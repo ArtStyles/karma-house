@@ -1,0 +1,78 @@
+import type { Listing } from './listings';
+
+export { defaultFilters, emptyDraft } from './listings';
+
+export const demoListings: Listing[] = [
+  {
+    id: 'demo-aurora-casa',
+    title: 'Casa luminosa en Barrio Aurora',
+    location: 'Barrio Aurora',
+    province: 'La Habana',
+    price: 138_000,
+    bedrooms: 3,
+    bathrooms: 2,
+    area: 168,
+    type: 'Casa',
+    description:
+      'Vivienda ficticia con portal, patio amplio y espacios ventilados para compartir en familia.',
+    amenities: ['Patio', 'Portal', 'Cisterna'],
+    imageKey: 'vedado',
+    owner: 'demo',
+    status: 'active',
+    createdAt: '2026-09-14T14:00:00.000Z',
+  },
+  {
+    id: 'demo-brisa-apartamento',
+    title: 'Apartamento sereno en Residencial Brisa',
+    location: 'Residencial Brisa',
+    province: 'La Habana',
+    price: 89_500,
+    bedrooms: 2,
+    bathrooms: 1,
+    area: 82,
+    type: 'Apartamento',
+    description:
+      'Anuncio de demostración con sala abierta, balcón y buena entrada de luz durante el día.',
+    amenities: ['Balcón', 'Agua corriente', 'Gas'],
+    imageKey: 'interior',
+    owner: 'demo',
+    status: 'active',
+    createdAt: '2026-09-13T16:30:00.000Z',
+  },
+  {
+    id: 'demo-palmas-casa',
+    title: 'Casa familiar en Reparto Las Palmas',
+    location: 'Reparto Las Palmas',
+    province: 'Matanzas',
+    price: 112_000,
+    bedrooms: 4,
+    bathrooms: 2,
+    area: 210,
+    type: 'Casa',
+    description:
+      'Propiedad ficticia de una planta con terraza, jardín pequeño y habitaciones independientes.',
+    amenities: ['Terraza', 'Jardín', 'Garaje'],
+    imageKey: 'terrace',
+    owner: 'demo',
+    status: 'active',
+    createdAt: '2026-09-12T11:15:00.000Z',
+  },
+  {
+    id: 'demo-coral-apartamento',
+    title: 'Apartamento cómodo en Edificio Coral',
+    location: 'Edificio Coral',
+    province: 'Villa Clara',
+    price: 74_000,
+    bedrooms: 1,
+    bathrooms: 1,
+    area: 61,
+    type: 'Apartamento',
+    description:
+      'Ejemplo ficticio compacto con comedor integrado y una terraza agradable para descansar.',
+    amenities: ['Terraza', 'Tanque de agua'],
+    imageKey: 'interior',
+    owner: 'demo',
+    status: 'active',
+    createdAt: '2026-09-11T09:45:00.000Z',
+  },
+];

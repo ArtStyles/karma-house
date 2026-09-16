@@ -1,25 +1,40 @@
 {
   "expo": {
-    "name": "karma-house",
+    "name": "KarmaHouse",
     "slug": "karma-house",
-    "version": "1.0.0",
+    "version": "0.1.0",
+    "scheme": "karmahouse",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/karmahouse-icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.karmahouse.app"
     },
     "android": {
+      "package": "com.karmahouse.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#132D43",
+        "foregroundImage": "./assets/karmahouse-icon.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/karmahouse-favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "KarmaHouse usa las fotos que seleccionas para tu anuncio.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      "expo-font"
+    ]
   }
 }
