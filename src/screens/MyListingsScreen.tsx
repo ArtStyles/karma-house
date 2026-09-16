@@ -3,31 +3,109 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PropertyImage } from '../components/PropertyImage';
-import { Button, EmptyState, Icon, Notice, PageTitle, Pill } from '../components/ui';
+import { Button, EmptyState, Icon, Notice, PageTitle } from '../components/ui';
 import type { Listing, ListingStatus } from '../domain/listings';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors, formatMoney } from '../theme';
 
 const statusNames = { active: 'Activo', paused: 'En pausa', sold: 'Vendido' };
+const statusColors = { active: colors.green, paused: colors.amber, sold: colors.muted };
+
 export default function MyListingsScreen() {
   const { listings, setStatus } = useMarketplace();
   const own = listings.filter(item => item.owner === 'local');
   const [pending, setPending] = useState('');
   const [error, setError] = useState('');
   const [confirm, setConfirm] = useState<Listing | null>(null);
-  async function update(id: string, status: ListingStatus) { if (pending) return; setPending(id); setError(''); try { await setStatus(id, status); setConfirm(null); } catch { setError('No se pudo guardar el cambio. Vuelve a intentarlo.'); } finally { setPending(''); } }
-  return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}><ScrollView contentContainerStyle={styles.content}><PageTitle title="Mis anuncios" subtitle="Cada vivienda, en tus manos." back />
-    <Notice>Estos anuncios de prueba se guardan solo en este dispositivo. Los activos aparecen en tu catálogo local.</Notice>
-    {error ? <Notice error>{error}</Notice> : null}
-    {own.length ? <View style={styles.list}>{own.map(item => <View key={item.id} style={styles.card}><Pressable accessibilityRole="button" accessibilityLabel={`Ver ${item.title}`} onPress={() => router.push(`/property/${item.id}`)} style={styles.overview}><PropertyImage listing={item} style={styles.image} /><View style={{ flex: 1, gap: 7 }}><Text style={[styles.status, item.status === 'active' && { color: colors.green }]}>{statusNames[item.status]} · Local</Text><Text style={styles.title}>{item.title}</Text><Text style={styles.price}>{formatMoney(item.price)} USD</Text><Text style={styles.location}>{item.location}</Text></View></Pressable>
-      <View style={styles.actions}><Button label="Editar" secondary icon="create-outline" onPress={() => router.push(`/edit/${item.id}`)} style={{ flex: 1, minWidth: 100 }} disabled={!!pending} />
-        {item.status === 'active' ? <Button label="Pausar" secondary icon="pause-outline" onPress={() => update(item.id, 'paused')} loading={pending === item.id} disabled={!!pending} style={{ flex: 1, minWidth: 100 }} /> : <Button label="Reactivar" secondary icon="play-outline" onPress={() => update(item.id, 'active')} loading={pending === item.id} disabled={!!pending} style={{ flex: 1, minWidth: 100 }} />}
-      </View>{item.status !== 'sold' && <Pressable accessibilityRole="button" disabled={!!pending} onPress={() => setConfirm(item)} style={styles.soldButton}><Icon name="checkmark-circle-outline" color={colors.green} size={18} /><Text style={styles.soldText}>Marcar como vendido</Text></Pressable>}
-    </View>)}<Button label="Crear otro anuncio" onPress={() => router.push('/publish')} icon="add-outline" /></View> : <EmptyState icon="key-outline" title="Tu primera publicación empieza aquí" description="Crea un anuncio de prueba y descubre cómo será mostrar tu vivienda en KarmaHouse." action={<Button label="Crear mi primer anuncio" onPress={() => router.push('/publish')} />} />}
-    </ScrollView><Modal visible={!!confirm} transparent animationType="fade" onRequestClose={() => !pending && setConfirm(null)}><View style={styles.backdrop}><View accessibilityViewIsModal style={styles.modal}><Text style={styles.modalTitle}>Un nuevo comienzo para esta casa</Text><Text style={styles.modalText}>El anuncio saldrá del catálogo y quedará como vendido en Mis anuncios. Podrás reactivarlo cuando quieras.</Text>{error ? <Notice error>{error}</Notice> : null}<Button label="Confirmar vendido" loading={!!pending} onPress={() => confirm && update(confirm.id, 'sold')} /><Button label="Volver" secondary disabled={!!pending} onPress={() => setConfirm(null)} /></View></View></Modal>
+
+  async function update(id: string, status: ListingStatus) {
+    if (pending) return;
+    setPending(id);
+    setError('');
+    try { await setStatus(id, status); setConfirm(null); }
+    catch { setError('No se pudo guardar el cambio. Vuelve a intentarlo.'); }
+    finally { setPending(''); }
+  }
+
+  return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
+    <ScrollView contentContainerStyle={styles.content}>
+      <PageTitle title="Mis anuncios" subtitle="Administra tus viviendas." back />
+      <Notice>Los anuncios de prueba se guardan en este dispositivo. Los activos aparecen en tu catálogo local.</Notice>
+      {error ? <Notice error>{error}</Notice> : null}
+
+      {own.length ? <View style={styles.list}>
+        <Text style={styles.sectionLabel}>{own.length} {own.length === 1 ? 'anuncio' : 'anuncios'}</Text>
+        {own.map(item => <View key={item.id} style={styles.card}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Ver ${item.title}`} onPress={() => router.push(`/property/${item.id}`)} style={({ pressed }) => [styles.overview, pressed && styles.pressed]}>
+            <PropertyImage listing={item} style={styles.image} />
+            <View style={styles.details}>
+              <View style={styles.statusRow}>
+                <View style={[styles.statusDot, { backgroundColor: statusColors[item.status] }]} />
+                <Text style={[styles.status, { color: statusColors[item.status] }]}>{statusNames[item.status]}</Text>
+              </View>
+              <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
+              <Text style={styles.price}>{formatMoney(item.price)} <Text style={styles.currency}>USD</Text></Text>
+              <Text style={styles.location} numberOfLines={1}>{item.location}</Text>
+            </View>
+            <Icon name="chevron-forward" size={16} color={colors.muted} />
+          </Pressable>
+
+          <View style={styles.actions}>
+            <Button label="Editar" secondary icon="create-outline" onPress={() => router.push(`/edit/${item.id}`)} style={styles.actionButton} disabled={!!pending} />
+            {item.status === 'active'
+              ? <Button label="Pausar" secondary icon="pause-outline" onPress={() => update(item.id, 'paused')} loading={pending === item.id} disabled={!!pending} style={styles.actionButton} />
+              : <Button label="Reactivar" secondary icon="play-outline" onPress={() => update(item.id, 'active')} loading={pending === item.id} disabled={!!pending} style={styles.actionButton} />}
+          </View>
+          {item.status !== 'sold' && <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!pending }} disabled={!!pending} onPress={() => setConfirm(item)} style={({ pressed }) => [styles.soldButton, pressed && styles.pressed, !!pending && styles.disabled]}>
+            <Icon name="checkmark-circle-outline" color={colors.primary} size={19} />
+            <Text style={styles.soldText}>Marcar como vendido</Text>
+          </Pressable>}
+        </View>)}
+        <Button label="Crear otro anuncio" onPress={() => router.push('/publish')} icon="add-outline" style={styles.createButton} />
+      </View> : <EmptyState icon="key-outline" title="Tu primera vivienda, aquí." description="Crea un anuncio de prueba con sus detalles y una foto. Podrás editarlo cuando quieras." action={<Button label="Crear mi primer anuncio" onPress={() => router.push('/publish')} />} />}
+    </ScrollView>
+
+    <Modal visible={!!confirm} transparent animationType="fade" onRequestClose={() => !pending && setConfirm(null)}>
+      <View style={styles.backdrop}>
+        <View accessibilityViewIsModal style={styles.modal}>
+          <View style={styles.modalIcon}><Icon name="checkmark-circle-outline" color={colors.primary} size={30} /></View>
+          <Text style={styles.modalTitle}>¿Marcar como vendido?</Text>
+          <Text style={styles.modalText}>El anuncio saldrá del catálogo y quedará como vendido en Mis anuncios. Podrás reactivarlo cuando quieras.</Text>
+          {error ? <Notice error>{error}</Notice> : null}
+          <Button label="Confirmar vendido" loading={!!pending} onPress={() => confirm && update(confirm.id, 'sold')} />
+          <Button label="Cancelar" secondary disabled={!!pending} onPress={() => setConfirm(null)} />
+        </View>
+      </View>
+    </Modal>
   </SafeAreaView>;
 }
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: 30, gap: 8 }, list: { gap: 20, marginTop: 20 }, card: { backgroundColor: colors.white, padding: 16, borderRadius: 18, borderWidth: 1, borderColor: colors.border }, overview: { flexDirection: 'row', gap: 14, alignItems: 'center' }, image: { width: 95, height: 108, borderRadius: 12 }, status: { color: colors.amber, fontSize: 11, fontWeight: '600' }, title: { color: colors.ink, fontSize: 17, fontWeight: '600' }, price: { color: colors.ink, fontSize: 15 }, location: { fontSize: 12, color: colors.muted }, actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 18 }, soldButton: { flexDirection: 'row', gap: 7, minHeight: 48, justifyContent: 'center', alignItems: 'center', marginTop: 6 }, soldText: { color: colors.green, fontSize: 13 },
-  backdrop: { flex: 1, backgroundColor: '#10293D70', justifyContent: 'center', padding: 24 }, modal: { backgroundColor: colors.white, borderRadius: 24, padding: 26, gap: 18, width: '100%', maxWidth: 420, alignSelf: 'center' }, modalTitle: { color: colors.ink, fontSize: 24, fontWeight: '600' }, modalText: { color: colors.muted, fontSize: 15, lineHeight: 23 },
+  safe: { flex: 1, backgroundColor: colors.paper },
+  content: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: 24, gap: 8 },
+  list: { gap: 16, marginTop: 18 },
+  sectionLabel: { color: colors.muted, fontSize: 14, marginLeft: 4, marginBottom: -4 },
+  card: { backgroundColor: colors.white, padding: 16, borderRadius: 22 },
+  overview: { flexDirection: 'row', gap: 13, alignItems: 'center', borderRadius: 12 },
+  pressed: { opacity: .65 },
+  image: { width: 92, height: 114, borderRadius: 14 },
+  details: { flex: 1, gap: 6 },
+  statusRow: { flexDirection: 'row', gap: 5, alignItems: 'center' },
+  statusDot: { width: 5, height: 5, borderRadius: 3 },
+  status: { fontSize: 12, fontWeight: '500' },
+  title: { color: colors.ink, fontSize: 17, lineHeight: 22, fontWeight: '600', letterSpacing: -.3 },
+  price: { color: colors.ink, fontSize: 16, fontWeight: '600', letterSpacing: -.2 },
+  currency: { color: colors.muted, fontSize: 12, fontWeight: '400' },
+  location: { fontSize: 13, color: colors.muted, lineHeight: 18 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 18 },
+  actionButton: { flex: 1, minWidth: 100, minHeight: 44, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.paper, borderWidth: 0, borderRadius: 12 },
+  soldButton: { flexDirection: 'row', gap: 7, minHeight: 46, justifyContent: 'center', alignItems: 'center', marginTop: 8, borderRadius: 12 },
+  soldText: { color: colors.primary, fontSize: 14, fontWeight: '500' },
+  disabled: { opacity: .5 },
+  createButton: { marginTop: 6 },
+  backdrop: { flex: 1, backgroundColor: '#00000050', justifyContent: 'center', padding: 24 },
+  modal: { backgroundColor: colors.white, borderRadius: 28, padding: 24, gap: 14, width: '100%', maxWidth: 420, alignSelf: 'center' },
+  modalIcon: { width: 58, height: 58, backgroundColor: colors.softBlue, borderRadius: 29, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 4 },
+  modalTitle: { color: colors.ink, fontSize: 23, lineHeight: 29, fontWeight: '600', letterSpacing: -.5, textAlign: 'center' },
+  modalText: { color: colors.muted, fontSize: 15, lineHeight: 23, textAlign: 'center', marginBottom: 8 },
 });

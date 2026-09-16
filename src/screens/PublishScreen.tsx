@@ -13,15 +13,12 @@ export default function PublishScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.header}>
-        <PageTitle
-          title="Publicar vivienda"
-          subtitle="Crea un anuncio local para recorrer la experiencia de KarmaHouse."
-        />
+        <PageTitle title="Publicar" />
         {storageError ? <Notice error>{storageError}</Notice> : null}
       </View>
       {ready ? (
         <ListingForm
-          submitLabel="Guardar en mi dispositivo"
+          submitLabel="Guardar anuncio"
           onSubmit={async (draft) => {
             await saveListing(draft);
             router.replace('/my-listings');
@@ -38,6 +35,6 @@ export default function PublishScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.paper },
-  header: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 18 },
+  header: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 20 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

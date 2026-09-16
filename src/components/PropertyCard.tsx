@@ -18,9 +18,9 @@ export function PropertyCard({ listing }: { listing: Listing }) {
     try { await toggleFavorite(listing.id); } catch { setError('No se pudo guardar el favorito. Inténtalo de nuevo.'); } finally { setSaving(false); }
   }
   return <View style={styles.card}>
-    <Pressable accessibilityRole="button" accessibilityLabel={`Ver ${listing.title}, ${formatMoney(listing.price)}`} onPress={() => router.push(`/property/${listing.id}`)}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`Ver ${listing.title}, ${formatMoney(listing.price)}`} onPress={() => router.push(`/property/${listing.id}`)} style={({ pressed }) => pressed && { opacity: .85 }}>
       <PropertyImage listing={listing} style={styles.image} />
-      <View style={styles.badge}><View style={styles.dot} /><Text style={styles.badgeText}>{listing.owner === 'demo' ? 'DEMO · EN VENTA' : 'ANUNCIO LOCAL'}</Text></View>
+      <View style={styles.badge}><View style={styles.dot} /><Text style={styles.badgeText}>{listing.owner === 'demo' ? 'En venta · Demo' : 'Anuncio local'}</Text></View>
       <View style={styles.body}>
         <View style={styles.priceRow}><Text style={styles.price}>{formatMoney(listing.price)} <Text style={styles.currency}>USD</Text></Text><Text style={styles.type}>{listing.type}</Text></View>
         <Text style={styles.title}>{listing.title}</Text>
@@ -34,12 +34,12 @@ export function PropertyCard({ listing }: { listing: Listing }) {
 }
 function Feature({ name, text }: { name: 'bed-outline' | 'water-outline' | 'expand-outline'; text: string }) { return <View style={styles.feature}><Icon name={name} size={17} color={colors.muted} /><Text style={styles.featureText}>{text}</Text></View>; }
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.white, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }, image: { height: 230 },
-  badge: { position: 'absolute', top: 16, left: 16, borderRadius: 7, backgroundColor: colors.white, paddingVertical: 8, paddingHorizontal: 10, flexDirection: 'row', gap: 6, alignItems: 'center' },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.green }, badgeText: { fontSize: 9, fontWeight: '700', letterSpacing: .8, color: colors.ink },
-  heart: { position: 'absolute', top: 12, right: 12, width: 44, minHeight: 44, backgroundColor: '#FFFFFFF2' }, body: { padding: 19 },
-  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }, price: { fontSize: 25, letterSpacing: -.7, fontWeight: '700', color: colors.ink }, currency: { fontSize: 11, color: colors.muted, fontWeight: '500', letterSpacing: 0 },
-  type: { fontSize: 11, color: colors.muted, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 5, backgroundColor: colors.paper }, title: { marginTop: 9, fontSize: 17, fontWeight: '600', color: colors.ink },
-  location: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 7 }, locationText: { fontSize: 12, color: colors.muted, flex: 1 },
-  features: { flexDirection: 'row', flexWrap: 'wrap', gap: 22, marginTop: 17, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#F0F1EF' }, feature: { flexDirection: 'row', alignItems: 'center', gap: 6 }, featureText: { fontSize: 12, color: colors.muted }, error: { padding: 12, color: colors.danger, fontSize: 12 },
+  card: { backgroundColor: colors.white, borderRadius: 24, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.025)' }, image: { height: 238 },
+  badge: { position: 'absolute', top: 15, left: 15, borderRadius: 15, backgroundColor: '#FFFFFFF2', paddingVertical: 7, paddingHorizontal: 10, flexDirection: 'row', gap: 6, alignItems: 'center' },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.green }, badgeText: { fontSize: 11, fontWeight: '600', color: colors.ink },
+  heart: { position: 'absolute', top: 12, right: 12, width: 44, minHeight: 44, backgroundColor: '#FFFFFFF2' }, body: { padding: 18 },
+  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }, price: { fontSize: 26, letterSpacing: -.8, fontWeight: '700', color: colors.ink }, currency: { fontSize: 12, color: colors.muted, fontWeight: '500', letterSpacing: 0 },
+  type: { fontSize: 12, color: colors.muted }, title: { marginTop: 8, fontSize: 17, lineHeight: 23, letterSpacing: -.25, fontWeight: '600', color: colors.ink },
+  location: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 }, locationText: { fontSize: 14, lineHeight: 20, color: colors.muted, flex: 1 },
+  features: { flexDirection: 'row', flexWrap: 'wrap', gap: 20, marginTop: 15 }, feature: { flexDirection: 'row', alignItems: 'center', gap: 5 }, featureText: { fontSize: 13, color: colors.muted }, error: { padding: 12, color: colors.danger, fontSize: 13 },
 });

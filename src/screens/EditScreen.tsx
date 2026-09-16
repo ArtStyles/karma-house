@@ -22,7 +22,7 @@ export default function EditScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.header}>
-        <PageTitle title="Editar anuncio" subtitle="Los cambios se guardan solo en este dispositivo." back />
+        <PageTitle title="Editar anuncio" back />
         {storageError ? <Notice error>{storageError}</Notice> : null}
       </View>
 
@@ -84,7 +84,7 @@ function toDraft(listing: Listing): ListingDraft {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.paper },
-  header: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 18 },
+  header: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 20 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  unavailable: { width: '100%', maxWidth: 720, alignSelf: 'center', padding: 18, gap: 16 },
+  unavailable: { width: '100%', maxWidth: 720, alignSelf: 'center', padding: 20, gap: 16 },
 });

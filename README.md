@@ -2,6 +2,8 @@
 
 Primera entrega navegable de una aplicación de compraventa de viviendas en Cuba, desarrollada con **React Native y Expo** para Android e iPhone. La vista web sirve para revisar el mismo código desde el navegador.
 
+La interfaz se ha actualizado con tipografía del sistema, superficies agrupadas y navegación flotante. [Referencias profesionales y verificación del rediseño](docs/apple-ui.md).
+
 ## Qué puedes probar
 
 - Explorar cuatro viviendas ficticias, buscar sin distinguir tildes y combinar filtros por tipo, precio y habitaciones.

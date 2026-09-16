@@ -1,9 +1,10 @@
 import { Platform } from 'react-native';
 
 export const colors = {
-  ink: '#132D43', muted: '#61717B', primary: '#145BDE', softBlue: '#EAF1FF',
-  paper: '#F8F7F3', white: '#FFFFFF', border: '#E3E7E7', green: '#277258',
-  softGreen: '#EAF3ED', danger: '#A82935', amber: '#8A5C15',
+  ink: '#1D1D1F', muted: '#68686D', primary: '#0066D6', softBlue: '#EAF3FF',
+  paper: '#F5F5F7', white: '#FFFFFF', border: '#E5E5EA', green: '#227A46',
+  softGreen: '#EDF8F0', danger: '#C32935', amber: '#8A5C15',
 };
-export const typefaces = { display: Platform.select({ ios: 'Georgia', android: 'serif', default: 'Georgia, serif' }) };
+export const typefaces = { display: Platform.select({ ios: 'System', android: 'sans-serif', default: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }) };
+export const layout = { tabContentBottom: 128 };
 export const formatMoney = (value: number) => `$ ${new Intl.NumberFormat('es-CU', { maximumFractionDigits: 0 }).format(value)}`;
