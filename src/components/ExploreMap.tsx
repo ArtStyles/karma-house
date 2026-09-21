@@ -1,26 +1,37 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import type { Listing } from '../domain/listings';
+import type { MapView as CatalogMapView } from '../catalog/types';
+import { useListing } from '../catalog/useCatalog';
 import { colors, formatMoney } from '../theme';
 import { KarmaMap } from './maps/KarmaMap';
 import { CUBA_CENTER, CUBA_ZOOM } from './maps/mapConfig';
 import { PropertyImage } from './PropertyImage';
 import { Icon } from './ui';
 
-export function ExploreMap({ listings, onShowList }: { listings: readonly Listing[]; onShowList: () => void }) {
+export function ExploreMap({ view, ready, withoutLocation, onShowList }: {
+  view: CatalogMapView;
+  ready: boolean;
+  /** Loaded listings with no published point, so the hint can send them to the list. */
+  withoutLocation: number;
+  onShowList: () => void;
+}) {
   const [selectedId, setSelectedId] = useState<string>();
   const { width } = useWindowDimensions();
-  const located = listings.filter(listing => listing.mapLocation);
-  const selected = located.find(listing => listing.id === selectedId);
-  const withoutLocation = listings.length - located.length;
+  const points = view.mode === 'points' ? view.items : [];
+  const selectedPoint = points.find(point => point.id === selectedId);
+  // Only the tapped pin costs a round trip; the map itself never carries photos or text.
+  const { listing: selected } = useListing(selectedPoint?.id);
+  const markers = view.mode === 'points'
+    ? points.map(point => ({ id: point.id, coordinate: point, precision: point.precision, label: formatMoney(point.price) }))
+    : view.items.map(cluster => ({ id: cluster.key, coordinate: cluster, precision: 'exact' as const, label: `${cluster.count}` }));
   return <View style={styles.container}>
     <View style={styles.mapFrame}>
       <KarmaMap
         style={{ height: width >= 700 ? 480 : 410 }}
         center={CUBA_CENTER} zoom={width >= 700 ? 5.6 : CUBA_ZOOM}
-        markers={located.map(listing => ({ id: listing.id, coordinate: listing.mapLocation!, precision: listing.mapLocation!.precision, label: formatMoney(listing.price) }))}
-        selectedMarkerId={selected?.id} onMarkerPress={setSelectedId}
+        markers={markers}
+        selectedMarkerId={selectedPoint?.id} onMarkerPress={view.mode === 'points' ? setSelectedId : () => {}}
         accessibilityLabel="Mapa de viviendas en venta en Cuba"
       />
     </View>
@@ -35,7 +46,7 @@ export function ExploreMap({ listings, onShowList }: { listings: readonly Listin
       <Icon name="chevron-forward" size={18} color={colors.primary} />
     </Pressable> : <View style={styles.hint}>
       <Icon name="map-outline" size={20} color={colors.primary} />
-      <Text style={styles.hintText}>{located.length ? 'Toca un precio para conocer la vivienda. Acerca el mapa para ver más detalle.' : listings.length ? 'Estas viviendas aún no tienen un punto en el mapa.' : 'Aquí verás las viviendas cuando tengan una ubicación publicada.'}</Text>
+      <Text style={styles.hintText}>{!ready ? 'Cargando las viviendas del mapa…' : view.mode === 'clusters' ? 'Cada globo agrupa varias viviendas. Acerca el mapa para separarlas.' : points.length ? 'Toca un precio para conocer la vivienda. Acerca el mapa para ver más detalle.' : 'Aquí verás las viviendas cuando tengan una ubicación publicada.'}</Text>
     </View>}
     {withoutLocation > 0 && <Pressable accessibilityRole="button" onPress={onShowList} style={styles.missing}>
       <Text style={styles.missingText}>{withoutLocation} {withoutLocation === 1 ? 'vivienda sin ubicación' : 'viviendas sin ubicación'} · Ver en la lista</Text>
@@ -45,12 +56,18 @@ export function ExploreMap({ listings, onShowList }: { listings: readonly Listin
 }
 
 const styles = StyleSheet.create({
-  container: { gap: 12 }, mapFrame: { borderRadius: 24, overflow: 'hidden', backgroundColor: colors.softBlue },
-  card: { backgroundColor: colors.white, borderRadius: 22, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  photo: { width: 86, height: 106, borderRadius: 14 }, copy: { flex: 1, gap: 4 },
-  price: { color: colors.ink, fontSize: 21, fontWeight: '700', letterSpacing: -.5 }, currency: { color: colors.muted, fontSize: 11, fontWeight: '500' },
-  title: { color: colors.ink, fontSize: 15, fontWeight: '600', lineHeight: 20 }, location: { color: colors.muted, fontSize: 12, lineHeight: 18 },
-  precision: { color: colors.primary, fontSize: 11, fontWeight: '500' },
-  hint: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 5, paddingVertical: 6 }, hintText: { flex: 1, color: colors.muted, fontSize: 13, lineHeight: 19 },
-  missing: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, backgroundColor: colors.white, padding: 14, borderRadius: 16 }, missingText: { flex: 1, color: colors.primary, fontSize: 13, lineHeight: 19 },
+  container: { gap: 12 },
+  mapFrame: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: '#E1E5EB', backgroundColor: colors.white },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 20, backgroundColor: colors.white, borderWidth: 1, borderColor: '#E1E5EB' },
+  photo: { width: 84, height: 84, borderRadius: 14 },
+  copy: { flex: 1, gap: 2 },
+  price: { fontSize: 17, fontWeight: '700', color: colors.ink, letterSpacing: -.4 },
+  currency: { fontSize: 12, fontWeight: '500', color: colors.muted },
+  title: { fontSize: 14, fontWeight: '600', color: colors.ink },
+  location: { fontSize: 12, color: colors.muted },
+  precision: { fontSize: 11, color: colors.primary, marginTop: 2 },
+  hint: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 18, backgroundColor: colors.softBlue },
+  hintText: { flex: 1, fontSize: 12, lineHeight: 18, color: colors.ink },
+  missing: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 44, paddingHorizontal: 14, borderRadius: 16, borderWidth: 1, borderColor: '#E1E5EB' },
+  missingText: { fontSize: 12, color: colors.primary },
 });

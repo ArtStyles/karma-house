@@ -53,21 +53,21 @@ test('photo drafts allow owned storage references and block remote URL imports',
 });
 
 function fakeRepository(overrides = {}) {
-  return { load: async () => ({ listings: [], ownListings: [], favoriteIds: [] }), save: async () => listing(), setFavorite: async () => {}, setStatus: async () => {}, submit: async () => {}, loadModerationQueue: async () => [], review: async () => {}, ...overrides };
+  return { load: async () => ({ ownListings: [], favoriteIds: [] }), save: async () => listing(), setFavorite: async () => {}, setStatus: async () => {}, submit: async () => {}, loadModerationQueue: async () => [], review: async () => {}, ...overrides };
 }
 function deferred() { let resolve; const promise = new Promise((done) => { resolve = done; }); return { promise, resolve }; }
 
 test('logout clears private state immediately and ignores an old refresh completing late', async () => {
   const pending = deferred();
-  const controller = createRemoteMarketplaceController(fakeRepository({ load: async (id) => id ? pending.promise : { listings: [], ownListings: [], favoriteIds: [] } }));
+  const controller = createRemoteMarketplaceController(fakeRepository({ load: async (id) => id ? pending.promise : { ownListings: [], favoriteIds: [] } }));
   controller.setSession('owner-a', true);
   const oldRefresh = controller.refresh();
   controller.setSession(null, false);
   assert.deepEqual(controller.getState().ownListings, []);
   assert.deepEqual(controller.getState().moderationQueue, []);
-  pending.resolve({ listings: [listing()], ownListings: [listing()], favoriteIds: ['property-1'] });
+  pending.resolve({ ownListings: [listing()], favoriteIds: ['property-1'] });
   await oldRefresh;
-  assert.deepEqual(controller.getState().listings, []);
+  assert.deepEqual(controller.getState().ownListings, []);
   assert.deepEqual(controller.getState().favoriteIds, []);
 });
 
@@ -91,7 +91,7 @@ test('cloud errors remain visible and never replace the catalog with demos', asy
   await assert.rejects(controller.refresh(), /Servidor/);
   assert.equal(controller.getState().ready, true);
   assert.match(controller.getState().storageError, /Servidor/);
-  assert.deepEqual(controller.getState().listings, []);
+  assert.deepEqual(controller.getState().ownListings, []);
   await assert.rejects(controller.saveListing(draft), /sesión/i);
   await assert.rejects(controller.toggleFavorite('property-1'), /sesión/i);
 });
@@ -102,7 +102,7 @@ test('a refresh started before a favorite mutation cannot undo the confirmed fav
   controller.setSession('owner-a', false);
   const refresh = controller.refresh();
   await controller.toggleFavorite('property-1');
-  oldRead.resolve({ listings: [], ownListings: [], favoriteIds: [] });
+  oldRead.resolve({ ownListings: [], favoriteIds: [] });
   await refresh;
   assert.deepEqual(controller.getState().favoriteIds, ['property-1']);
 });

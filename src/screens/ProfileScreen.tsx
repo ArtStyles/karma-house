@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Icon, Notice, PageTitle } from '../components/ui';
 import { AccountPrompt } from '../components/AccountPrompt';
+import { useFavoriteListings } from '../catalog/useCatalog';
 import { useAuth } from '../auth/AuthProvider';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors, layout } from '../theme';
@@ -12,13 +13,13 @@ import { useNotifications } from '../notifications/NotificationsProvider';
 import { AccountMenu } from '../components/account/AccountMenu';
 
 export default function ProfileScreen() {
-  const { listings, favoriteIds, ownListings: own, mode } = useMarketplace();
+  const { favoriteIds, ownListings: own, mode } = useMarketplace();
   const { user, displayName, isAdmin, signOut, error: authError, refreshProfile } = useAuth();
   const { unreadCount } = useMessaging();
   const { unreadCount: notificationUnreadCount } = useNotifications();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const favorites = listings.filter(item => favoriteIds.includes(item.id) && item.status === 'active');
+  const { listings: favorites } = useFavoriteListings();
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
     <ScrollView contentContainerStyle={styles.content}>

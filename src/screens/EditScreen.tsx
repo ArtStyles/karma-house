@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ListingForm from '../components/ListingForm';
+import { useListing } from '../catalog/useCatalog';
 import { useAuth } from '../auth/AuthProvider';
 import { Button, Notice, PageTitle } from '../components/ui';
 import type { Listing, ListingDraft } from '../domain/listings';
@@ -13,9 +14,9 @@ import { colors } from '../theme';
 export default function EditScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  const { ready, listings, saveListing, storageError, isOwnListing, mode, refresh } = useMarketplace();
+  const { saveListing, storageError, isOwnListing, mode, refresh } = useMarketplace();
   const { user } = useAuth();
-  const listing = listings.find((item) => item.id === id);
+  const { listing, ready } = useListing(id);
 
   function cancel() {
     if (router.canGoBack()) router.back();

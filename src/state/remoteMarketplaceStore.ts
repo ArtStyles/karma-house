@@ -1,10 +1,12 @@
 import { validateDraft, type Listing, type ListingDraft, type ListingStatus } from '../domain/listings.ts';
-import { mergeListings } from '../data/remoteMapping.ts';
 
 export type SaveModeration = 'draft' | 'pending';
 export type ReviewDecision = 'approved' | 'rejected';
+/**
+ * The connected catalogue is paginated by src/catalog, so a session snapshot carries only
+ * what belongs to the account: no screen holds a complete listing array any more.
+ */
 export interface RemoteCatalogSnapshot {
-  listings: Listing[];
   ownListings: Listing[];
   favoriteIds: string[];
 }
@@ -25,7 +27,7 @@ export interface RemoteMarketplaceRepository {
 }
 
 export function emptyRemoteState(userId: string | null = null): RemoteMarketplaceState {
-  return { ready: false, storageError: null, sessionUserId: userId, listings: [], ownListings: [], favoriteIds: [], moderationQueue: [] };
+  return { ready: false, storageError: null, sessionUserId: userId, ownListings: [], favoriteIds: [], moderationQueue: [] };
 }
 
 export function createRemoteMarketplaceController(repository: RemoteMarketplaceRepository) {
@@ -128,8 +130,7 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
         const ownListings = [...state.ownListings.filter((item) => item.id !== listing.id), listing];
         // Invalidate refreshes started before this save so they cannot restore stale moderation.
         refreshSequence += 1;
-        const publicListings = state.listings.filter((item) => item.id !== listing.id && item.moderationStatus === 'approved' && item.status === 'active');
-        publish({ ...state, ready: true, storageError: null, ownListings, listings: mergeListings(publicListings, ownListings) });
+        publish({ ...state, ready: true, storageError: null, ownListings });
         return listing.id;
       });
     },

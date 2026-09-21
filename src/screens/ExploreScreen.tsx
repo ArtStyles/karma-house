@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { activeFilterCount, defaultFilters, filterListings, type Listing, type ListingFilters } from '../domain/listings';
+import { activeFilterCount, defaultFilters, type Listing, type ListingFilters } from '../domain/listings';
+import { useCatalogPage, useMapView } from '../catalog/useCatalog';
+import { CUBA_BOUNDS, CUBA_ZOOM } from '../components/maps/mapConfig';
 import { CONDITIONS } from '../domain/listingOptions';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors, layout } from '../theme';
@@ -23,11 +25,11 @@ const categories = [
 ] as const;
 
 export default function ExploreScreen() {
-  const { listings, mode, ready, storageError, refresh } = useMarketplace();
+  const { mode, storageError, refresh } = useMarketplace();
   const { unreadCount } = useMessaging();
   const { unreadCount: notificationUnreadCount } = useNotifications();
   const [refreshing, setRefreshing] = useState(false);
-  async function reload() { setRefreshing(true); try { await refresh(); } catch { /* Provider exposes the remote error. */ } finally { setRefreshing(false); } }
+  async function reload() { setRefreshing(true); try { await Promise.all([refresh(), refreshCatalog()]); } catch { /* Provider and catalogue expose their own errors. */ } finally { setRefreshing(false); } }
   const [filters, setFilters] = useState<ListingFilters>({ ...defaultFilters });
   const [expanded, setExpanded] = useState(false);
   const [view, setView] = useState<'list' | 'map'>('list');
@@ -35,7 +37,8 @@ export default function ExploreScreen() {
   const resultsY = useRef(0);
   const { width } = useWindowDimensions();
   const columns = width >= 1060 ? 3 : width >= 700 ? 2 : 1;
-  const result = useMemo(() => filterListings(listings, filters), [listings, filters]);
+  const { rows: result, total, hasMore, ready, loading, pageError, loadMore, refresh: refreshCatalog } = useCatalogPage(filters);
+  const mapView = useMapView(CUBA_BOUNDS, width >= 700 ? 5.6 : CUBA_ZOOM, filters);
   const hasFilters = activeFilterCount(filters) > 0;
   const filterCount = activeFilterCount({ ...filters, query: '' });
   const change = (next: Partial<ListingFilters>) => setFilters(old => ({ ...old, ...next }));
@@ -49,12 +52,14 @@ export default function ExploreScreen() {
         numColumns={columns}
         keyExtractor={item => item.id}
         initialNumToRender={6}
+        onEndReached={() => { if (view === 'list') loadMore(); }}
+        onEndReachedThreshold={0.6}
         columnWrapperStyle={columns > 1 ? styles.row : undefined}
         renderItem={({ item }) => <View style={[styles.cell, { width: result.length === 1 ? '100%' : columns === 3 ? '31.9%' : columns === 2 ? '48.8%' : '100%' }]}><PropertyCard listing={item} horizontal={columns > 1 && result.length === 1} /></View>}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={colors.primary} />}
-        ListEmptyComponent={!ready ? <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: 45 }} /> : view === 'map' ? <ExploreMap listings={result} onShowList={() => setView('list')} /> : !storageError ? <EmptyState title={hasFilters ? 'Sin coincidencias' : 'Aquí empieza tu próximo hogar'} description={hasFilters ? 'Prueba otra zona o amplía los filtros para encontrar más viviendas.' : 'Aún no hay viviendas publicadas. Si tienes una en venta, puedes preparar el primer anuncio.'} icon={hasFilters ? 'search-outline' : 'home-outline'} action={<Button label={hasFilters ? 'Ver todas las viviendas' : 'Publicar una vivienda'} onPress={() => hasFilters ? setFilters({ ...defaultFilters }) : router.push('/publish')} />} /> : null}
+        ListEmptyComponent={!ready ? <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: 45 }} /> : view === 'map' ? <ExploreMap view={mapView.view} ready={mapView.ready} withoutLocation={result.filter(item => !item.mapLocation).length} onShowList={() => setView('list')} /> : !storageError ? <EmptyState title={hasFilters ? 'Sin coincidencias' : 'Aquí empieza tu próximo hogar'} description={hasFilters ? 'Prueba otra zona o amplía los filtros para encontrar más viviendas.' : 'Aún no hay viviendas publicadas. Si tienes una en venta, puedes preparar el primer anuncio.'} icon={hasFilters ? 'search-outline' : 'home-outline'} action={<Button label={hasFilters ? 'Ver todas las viviendas' : 'Publicar una vivienda'} onPress={() => hasFilters ? setFilters({ ...defaultFilters }) : router.push('/publish')} />} /> : null}
         ListHeaderComponent={<View>
         <View style={styles.topbar}>
           <View style={[styles.brand, width < 360 && { gap: 5 }]}><View style={[styles.brandMark, width < 360 && { width: 26, height: 26 }]}><Icon name="home" size={width < 360 ? 15 : 18} color={colors.white} /></View><Text style={[styles.brandText, width < 360 && { fontSize: 14 }]}>KarmaHouse</Text>{mode === 'demo' && <Text style={styles.demo}>Demo</Text>}</View>
@@ -96,7 +101,7 @@ export default function ExploreScreen() {
         </View>
         </View>
         <View style={styles.resultMeta}>
-          <Text style={styles.resultCount}>{ready ? `${result.length} ${result.length === 1 ? 'vivienda' : 'viviendas'}${hasFilters ? (result.length === 1 ? ' encontrada' : ' encontradas') : mode === 'demo' ? ' · Catálogo de prueba' : ' en venta'}` : 'Cargando viviendas…'}</Text>
+          <Text style={styles.resultCount}>{ready ? `${total} ${total === 1 ? 'vivienda' : 'viviendas'}${hasFilters ? (total === 1 ? ' encontrada' : ' encontradas') : mode === 'demo' ? ' · Catálogo de prueba' : ' en venta'}` : 'Cargando viviendas…'}</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Cambiar orden de viviendas" onPress={() => setExpanded(true)} style={styles.sort}><Text style={styles.sortText}>{SORT_OPTIONS.find(option => option.value === filters.sort)?.label}</Text><Icon name="chevron-down" size={13} color={colors.primary} /></Pressable>
         </View>
         {filterCount > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activeFilters}>
@@ -113,6 +118,9 @@ export default function ExploreScreen() {
         {storageError && <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{storageError}</Notice><Button label="Volver a cargar" secondary loading={refreshing} onPress={reload} /></View>}
         </View>}
         ListFooterComponent={<View>
+        {view === 'list' && pageError && ready ? <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{pageError}</Notice><Button label="Cargar más viviendas" secondary loading={loading} onPress={loadMore} /></View>
+          : view === 'list' && loading && ready ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
+          : view === 'list' && !hasMore && result.length > 0 ? <Text style={styles.listEnd}>Has visto las {total} {total === 1 ? 'vivienda' : 'viviendas'} que coinciden.</Text> : null}
         {!hasFilters && <>
           <Text accessibilityRole="header" style={styles.discoverTitle}>A tu manera</Text>
           <View style={styles.shortcuts}>
@@ -132,7 +140,7 @@ export default function ExploreScreen() {
         {mode === 'demo' && <Notice>Viviendas e imágenes de demostración. Tus anuncios y favoritos se guardan solo en este dispositivo.</Notice>}
         </View>}
       />
-      {expanded && <CatalogFilters filters={filters} listings={listings} onApply={setFilters} onClose={() => setExpanded(false)} />}
+      {expanded && <CatalogFilters filters={filters} total={total} onApply={setFilters} onClose={() => setExpanded(false)} />}
     </SafeAreaView>
   );
 }
@@ -159,6 +167,7 @@ const styles = StyleSheet.create({
   sort: { flexDirection: 'row', minHeight: 44, gap: 4, alignItems: 'center' }, sortText: { fontSize: 13, color: colors.primary },
   viewSwitch: { flexDirection: 'row', padding: 3, borderRadius: 15, backgroundColor: '#EAEAEE' },
   viewOption: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12 }, viewSelected: { backgroundColor: colors.white, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
+  listEnd: { fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 4, marginBottom: 8 },
   clear: { minHeight: 44, justifyContent: 'center', marginTop: -8, marginBottom: 6 }, clearText: { color: colors.primary, fontSize: 14 },
   row: { columnGap: '2%' }, cell: { marginBottom: 24 },
   discoverTitle: { color: colors.ink, fontSize: 20, fontWeight: '700', letterSpacing: -.4, marginTop: 28, marginBottom: 14 }, shortcuts: { flexDirection: 'row', gap: 12 }, shortcut: { flex: 1, borderRadius: 22, padding: 16, gap: 7, borderWidth: 1 }, mapShortcut: { backgroundColor: '#EEF5F1', borderColor: '#DFEAE4' }, favoriteShortcut: { backgroundColor: '#F3F0F8', borderColor: '#E8E1F0' }, shortcutTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }, shortcutIcon: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center' }, shortcutTitle: { color: colors.ink, fontSize: 15, fontWeight: '600', letterSpacing: -.3 }, shortcutText: { fontSize: 12, lineHeight: 18, color: colors.muted },

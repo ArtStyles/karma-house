@@ -8,16 +8,17 @@ import { KarmaMap } from '../components/maps/KarmaMap';
 import { Button, EmptyState, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors, formatMoney, typefaces } from '../theme';
+import { useListing } from '../catalog/useCatalog';
 import { useAuth } from '../auth/AuthProvider';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { CONDITIONS } from '../domain/listingOptions';
 
 export default function DetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { listings, favoriteIds, toggleFavorite, isOwnListing, mode, ready, storageError, refresh } = useMarketplace();
+  const { favoriteIds, toggleFavorite, isOwnListing, mode, storageError, refresh } = useMarketplace();
   const auth = useAuth();
   const messaging = useMessaging();
-  const listing = listings.find(item => item.id === id);
+  const { listing, ready } = useListing(id);
   const [contact, setContact] = useState(false);
   const [contactBusy, setContactBusy] = useState(false);
   const [contactError, setContactError] = useState('');

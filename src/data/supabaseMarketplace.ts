@@ -10,7 +10,32 @@ export { propertyPayload } from './propertyPayload';
 const BUCKET = 'property-photos';
 // Signed URLs are renewed by the provider while the app is foregrounded.
 const PHOTO_URL_SECONDS = 3600;
-const PROPERTY_COLUMNS = 'id,owner_id,client_request_id,title,location,province,latitude,longitude,location_precision,condition,floor,price_negotiable,price,bedrooms,bathrooms,area,type,description,amenities,photo_paths,availability,moderation,review_note,version,created_at';
+export const PROPERTY_COLUMNS = 'id,owner_id,client_request_id,title,location,province,latitude,longitude,location_precision,condition,floor,price_negotiable,price,bedrooms,bathrooms,area,type,description,amenities,photo_paths,availability,moderation,review_note,version,created_at';
+
+/** Signs the storage paths a batch of rows needs and maps them to listings. */
+export type SignRows = (rows: RemotePropertyRow[], checkpoint: () => void, photos?: 'cover' | 'all') => Promise<Listing[]>;
+
+/** Shared by the marketplace repository and the paginated catalogue repository. */
+export function createRowSigner(client: SupabaseClient): SignRows {
+  const bucket = client.storage.from(BUCKET);
+  return async (rows, checkpoint, photos = 'all') => {
+    checkpoint();
+    const paths = [...new Set(rows.flatMap((row) => photos === 'cover' ? row.photo_paths.slice(0, 1) : row.photo_paths))];
+    const signedUrls = new Map<string, string>();
+    for (let start = 0; start < paths.length; start += 100) {
+      checkpoint();
+      const { data, error } = await bucket.createSignedUrls(paths.slice(start, start + 100), PHOTO_URL_SECONDS);
+      checkpoint();
+      if (error) throw error;
+      for (const item of data ?? []) {
+        if (item.error || !item.path || !item.signedUrl) throw new Error('No se pudieron cargar las fotos autorizadas del anuncio. Inténtalo de nuevo.');
+        signedUrls.set(item.path, item.signedUrl);
+      }
+    }
+    if (paths.some((path) => !signedUrls.has(path))) throw new Error('Faltan fotos del anuncio en la respuesta del servidor.');
+    return rows.map((row) => mapRemoteListing(row, signedUrls, photos));
+  };
+}
 
 export function createSupabaseMarketplaceRepository(client: SupabaseClient, storage: MarketplaceStorage): RemoteMarketplaceRepository {
   const bucket = client.storage.from(BUCKET);
@@ -46,23 +71,7 @@ export function createSupabaseMarketplaceRepository(client: SupabaseClient, stor
     },
   };
 
-  const resolveRows = async (rows: RemotePropertyRow[], checkpoint: () => void): Promise<Listing[]> => {
-    checkpoint();
-    const paths = [...new Set(rows.flatMap((row) => row.photo_paths))];
-    const signedUrls = new Map<string, string>();
-    for (let start = 0; start < paths.length; start += 100) {
-      checkpoint();
-      const { data, error } = await bucket.createSignedUrls(paths.slice(start, start + 100), PHOTO_URL_SECONDS);
-      checkpoint();
-      if (error) throw error;
-      for (const item of data ?? []) {
-        if (item.error || !item.path || !item.signedUrl) throw new Error('No se pudieron cargar las fotos autorizadas del anuncio. Inténtalo de nuevo.');
-        signedUrls.set(item.path, item.signedUrl);
-      }
-    }
-    if (paths.some((path) => !signedUrls.has(path))) throw new Error('Faltan fotos del anuncio en la respuesta del servidor.');
-    return rows.map((row) => mapRemoteListing(row, signedUrls));
-  };
+  const resolveRows = createRowSigner(client);
   const readProperties = (filters: { ownerId?: string; publicOnly?: boolean; pendingOnly?: boolean }, checkpoint: () => void) => collectPages<RemotePropertyRow>(async (from, to) => {
     checkpoint();
     let query = client.from('properties').select(PROPERTY_COLUMNS);
@@ -76,9 +85,10 @@ export function createSupabaseMarketplaceRepository(client: SupabaseClient, stor
   });
 
   return {
+    // The public catalogue is no longer walked here: src/catalog pages it on demand. A
+    // session load now costs only the account's own listings and favourite ids.
     async load(ownerId, checkpoint) {
-      const [publicRows, ownRows, favorites] = await Promise.all([
-        readProperties({ publicOnly: true }, checkpoint),
+      const [ownRows, favorites] = await Promise.all([
         ownerId ? readProperties({ ownerId }, checkpoint) : Promise.resolve([]),
         ownerId ? collectPages<{ property_id: string }>(async (from, to) => {
           checkpoint();
@@ -89,11 +99,8 @@ export function createSupabaseMarketplaceRepository(client: SupabaseClient, stor
         }) : Promise.resolve([]),
       ]);
       checkpoint();
-      const mergedRows = new Map(publicRows.map((row) => [row.id, row]));
-      ownRows.forEach((row) => mergedRows.set(row.id, row));
-      const listings = await resolveRows([...mergedRows.values()], checkpoint);
-      const ownListings = listings.filter((listing) => listing.ownerId === ownerId);
-      return { listings: mergeListings(listings.filter((listing) => listing.moderationStatus === 'approved' && listing.status === 'active'), ownListings), ownListings, favoriteIds: favorites.map((row) => row.property_id) };
+      const ownListings = await resolveRows(ownRows, checkpoint);
+      return { ownListings, favoriteIds: favorites.map((row) => row.property_id) };
     },
     async save(draft, ownerId, current, moderation, checkpoint) {
       const requestId = draft.clientRequestId;

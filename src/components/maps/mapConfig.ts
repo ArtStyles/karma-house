@@ -3,6 +3,8 @@ import type { Coordinates } from '../../domain/geo';
 
 export const CUBA_CENTER: Coordinates = { latitude: 21.7, longitude: -79.5 };
 export const CUBA_ZOOM = 4.6;
+/** Whole-island box used until KarmaMap reports its own viewport to the clustering RPC. */
+export const CUBA_BOUNDS = { west: -85.2, south: 19.6, east: -73.9, north: 23.4 };
 export const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
 export const MAP_ATTRIBUTION = [
   { label: 'OpenFreeMap', url: 'https://openfreemap.org/' },

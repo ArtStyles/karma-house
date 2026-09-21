@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { activeFilterCount, defaultFilters, filterListings, filterRangeError, type Listing, type ListingFilters } from '../domain/listings';
+import { activeFilterCount, defaultFilters, filterRangeError, type ListingFilters } from '../domain/listings';
 import { AMENITIES, CONDITIONS, PROVINCES } from '../domain/listingOptions';
 import { normalizeDecimalInput } from '../domain/numericInput';
 import { colors } from '../theme';
@@ -14,13 +14,14 @@ export const SORT_OPTIONS = [
 ] as const;
 
 /** Mounted only while open, so dismissing never mutates the applied catalogue. */
-export function CatalogFilters({ filters, listings, onApply, onClose }: { filters: ListingFilters; listings: Listing[]; onApply(next: ListingFilters): void; onClose(): void }) {
+export function CatalogFilters({ filters, total, onApply, onClose }: { filters: ListingFilters; total: number; onApply(next: ListingFilters): void; onClose(): void }) {
   const [draft, setDraft] = useState<ListingFilters>(() => ({ ...filters, amenities: [...(filters.amenities ?? [])] }));
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const change = (next: Partial<ListingFilters>) => setDraft(old => ({ ...old, ...next }));
   const error = filterRangeError(draft);
-  const count = error ? 0 : filterListings(listings, draft).length;
+  // The count is the server total for the applied filters; an invalid range still shows none.
+  const count = error ? 0 : total;
   const selectedCount = activeFilterCount({ ...draft, query: '' });
   return <Modal transparent visible animationType="fade" onRequestClose={onClose}>
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

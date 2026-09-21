@@ -5,15 +5,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PropertyCard } from '../components/PropertyCard';
 import { Button, EmptyState, Notice, PageTitle } from '../components/ui';
 import { AccountPrompt } from '../components/AccountPrompt';
+import { useFavoriteListings } from '../catalog/useCatalog';
 import { useAuth } from '../auth/AuthProvider';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors, layout } from '../theme';
 
 export default function FavoritesScreen() {
-  const { favoriteIds, listings, mode, ready, storageError, refresh } = useMarketplace();
+  const { favoriteIds, mode, storageError, refresh } = useMarketplace();
   const auth = useAuth();
   const [refreshing, setRefreshing] = useState(false);
-  const favorites = listings.filter(item => favoriteIds.includes(item.id) && item.status === 'active' && (!item.moderationStatus || item.moderationStatus === 'approved'));
+  const { listings: favorites, ready } = useFavoriteListings();
   async function reload() { setRefreshing(true); try { await refresh(); } catch { /* Provider exposes the remote error. */ } finally { setRefreshing(false); } }
   const { width } = useWindowDimensions();
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}><ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={colors.primary} />}><PageTitle title="Favoritos" subtitle="Los lugares que quieres tener cerca." />

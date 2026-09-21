@@ -25,7 +25,11 @@ export interface MarketplaceContextValue {
   mode: 'demo' | 'cloud';
   ready: boolean;
   storageError: string | null;
-  listings: Listing[];
+  /**
+   * The local example catalogue, and null in cloud mode. Only src/catalog reads it: the
+   * connected catalogue is paginated, so there is no complete array to hand out.
+   */
+  demoCatalog: Listing[] | null;
   favoriteIds: string[];
   ownListings: Listing[];
   moderationQueue: Listing[];
@@ -65,6 +69,7 @@ function DemoMarketplaceProvider({ children }: PropsWithChildren) {
     () => ({
       ...state,
       mode: 'demo',
+      demoCatalog: state.listings,
       ownListings: state.listings.filter((listing) => listing.owner === 'local'),
       moderationQueue: [],
       refresh: controller.hydrate,
@@ -109,6 +114,7 @@ function CloudMarketplaceProvider({ children }: PropsWithChildren) {
     return {
       ...visible,
       mode: 'cloud',
+      demoCatalog: null,
       moderationQueue: auth.isAdmin ? visible.moderationQueue : [],
       isOwnListing: (listing) => !!userId && listing.owner === 'remote' && listing.ownerId === userId,
       refresh: controller.refresh,
