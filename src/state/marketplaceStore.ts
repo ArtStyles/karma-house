@@ -6,7 +6,10 @@ import {
   type Listing,
   type ListingDraft,
   type ListingStatus,
+  type PhotoDraft,
 } from '../domain/listings.ts';
+import { isMapLocation, normalizeMapLocation } from '../domain/geo.ts';
+import { isListingCondition } from '../domain/listingOptions.ts';
 
 export const MARKETPLACE_STORAGE_KEY = '@karma-house/marketplace-v1';
 
@@ -281,6 +284,10 @@ function readLocalListing(value: unknown): Listing | null {
     !isNonEmptyString(value.title) ||
     !isNonEmptyString(value.location) ||
     !isNonEmptyString(value.province) ||
+    (value.condition !== undefined && !isListingCondition(value.condition)) ||
+    (value.floor !== undefined && !isIntegerWithin(value.floor, 0, 99)) ||
+    (value.priceNegotiable !== undefined && typeof value.priceNegotiable !== 'boolean') ||
+    (value.mapLocation !== undefined && !isMapLocation(value.mapLocation)) ||
     !isFiniteWithin(value.price, 0, 100_000_000, true) ||
     !isIntegerWithin(value.bedrooms, 1, 20) ||
     !isIntegerWithin(value.bathrooms, 1, 20) ||
@@ -295,7 +302,10 @@ function readLocalListing(value: unknown): Listing | null {
     !isNonEmptyString(value.createdAt) ||
     !Number.isFinite(Date.parse(value.createdAt)) ||
     (value.photoUri !== undefined &&
-      (typeof value.photoUri !== 'string' || !isSupportedPhotoUri(value.photoUri)))
+      (typeof value.photoUri !== 'string' || !isSupportedPhotoUri(value.photoUri))) ||
+    (value.photos !== undefined && (!Array.isArray(value.photos) || value.photos.some((photo) =>
+      !isRecord(photo) || typeof photo.uri !== 'string' || !isSupportedPhotoUri(photo.uri) || photo.storagePath !== undefined))) ||
+    (value.clientRequestId !== undefined && (typeof value.clientRequestId !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(value.clientRequestId)))
   ) {
     return null;
   }
@@ -304,6 +314,10 @@ function readLocalListing(value: unknown): Listing | null {
     title: value.title,
     location: value.location,
     province: value.province,
+    ...(isListingCondition(value.condition) ? { condition: value.condition } : {}),
+    ...(typeof value.floor === 'number' ? { floor: String(value.floor) } : {}),
+    ...(typeof value.priceNegotiable === 'boolean' ? { priceNegotiable: value.priceNegotiable } : {}),
+    ...(isMapLocation(value.mapLocation) ? { mapLocation: normalizeMapLocation(value.mapLocation) } : {}),
     price: String(value.price),
     bedrooms: String(value.bedrooms),
     bathrooms: String(value.bathrooms),
@@ -313,6 +327,8 @@ function readLocalListing(value: unknown): Listing | null {
     amenities: value.amenities,
     imageKey: value.imageKey as Listing['imageKey'],
     ...(value.photoUri === undefined ? {} : { photoUri: value.photoUri }),
+    ...(value.photos === undefined ? {} : { photos: (value.photos as PhotoDraft[]).map((photo) => ({ ...photo })) }),
+    ...(value.clientRequestId === undefined ? {} : { clientRequestId: value.clientRequestId }),
   };
   if (!validateDraft(draft).ok) return null;
 
@@ -321,6 +337,10 @@ function readLocalListing(value: unknown): Listing | null {
     title: value.title.trim(),
     location: value.location.trim(),
     province: value.province.trim(),
+    ...(isListingCondition(value.condition) ? { condition: value.condition } : {}),
+    ...(typeof value.floor === 'number' ? { floor: value.floor } : {}),
+    ...(typeof value.priceNegotiable === 'boolean' ? { priceNegotiable: value.priceNegotiable } : {}),
+    ...(draft.mapLocation ? { mapLocation: draft.mapLocation } : {}),
     price: value.price,
     bedrooms: value.bedrooms,
     bathrooms: value.bathrooms,
@@ -330,6 +350,8 @@ function readLocalListing(value: unknown): Listing | null {
     amenities: [...new Set(value.amenities.map((item) => item.trim()).filter(Boolean))],
     imageKey: value.imageKey as Listing['imageKey'],
     ...(value.photoUri?.trim() ? { photoUri: value.photoUri.trim() } : {}),
+    ...(draft.photos === undefined ? {} : { photos: draft.photos }),
+    ...(draft.clientRequestId === undefined ? {} : { clientRequestId: draft.clientRequestId }),
     owner: 'local',
     status: value.status,
     createdAt: value.createdAt,
@@ -367,7 +389,7 @@ function isListingStatus(value: unknown): value is ListingStatus {
 }
 
 function cloneListing(listing: Listing): Listing {
-  return { ...listing, amenities: [...listing.amenities] };
+  return { ...listing, amenities: [...listing.amenities], ...(listing.mapLocation ? { mapLocation: normalizeMapLocation(listing.mapLocation) } : {}), ...(listing.photos ? { photos: listing.photos.map((photo) => ({ ...photo })) } : {}) };
 }
 
 function cloneSnapshot(snapshot: MarketplaceSnapshot): MarketplaceSnapshot {

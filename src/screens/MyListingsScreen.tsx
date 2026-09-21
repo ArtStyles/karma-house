@@ -1,37 +1,60 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../auth/AuthProvider';
+import { AccountPrompt } from '../components/AccountPrompt';
 import { PropertyImage } from '../components/PropertyImage';
 import { Button, EmptyState, Icon, Notice, PageTitle } from '../components/ui';
 import type { Listing, ListingStatus } from '../domain/listings';
 import { useMarketplace } from '../state/MarketplaceProvider';
+import { remoteErrorMessage } from '../state/remoteMarketplaceStore';
 import { colors, formatMoney } from '../theme';
 
 const statusNames = { active: 'Activo', paused: 'En pausa', sold: 'Vendido' };
 const statusColors = { active: colors.green, paused: colors.amber, sold: colors.muted };
+const moderationNames = { draft: 'Borrador', pending: 'En revisión', approved: 'Aprobado', rejected: 'Necesita cambios' };
 
 export default function MyListingsScreen() {
-  const { listings, setStatus } = useMarketplace();
-  const own = listings.filter(item => item.owner === 'local');
+  const { ownListings: own, setStatus, mode, refresh, submitForReview } = useMarketplace();
+  const { user } = useAuth();
   const [pending, setPending] = useState('');
   const [error, setError] = useState('');
   const [confirm, setConfirm] = useState<Listing | null>(null);
+  const effectiveConfirm = confirm && (mode === 'demo' || confirm.ownerId === user?.id) ? confirm : null;
+
+  useEffect(() => { setConfirm(null); setError(''); setPending(''); }, [user?.id]);
 
   async function update(id: string, status: ListingStatus) {
     if (pending) return;
     setPending(id);
     setError('');
     try { await setStatus(id, status); setConfirm(null); }
-    catch { setError('No se pudo guardar el cambio. Vuelve a intentarlo.'); }
+    catch (failure) { setError(remoteErrorMessage(failure)); }
+    finally { setPending(''); }
+  }
+
+  async function reload() {
+    if (pending) return;
+    setPending('refresh'); setError('');
+    try { await refresh(); } catch (failure) { setError(remoteErrorMessage(failure)); }
+    finally { setPending(''); }
+  }
+
+  async function submit(id: string) {
+    if (pending) return;
+    setPending(id); setError('');
+    try { await submitForReview(id); } catch (failure) { setError(remoteErrorMessage(failure)); }
     finally { setPending(''); }
   }
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
     <ScrollView contentContainerStyle={styles.content}>
       <PageTitle title="Mis anuncios" subtitle="Administra tus viviendas." back />
-      <Notice>Los anuncios de prueba se guardan en este dispositivo. Los activos aparecen en tu catálogo local.</Notice>
+      {mode === 'cloud' && !user ? <AccountPrompt returnTo="/my-listings" /> : <>
+      <Notice>{mode === 'cloud' ? 'Tus anuncios aparecen en el catálogo cuando están aprobados y activos. Los cambios de contenido se revisan antes de publicarse.' : 'Los anuncios de prueba se guardan en este dispositivo. Los activos aparecen en tu catálogo local.'}</Notice>
       {error ? <Notice error>{error}</Notice> : null}
+      {mode === 'cloud' && <Button label="Actualizar mis anuncios" icon="refresh-outline" secondary loading={pending === 'refresh'} disabled={!!pending} onPress={reload} />}
 
       {own.length ? <View style={styles.list}>
         <Text style={styles.sectionLabel}>{own.length} {own.length === 1 ? 'anuncio' : 'anuncios'}</Text>
@@ -43,12 +66,14 @@ export default function MyListingsScreen() {
                 <View style={[styles.statusDot, { backgroundColor: statusColors[item.status] }]} />
                 <Text style={[styles.status, { color: statusColors[item.status] }]}>{statusNames[item.status]}</Text>
               </View>
+              {item.moderationStatus && <Text style={[styles.moderation, item.moderationStatus === 'rejected' && { color: colors.danger }]}>{moderationNames[item.moderationStatus]}</Text>}
               <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
               <Text style={styles.price}>{formatMoney(item.price)} <Text style={styles.currency}>USD</Text></Text>
               <Text style={styles.location} numberOfLines={1}>{item.location}</Text>
             </View>
             <Icon name="chevron-forward" size={16} color={colors.muted} />
           </Pressable>
+          {item.reviewNote && <Notice error>{item.reviewNote}</Notice>}
 
           <View style={styles.actions}>
             <Button label="Editar" secondary icon="create-outline" onPress={() => router.push(`/edit/${item.id}`)} style={styles.actionButton} disabled={!!pending} />
@@ -56,23 +81,25 @@ export default function MyListingsScreen() {
               ? <Button label="Pausar" secondary icon="pause-outline" onPress={() => update(item.id, 'paused')} loading={pending === item.id} disabled={!!pending} style={styles.actionButton} />
               : <Button label="Reactivar" secondary icon="play-outline" onPress={() => update(item.id, 'active')} loading={pending === item.id} disabled={!!pending} style={styles.actionButton} />}
           </View>
+          {(item.moderationStatus === 'draft' || item.moderationStatus === 'rejected') && <Button label="Enviar a revisión" secondary icon="paper-plane-outline" loading={pending === item.id} disabled={!!pending} onPress={() => submit(item.id)} style={styles.reviewButton} />}
           {item.status !== 'sold' && <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!pending }} disabled={!!pending} onPress={() => setConfirm(item)} style={({ pressed }) => [styles.soldButton, pressed && styles.pressed, !!pending && styles.disabled]}>
             <Icon name="checkmark-circle-outline" color={colors.primary} size={19} />
             <Text style={styles.soldText}>Marcar como vendido</Text>
           </Pressable>}
         </View>)}
         <Button label="Crear otro anuncio" onPress={() => router.push('/publish')} icon="add-outline" style={styles.createButton} />
-      </View> : <EmptyState icon="key-outline" title="Tu primera vivienda, aquí." description="Crea un anuncio de prueba con sus detalles y una foto. Podrás editarlo cuando quieras." action={<Button label="Crear mi primer anuncio" onPress={() => router.push('/publish')} />} />}
+      </View> : <EmptyState icon="key-outline" title="Tu primera vivienda, aquí." description={mode === 'cloud' ? 'Añade los detalles y las fotos de tu vivienda. Revisaremos el anuncio antes de mostrarlo en el catálogo.' : 'Crea un anuncio de prueba con sus detalles y una foto. Podrás editarlo cuando quieras.'} action={<Button label="Crear mi primer anuncio" onPress={() => router.push('/publish')} />} />}
+      </>}
     </ScrollView>
 
-    <Modal visible={!!confirm} transparent animationType="fade" onRequestClose={() => !pending && setConfirm(null)}>
+    <Modal visible={!!effectiveConfirm} transparent animationType="fade" onRequestClose={() => !pending && setConfirm(null)}>
       <View style={styles.backdrop}>
         <View accessibilityViewIsModal style={styles.modal}>
           <View style={styles.modalIcon}><Icon name="checkmark-circle-outline" color={colors.primary} size={30} /></View>
           <Text style={styles.modalTitle}>¿Marcar como vendido?</Text>
           <Text style={styles.modalText}>El anuncio saldrá del catálogo y quedará como vendido en Mis anuncios. Podrás reactivarlo cuando quieras.</Text>
           {error ? <Notice error>{error}</Notice> : null}
-          <Button label="Confirmar vendido" loading={!!pending} onPress={() => confirm && update(confirm.id, 'sold')} />
+          <Button label="Confirmar vendido" loading={!!pending} onPress={() => effectiveConfirm && update(effectiveConfirm.id, 'sold')} />
           <Button label="Cancelar" secondary disabled={!!pending} onPress={() => setConfirm(null)} />
         </View>
       </View>
@@ -93,6 +120,8 @@ const styles = StyleSheet.create({
   statusRow: { flexDirection: 'row', gap: 5, alignItems: 'center' },
   statusDot: { width: 5, height: 5, borderRadius: 3 },
   status: { fontSize: 12, fontWeight: '500' },
+  moderation: { fontSize: 12, fontWeight: '600', color: colors.primary },
+  reviewButton: { marginTop: 10, minHeight: 44 },
   title: { color: colors.ink, fontSize: 17, lineHeight: 22, fontWeight: '600', letterSpacing: -.3 },
   price: { color: colors.ink, fontSize: 16, fontWeight: '600', letterSpacing: -.2 },
   currency: { color: colors.muted, fontSize: 12, fontWeight: '400' },

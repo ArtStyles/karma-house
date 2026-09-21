@@ -3,15 +3,18 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ListingForm from '../components/ListingForm';
+import { useAuth } from '../auth/AuthProvider';
 import { Button, Notice, PageTitle } from '../components/ui';
 import type { Listing, ListingDraft } from '../domain/listings';
+import { normalizeMapLocation } from '../domain/geo';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors } from '../theme';
 
 export default function EditScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  const { ready, listings, saveListing, storageError } = useMarketplace();
+  const { ready, listings, saveListing, storageError, isOwnListing, mode, refresh } = useMarketplace();
+  const { user } = useAuth();
   const listing = listings.find((item) => item.id === id);
 
   function cancel() {
@@ -32,24 +35,27 @@ export default function EditScreen() {
         </View>
       ) : !listing ? (
         <Unavailable
-          message="No encontramos este anuncio local. Puede haber sido eliminado o pertenecer a otra demostración."
+          message="No encontramos este anuncio en tu cuenta. Vuelve a Mis anuncios para actualizar la lista."
           onBack={() => router.replace('/my-listings')}
         />
-      ) : listing.owner !== 'local' ? (
+      ) : !isOwnListing(listing) ? (
         <Unavailable
-          message="Los anuncios de ejemplo no se pueden editar. Crea uno nuevo para probar esta función."
+          message="Solo puedes editar tus propios anuncios."
           onBack={() => router.replace('/my-listings')}
         />
       ) : (
         <ListingForm
-          key={listing.id}
+          key={`${user?.id ?? 'demo'}:${listing.id}`}
           initialDraft={toDraft(listing)}
-          submitLabel="Guardar cambios"
+          cloud={mode === 'cloud'}
+          draftStorageKey={mode === 'cloud' && user ? `karmahouse:draft:${user.id}:${listing.id}` : undefined}
+          submitLabel={mode === 'cloud' ? 'Guardar y enviar a revisión' : 'Guardar cambios'}
           onCancel={cancel}
+          onReloadLatest={refresh}
           onSubmit={async (draft) => {
             await saveListing(draft, listing.id);
-            router.dismissTo('/my-listings');
           }}
+          onSaved={() => router.dismissTo('/my-listings')}
         />
       )}
     </SafeAreaView>
@@ -70,14 +76,21 @@ function toDraft(listing: Listing): ListingDraft {
     title: listing.title,
     location: listing.location,
     province: listing.province,
+    mapLocation: listing.mapLocation ? normalizeMapLocation(listing.mapLocation) : undefined,
     price: String(listing.price),
     bedrooms: String(listing.bedrooms),
     bathrooms: String(listing.bathrooms),
     area: String(listing.area),
+    condition: listing.condition ?? '',
+    floor: listing.floor === undefined ? '' : String(listing.floor),
+    priceNegotiable: listing.priceNegotiable ?? null,
     type: listing.type,
     description: listing.description,
     amenities: [...listing.amenities],
     imageKey: listing.imageKey,
+    photos: listing.photos?.map(photo => ({ ...photo })),
+    clientRequestId: listing.clientRequestId,
+    expectedVersion: listing.version,
     ...(listing.photoUri ? { photoUri: listing.photoUri } : {}),
   };
 }

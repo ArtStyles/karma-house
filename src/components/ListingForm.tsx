@@ -1,5 +1,4 @@
-import * as ImagePicker from 'expo-image-picker';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -18,8 +17,16 @@ import {
   type DraftValidation,
   type ListingDraft,
 } from '../domain/listings';
-import { colors, typefaces } from '../theme';
+import { colors, layout, typefaces } from '../theme';
+import { createDraftPersistence, draftToken, hasDraftVersionConflict, restoreDraft } from '../domain/draftPersistence';
+import { draftStorage } from '../data/draftStorage';
+import { ListingPhotos } from './ListingPhotos';
+import { LocationPicker } from './maps/LocationPicker';
+import { normalizeMapLocation } from '../domain/geo';
 import { Button, Icon, Notice, Pill } from './ui';
+import { SelectionField } from './SelectionField';
+import { AMENITIES, CONDITIONS, PROVINCES } from '../domain/listingOptions';
+import { normalizeDecimalInput } from '../domain/numericInput';
 
 type DraftErrors = DraftValidation['errors'];
 
@@ -27,30 +34,97 @@ export interface ListingFormProps {
   initialDraft?: ListingDraft;
   submitLabel?: string;
   onSubmit(draft: ListingDraft): Promise<void>;
+  onSaved?: () => void;
   onCancel?: () => void;
+  onReloadLatest?: () => Promise<void>;
+  cloud?: boolean;
+  draftStorageKey?: string;
 }
 
 const stepFields: (keyof ListingDraft)[][] = [
-  ['title', 'type', 'location', 'province'],
-  ['price', 'bedrooms', 'bathrooms', 'area', 'description', 'amenities', 'photoUri'],
+  ['title', 'type', 'location', 'province', 'mapLocation'],
+  ['price', 'bedrooms', 'bathrooms', 'area', 'condition', 'floor', 'priceNegotiable', 'description', 'amenities', 'photoUri', 'photos'],
   [],
 ];
 
-const amenities = ['Balcón', 'Patio', 'Garaje', 'Amueblado', 'Aire acondicionado', 'Ascensor'];
-const maxPhotoBytes = 4 * 1024 * 1024;
+const roomOptions = Array.from({ length: 20 }, (_, index) => ({ value: String(index + 1), label: String(index + 1) }));
+const floorOptions = [{ value: '', label: 'Sin especificar' }, ...Array.from({ length: 100 }, (_, value) => ({ value: String(value), label: value === 0 ? 'Planta baja' : `Planta ${value}` }))];
 
 export function ListingForm({
   initialDraft,
   submitLabel = 'Guardar anuncio',
   onSubmit,
+  onSaved,
   onCancel,
+  onReloadLatest,
+  cloud = false,
+  draftStorageKey,
 }: ListingFormProps) {
-  const [draft, setDraft] = useState<ListingDraft>(() => cloneDraft(initialDraft ?? emptyDraft));
+  const [draft, setDraft] = useState<ListingDraft>(() => ({ ...cloneDraft(initialDraft ?? emptyDraft), clientRequestId: initialDraft?.clientRequestId ?? draftToken() }));
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<DraftErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [hydrated, setHydrated] = useState(!draftStorageKey);
+  const [draftError, setDraftError] = useState('');
+  const [readFailed, setReadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [reloading, setReloading] = useState(false);
+  const [discardRequested, setDiscardRequested] = useState(false);
+  const [savedWarning, setSavedWarning] = useState('');
+  const completed = useRef(false);
+  const submitLock = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const mounted = useRef(true);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialRef = useRef(draft);
+  const latestRef = useRef(initialDraft);
+  latestRef.current = initialDraft;
+  const persistence = useMemo(() => draftStorageKey ? createDraftPersistence(draftStorage, draftStorageKey) : null, [draftStorageKey]);
+  const versionConflict = hasDraftVersionConflict(draft, initialDraft);
+
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useEffect(() => { scrollRef.current?.scrollTo({ y: 0, animated: false }); }, [step]);
+
+  useEffect(() => {
+    let active = true;
+    if (!persistence) return;
+    setReadFailed(false); setHydrated(false);
+    persistence.read().then(raw => {
+      if (active) { setDraft(restoreDraft(raw, latestRef.current ?? initialRef.current)); setDraftError(''); setHydrated(true); }
+    }).catch(() => { if (active) { setReadFailed(true); setDraftError('No pudimos recuperar el borrador guardado. Vuelve a intentarlo para conservar tus cambios.'); } });
+    return () => { active = false; };
+  }, [persistence, loadAttempt]);
+
+  useEffect(() => {
+    if (!persistence || !hydrated || completed.current || versionConflict || submitting || reloading) return;
+    autosaveTimer.current = setTimeout(() => {
+      if (completed.current) return;
+      void persistence.write(draft).then(() => { if (mounted.current) setDraftError(''); }).catch(() => { if (mounted.current) setDraftError('No pudimos guardar el borrador en este dispositivo. Comprueba el espacio disponible y vuelve a intentarlo.'); });
+    }, 250);
+    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
+  }, [draft, persistence, hydrated, versionConflict, submitting, reloading]);
+
+  async function discardAndReload() {
+    if (reloading || submitting) return;
+    setReloading(true); setSubmitError(null);
+    try {
+      await onReloadLatest?.();
+      if (mounted.current) setDiscardRequested(true);
+    } catch { if (mounted.current) { setSubmitError('No pudimos cargar la versión actual. Tu borrador se conserva.'); setReloading(false); } }
+  }
+
+  useEffect(() => {
+    if (!discardRequested || !latestRef.current) return;
+    let active = true;
+    const next = cloneDraft(latestRef.current);
+    void (persistence?.write(next) ?? Promise.resolve()).then(() => {
+      if (active) { setDraft(next); setErrors({}); setSubmitError(null); setDraftError(''); setStep(0); }
+    }).catch(() => { if (active) setSubmitError('No pudimos guardar la versión actual en este dispositivo. Tu borrador anterior se conserva.'); })
+      .finally(() => { if (active) { setDiscardRequested(false); setReloading(false); } });
+    return () => { active = false; };
+  }, [discardRequested, persistence]);
 
   const selectedAmenities = useMemo(() => new Set(draft.amenities), [draft.amenities]);
 
@@ -67,6 +141,7 @@ export function ListingForm({
 
   function validateCurrentStep(): boolean {
     const result = validateDraft(draft);
+    if (cloud && !(draft.photos?.length)) result.errors.photos = 'Añade al menos una foto real de tu vivienda.';
     const currentFields = stepFields[step];
     const currentErrors = Object.fromEntries(
       currentFields
@@ -76,6 +151,7 @@ export function ListingForm({
 
     if (Object.keys(currentErrors).length === 0) return true;
     setErrors((previous) => ({ ...previous, ...currentErrors }));
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
     return false;
   }
 
@@ -85,57 +161,44 @@ export function ListingForm({
   }
 
   async function submit() {
-    if (submitting) return;
+    if (submitLock.current || !hydrated || photoBusy || versionConflict || savedWarning) return;
 
     const result = validateDraft(draft);
-    if (!result.ok) {
+    if (cloud && !(draft.photos?.length)) result.errors.photos = 'Añade al menos una foto real de tu vivienda.';
+    if (Object.keys(result.errors).length) {
       setErrors(result.errors);
       const firstInvalidStep = stepFields.findIndex((fields) =>
         fields.some((field) => Boolean(result.errors[field])),
       );
       setStep(firstInvalidStep >= 0 ? firstInvalidStep : 0);
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
       return;
     }
 
+    submitLock.current = true;
     setSubmitting(true);
     setSubmitError(null);
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     try {
+      if (persistence) await persistence.write(draft);
       await onSubmit(cloneDraft(draft));
-    } catch (error) {
-      setSubmitError(readError(error, 'No pudimos guardar el anuncio en este dispositivo.'));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function pickPhoto() {
-    if (photoBusy || submitting) return;
-    setPhotoBusy(true);
-    setSubmitError(null);
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: false,
-        quality: 0.5,
-        base64: Platform.OS === 'web',
-      });
-      if (result.canceled) return;
-
-      const asset = result.assets[0];
-      if (!asset) throw new Error('No se recibió la foto seleccionada.');
-      if (asset.fileSize && asset.fileSize > maxPhotoBytes) {
-        throw new Error('La foto debe ocupar 4 MB o menos.');
+      completed.current = true;
+      const cleaned = persistence ? await persistence.complete() : true;
+      if (!mounted.current) return;
+      if (!initialDraft) {
+        persistence?.beginNext();
+        setDraft({ ...cloneDraft(emptyDraft), clientRequestId: draftToken() });
+        setStep(0);
+        setErrors({});
       }
-
-      const photoUri = await persistPhoto(asset);
-      changeField('photoUri', photoUri);
+      if (!initialDraft) completed.current = false;
+      if (cleaned) onSaved?.();
+      else setSavedWarning('El anuncio se guardó y se envió a revisión. No pudimos limpiar el borrador de este dispositivo; no necesitas volver a enviarlo.');
     } catch (error) {
-      setErrors((current) => ({
-        ...current,
-        photoUri: readError(error, 'No pudimos preparar esa foto. Prueba con otra imagen.'),
-      }));
+      if (mounted.current) setSubmitError(readError(error, 'No pudimos guardar el anuncio. Tu borrador sigue disponible para reintentar.'));
     } finally {
-      setPhotoBusy(false);
+      submitLock.current = false;
+      if (mounted.current) setSubmitting(false);
     }
   }
 
@@ -146,6 +209,15 @@ export function ListingForm({
     changeField('amenities', next);
   }
 
+  if (!hydrated) return <View style={{ padding: 24, gap: 16 }}><Notice error={readFailed}>{readFailed ? draftError : 'Recuperando tu borrador…'}</Notice>{readFailed && <Button label="Volver a cargar el borrador" onPress={() => setLoadAttempt(value => value + 1)} />}</View>;
+  if (savedWarning) return <View style={{ padding: 24, gap: 16 }}><Notice>{savedWarning}</Notice><Button label="Ir a mis anuncios" onPress={() => { setSavedWarning(''); onSaved?.(); }} /></View>;
+  if (versionConflict || reloading) return <View style={{ padding: 24, gap: 16 }}>
+    <Notice>Este anuncio cambió desde que empezaste tu borrador. Tus cambios siguen guardados. Puedes descartar este borrador y cargar la versión actual para editarla.</Notice>
+    {submitError && <Notice error>{submitError}</Notice>}
+    <Button label="Descartar borrador y cargar versión actual" loading={reloading} onPress={discardAndReload} />
+    {onCancel && <Button label="Volver sin descartar" secondary disabled={reloading} onPress={onCancel} />}
+  </View>;
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -153,6 +225,7 @@ export function ListingForm({
       style={styles.flex}
     >
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -176,12 +249,14 @@ export function ListingForm({
           </View>
 
           {submitError ? <Notice error>{submitError}</Notice> : null}
+          {submitError && onReloadLatest && <Button label="Actualizar anuncio sin perder el borrador" secondary loading={reloading} onPress={async () => { setReloading(true); try { await onReloadLatest(); } catch { /* Existing error remains visible. */ } finally { if (mounted.current) setReloading(false); } }} />}
+          {draftError ? <Notice error>{draftError}</Notice> : null}
 
           {step === 0 ? (
             <View style={styles.section}>
               <SectionHeading
                 title="Sobre la vivienda"
-                description="Empieza por lo esencial."
+                description="Una ubicación clara ayuda a encontrar tu vivienda. Los campos con * son obligatorios."
               />
               <View style={styles.fieldCard}>
                 <Field
@@ -221,15 +296,19 @@ export function ListingForm({
                   error={errors.location}
                   maxLength={80}
                 />
-                <Field
+                <SelectionField
                   label="Provincia"
                   required
-                  placeholder="Ej. La Habana"
+                  placeholder="Selecciona la provincia"
                   value={draft.province}
-                  onChangeText={(value) => changeField('province', value)}
+                  options={[...PROVINCES.map(value => ({ value, label: value })), ...(draft.province && !PROVINCES.some(value => value === draft.province) ? [{ value: draft.province, label: `${draft.province} · valor guardado` }] : [])]}
+                  onChange={(value) => changeField('province', value)}
                   error={errors.province}
-                  maxLength={80}
                 />
+                <Text style={styles.fieldHint}>Indica el barrio o reparto. Puedes señalar la ubicación aproximada en el mapa sin publicar la dirección exacta.</Text>
+              </View>
+              <View style={styles.fieldCard}>
+                <LocationPicker value={draft.mapLocation} onChange={value => changeField('mapLocation', value)} disabled={submitting} error={errors.mapLocation} />
               </View>
             </View>
           ) : null}
@@ -238,7 +317,7 @@ export function ListingForm({
             <View style={styles.section}>
               <SectionHeading
                 title="Los detalles"
-                description="Precio, espacio y lo que la hace especial."
+                description="Cuantos más detalles, más fácil será encontrarla con los filtros."
               />
               <View style={styles.fieldCard}>
                 <Field
@@ -246,7 +325,7 @@ export function ListingForm({
                   required
                   placeholder="85000"
                   value={draft.price}
-                  onChangeText={(value) => changeField('price', value)}
+                  onChangeText={(value) => changeField('price', normalizeDecimalInput(value))}
                   error={errors.price}
                   keyboardType="decimal-pad"
                   inputMode="decimal"
@@ -254,27 +333,25 @@ export function ListingForm({
 
                 <View style={styles.fieldGrid}>
                   <View style={styles.gridField}>
-                    <Field
+                    <SelectionField
                       label="Habitaciones"
                       required
-                      placeholder="3"
+                      placeholder="Seleccionar"
                       value={draft.bedrooms}
-                      onChangeText={(value) => changeField('bedrooms', value)}
+                      options={roomOptions}
+                      onChange={(value) => changeField('bedrooms', value)}
                       error={errors.bedrooms}
-                      keyboardType="number-pad"
-                      inputMode="numeric"
                     />
                   </View>
                   <View style={styles.gridField}>
-                    <Field
+                    <SelectionField
                       label="Baños"
                       required
-                      placeholder="2"
+                      placeholder="Seleccionar"
                       value={draft.bathrooms}
-                      onChangeText={(value) => changeField('bathrooms', value)}
+                      options={roomOptions}
+                      onChange={(value) => changeField('bathrooms', value)}
                       error={errors.bathrooms}
-                      keyboardType="number-pad"
-                      inputMode="numeric"
                     />
                   </View>
                   <View style={styles.gridField}>
@@ -283,7 +360,7 @@ export function ListingForm({
                       required
                       placeholder="120"
                       value={draft.area}
-                      onChangeText={(value) => changeField('area', value)}
+                      onChangeText={(value) => changeField('area', normalizeDecimalInput(value))}
                       error={errors.area}
                       keyboardType="decimal-pad"
                       inputMode="decimal"
@@ -291,10 +368,14 @@ export function ListingForm({
                   </View>
                 </View>
 
+                <SelectionField label="Precio negociable" value={draft.priceNegotiable == null ? '' : draft.priceNegotiable ? 'yes' : 'no'} options={[{ value: '', label: 'Sin especificar' }, { value: 'yes', label: 'Sí, acepto negociar' }, { value: 'no', label: 'No, precio fijo' }]} onChange={value => changeField('priceNegotiable', value === '' ? null : value === 'yes')} error={errors.priceNegotiable} />
+                <SelectionField label="Estado de conservación" value={draft.condition ?? ''} options={[{ value: '', label: 'Sin especificar' }, ...CONDITIONS]} onChange={value => changeField('condition', value as ListingDraft['condition'])} error={errors.condition} hint="Describe el estado actual, no las reformas que se podrían hacer." />
+                <SelectionField label="Planta de acceso" value={draft.floor ?? ''} options={floorOptions} onChange={value => changeField('floor', value)} error={errors.floor} hint="La planta donde se encuentra la entrada de la vivienda. Opcional." />
+
                 <Field
                   label="Descripción"
                   required
-                  placeholder="Describe la distribución, el estado y lo que hace especial a la vivienda."
+                  placeholder="Cuenta cómo se distribuyen los espacios, su iluminación y ventilación, el suministro de agua y las reformas realizadas."
                   value={draft.description}
                   onChangeText={(value) => changeField('description', value)}
                   error={errors.description}
@@ -303,11 +384,13 @@ export function ListingForm({
                   textAlignVertical="top"
                   inputStyle={styles.descriptionInput}
                 />
+                <View style={styles.descriptionHelp}><Icon name="bulb-outline" size={18} color={colors.primary} /><Text style={styles.fieldHint}>Incluye detalles que no se vean en las fotos. Evita repetir el precio o publicar datos personales.</Text></View>
+                <Text style={styles.characterCount}>{draft.description.length}/2000 caracteres</Text>
               </View>
 
               <View style={styles.fieldCard}>
                 <ChoiceField label="Comodidades (opcional)" error={errors.amenities}>
-                  {amenities.map((item) => (
+                  {Array.from(new Set([...AMENITIES, ...draft.amenities])).map((item) => (
                     <Pill
                       key={item}
                       label={item}
@@ -318,51 +401,14 @@ export function ListingForm({
                 </ChoiceField>
               </View>
 
-              <View style={[styles.fieldGroup, styles.fieldCard]}>
-                <View style={styles.labelRow}>
-                  <Text style={styles.label}>Foto (opcional)</Text>
-                  <Text style={styles.helper}>Máximo 4 MB</Text>
-                </View>
-                {draft.photoUri ? (
-                  <View style={styles.photoCard}>
-                    <Image source={{ uri: draft.photoUri }} style={styles.photo} resizeMode="cover" />
-                    <View style={styles.photoActions}>
-                      <Button
-                        label="Cambiar foto"
-                        secondary
-                        loading={photoBusy}
-                        onPress={() => void pickPhoto()}
-                        style={styles.photoButton}
-                      />
-                      <Button
-                        label="Quitar"
-                        secondary
-                        disabled={photoBusy}
-                        onPress={() => changeField('photoUri', undefined)}
-                        style={styles.photoButton}
-                      />
-                    </View>
-                  </View>
-                ) : (
-                  <View style={styles.photoEmpty}>
-                    <View style={styles.photoIcon}>
-                      <Icon name="image-outline" color={colors.primary} size={27} />
-                    </View>
-                    <View style={styles.photoCopy}>
-                      <Text style={styles.photoTitle}>Añade una foto principal</Text>
-                      <Text style={styles.photoDescription}>
-                        Muestra su mejor ángulo.
-                      </Text>
-                    </View>
-                    <Button
-                      label="Elegir foto"
-                      secondary
-                      loading={photoBusy}
-                      onPress={() => void pickPhoto()}
-                    />
-                  </View>
-                )}
-                {errors.photoUri ? <FieldError message={errors.photoUri} /> : null}
+              <View style={styles.fieldCard}>
+                <ListingPhotos photos={draft.photos ?? []} busy={photoBusy} disabled={submitting} onBusy={setPhotoBusy}
+                  onChange={photos => {
+                    changeField('photos', photos);
+                    changeField('photoUri', photos[0]?.uri);
+                  }}
+                  onError={message => setErrors(current => ({ ...current, photos: message }))} />
+                {errors.photos || errors.photoUri ? <FieldError message={errors.photos ?? errors.photoUri!} /> : null}
               </View>
             </View>
           ) : null}
@@ -394,6 +440,9 @@ export function ListingForm({
                 </View>
                 <View style={styles.divider} />
                 <Text style={styles.reviewType}>{draft.type}</Text>
+                {draft.condition ? <Text style={styles.reviewLocation}>Estado: {CONDITIONS.find(item => item.value === draft.condition)?.label}</Text> : null}
+                {draft.floor !== undefined && draft.floor !== '' ? <Text style={styles.reviewLocation}>{draft.floor === '0' ? 'Planta baja' : `Planta ${draft.floor}`}</Text> : null}
+                {draft.priceNegotiable != null ? <Text style={styles.reviewLocation}>{draft.priceNegotiable ? 'Precio negociable' : 'Precio fijo'}</Text> : null}
                 <Text style={styles.reviewDescription}>{draft.description.trim()}</Text>
                 {draft.amenities.length > 0 ? (
                   <View style={styles.reviewAmenities}>
@@ -404,6 +453,9 @@ export function ListingForm({
                     ))}
                   </View>
                 ) : null}
+              </View>
+              <View style={styles.fieldCard}>
+                <LocationPicker value={draft.mapLocation} readOnly />
               </View>
             </View>
           ) : null}
@@ -457,7 +509,7 @@ export function ListingForm({
           ) : null}
 
           <Text style={styles.demoNote}>
-            Demostración: se guarda en este dispositivo, sin publicarse en internet.
+            {cloud ? 'Tu borrador se guarda en este dispositivo. Al enviarlo, revisaremos el anuncio antes de publicarlo. Los cambios posteriores también requieren revisión.' : 'Demostración: se guarda en este dispositivo, sin publicarse en internet.'}
           </Text>
         </View>
       </ScrollView>
@@ -526,45 +578,7 @@ function Fact({ icon, value }: { icon: Parameters<typeof Icon>[0]['name']; value
 }
 
 function cloneDraft(draft: ListingDraft): ListingDraft {
-  return { ...draft, amenities: [...draft.amenities] };
-}
-
-async function persistPhoto(asset: ImagePicker.ImagePickerAsset): Promise<string> {
-  if (Platform.OS === 'web') {
-    if (!asset.base64) throw new Error('El navegador no pudo leer la foto seleccionada.');
-    if (base64ByteLength(asset.base64) > maxPhotoBytes) {
-      throw new Error('La foto debe ocupar 4 MB o menos.');
-    }
-    const mimeType = asset.mimeType?.startsWith('image/') ? asset.mimeType : 'image/jpeg';
-    return `data:${mimeType};base64,${asset.base64}`;
-  }
-
-  const { Directory, File, Paths } = await import('expo-file-system');
-  const directory = new Directory(Paths.document, 'karmahouse', 'listing-photos');
-  if (!directory.exists) directory.create({ idempotent: true, intermediates: true });
-
-  const extension = fileExtension(asset.fileName, asset.mimeType);
-  const destination = new File(
-    directory,
-    `listing-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`,
-  );
-  const source = new File(asset.uri);
-  await source.copy(destination);
-  return destination.uri;
-}
-
-function fileExtension(fileName?: string | null, mimeType?: string | null): string {
-  const extension = fileName?.split('.').pop()?.toLocaleLowerCase();
-  if (extension && /^[a-z0-9]{2,5}$/.test(extension)) return extension;
-  if (mimeType === 'image/png') return 'png';
-  if (mimeType === 'image/webp') return 'webp';
-  if (mimeType === 'image/heic' || mimeType === 'image/heif') return 'heic';
-  return 'jpg';
-}
-
-function base64ByteLength(value: string): number {
-  const padding = value.endsWith('==') ? 2 : value.endsWith('=') ? 1 : 0;
-  return Math.floor((value.length * 3) / 4) - padding;
+  return { ...draft, amenities: [...draft.amenities], photos: draft.photos?.map(photo => ({ ...photo })) ?? (draft.photoUri ? [{ uri: draft.photoUri }] : []), mapLocation: draft.mapLocation ? normalizeMapLocation(draft.mapLocation) : undefined };
 }
 
 function readError(error: unknown, fallback: string): string {
@@ -573,7 +587,7 @@ function readError(error: unknown, fallback: string): string {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: 124 },
+  scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: layout.tabContentBottom },
   formShell: { width: '100%', maxWidth: 680, alignSelf: 'center', gap: 20 },
   steps: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 8, borderRadius: 16, backgroundColor: colors.white },
   stepItem: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7 },
@@ -596,6 +610,7 @@ const styles = StyleSheet.create({
   input: { minHeight: 44, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, backgroundColor: colors.white, color: colors.ink, paddingHorizontal: 0, paddingTop: 6, paddingBottom: 11, fontSize: 17, lineHeight: 23 },
   inputError: { borderBottomColor: colors.danger, backgroundColor: '#FFF9F9' },
   descriptionInput: { minHeight: 132, paddingTop: 8 },
+  fieldHint: { flexShrink: 1, color: colors.muted, fontSize: 12, lineHeight: 18 }, descriptionHelp: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: '#F1F6FC', borderRadius: 13, padding: 12 }, characterCount: { color: colors.muted, fontSize: 11, textAlign: 'right', marginTop: -12 },
   errorRow: { flexDirection: 'row', gap: 6, alignItems: 'flex-start' },
   errorText: { color: colors.danger, fontSize: 13, lineHeight: 18, flex: 1 },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

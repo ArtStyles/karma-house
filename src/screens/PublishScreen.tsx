@@ -3,26 +3,31 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ListingForm from '../components/ListingForm';
-import { Notice, PageTitle } from '../components/ui';
+import { AccountPrompt } from '../components/AccountPrompt';
+import { useAuth } from '../auth/AuthProvider';
+import { PageTitle } from '../components/ui';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors } from '../theme';
 
 export default function PublishScreen() {
-  const { ready, saveListing, storageError } = useMarketplace();
+  const { ready, saveListing, mode } = useMarketplace();
+  const { user } = useAuth();
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.header}>
         <PageTitle title="Publicar" />
-        {storageError ? <Notice error>{storageError}</Notice> : null}
       </View>
-      {ready ? (
+      {mode === 'cloud' && !user ? <AccountPrompt returnTo="/publish" title="Dale un lugar a tu vivienda" description="Crea tu cuenta para publicar una vivienda y seguir su revisión." /> : ready ? (
         <ListingForm
-          submitLabel="Guardar anuncio"
+          key={user?.id ?? 'demo'}
+          draftStorageKey={mode === 'cloud' && user ? `karmahouse:draft:${user.id}:new` : undefined}
+          cloud={mode === 'cloud'}
+          submitLabel={mode === 'cloud' ? 'Enviar a revisión' : 'Guardar anuncio'}
           onSubmit={async (draft) => {
             await saveListing(draft);
-            router.replace('/my-listings');
           }}
+          onSaved={() => router.replace('/my-listings')}
         />
       ) : (
         <View style={styles.loading} accessibilityLabel="Cargando anuncios locales">

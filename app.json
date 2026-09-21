@@ -2,7 +2,8 @@
   "expo": {
     "name": "KarmaHouse",
     "slug": "karma-house",
-    "version": "0.1.0",
+    "owner": "artstyless-team",
+    "version": "0.1.4",
     "scheme": "karmahouse",
     "orientation": "portrait",
     "icon": "./assets/karmahouse-icon.png",
@@ -12,7 +13,9 @@
       "bundleIdentifier": "com.karmahouse.app"
     },
     "android": {
-      "package": "com.karmahouse.app",
+      "package": "com.karmahouse.karmahouse",
+      "googleServicesFile": "./google-services.json",
+      "versionCode": 5,
       "adaptiveIcon": {
         "backgroundColor": "#132D43",
         "foregroundImage": "./assets/karmahouse-icon.png"
@@ -24,8 +27,21 @@
       "output": "single",
       "favicon": "./assets/karmahouse-favicon.png"
     },
+    "extra": {
+      "eas": {
+        "projectId": "e054aea9-38b4-4211-826b-521b3cc0be9f"
+      }
+    },
     "plugins": [
       "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/karmahouse-notification.png",
+          "color": "#0069D9",
+          "defaultChannel": "karmahouse-updates"
+        }
+      ],
       [
         "expo-image-picker",
         {
@@ -34,7 +50,9 @@
           "microphonePermission": false
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-secure-store",
+      "@maplibre/maplibre-react-native"
     ]
   }
 }

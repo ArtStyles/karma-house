@@ -1,0 +1,2 @@
+# Migration checksums must remain stable across Windows and Unix checkouts.
+supabase/migrations/*.sql text eol=lf

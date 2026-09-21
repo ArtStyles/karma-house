@@ -6,5 +6,5 @@ export const colors = {
   softGreen: '#EDF8F0', danger: '#C32935', amber: '#8A5C15',
 };
 export const typefaces = { display: Platform.select({ ios: 'System', android: 'sans-serif', default: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }) };
-export const layout = { tabContentBottom: 128 };
+export const layout = { tabContentBottom: 144 };
 export const formatMoney = (value: number) => `$ ${new Intl.NumberFormat('es-CU', { maximumFractionDigits: 0 }).format(value)}`;

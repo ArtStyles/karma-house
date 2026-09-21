@@ -1,0 +1,1 @@
+{"result":"android_push_transport_configured","version":"20260920000500","sha256":"b04acc701f31f1f5c5ee7d0427ea37b6dea667b560868b2e670e7298d64d4316","configuredAt":"2026-09-21T02:57:35.386Z","status":{"installed":true,"transport_enabled":true,"jobs":[{"jobid":"1","jobname":"karmahouse-push-delivery","schedule":"30 seconds","active":true,"command_matches":true}]}}
