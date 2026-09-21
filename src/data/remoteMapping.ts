@@ -30,7 +30,11 @@ export interface RemotePropertyRow {
   version: number;
 }
 
-export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap<string, string>): Listing {
+/**
+ * `photos: 'cover'` keeps only the first storage path, which is all a catalogue card
+ * shows. A list page then signs one URL per listing instead of six.
+ */
+export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap<string, string>, photos: 'cover' | 'all' = 'all'): Listing {
   if (!row || !row.id || !row.owner_id || !row.client_request_id ||
     (row.condition != null && !isListingCondition(row.condition)) ||
     (row.floor != null && (!Number.isInteger(row.floor) || row.floor < 0 || row.floor > 99)) ||
@@ -46,7 +50,8 @@ export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap
     !Array.isArray(row.photo_paths) || !Array.isArray(row.amenities)) {
     throw new Error('El servidor devolvió datos de propiedad no válidos.');
   }
-  const photos = row.photo_paths.map((storagePath) => ({ uri: signedUrls.get(storagePath) ?? '', storagePath }));
+  const wanted = photos === 'cover' ? row.photo_paths.slice(0, 1) : row.photo_paths;
+  const mapped = wanted.map((storagePath) => ({ uri: signedUrls.get(storagePath) ?? '', storagePath }));
   const hasPoint = row.latitude != null || row.longitude != null || row.location_precision != null;
   let mapLocation;
   if (hasPoint) {
@@ -64,7 +69,7 @@ export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap
     ...(mapLocation ? { mapLocation } : {}),
     bedrooms: row.bedrooms, bathrooms: row.bathrooms, area: Number(row.area), type: row.type,
     description: row.description, amenities: [...row.amenities], imageKey: 'vedado',
-    photos, ...(photos[0]?.uri ? { photoUri: photos[0].uri } : {}),
+    photos: mapped, ...(mapped[0]?.uri ? { photoUri: mapped[0].uri } : {}),
     status: row.availability, moderationStatus: row.moderation,
     ...(row.review_note ? { reviewNote: row.review_note } : {}), version: row.version, createdAt: row.created_at,
   };
