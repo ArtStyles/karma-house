@@ -120,7 +120,7 @@ export default function ExploreScreen() {
         ListFooterComponent={<View>
         {view === 'list' && pageError && ready ? <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{pageError}</Notice><Button label="Cargar más viviendas" secondary loading={loading} onPress={loadMore} /></View>
           : view === 'list' && loading && ready ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
-          : view === 'list' && !hasMore && result.length > 0 ? <Text style={styles.listEnd}>Has visto las {total} {total === 1 ? 'vivienda' : 'viviendas'} que coinciden.</Text> : null}
+          : view === 'list' && !hasMore && result.length > 0 ? <Text style={styles.listEnd}>{total === 1 ? 'Has visto la única vivienda que coincide.' : `Has visto las ${total} viviendas que coinciden.`}</Text> : null}
         {!hasFilters && <>
           <Text accessibilityRole="header" style={styles.discoverTitle}>A tu manera</Text>
           <View style={styles.shortcuts}>

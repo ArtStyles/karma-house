@@ -9,7 +9,8 @@ La interfaz se ha actualizado con tipografía del sistema, superficies agrupadas
 ## Qué puedes probar
 
 - Registro, confirmación de correo, acceso y recuperación de contraseña.
-- Catálogo compartido de viviendas aprobadas; búsqueda y filtros.
+- Catálogo compartido de viviendas aprobadas, en páginas de 24 con filtros, orden y recuento resueltos en el servidor.
+- Búsqueda por palabra con prefijo; si no encuentra nada, reintenta por subcadena.
 - Publicación con hasta seis fotos optimizadas y borrador local por cuenta.
 - Edición, pausa, reactivación y marcado como vendido desde Mis anuncios.
 - Favoritos sincronizados entre sesiones.
@@ -67,7 +68,7 @@ npx expo install --check
 npm run export
 ```
 
-`npm run check` ejecuta TypeScript y pruebas de búsqueda, validación, codec, hidratación, fallos de escritura y concurrencia. `npm run export` genera los bundles de Android, iOS y web en `dist/`. **Exportar los bundles no genera un APK/IPA ni demuestra ejecución en teléfonos.** Resultados y límites: [docs/verification.md](docs/verification.md).
+`npm run check` ejecuta TypeScript y pruebas de búsqueda, validación, codec, hidratación, paginación del catálogo, fallos de escritura y concurrencia. `npm run export` genera los bundles de Android, iOS y web en `dist/`. **Exportar los bundles no genera un APK/IPA ni demuestra ejecución en teléfonos.** Resultados y límites: [docs/verification.md](docs/verification.md).
 
 ## Organización
 
@@ -78,6 +79,7 @@ npm run export
 | `src/components` | Tarjetas, formulario y controles compartidos |
 | `src/domain` | Reglas puras y catálogo de demostración |
 | `src/state` | Persistencia versionada y contexto de React |
+| `src/catalog` | Páginas por cursor, anuncio por id, favoritos y vista de mapa |
 | `src/messaging` | Conversaciones, cola de envío por cuenta y sincronización |
 | `src/negotiations` | Visitas, ofertas, estados y solicitudes paginadas por participante |
 | `src/notifications` | Bandeja de avisos, lecturas y preferencias por cuenta |

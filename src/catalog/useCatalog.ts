@@ -13,7 +13,13 @@ function useCatalogRepository(): CatalogRepository | null {
   return useMemo(() => supabase ? createCatalogRepository(supabase, createRowSigner(supabase)) : null, []);
 }
 
-const never = () => { throw new Error('KH_ACCOUNT_CHANGED'); };
+/**
+ * useSyncExternalStore compares snapshots by identity, so the demo fallback must return one
+ * frozen object rather than build a fresh state on every call, which loops forever.
+ */
+const EMPTY_STATE: CatalogState = Object.freeze(emptyCatalogState());
+const emptySnapshot = () => EMPTY_STATE;
+const noSubscribe = () => () => {};
 /** Reads outside the controller have no epoch of their own, so they pass a no-op checkpoint. */
 const passthrough = () => {};
 
@@ -31,9 +37,9 @@ export function useCatalogPage(filters: ListingFilters): CatalogPageResult {
     [repository],
   );
   const remote = useSyncExternalStore(
-    controller ? controller.subscribe : () => never,
-    controller ? controller.getState : emptyCatalogState,
-    controller ? controller.getState : emptyCatalogState,
+    controller ? controller.subscribe : noSubscribe,
+    controller ? controller.getState : emptySnapshot,
+    controller ? controller.getState : emptySnapshot,
   );
 
   // A new account must not keep the previous account's pages on screen.

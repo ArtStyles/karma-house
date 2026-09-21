@@ -19,7 +19,11 @@ También se entregó el centro de avisos dentro de la app, con preferencias, con
 
 ## Dependencias actuales observadas en el código
 
-El catálogo recorre todas las páginas antes de resolver sus fotos (`src/data/supabaseMarketplace.ts`, `src/data/remoteMapping.ts`), filtra localmente y monta tarjetas en un ScrollView (`src/screens/ExploreScreen.tsx`). La bandeja consulta cada 15 segundos y la conversación cada cinco mientras están activas. Eso justifica paginación visible y sincronización incremental antes de una campaña amplia; no permite afirmar un número máximo de usuarios sin medirlo.
+El catálogo ya no se recorre entero. Explorar pide páginas de 24 anuncios por cursor a `kh_search_properties`, que resuelve filtros, orden, búsqueda y el total exacto en Supabase, y firma solo la fotografía de portada de cada tarjeta (`src/catalog/`, `supabase/migrations/20260921000100_catalog_pagination.sql`). La carga de sesión conserva únicamente los anuncios de la cuenta y sus favoritos. Medido sobre PostgreSQL 15 con 5.000 anuncios: una página con su total exacto tarda 7,5 ms y los cuatro órdenes usan su índice parcial. Falta la medición sobre el proyecto real y con redes lentas. [Diseño](superpowers/specs/2026-09-21-catalog-pagination-design.md).
+
+El mapa consulta `kh_map_clusters`, que agrupa por celda cuando el recuadro contiene más de 200 viviendas. Queda pendiente que `KarmaMap` informe de su propio recuadro al desplazarse y que pulsar un globo acerque el zoom; hoy consulta el recuadro de toda la isla.
+
+La bandeja consulta cada 15 segundos y la conversación cada cinco mientras están activas. Eso sigue justificando sincronización incremental antes de una campaña amplia; no permite afirmar un número máximo de usuarios sin medirlo.
 
 El README conserva pendiente la preparación del SMTP y dominio. En esta revisión no se consultó la configuración remota de correo, por lo que se requiere comprobarla antes de cambiarla. El proyecto Expo y la credencial Android FCM V1 están vinculados y validados; [evidencia y vencimiento](firebase-android-setup.md). Registro por sesión, cola de entrega y revocación Android se implementaron en 0.1.4; siguen pendientes la recepción física y APNs para iOS. Tampoco se ha añadido seguimiento centralizado de errores.
 
