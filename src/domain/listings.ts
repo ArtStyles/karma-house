@@ -299,7 +299,8 @@ interface NumberRules {
   integer?: boolean;
 }
 
-function normalizeSearch(value: string): string {
+/** Exported so the server payload cannot drift from the local demo filter. */
+export function normalizeSearch(value: string): string {
   return value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
