@@ -1,4 +1,4 @@
-import { changed, isExpoPushToken, isRevision, isUuid, registrationError, revocationError, PushError } from './domain.ts';
+import { changed, isFcmToken, isRevision, isUuid, registrationError, revocationError, PushError } from './domain.ts';
 import type { PushRepository, PushRequestContext, RevocationInput } from './types.ts';
 
 const invalid = () => new PushError('No se pudo confirmar el registro de avisos. Vuelve a intentarlo.');
@@ -27,7 +27,7 @@ export function createPushRepository(url: string, publicKey: string, fetcher: ty
   return {
     async register(input, context) {
       validateIdentity(input);
-      if (!isUuid(context.userId) || !isUuid(context.sessionId) || !isUuid(input.projectId) || input.platform !== 'android' || !isExpoPushToken(input.expoPushToken)) throw invalid();
+      if (!isUuid(context.userId) || !isUuid(context.sessionId) || !isUuid(input.projectId) || input.platform !== 'android' || !isFcmToken(input.fcmToken)) throw invalid();
       const result = await rpc('kh_register_push_device', { p_actor_id: context.userId, p_payload: input }, context);
       if (result.enabled !== true || result.revision !== input.revision || result.platform !== 'android') throw invalid();
       return { enabled: true, revision: input.revision, platform: 'android' };

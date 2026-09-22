@@ -5,7 +5,7 @@ import { createInstallationStore } from '../src/push/installationStore.ts';
 import { registerBeforeSignOut, runBeforeSignOut } from '../src/push/signOutHooks.ts';
 const userId = '51000000-0000-4000-8000-000000000001', installationId = '51000000-0000-4000-8000-000000000002', sessionId = '51000000-0000-4000-8000-000000000003';
 const projectId = 'e054aea9-38b4-4211-826b-521b3cc0be9f';
-const input = { installationId, installationSecret: 'a'.repeat(64), revision: 1, platform: 'android' as const, projectId, expoPushToken: 'ExpoPushToken[fixture_token]' };
+const input = { installationId, installationSecret: 'a'.repeat(64), revision: 1, platform: 'android' as const, projectId, fcmToken: 'fcm-fixture-token-222222222222222222222222222222222222222222222222222222222222' };
 function fixture(result: unknown) {
   const calls: { url: string; init: RequestInit }[] = []; let changed = false;
   const abort = new AbortController();
@@ -51,7 +51,7 @@ test('storage serializes revisions, preserves identity on restart and refuses co
   const storage = { getItem: async () => value, setItem: async (_key: string, next: string) => { value = next; } };
   const createIdentity = () => ({ installationId, installationSecret: 'a'.repeat(64) });
   const store = createInstallationStore(storage, createIdentity);
-  const intent = { enabled: false, userId, sessionId, expoPushToken: null, confirmed: false, wasEnabled: false };
+  const intent = { enabled: false, userId, sessionId, fcmToken: null, confirmed: false, wasEnabled: false };
   await Promise.all(Array.from({ length: 10 }, () => store.change(current => ({ ...current, revision: current.revision + 1, intent }))));
   const restarted = createInstallationStore(storage, () => { throw new Error('do not rotate'); }); assert.equal((await restarted.read()).revision, 10);
   value = '{broken'; await assert.rejects(restarted.read()); assert.equal(value, '{broken');

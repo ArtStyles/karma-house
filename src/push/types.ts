@@ -6,7 +6,7 @@ export interface PushIntent {
   enabled: boolean;
   userId: string | null;
   sessionId: string | null;
-  expoPushToken: string | null;
+  fcmToken: string | null;
   confirmed: boolean;
   wasEnabled: boolean;
 }
@@ -16,7 +16,7 @@ export interface InstallationStore {
   change(update: (current: InstallationState) => InstallationState): Promise<InstallationState>;
 }
 export interface RevocationInput extends InstallationIdentity { revision: number }
-export interface RegistrationInput extends RevocationInput { expoPushToken: string; platform: 'android'; projectId: string }
+export interface RegistrationInput extends RevocationInput { fcmToken: string; platform: 'android'; projectId: string }
 export interface RegistrationResult { enabled: true; revision: number; platform: 'android' }
 export interface RevocationResult { enabled: false; revision: number }
 export interface ResolvedPush { notificationId: string; recipientId: string; conversationId: string }

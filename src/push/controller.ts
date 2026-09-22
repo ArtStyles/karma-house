@@ -1,4 +1,4 @@
-import { changed, isExpoPushToken, isUuid, nextRevision, parsePushPayload, PushError, registrationError, revocationError } from './domain.ts';
+import { changed, isFcmToken, isUuid, nextRevision, parsePushPayload, PushError, registrationError, revocationError } from './domain.ts';
 import type { InstallationState, InstallationStore, PushAdapter, PushPayload, PushRepository, PushRequestContext, PushSession, PushState } from './types.ts';
 
 interface Dependencies {
@@ -44,7 +44,7 @@ export function createPushController({ store, repository, adapter, projectId, na
       if (current.intent && !current.intent.enabled) return current;
       return { ...current, revision: nextRevision(current.revision), intent: { enabled: false,
         userId: current.intent?.userId ?? session?.userId ?? null, sessionId: current.intent?.sessionId ?? session?.sessionId ?? null,
-        expoPushToken: null, confirmed: false, wasEnabled: !!(current.intent?.confirmed || current.intent?.wasEnabled) } };
+        fcmToken: null, confirmed: false, wasEnabled: !!(current.intent?.confirmed || current.intent?.wasEnabled) } };
     });
     if (saved.intent?.confirmed) return saved;
     try {
@@ -99,19 +99,19 @@ export function createPushController({ store, repository, adapter, projectId, na
       return;
     }
     const token = await adapter.getToken(); assertCurrent(expectedEpoch, expectedIntent);
-    if (!isExpoPushToken(token)) throw registrationError();
+    if (!isFcmToken(token)) throw registrationError();
     const captured = { ...session };
     saved = await store.change(current => {
       assertCurrent(expectedEpoch, expectedIntent);
       const previous = current.intent;
-      if (previous?.enabled && previous.userId === captured.userId && previous.sessionId === captured.sessionId && previous.expoPushToken === token) return current;
-      return { ...current, revision: nextRevision(current.revision), intent: { enabled: true, userId: captured.userId, sessionId: captured.sessionId, expoPushToken: token, confirmed: false,
+      if (previous?.enabled && previous.userId === captured.userId && previous.sessionId === captured.sessionId && previous.fcmToken === token) return current;
+      return { ...current, revision: nextRevision(current.revision), intent: { enabled: true, userId: captured.userId, sessionId: captured.sessionId, fcmToken: token, confirmed: false,
         wasEnabled: !!(previous?.enabled && previous.userId === captured.userId && previous.sessionId === captured.sessionId && (previous.confirmed || previous.wasEnabled)) } };
     });
     assertCurrent(expectedEpoch, expectedIntent);
     const request = context(expectedEpoch, expectedIntent);
     try {
-      const result = await repository.register({ installationId: saved.installationId, installationSecret: saved.installationSecret, revision: saved.revision, expoPushToken: token, platform: 'android', projectId }, request);
+      const result = await repository.register({ installationId: saved.installationId, installationSecret: saved.installationSecret, revision: saved.revision, fcmToken: token, platform: 'android', projectId }, request);
       request.checkpoint();
       if (result.enabled !== true || result.revision !== saved.revision || result.platform !== 'android') throw registrationError();
       await store.change(current => { request.checkpoint(); return current.revision === saved.revision && current.intent?.enabled ? { ...current, intent: { ...current.intent, confirmed: true } } : current; });

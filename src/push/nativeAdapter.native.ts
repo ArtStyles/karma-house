@@ -19,7 +19,8 @@ export const nativePushAdapter: PushAdapter = {
   },
   async getPermission() { const permission = await Notifications.getPermissionsAsync(); return { permission: permission.status, canAskAgain: permission.canAskAgain }; },
   async requestPermission() { const permission = await Notifications.requestPermissionsAsync(); return { permission: permission.status, canAskAgain: permission.canAskAgain }; },
-  async getToken() { return (await Notifications.getExpoPushTokenAsync({ projectId: pushProjectId })).data; },
+  // Never getExpoPushTokenAsync: exp.host answers 403 on the networks this app ships to.
+  async getToken() { return (await Notifications.getDevicePushTokenAsync()).data; },
   async clearLastResponse(responseId) {
     const last = Notifications.getLastNotificationResponse();
     if (last && `${last.notification.request.identifier}:${last.actionIdentifier}` === responseId) Notifications.clearLastNotificationResponse();

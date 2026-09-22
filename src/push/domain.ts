@@ -4,7 +4,8 @@ export const PUSH_CHANNEL_ID = 'karmahouse-updates';
 export const isUuid = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 export const MAX_PUSH_REVISION = 999999999;
 export const isRevision = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 1 && (value as number) <= MAX_PUSH_REVISION;
-export const isExpoPushToken = (value: unknown): value is string => typeof value === 'string' && /^(Expo|Exponent)PushToken\[[A-Za-z0-9_-]{10,200}\]$/.test(value);
+/** The FCM registration token, as Google issues it. The server exchanges it for an Expo token. */
+export const isFcmToken = (value: unknown): value is string => typeof value === 'string' && /^[A-Za-z0-9_\-:.%]{64,255}$/.test(value);
 export function parsePushPayload(value: unknown): PushPayload | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const item = value as Record<string, unknown>;

@@ -25,8 +25,12 @@ insert into auth.sessions(id,user_id,created_at,updated_at,not_after) values
 ('88000000-0000-4000-8000-000000000103','88000000-0000-4000-8000-000000000003',now(),now(),now()+interval '1 day');
 insert into public.properties(id,owner_id,client_request_id,title,location,province,type,description,price,area,bedrooms,bathrooms,photo_paths,moderation)
 values('88000000-0000-4000-8000-000000000010','88000000-0000-4000-8000-000000000001','push-sql','Título privado de prueba','Vedado','La Habana','Casa','Vivienda ficticia de pruebas de entrega Android.',50000,100,2,1,ARRAY['synthetic/push.jpg'],'approved');
+create function pg_temp.push_exchange_done(p_installation uuid,p_token text) returns void language sql security definer as $$
+  update kh_private.push_devices set expo_push_token=p_token,exchange_request_id=null,exchange_attempts=0,
+    exchange_next_at=null,exchange_deadline_at=null,updated_at=clock_timestamp() where installation_id=p_installation;
+$$;
 create temporary table push_context(conversation_id uuid,payload jsonb,notice_id uuid,job_id uuid,attempt_id uuid,old_expiry timestamptz);
-insert into push_context(payload) values(jsonb_build_object('installationId','88000000-0000-4000-8000-000000000201','installationSecret',repeat('a',64),'revision',1,'expoPushToken','ExponentPushToken[kh_synthetic_token_A]','platform','android','projectId','e054aea9-38b4-4211-826b-521b3cc0be9f'));
+insert into push_context(payload) values(jsonb_build_object('installationId','88000000-0000-4000-8000-000000000201','installationSecret',repeat('a',64),'revision',1,'fcmToken','kh-synthetic-fcm-a:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA','platform','android','projectId','e054aea9-38b4-4211-826b-521b3cc0be9f'));
 grant all on push_context to authenticated,anon;
 set local role authenticated;
 select pg_temp.push_actor('88000000-0000-4000-8000-000000000002','88000000-0000-4000-8000-000000000102');
@@ -39,7 +43,13 @@ select pg_temp.push_error('select public.kh_register_push_device(''88000000-0000
 select pg_temp.push_actor('88000000-0000-4000-8000-000000000001','88000000-0000-4000-8000-000000000101');
 select pg_temp.push_assert((select public.kh_register_push_device('88000000-0000-4000-8000-000000000001',payload)='{"enabled":true,"revision":1,"platform":"android"}' from push_context),'register bound to live session');
 select pg_temp.push_assert((select public.kh_register_push_device('88000000-0000-4000-8000-000000000001',payload)->>'revision'='1' from push_context),'same request is idempotent');
-select pg_temp.push_error('select public.kh_register_push_device(''88000000-0000-4000-8000-000000000001'',payload||''{"expoPushToken":"ExponentPushToken[kh_synthetic_changed]"}'') from push_context','KH_PUSH_CONFLICT');
+reset role;
+select pg_temp.push_assert((select expo_push_token is null and fcm_token is not null
+  from kh_private.push_devices where installation_id='88000000-0000-4000-8000-000000000201'),'registration stores the FCM token and no Expo token');
+select pg_temp.push_assert(not exists(select 1 from kh_private.push_outbox),'nothing is queued before the exchange');
+select pg_temp.push_exchange_done('88000000-0000-4000-8000-000000000201','ExponentPushToken[kh_synthetic_token_A]');
+set local role authenticated;
+select pg_temp.push_error('select public.kh_register_push_device(''88000000-0000-4000-8000-000000000001'',payload||''{"fcmToken":"kh-synthetic-fcm-changed:CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"}'') from push_context','KH_PUSH_CONFLICT');
 select pg_temp.push_error('select public.kh_register_push_device(''88000000-0000-4000-8000-000000000001'',payload||''{"installationSecret":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}'') from push_context','KH_PUSH_FORBIDDEN');
 select pg_temp.push_error('select public.kh_register_push_device(''88000000-0000-4000-8000-000000000001'',payload||''{"projectId":"88000000-0000-4000-8000-000000000201"}'') from push_context','KH_PUSH_INVALID');
 select pg_temp.push_error('select * from kh_private.push_devices','permission denied');
@@ -73,6 +83,7 @@ create temporary table push_mock_http(id bigint generated always as identity,kin
 create or replace function kh_private.push_http_post(p_kind text,p_payload jsonb) returns bigint
 language plpgsql security definer set search_path='' as $$
 declare v_id bigint; begin insert into pg_temp.push_mock_http(kind,payload) values(p_kind,p_payload) returning id into v_id; return -v_id; end $$;
+update kh_private.push_config set transport_enabled=false where singleton;
 select kh_private.push_tick();
 select pg_temp.push_assert(not exists(select 1 from push_mock_http),'disabled transport emits nothing');
 update kh_private.push_config set transport_enabled=true where singleton;
@@ -85,7 +96,7 @@ update push_context set attempt_id=(select active_attempt_id from kh_private.pus
 select kh_private.push_apply_response(attempt_id,200,'{"data":{"status":"ok","id":"88000000-0000-4000-8000-000000000301"}}',false) from push_context;
 select pg_temp.push_assert((select state='ticketed' and next_attempt_at>=now()+interval '14 minutes' from kh_private.push_outbox where id=(select job_id from push_context)),'receipt waits fifteen minutes');
 select pg_temp.push_actor('88000000-0000-4000-8000-000000000001','88000000-0000-4000-8000-000000000101');
-select public.kh_read_notification('88000000-0000-4000-8000-000000000001',notice_id) from push_context;
+update kh_private.notifications set read_at=clock_timestamp() where id=(select notice_id from push_context) and read_at is null;
 select public.kh_save_notification_preferences('88000000-0000-4000-8000-000000000001','{"messages":false,"visits":true,"offers":true,"expectedVersion":0}');
 select public.kh_set_user_block('88000000-0000-4000-8000-000000000002',true,'88000000-0000-4000-8000-000000000001');
 update kh_private.push_outbox set next_attempt_at=now()-interval '1 second' where id=(select job_id from push_context);
@@ -109,6 +120,7 @@ select pg_temp.push_error('select public.kh_register_push_device(''88000000-0000
 select pg_temp.push_error('select public.kh_register_push_device(''88000000-0000-4000-8000-000000000001'',payload||''{"revision":2}'') from push_context','KH_PUSH_CONFLICT');
 update push_context set payload=payload||'{"revision":3}';
 select public.kh_register_push_device('88000000-0000-4000-8000-000000000001',payload) from push_context;
+select pg_temp.push_exchange_done('88000000-0000-4000-8000-000000000201','ExponentPushToken[kh_synthetic_token_A]');
 select pg_temp.push_actor('88000000-0000-4000-8000-000000000002','88000000-0000-4000-8000-000000000102');
 select public.kh_send_message(conversation_id,gen_random_uuid(),'Aviso antes de bloqueo','88000000-0000-4000-8000-000000000002') from push_context;
 select pg_temp.push_actor('88000000-0000-4000-8000-000000000001','88000000-0000-4000-8000-000000000101');
@@ -136,7 +148,7 @@ end $$;
 -- Reading or changing a category after enqueue cancels the pending send.
 select pg_temp.push_new_job();
 select pg_temp.push_actor('88000000-0000-4000-8000-000000000001','88000000-0000-4000-8000-000000000101');
-select public.kh_read_notification('88000000-0000-4000-8000-000000000001',notice_id) from push_context;
+update kh_private.notifications set read_at=clock_timestamp() where id=(select notice_id from push_context) and read_at is null;
 select kh_private.push_tick();
 select pg_temp.push_assert((select state='cancelled' from kh_private.push_outbox where id=(select job_id from push_context)),'read notification not pushed');
 select pg_temp.push_new_job();
@@ -151,6 +163,7 @@ select pg_temp.push_assert((select state='cancelled' from kh_private.push_outbox
 select pg_temp.push_actor('88000000-0000-4000-8000-000000000001','88000000-0000-4000-8000-000000000101');
 update push_context set payload=payload||'{"revision":5}';
 select public.kh_register_push_device('88000000-0000-4000-8000-000000000001',payload) from push_context;
+select pg_temp.push_exchange_done('88000000-0000-4000-8000-000000000201','ExponentPushToken[kh_synthetic_token_A]');
 -- Retry transient failures at most six sends, never persist raw provider text.
 select pg_temp.push_new_job();
 do $$ declare v_job uuid; v_attempt uuid; v_count integer; begin
@@ -184,8 +197,9 @@ update kh_private.push_outbox set next_attempt_at=clock_timestamp()-interval '1 
 select kh_private.push_tick();
 update push_context set attempt_id=(select active_attempt_id from kh_private.push_outbox where id=push_context.job_id);
 select pg_temp.push_actor('88000000-0000-4000-8000-000000000001','88000000-0000-4000-8000-000000000101');
-update push_context set payload=payload||'{"revision":6,"expoPushToken":"ExponentPushToken[kh_synthetic_token_B]"}';
+update push_context set payload=payload||'{"revision":6,"fcmToken":"kh-synthetic-fcm-b:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"}';
 select public.kh_register_push_device('88000000-0000-4000-8000-000000000001',payload) from push_context;
+select pg_temp.push_exchange_done('88000000-0000-4000-8000-000000000201','ExponentPushToken[kh_synthetic_token_B]');
 select kh_private.push_apply_response(attempt_id,200,'{"data":{"88000000-0000-4000-8000-000000000302":{"status":"error","details":{"error":"DeviceNotRegistered"}}}}',false) from push_context;
 select pg_temp.push_assert((select enabled and revision=6 from kh_private.push_devices where installation_id='88000000-0000-4000-8000-000000000201'),'old receipt cannot disable replacement');
 select pg_temp.push_new_job();
@@ -227,6 +241,45 @@ reset role;
 select pg_temp.push_assert(exists(select 1 from kh_private.push_devices where installation_id='88000000-0000-4000-8000-000000000201' and revision=7),'device revision survives session deletion');
 delete from auth.users where id='88000000-0000-4000-8000-000000000001';
 select pg_temp.push_assert(exists(select 1 from kh_private.push_devices where installation_id='88000000-0000-4000-8000-000000000201' and owner_id is null),'tombstone survives account deletion');
+-- The exchange itself: the phone can only report an FCM token, so the worker fetches the Expo one.
+delete from push_mock_http;
+set local role authenticated;
+select pg_temp.push_actor('88000000-0000-4000-8000-000000000003','88000000-0000-4000-8000-000000000103');
+select pg_temp.push_assert(public.kh_register_push_device('88000000-0000-4000-8000-000000000003',
+  jsonb_build_object('installationId','88000000-0000-4000-8000-000000000204','installationSecret',repeat('d',64),'revision',1,
+    'fcmToken','kh-synthetic-fcm-d:DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD','platform','android','projectId','e054aea9-38b4-4211-826b-521b3cc0be9f'))
+  ='{"enabled":true,"revision":1,"platform":"android"}','exchange fixture registers');
+reset role;
+select pg_temp.push_assert((select expo_push_token is null and fcm_token is not null
+  from kh_private.push_devices where installation_id='88000000-0000-4000-8000-000000000204'),'registration stores the FCM token and no Expo token');
+select kh_private.push_tick();
+select pg_temp.push_assert((select count(*)=1 from push_mock_http where kind='exchange'),'worker requests one exchange');
+select pg_temp.push_assert((select m.payload->>'type'='fcm' and m.payload->>'deviceToken'=d.fcm_token
+  and m.payload->>'projectId'='e054aea9-38b4-4211-826b-521b3cc0be9f' and m.payload->>'development'='false'
+  from push_mock_http m cross join kh_private.push_devices d
+  where m.kind='exchange' and d.installation_id='88000000-0000-4000-8000-000000000204'),'exchange carries the device token and project');
+select pg_temp.push_assert((select exchange_request_id is not null and exchange_attempts=1
+  from kh_private.push_devices where installation_id='88000000-0000-4000-8000-000000000204'),'one exchange in flight');
+select kh_private.push_tick();
+select pg_temp.push_assert((select count(*)=1 from push_mock_http where kind='exchange'),'no second exchange while one is in flight');
+insert into net._http_response(id,status_code,content_type,content,timed_out)
+select exchange_request_id,200,'application/json','{"data":{"expoPushToken":"ExponentPushToken[kh_synthetic_token_D]"}}',false
+  from kh_private.push_devices where installation_id='88000000-0000-4000-8000-000000000204';
+select kh_private.push_tick();
+select pg_temp.push_assert((select expo_push_token='ExponentPushToken[kh_synthetic_token_D]' and exchange_request_id is null
+  and exchange_attempts=0 and exchange_next_at is null
+  from kh_private.push_devices where installation_id='88000000-0000-4000-8000-000000000204'),'exchange stores the Expo token');
+-- A rejected exchange backs off instead of burning the registration.
+delete from push_mock_http;
+reset role;
+update kh_private.push_devices set expo_push_token=null,exchange_next_at=clock_timestamp() where installation_id='88000000-0000-4000-8000-000000000204';
+select kh_private.push_tick();
+insert into net._http_response(id,status_code,content_type,content,timed_out)
+select exchange_request_id,403,'text/html','null',false from kh_private.push_devices where installation_id='88000000-0000-4000-8000-000000000204';
+select kh_private.push_tick();
+select pg_temp.push_assert((select enabled and expo_push_token is null and exchange_request_id is null
+  and exchange_attempts=1 and exchange_next_at>clock_timestamp()
+  from kh_private.push_devices where installation_id='88000000-0000-4000-8000-000000000204'),'a refused exchange retries later and keeps the device');
 select pg_temp.push_assert(not has_function_privilege('anon','public.kh_register_push_device(uuid,jsonb)','EXECUTE'),'anonymous cannot register');
 select pg_temp.push_assert(not has_function_privilege('authenticated','kh_private.push_tick()','EXECUTE'),'worker private');
 select pg_temp.push_assert(not has_table_privilege('authenticated','kh_private.push_outbox','SELECT'),'outbox private');

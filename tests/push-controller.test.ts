@@ -23,7 +23,7 @@ function fixture(overrides: Partial<PushRepository> = {}, native: Partial<PushAd
     disable: async input => { calls.push({ kind: 'disable', revision: input.revision }); return { enabled: false, revision: input.revision }; },
     resolve: async (id, context) => ({ notificationId: id, recipientId: context.userId, conversationId }), ...overrides,
   };
-  const adapter: PushAdapter = { ensureChannel: async () => {}, getPermission: async () => ({ permission: 'granted', canAskAgain: true }), requestPermission: async () => { prompts++; return { permission: 'granted', canAskAgain: true }; }, getToken: async () => 'ExpoPushToken[test_token]', clearLastResponse: async id => { clears++; clearedResponses.push(id); }, openSettings: async () => {}, ...native };
+  const adapter: PushAdapter = { ensureChannel: async () => {}, getPermission: async () => ({ permission: 'granted', canAskAgain: true }), requestPermission: async () => { prompts++; return { permission: 'granted', canAskAgain: true }; }, getToken: async () => 'fcm-test-token-000000000000000000000000000000000000000000000000000000000000', clearLastResponse: async id => { clears++; clearedResponses.push(id); }, openSettings: async () => {}, ...native };
   const controller = createPushController({ store, repository, adapter, projectId, navigate: id => { routes.push(id); }, refreshSummary: async () => { summaries++; } });
   return { controller, store, storage, calls, routes, clearedResponses, prompts: () => prompts, clears: () => clears, summaries: () => summaries };
 }
@@ -90,9 +90,9 @@ test('A to B to A cancels the old operation, revokes it, and requires another ex
 });
 
 test('token rotation advances revision and identical renewal retains it', async () => {
-  let token = 'ExpoPushToken[first_token_123]'; const f = fixture({}, { getToken: async () => token });
+  let token = 'fcm-first-token-111111111111111111111111111111111111111111111111111111111111'; const f = fixture({}, { getToken: async () => token });
   await f.controller.setSession(session()); await f.controller.enable(); await f.controller.refresh();
-  token = 'ExpoPushToken[second_token_123]'; await f.controller.refresh();
+  token = 'fcm-second-token-333333333333333333333333333333333333333333333333333333333333'; await f.controller.refresh();
   assert.deepEqual(f.calls.map(call => call.revision), [1, 1, 2]);
 });
 
@@ -141,7 +141,7 @@ test('logout cancels pending token acquisition even when it never reached the re
   const pending = deferred<string>();
   const f = fixture({ disable: async () => { throw new Error('offline'); } }, { getToken: async () => pending.promise });
   await f.controller.setSession(session()); const enabling = f.controller.enable().catch(() => {}); await tick();
-  await f.controller.beforeSignOut(actor); pending.resolve('ExpoPushToken[late_token_123]'); await enabling;
+  await f.controller.beforeSignOut(actor); pending.resolve('fcm-late-token-444444444444444444444444444444444444444444444444444444444444'); await enabling;
   assert.deepEqual(f.calls, []); assert.equal((await f.store.read()).intent, null);
 });
 
@@ -150,7 +150,7 @@ test('after restart a failed revocation remains visibly enabled until server con
   await f.controller.setSession(session()); await f.controller.enable(); await assert.rejects(f.controller.disable());
   // Hydrating the same persisted session must preserve the uncertain active status.
   f.controller.dispose();
-  const restart = createPushController({ store: f.store, repository: { register: async input => ({ enabled: true, revision: input.revision, platform: 'android' }), disable: async () => { throw new Error('offline'); }, resolve: async () => { throw new Error('unused'); } }, adapter: { ensureChannel: async () => {}, getPermission: async () => ({ permission: 'granted', canAskAgain: true }), requestPermission: async () => { throw new Error('unexpected'); }, getToken: async () => 'ExpoPushToken[fixture_token]', clearLastResponse: async () => {}, openSettings: async () => {} }, projectId, navigate: () => {}, refreshSummary: async () => {} });
+  const restart = createPushController({ store: f.store, repository: { register: async input => ({ enabled: true, revision: input.revision, platform: 'android' }), disable: async () => { throw new Error('offline'); }, resolve: async () => { throw new Error('unused'); } }, adapter: { ensureChannel: async () => {}, getPermission: async () => ({ permission: 'granted', canAskAgain: true }), requestPermission: async () => { throw new Error('unexpected'); }, getToken: async () => 'fcm-fixture-token-222222222222222222222222222222222222222222222222222222222222', clearLastResponse: async () => {}, openSettings: async () => {} }, projectId, navigate: () => {}, refreshSummary: async () => {} });
   await assert.rejects(restart.setSession(session())); assert.equal(restart.getState().enabled, true); assert.ok(restart.getState().error);
 });
 
@@ -198,9 +198,9 @@ test('JWT refresh within the same session preserves the pending registration and
 });
 
 test('a replaced token with uncertain registration preserves the previous confirmed active status on rehydration', async () => {
-  let token = 'ExpoPushToken[first_token_123]', fail = false;
+  let token = 'fcm-first-token-111111111111111111111111111111111111111111111111111111111111', fail = false;
   const f = fixture({ register: async input => { if (fail) throw new Error('offline'); return { enabled: true, revision: input.revision, platform: 'android' }; } }, { getToken: async () => token });
-  await f.controller.setSession(session()); await f.controller.enable(); token = 'ExpoPushToken[second_token_123]'; fail = true;
+  await f.controller.setSession(session()); await f.controller.enable(); token = 'fcm-second-token-333333333333333333333333333333333333333333333333333333333333'; fail = true;
   await assert.rejects(f.controller.refresh());
   await f.controller.setSession(null, false); await f.controller.setSession(session());
   assert.equal(f.controller.getState().enabled, true);

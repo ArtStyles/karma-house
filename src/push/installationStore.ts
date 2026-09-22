@@ -1,7 +1,8 @@
-import { isExpoPushToken, isUuid, MAX_PUSH_REVISION, PushError } from './domain.ts';
+import { isFcmToken, isUuid, MAX_PUSH_REVISION, PushError } from './domain.ts';
 import type { InstallationIdentity, InstallationState, InstallationStore } from './types.ts';
 
-export const INSTALLATION_STORAGE_KEY = 'karmahouse.push.installation.v1';
+// v2 stores the FCM token instead of the Expo one; a v1 record is simply replaced.
+export const INSTALLATION_STORAGE_KEY = 'karmahouse.push.installation.v2';
 interface Storage { getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<void> }
 function validate(value: unknown): InstallationState {
   const item = value as InstallationState;
@@ -11,10 +12,10 @@ function validate(value: unknown): InstallationState {
   if (intent === null) { if (item.revision !== 0) throw new Error('Missing intent'); }
   else if (!intent || item.revision === 0 || typeof intent.enabled !== 'boolean' || typeof intent.confirmed !== 'boolean' || typeof intent.wasEnabled !== 'boolean'
     || intent.userId !== null && !isUuid(intent.userId) || intent.sessionId !== null && !isUuid(intent.sessionId)
-    || intent.expoPushToken !== null && !isExpoPushToken(intent.expoPushToken)
-    || intent.enabled && (!intent.userId || !intent.sessionId || !intent.expoPushToken)) throw new Error('Invalid intent');
+    || intent.fcmToken !== null && !isFcmToken(intent.fcmToken)
+    || intent.enabled && (!intent.userId || !intent.sessionId || !intent.fcmToken)) throw new Error('Invalid intent');
   return { version: 1, installationId: item.installationId, installationSecret: item.installationSecret, revision: item.revision,
-    intent: intent ? { enabled: intent.enabled, userId: intent.userId, sessionId: intent.sessionId, expoPushToken: intent.expoPushToken, confirmed: intent.confirmed, wasEnabled: intent.wasEnabled } : null };
+    intent: intent ? { enabled: intent.enabled, userId: intent.userId, sessionId: intent.sessionId, fcmToken: intent.fcmToken, confirmed: intent.confirmed, wasEnabled: intent.wasEnabled } : null };
 }
 
 /** One durable write precedes each outbound mutation. Failed writes never publish an in-memory revision. */
