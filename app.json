@@ -3,7 +3,7 @@
     "name": "KarmaHouse",
     "slug": "karma-house",
     "owner": "artstyless-team",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "scheme": "karmahouse",
     "orientation": "portrait",
     "icon": "./assets/karmahouse-icon.png",
@@ -15,7 +15,7 @@
     "android": {
       "package": "com.karmahouse.karmahouse",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "backgroundColor": "#132D43",
         "foregroundImage": "./assets/karmahouse-icon.png"

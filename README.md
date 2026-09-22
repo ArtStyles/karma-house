@@ -49,16 +49,16 @@ Con Android SDK, Java 17 para las herramientas de React Native y las variables p
 ```powershell
 npx expo prebuild --platform android --no-install
 powershell -ExecutionPolicy Bypass -File scripts/build-android-preview.ps1
-powershell -ExecutionPolicy Bypass -File scripts/verify-android-preview.ps1 -ApkPath artifacts/releases/KarmaHouse-0.1.4-preview.apk -ExpectedVersion 0.1.4 -ExpectedVersionCode 5 -SdkPath artifacts/android-sdk -BuildToolsVersion 36.0.0 -JdkPath artifacts/android-tooling/jdk17/jdk-17.0.20.1+1
+powershell -ExecutionPolicy Bypass -File scripts/verify-android-preview.ps1 -ApkPath artifacts/releases/KarmaHouse-0.1.5-preview.apk -ExpectedVersion 0.1.5 -ExpectedVersionCode 6 -SdkPath artifacts/android-sdk -BuildToolsVersion 36.0.0 -JdkPath artifacts/android-tooling/jdk17/jdk-17.0.20.1+1
 ```
 
 El script acepta `-JdkPath` y `-SdkPath` si las herramientas están en otra ubicación. En Windows, usa una ruta del SDK **sin espacios**: la abreviación de `clang++.exe` puede impedir que se enlace la biblioteca estándar de C++. En este equipo se conserva una copia local de las herramientas en `artifacts/android-sdk` y Java 17 en `artifacts/android-tooling/jdk17`; el script las detecta automáticamente.
 
 Se compila una variante release con JavaScript incorporado y firma de pruebas, para teléfonos ARM de 32 y 64 bits. El APK queda en `artifacts/releases/`, junto con su SHA-256. No necesita Metro ni Expo Go; las funciones de Supabase necesitan Internet. La verificación compara también los valores privados de `infra/.env.local` sin mostrarlos.
 
-Para instalarlo, copia el APK al teléfono y ábrelo desde Archivos. Android puede pedir autorización para instalar aplicaciones desde esa aplicación. **0.1.4 usa el nuevo identificador `com.karmahouse.karmahouse` y se instala como otra app respecto a 0.1.3.** No transfiere automáticamente sesión o borradores locales. En futuras actualizaciones del mismo paquete conserva la firma e instala encima de la versión anterior.
+Para instalarlo, copia el APK al teléfono y ábrelo desde Archivos. Android puede pedir autorización para instalar aplicaciones desde esa aplicación. **0.1.5 conserva el identificador `com.karmahouse.karmahouse` y la firma de 0.1.4, así que se instala encima sin desinstalar y conserva sesión y borradores.** 0.1.4 sí había cambiado de identificador respecto a 0.1.3 y se instaló como otra app.
 
-[APK inicial 0.1.0: tamaño, SHA-256 y comprobaciones](docs/android-preview-verification.md) · [Ajuste de la barra inferior en 0.1.1](docs/android-tab-bar.md) · [Mapa y APK 0.1.2](docs/property-map-verification.md) · [Mensajería 0.1.3](docs/messaging-verification.md) · [Avisos Android 0.1.4](docs/android-push-verification.md).
+[APK inicial 0.1.0: tamaño, SHA-256 y comprobaciones](docs/android-preview-verification.md) · [Ajuste de la barra inferior en 0.1.1](docs/android-tab-bar.md) · [Mapa y APK 0.1.2](docs/property-map-verification.md) · [Mensajería 0.1.3](docs/messaging-verification.md) · [Avisos Android 0.1.4](docs/android-push-verification.md) · [Catálogo paginado 0.1.5](docs/superpowers/specs/2026-09-21-catalog-pagination-design.md).
 
 ## Verificación
 
