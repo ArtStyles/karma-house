@@ -42,7 +42,7 @@ Sobre ese envoltorio, dos columnas generadas `stored` que concatenan título, ub
 
 La equivalencia con el cliente está comprobada sobre el código, no supuesta: `normalizeSearch` en `src/domain/listings.ts` descompone a NFD y descarta las marcas combinantes, de modo que `ñ` (n + U+0303) queda en `n`. `unaccent` aplica el mismo mapeo. Ambos coinciden para el juego de caracteres del español.
 
-`unaccent` y `pg_trgm` son extensiones nuevas en este proyecto: ninguna migración anterior declara `create extension`. Están disponibles en Supabase pero hay que habilitarlas, y su esquema de instalación debe confirmarse contra el proyecto real antes de fijar `extensions.` en la migración. El script de aplicación resuelve el esquema en vez de darlo por hecho.
+`unaccent` y `pg_trgm` son extensiones nuevas en este proyecto: ninguna migración anterior declara `create extension`. La migración resuelve su esquema de instalación en tiempo de ejecución en vez de darlo por hecho, y eso resultó necesario: al aplicarla, ambas quedaron en `public`, no en `extensions` como se suponía al escribir este documento. Fijar `extensions.unaccent` habría fallado.
 
 ### Índices
 

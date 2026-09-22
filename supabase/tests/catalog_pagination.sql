@@ -21,17 +21,22 @@ insert into auth.users(id,email,raw_user_meta_data) values
 ('67000000-0000-4000-8000-000000000001','kh-cat-seller@example.invalid','{}');
 
 insert into public.properties(id,owner_id,client_request_id,title,location,province,type,description,price,area,bedrooms,bathrooms,amenities,photo_paths,moderation,created_at,latitude,longitude,location_precision) values
-('67000000-0000-4000-8000-00000000000a','67000000-0000-4000-8000-000000000001','cat-a','Casa luminosa en Residencial Brisa','Residencial Brisa','La Habana','Casa','Vivienda ficticia para probar la paginación del catálogo.',50000,100,2,1,'{Terraza}',ARRAY['67000000-0000-4000-8000-000000000001/cat-a/p.jpg'],'approved','2026-09-01T10:00:00Z',23.10,-82.38,'exact'),
-('67000000-0000-4000-8000-00000000000b','67000000-0000-4000-8000-000000000001','cat-b','Apartamento sereno en Vedado','Vedado','La Habana','Apartamento','Vivienda ficticia para probar la paginación del catálogo.',60000,110,2,1,'{}',ARRAY['67000000-0000-4000-8000-000000000001/cat-b/p.jpg'],'approved','2026-09-02T10:00:00Z',23.11,-82.39,'exact'),
-('67000000-0000-4000-8000-00000000000c','67000000-0000-4000-8000-000000000001','cat-c','Casa amplia en Matanzas','Reparto Norte','Matanzas','Casa','Vivienda ficticia para probar la paginación del catálogo.',70000,120,3,2,'{}',ARRAY['67000000-0000-4000-8000-000000000001/cat-c/p.jpg'],'approved','2026-09-03T10:00:00Z',23.12,-82.40,'exact'),
-('67000000-0000-4000-8000-00000000000d','67000000-0000-4000-8000-000000000001','cat-d','Apartamento con vista','Playa','La Habana','Apartamento','Vivienda ficticia para probar la paginación del catálogo.',80000,130,1,1,'{}',ARRAY['67000000-0000-4000-8000-000000000001/cat-d/p.jpg'],'approved','2026-09-04T10:00:00Z',null,null,null),
-('67000000-0000-4000-8000-00000000000e','67000000-0000-4000-8000-000000000001','cat-e','Casa pendiente de revisión','Centro','La Habana','Casa','Vivienda ficticia que no debe aparecer en el catálogo público.',90000,140,2,1,'{}',ARRAY['67000000-0000-4000-8000-000000000001/cat-e/p.jpg'],'pending','2026-09-05T10:00:00Z',23.13,-82.41,'exact');
+('67000000-0000-4000-8000-00000000000a','67000000-0000-4000-8000-000000000001','cat-a','Casa luminosa en Residencial Brisa','Residencial Brisa','Zona QÁ Catálogo','Casa','Vivienda ficticia para probar la paginación del catálogo.',50000,100,2,1,'{Terraza}',ARRAY['67000000-0000-4000-8000-000000000001/cat-a/p.jpg'],'approved','2026-09-01T10:00:00Z',23.10,-82.38,'exact'),
+('67000000-0000-4000-8000-00000000000b','67000000-0000-4000-8000-000000000001','cat-b','Apartamento sereno en Vedado','Vedado','Zona QÁ Catálogo','Apartamento','Vivienda ficticia para probar la paginación del catálogo.',60000,110,2,1,'{}',ARRAY['67000000-0000-4000-8000-000000000001/cat-b/p.jpg'],'approved','2026-09-02T10:00:00Z',23.11,-82.39,'exact'),
+('67000000-0000-4000-8000-00000000000c','67000000-0000-4000-8000-000000000001','cat-c','Casa amplia en Matanzas','Reparto Norte','Zona QÁ Catálogo','Casa','Vivienda ficticia para probar la paginación del catálogo.',70000,120,3,2,'{}',ARRAY['67000000-0000-4000-8000-000000000001/cat-c/p.jpg'],'approved','2026-09-03T10:00:00Z',23.12,-82.40,'exact'),
+('67000000-0000-4000-8000-00000000000d','67000000-0000-4000-8000-000000000001','cat-d','Apartamento con vista','Playa','Zona QÁ Catálogo','Apartamento','Vivienda ficticia para probar la paginación del catálogo.',80000,130,1,1,'{}',ARRAY['67000000-0000-4000-8000-000000000001/cat-d/p.jpg'],'approved','2026-09-04T10:00:00Z',null,null,null),
+('67000000-0000-4000-8000-00000000000e','67000000-0000-4000-8000-000000000001','cat-e','Casa pendiente de revisión','Centro','Zona QÁ Catálogo','Casa','Vivienda ficticia que no debe aparecer en el catálogo público.',90000,140,2,1,'{}',ARRAY['67000000-0000-4000-8000-000000000001/cat-e/p.jpg'],'pending','2026-09-05T10:00:00Z',23.13,-82.41,'exact');
 
 create temporary table kh_cat_context(base jsonb,ids text[],result jsonb);
 insert into kh_cat_context(base) values (jsonb_build_object(
-  'query','','type',null,'province',null,'condition',null,'min_price',null,'max_price',null,
+  'query','','type',null,'province','zona qa catalogo','condition',null,'min_price',null,'max_price',null,
   'min_area',null,'max_area',null,'min_bedrooms',0,'min_bathrooms',null,'negotiable_only',null,
   'amenities','[]'::jsonb,'sort','recent','cursor',null,'with_total',true,'limit',24));
+
+-- Every query below is scoped by province to this suite's own rows, so the assertions hold
+-- on a database that already has listings. The scope is written unaccented and lowercased
+-- while the rows carry accents and capitals, which also proves the province filter matches
+-- the way normalizeSearch does on the client.
 
 -- Only approved and active listings reach the public catalogue, count included.
 update kh_cat_context set result=public.kh_search_properties(base);
@@ -59,7 +64,7 @@ select pg_temp.cat_assert((select ids[1] from kh_cat_context)='67000000-0000-400
 -- A listing approved between two pages must not duplicate or skip an existing row.
 update kh_cat_context set result=public.kh_search_properties(base||jsonb_build_object('limit',2));
 insert into public.properties(id,owner_id,client_request_id,title,location,province,type,description,price,area,bedrooms,bathrooms,amenities,photo_paths,moderation,created_at)
-values('67000000-0000-4000-8000-00000000000f','67000000-0000-4000-8000-000000000001','cat-f','Casa aprobada a mitad de paginación','Cerro','La Habana','Casa','Vivienda ficticia insertada entre dos páginas del catálogo.',95000,150,2,1,'{}',ARRAY['67000000-0000-4000-8000-000000000001/cat-f/p.jpg'],'approved','2026-09-06T10:00:00Z');
+values('67000000-0000-4000-8000-00000000000f','67000000-0000-4000-8000-000000000001','cat-f','Casa aprobada a mitad de paginación','Cerro','Zona QÁ Catálogo','Casa','Vivienda ficticia insertada entre dos páginas del catálogo.',95000,150,2,1,'{}',ARRAY['67000000-0000-4000-8000-000000000001/cat-f/p.jpg'],'approved','2026-09-06T10:00:00Z');
 update kh_cat_context set result=public.kh_search_properties(base||jsonb_build_object('limit',2,'cursor',result->>'next_cursor'));
 select pg_temp.cat_assert(not exists(select 1 from kh_cat_context,jsonb_array_elements(result->'rows') r where r->>'id' in ('67000000-0000-4000-8000-00000000000d','67000000-0000-4000-8000-00000000000c')),'a mid-paging insert never repeats a row already returned');
 select pg_temp.cat_assert((select jsonb_array_length(result->'rows') from kh_cat_context)=2,'the second page still fills');
@@ -95,8 +100,6 @@ update kh_cat_context set result=public.kh_search_properties(base||jsonb_build_o
 select pg_temp.cat_assert((select (result->>'total')::int from kh_cat_context)=2,'the type filter narrows the count');
 update kh_cat_context set result=public.kh_search_properties(base||jsonb_build_object('min_price',60000,'max_price',70000));
 select pg_temp.cat_assert((select (result->>'total')::int from kh_cat_context)=2,'the price range narrows the count');
-update kh_cat_context set result=public.kh_search_properties(base||jsonb_build_object('province','la habana'));
-select pg_temp.cat_assert((select (result->>'total')::int from kh_cat_context)=3,'the province filter ignores case and accents');
 update kh_cat_context set result=public.kh_search_properties(base||jsonb_build_object('min_bedrooms',3));
 select pg_temp.cat_assert((select (result->>'total')::int from kh_cat_context)=1,'the bedroom minimum narrows the count');
 update kh_cat_context set result=public.kh_search_properties(base||jsonb_build_object('amenities','["terraza"]'::jsonb));

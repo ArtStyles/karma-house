@@ -34,7 +34,12 @@ try {
     "explain (format json) select p.id from public.properties p where p.moderation='approved' and p.availability='active' order by p.created_at desc, p.id desc limit 24",
   );
   const plan = JSON.stringify(plans.rows[0]['QUERY PLAN']);
-  console.log(`plan del orden por recientes: ${/properties_catalog_recent/.test(plan) ? 'usa properties_catalog_recent' : 'NO usa el índice'}`);
+  const indexed = /properties_catalog_recent/.test(plan);
+  // Below a few hundred rows a sequential scan is genuinely cheaper, so this is a report of
+  // what the planner chose, not a pass or fail condition.
+  console.log(indexed
+    ? `plan del orden por recientes: usa properties_catalog_recent (${after.properties} anuncios)`
+    : `plan del orden por recientes: escaneo secuencial, esperado con ${after.properties} anuncios; el índice se usa al crecer el catálogo`);
 
   console.log('suite del catálogo superada');
 } catch (error) {
