@@ -3,8 +3,7 @@ import { useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { activeFilterCount, defaultFilters, type Listing, type ListingFilters } from '../domain/listings';
-import { useCatalogPage, useMapView } from '../catalog/useCatalog';
-import { CUBA_BOUNDS, CUBA_ZOOM } from '../components/maps/mapConfig';
+import { useCatalogPage } from '../catalog/useCatalog';
 import { CONDITIONS } from '../domain/listingOptions';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors, layout } from '../theme';
@@ -38,7 +37,6 @@ export default function ExploreScreen() {
   const { width } = useWindowDimensions();
   const columns = width >= 1060 ? 3 : width >= 700 ? 2 : 1;
   const { rows: result, total, hasMore, ready, loading, pageError, loadMore, refresh: refreshCatalog } = useCatalogPage(filters);
-  const mapView = useMapView(CUBA_BOUNDS, width >= 700 ? 5.6 : CUBA_ZOOM, filters);
   const hasFilters = activeFilterCount(filters) > 0;
   const filterCount = activeFilterCount({ ...filters, query: '' });
   const change = (next: Partial<ListingFilters>) => setFilters(old => ({ ...old, ...next }));
@@ -59,7 +57,7 @@ export default function ExploreScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={colors.primary} />}
-        ListEmptyComponent={!ready ? <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: 45 }} /> : view === 'map' ? <ExploreMap view={mapView.view} ready={mapView.ready} withoutLocation={result.filter(item => !item.mapLocation).length} onShowList={() => setView('list')} /> : !storageError ? <EmptyState title={hasFilters ? 'Sin coincidencias' : 'Aquí empieza tu próximo hogar'} description={hasFilters ? 'Prueba otra zona o amplía los filtros para encontrar más viviendas.' : 'Aún no hay viviendas publicadas. Si tienes una en venta, puedes preparar el primer anuncio.'} icon={hasFilters ? 'search-outline' : 'home-outline'} action={<Button label={hasFilters ? 'Ver todas las viviendas' : 'Publicar una vivienda'} onPress={() => hasFilters ? setFilters({ ...defaultFilters }) : router.push('/publish')} />} /> : null}
+        ListEmptyComponent={!ready ? <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: 45 }} /> : view === 'map' ? <ExploreMap filters={filters} withoutLocation={result.filter(item => !item.mapLocation).length} onShowList={() => setView('list')} /> : !storageError ? <EmptyState title={hasFilters ? 'Sin coincidencias' : 'Aquí empieza tu próximo hogar'} description={hasFilters ? 'Prueba otra zona o amplía los filtros para encontrar más viviendas.' : 'Aún no hay viviendas publicadas. Si tienes una en venta, puedes preparar el primer anuncio.'} icon={hasFilters ? 'search-outline' : 'home-outline'} action={<Button label={hasFilters ? 'Ver todas las viviendas' : 'Publicar una vivienda'} onPress={() => hasFilters ? setFilters({ ...defaultFilters }) : router.push('/publish')} />} /> : null}
         ListHeaderComponent={<View>
         <View style={styles.topbar}>
           <View style={[styles.brand, width < 360 && { gap: 5 }]}><View style={[styles.brandMark, width < 360 && { width: 26, height: 26 }]}><Icon name="home" size={width < 360 ? 15 : 18} color={colors.white} /></View><Text style={[styles.brandText, width < 360 && { fontSize: 14 }]}>KarmaHouse</Text>{mode === 'demo' && <Text style={styles.demo}>Demo</Text>}</View>

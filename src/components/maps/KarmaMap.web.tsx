@@ -6,18 +6,19 @@ import { colors } from '../../theme';
 import type { KarmaMapProps } from './KarmaMap.types';
 import { CUBA_CENTER, CUBA_ZOOM } from './mapConfig';
 import { approximateAreas, coordinatesFromMapPress } from './mapGeometry';
+import { viewportBounds } from '../../domain/geo';
 import { MapAttribution, MapBrand, MapStatus } from './MapChrome';
 import { useMapStyle } from './useMapStyle';
 
 export type { KarmaMapProps, MapMarker } from './KarmaMap.types';
 
-export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM, selectedMarkerId, onMarkerPress, onMapPress, interactive = true, style, accessibilityLabel = 'Mapa de viviendas de KarmaHouse' }: KarmaMapProps) {
+export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM, selectedMarkerId, onMarkerPress, onMapPress, onRegionChange, interactive = true, style, accessibilityLabel = 'Mapa de viviendas de KarmaHouse' }: KarmaMapProps) {
   const host = useRef<HTMLDivElement>(null);
   const map = useRef<WebMap | null>(null);
   const markerConstructor = useRef<typeof WebMarker | null>(null);
   const buttons = useRef<WebMarker[]>([]);
-  const callbacks = useRef({ onMarkerPress, onMapPress });
-  callbacks.current = { onMarkerPress, onMapPress };
+  const callbacks = useRef({ onMarkerPress, onMapPress, onRegionChange });
+  callbacks.current = { onMarkerPress, onMapPress, onRegionChange };
   const position = useRef({ center, zoom });
   position.current = { center, zoom };
   const [attempt, setAttempt] = useState(0);
@@ -52,6 +53,12 @@ export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM,
         if (!interactive) return;
         const coordinate = coordinatesFromMapPress(event.lngLat.lat, event.lngLat.lng);
         if (coordinate) callbacks.current.onMapPress?.(coordinate);
+      });
+      instance.on('moveend', () => {
+        if (!instance || !callbacks.current.onRegionChange) return;
+        const box = instance.getBounds();
+        const bounds = viewportBounds(box.getWest(), box.getSouth(), box.getEast(), box.getNorth());
+        if (bounds) callbacks.current.onRegionChange(bounds, instance.getZoom());
       });
       instance.on('error', event => {
         if (__DEV__) console.warn('[KarmaHouse map]', event.error?.message ?? 'Map resource failed');

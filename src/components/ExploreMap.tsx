@@ -1,23 +1,32 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import type { MapView as CatalogMapView } from '../catalog/types';
-import { useListing } from '../catalog/useCatalog';
+import type { BoundingBox } from '../domain/geo';
+import type { ListingFilters } from '../domain/listings';
+import { useListing, useMapView } from '../catalog/useCatalog';
 import { colors, formatMoney } from '../theme';
 import { KarmaMap } from './maps/KarmaMap';
-import { CUBA_CENTER, CUBA_ZOOM } from './maps/mapConfig';
+import { CUBA_BOUNDS, CUBA_CENTER, CUBA_ZOOM } from './maps/mapConfig';
 import { PropertyImage } from './PropertyImage';
 import { Icon } from './ui';
 
-export function ExploreMap({ view, ready, withoutLocation, onShowList }: {
-  view: CatalogMapView;
-  ready: boolean;
+/** One step past a cluster keeps its members in view instead of overshooting past them. */
+const CLUSTER_ZOOM_STEP = 2;
+const MAX_ZOOM = 16;
+
+export function ExploreMap({ filters, withoutLocation, onShowList }: {
+  filters: ListingFilters;
   /** Loaded listings with no published point, so the hint can send them to the list. */
   withoutLocation: number;
   onShowList: () => void;
 }) {
-  const [selectedId, setSelectedId] = useState<string>();
   const { width } = useWindowDimensions();
+  const initialZoom = width >= 700 ? 5.6 : CUBA_ZOOM;
+  const [camera, setCamera] = useState({ center: CUBA_CENTER, zoom: initialZoom });
+  // Null until the map reports its first viewport; the island box covers that first frame.
+  const [region, setRegion] = useState<{ bounds: BoundingBox; zoom: number } | null>(null);
+  const [selectedId, setSelectedId] = useState<string>();
+  const { view, ready } = useMapView(region?.bounds ?? CUBA_BOUNDS, region?.zoom ?? initialZoom, filters);
   const points = view.mode === 'points' ? view.items : [];
   const selectedPoint = points.find(point => point.id === selectedId);
   // Only the tapped pin costs a round trip; the map itself never carries photos or text.
@@ -25,13 +34,23 @@ export function ExploreMap({ view, ready, withoutLocation, onShowList }: {
   const markers = view.mode === 'points'
     ? points.map(point => ({ id: point.id, coordinate: point, precision: point.precision, label: formatMoney(point.price) }))
     : view.items.map(cluster => ({ id: cluster.key, coordinate: cluster, precision: 'exact' as const, label: `${cluster.count}` }));
+
+  function press(id: string) {
+    if (view.mode === 'points') { setSelectedId(id); return; }
+    const cluster = view.items.find(item => item.key === id);
+    if (!cluster) return;
+    // Zoom towards the cluster; the resulting viewport asks the server to split it.
+    setCamera(current => ({ center: cluster, zoom: Math.min(current.zoom + CLUSTER_ZOOM_STEP, MAX_ZOOM) }));
+  }
+
   return <View style={styles.container}>
     <View style={styles.mapFrame}>
       <KarmaMap
         style={{ height: width >= 700 ? 480 : 410 }}
-        center={CUBA_CENTER} zoom={width >= 700 ? 5.6 : CUBA_ZOOM}
+        center={camera.center} zoom={camera.zoom}
         markers={markers}
-        selectedMarkerId={selectedPoint?.id} onMarkerPress={view.mode === 'points' ? setSelectedId : () => {}}
+        selectedMarkerId={selectedPoint?.id} onMarkerPress={press}
+        onRegionChange={(bounds, zoom) => setRegion({ bounds, zoom })}
         accessibilityLabel="Mapa de viviendas en venta en Cuba"
       />
     </View>
@@ -46,7 +65,7 @@ export function ExploreMap({ view, ready, withoutLocation, onShowList }: {
       <Icon name="chevron-forward" size={18} color={colors.primary} />
     </Pressable> : <View style={styles.hint}>
       <Icon name="map-outline" size={20} color={colors.primary} />
-      <Text style={styles.hintText}>{!ready ? 'Cargando las viviendas del mapa…' : view.mode === 'clusters' ? 'Cada globo agrupa varias viviendas. Acerca el mapa para separarlas.' : points.length ? 'Toca un precio para conocer la vivienda. Acerca el mapa para ver más detalle.' : 'Aquí verás las viviendas cuando tengan una ubicación publicada.'}</Text>
+      <Text style={styles.hintText}>{!ready ? 'Cargando las viviendas del mapa…' : view.mode === 'clusters' ? 'Cada globo agrupa varias viviendas. Tócalo para acercarte y separarlas.' : points.length ? 'Toca un precio para conocer la vivienda. Acerca el mapa para ver más detalle.' : 'No hay viviendas con ubicación en esta zona. Aleja el mapa o muévelo.'}</Text>
     </View>}
     {withoutLocation > 0 && <Pressable accessibilityRole="button" onPress={onShowList} style={styles.missing}>
       <Text style={styles.missingText}>{withoutLocation} {withoutLocation === 1 ? 'vivienda sin ubicación' : 'viviendas sin ubicación'} · Ver en la lista</Text>

@@ -1,6 +1,25 @@
 export interface Coordinates { latitude: number; longitude: number }
 export type LocationPrecision = 'exact' | 'approximate';
 export interface MapLocation extends Coordinates { precision: LocationPrecision }
+/** Geographic box in the order MapLibre reports it: south-west then north-east corner. */
+export interface BoundingBox { west: number; south: number; east: number; north: number }
+
+/**
+ * Normalises a viewport box for a server query: clamps to valid latitudes, widens a box
+ * crossing the antimeridian to the whole world rather than sending an inverted range, and
+ * rounds so a sub-metre pan does not count as a new viewport.
+ */
+export function viewportBounds(west: number, south: number, east: number, north: number): BoundingBox | null {
+  if (![west, south, east, north].every(Number.isFinite)) return null;
+  const round = (value: number) => Math.round(value * 1000) / 1000;
+  const wrapped = east < west;
+  return {
+    west: wrapped ? -180 : round(Math.max(west, -180)),
+    east: wrapped ? 180 : round(Math.min(east, 180)),
+    south: round(Math.max(south, -90)),
+    north: round(Math.min(north, 90)),
+  };
+}
 
 export const APPROXIMATE_RADIUS_METERS = 800;
 

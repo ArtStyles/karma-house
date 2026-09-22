@@ -1,4 +1,4 @@
-import type { Coordinates, MapLocation } from '../domain/geo.ts';
+import type { BoundingBox, Coordinates, MapLocation } from '../domain/geo.ts';
 import type { Listing, ListingFilters } from '../domain/listings.ts';
 
 /** Which index answered the text search. Carried in the cursor so later pages keep one criterion. */
@@ -27,7 +27,7 @@ export interface CatalogCursor {
   key: string;
 }
 
-export interface BoundingBox { west: number; south: number; east: number; north: number }
+export type { BoundingBox };
 export interface MapCluster extends Coordinates { key: string; count: number }
 export interface MapPoint extends MapLocation { id: string; price: number }
 export type MapView =

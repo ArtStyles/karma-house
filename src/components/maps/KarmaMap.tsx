@@ -6,12 +6,13 @@ import { Icon } from '../ui';
 import type { KarmaMapProps } from './KarmaMap.types';
 import { CUBA_CENTER, CUBA_ZOOM } from './mapConfig';
 import { approximateAreas, coordinatesFromMapPress } from './mapGeometry';
+import { viewportBounds } from '../../domain/geo';
 import { MapAttribution, MapBrand, MapStatus } from './MapChrome';
 import { useMapStyle } from './useMapStyle';
 
 export type { KarmaMapProps, MapMarker } from './KarmaMap.types';
 
-export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM, selectedMarkerId, onMarkerPress, onMapPress, interactive = true, style, accessibilityLabel = 'Mapa de viviendas de KarmaHouse' }: KarmaMapProps) {
+export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM, selectedMarkerId, onMarkerPress, onMapPress, onRegionChange, interactive = true, style, accessibilityLabel = 'Mapa de viviendas de KarmaHouse' }: KarmaMapProps) {
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const { mapStyle, styleFailed } = useMapStyle(attempt);
@@ -30,6 +31,12 @@ export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM,
         dragPan={interactive} touchZoom={interactive} doubleTapZoom={interactive} doubleTapHoldZoom={interactive}
         touchRotate={false} touchPitch={false} compass={false} logo={false} attribution={false}
         onPress={event => { if (interactive && onMapPress) { const [longitude, latitude] = event.nativeEvent.lngLat; const coordinate = coordinatesFromMapPress(latitude, longitude); if (coordinate) onMapPress(coordinate); } }}
+        onRegionDidChange={event => {
+          if (!onRegionChange) return;
+          const [west, south, east, north] = event.nativeEvent.bounds;
+          const bounds = viewportBounds(west, south, east, north);
+          if (bounds) onRegionChange(bounds, event.nativeEvent.zoom);
+        }}
         onDidFinishLoadingMap={() => setStatus('ready')} onDidFailLoadingMap={() => setStatus('error')}>
         <Camera center={cameraCenter} zoom={zoom} minZoom={3} maxZoom={18} duration={200} />
         <GeoJSONSource id="karma-approximate-areas" data={areas}>

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { approximateAreas, coordinatesFromMapPress } from '../src/components/maps/mapGeometry.ts';
 import { customizeMapStyle } from '../src/components/maps/mapConfig.ts';
+import { viewportBounds } from '../src/domain/geo.ts';
 
 test('approximate areas show an 800 metre radius and exact markers have no area', () => {
   const result = approximateAreas([
@@ -49,4 +50,16 @@ test('map presses wrap longitudes and reject coordinates a provider cannot rende
   assert.equal(coordinatesFromMapPress(NaN, -82), undefined);
   assert.equal(coordinatesFromMapPress(23, Infinity), undefined);
   assert.equal(coordinatesFromMapPress(91, 23), undefined);
+});
+
+test('a reported viewport is clamped, rounded and never sent as an inverted range', () => {
+  // A normal box keeps its corners, rounded so a sub-metre pan is not a new viewport.
+  assert.deepEqual(viewportBounds(-82.3849991, 23.1000004, -82.3, 23.2), { west: -82.385, south: 23.1, east: -82.3, north: 23.2 });
+  // Latitudes beyond the poles and longitudes beyond the meridian are clamped, not rejected.
+  assert.deepEqual(viewportBounds(-190, -95, -80, 99), { west: -180, south: -90, east: -80, north: 90 });
+  // Crossing the antimeridian would invert the range, so the whole world is requested instead.
+  assert.deepEqual(viewportBounds(170, 20, -170, 30), { west: -180, south: 20, east: 180, north: 30 });
+  for (const bad of [[NaN, 1, 2, 3], [1, Infinity, 2, 3]]) {
+    assert.equal(viewportBounds(bad[0], bad[1], bad[2], bad[3]), null, 'a non-finite corner yields no query');
+  }
 });
