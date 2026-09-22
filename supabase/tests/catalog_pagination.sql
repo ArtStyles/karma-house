@@ -115,6 +115,12 @@ select pg_temp.cat_assert(not exists(select 1 from kh_cat_context,jsonb_array_el
 update kh_cat_context set result=public.kh_map_clusters(base||jsonb_build_object('west',-83,'south',23.115,'east',-82,'north',24,'zoom',10));
 select pg_temp.cat_assert((select jsonb_array_length(result->'items') from kh_cat_context)=1,'the box excludes listings outside it');
 select pg_temp.cat_error($$select public.kh_map_clusters(jsonb_build_object('west',-83,'south',50,'east',-82,'north',24,'zoom',10,'min_bedrooms',0,'amenities','[]'::jsonb))$$,'KH_INVALID_MAP_BOUNDS');
+-- MapLibre reports a fractional zoom; a straight ::int cast on the text raised
+-- 'invalid input syntax for type integer'. Every local test had used whole numbers.
+update kh_cat_context set result=public.kh_map_clusters(base||jsonb_build_object('west',-83,'south',22,'east',-82,'north',24,'zoom',4.6));
+select pg_temp.cat_assert((select result->>'mode' from kh_cat_context)='points','a fractional zoom is accepted');
+update kh_cat_context set result=public.kh_map_clusters(base||jsonb_build_object('west',-83,'south',22,'east',-82,'north',24,'zoom',5.6));
+select pg_temp.cat_assert((select jsonb_array_length(result->'items') from kh_cat_context)=3,'a fractional zoom returns the same pins as its whole number');
 
 -- anon reads the same public catalogue and no more.
 grant select on kh_cat_context to anon;
