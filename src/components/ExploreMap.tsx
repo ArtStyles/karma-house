@@ -8,7 +8,7 @@ import { colors, formatMoney } from '../theme';
 import { KarmaMap } from './maps/KarmaMap';
 import { CUBA_BOUNDS, CUBA_CENTER, CUBA_ZOOM } from './maps/mapConfig';
 import { PropertyImage } from './PropertyImage';
-import { Icon } from './ui';
+import { Button, Icon, Notice } from './ui';
 
 /** One step past a cluster keeps its members in view instead of overshooting past them. */
 const CLUSTER_ZOOM_STEP = 2;
@@ -26,7 +26,7 @@ export function ExploreMap({ filters, withoutLocation, onShowList }: {
   // Null until the map reports its first viewport; the island box covers that first frame.
   const [region, setRegion] = useState<{ bounds: BoundingBox; zoom: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string>();
-  const { view, ready } = useMapView(region?.bounds ?? CUBA_BOUNDS, region?.zoom ?? initialZoom, filters);
+  const { view, ready, error, retry } = useMapView(region?.bounds ?? CUBA_BOUNDS, region?.zoom ?? initialZoom, filters);
   const points = view.mode === 'points' ? view.items : [];
   const selectedPoint = points.find(point => point.id === selectedId);
   // Only the tapped pin costs a round trip; the map itself never carries photos or text.
@@ -50,11 +50,13 @@ export function ExploreMap({ filters, withoutLocation, onShowList }: {
         center={camera.center} zoom={camera.zoom}
         markers={markers}
         selectedMarkerId={selectedPoint?.id} onMarkerPress={press}
+        onMapPress={() => setSelectedId(undefined)}
         onRegionChange={(bounds, zoom) => setRegion({ bounds, zoom })}
         accessibilityLabel="Mapa de viviendas en venta en Cuba"
       />
     </View>
-    {selected ? <Pressable accessibilityRole="button" accessibilityLabel={`Ver vivienda: ${selected.title}, ${formatMoney(selected.price)}`} onPress={() => router.push(`/property/${selected.id}`)} style={({ pressed }) => [styles.card, pressed && { opacity: .75 }]}>
+    {error ? <View style={styles.failure}><Notice error>{error}</Notice><Button label="Reintentar" secondary onPress={retry} /></View>
+    : selected ? <Pressable accessibilityRole="button" accessibilityLabel={`Ver vivienda: ${selected.title}, ${formatMoney(selected.price)}`} onPress={() => router.push(`/property/${selected.id}`)} style={({ pressed }) => [styles.card, pressed && { opacity: .75 }]}>
       <PropertyImage listing={selected} style={styles.photo} />
       <View style={styles.copy}>
         <Text style={styles.price}>{formatMoney(selected.price)} <Text style={styles.currency}>USD</Text></Text>
@@ -75,7 +77,7 @@ export function ExploreMap({ filters, withoutLocation, onShowList }: {
 }
 
 const styles = StyleSheet.create({
-  container: { gap: 12 },
+  container: { gap: 12 }, failure: { gap: 8 },
   mapFrame: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: '#E1E5EB', backgroundColor: colors.white },
   card: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 20, backgroundColor: colors.white, borderWidth: 1, borderColor: '#E1E5EB' },
   photo: { width: 84, height: 84, borderRadius: 14 },

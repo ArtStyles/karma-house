@@ -17,7 +17,7 @@ import {
   type DraftValidation,
   type ListingDraft,
 } from '../domain/listings';
-import { colors, layout, typefaces } from '../theme';
+import { colors, formatMoney, layout, typefaces } from '../theme';
 import { createDraftPersistence, draftToken, hasDraftVersionConflict, restoreDraft } from '../domain/draftPersistence';
 import { draftStorage } from '../data/draftStorage';
 import { ListingPhotos } from './ListingPhotos';
@@ -26,7 +26,7 @@ import { normalizeMapLocation } from '../domain/geo';
 import { Button, Icon, Notice, Pill } from './ui';
 import { SelectionField } from './SelectionField';
 import { AMENITIES, CONDITIONS, PROVINCES } from '../domain/listingOptions';
-import { normalizeDecimalInput } from '../domain/numericInput';
+import { normalizeDecimalInput, publishedNumber } from '../domain/numericInput';
 
 type DraftErrors = DraftValidation['errors'];
 
@@ -46,6 +46,15 @@ const stepFields: (keyof ListingDraft)[][] = [
   ['price', 'bedrooms', 'bathrooms', 'area', 'condition', 'floor', 'priceNegotiable', 'description', 'amenities', 'photoUri', 'photos'],
   [],
 ];
+
+/** The names the seller reads on screen, so a validation summary names fields they can find. */
+const fieldLabels: Partial<Record<keyof ListingDraft, string>> = {
+  title: 'Título del anuncio', type: 'Tipo de vivienda', location: 'Zona o barrio', province: 'Provincia',
+  mapLocation: 'Ubicación en el mapa', price: 'Precio en USD', bedrooms: 'Habitaciones', bathrooms: 'Baños',
+  area: 'Superficie', condition: 'Estado de conservación', floor: 'Planta de acceso',
+  priceNegotiable: 'Precio negociable', description: 'Descripción', amenities: 'Comodidades',
+  photos: 'Fotos', photoUri: 'Fotos',
+};
 
 const roomOptions = Array.from({ length: 20 }, (_, index) => ({ value: String(index + 1), label: String(index + 1) }));
 const floorOptions = [{ value: '', label: 'Sin especificar' }, ...Array.from({ length: 100 }, (_, value) => ({ value: String(value), label: value === 0 ? 'Planta baja' : `Planta ${value}` }))];
@@ -127,6 +136,9 @@ export function ListingForm({
   }, [discardRequested, persistence]);
 
   const selectedAmenities = useMemo(() => new Set(draft.amenities), [draft.amenities]);
+  const stepIssues = [...new Set(stepFields[step].filter((field) => errors[field]).map((field) => fieldLabels[field] ?? field))];
+  const publishedPrice = publishedNumber(draft.price);
+  const publishedArea = publishedNumber(draft.area);
 
   function changeField<K extends keyof ListingDraft>(field: K, value: ListingDraft[K]) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -150,8 +162,8 @@ export function ListingForm({
     ) as DraftErrors;
 
     if (Object.keys(currentErrors).length === 0) return true;
+    // The summary sits with the buttons that were just tapped; jumping to the top hid the error.
     setErrors((previous) => ({ ...previous, ...currentErrors }));
-    scrollRef.current?.scrollTo({ y: 0, animated: false });
     return false;
   }
 
@@ -171,7 +183,6 @@ export function ListingForm({
         fields.some((field) => Boolean(result.errors[field])),
       );
       setStep(firstInvalidStep >= 0 ? firstInvalidStep : 0);
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
       return;
     }
 
@@ -319,17 +330,31 @@ export function ListingForm({
                 title="Los detalles"
                 description="Cuantos más detalles, más fácil será encontrarla con los filtros."
               />
+              {/* Photos are required in the cloud, so they open the step instead of closing it. */}
               <View style={styles.fieldCard}>
-                <Field
-                  label="Precio en USD"
-                  required
-                  placeholder="85000"
-                  value={draft.price}
-                  onChangeText={(value) => changeField('price', normalizeDecimalInput(value))}
-                  error={errors.price}
-                  keyboardType="decimal-pad"
-                  inputMode="decimal"
-                />
+                <ListingPhotos required={cloud} photos={draft.photos ?? []} busy={photoBusy} disabled={submitting} onBusy={setPhotoBusy}
+                  onChange={photos => {
+                    changeField('photos', photos);
+                    changeField('photoUri', photos[0]?.uri);
+                  }}
+                  onError={message => setErrors(current => ({ ...current, photos: message }))} />
+                {errors.photos || errors.photoUri ? <FieldError message={errors.photos ?? errors.photoUri!} /> : null}
+              </View>
+              <View style={styles.fieldCard}>
+                <View style={styles.previewGroup}>
+                  <Field
+                    label="Precio en USD"
+                    required
+                    placeholder="85000"
+                    value={draft.price}
+                    onChangeText={(value) => changeField('price', normalizeDecimalInput(value))}
+                    error={errors.price}
+                    keyboardType="decimal-pad"
+                    inputMode="decimal"
+                  />
+                  {/* A thousands separator turns «85.000» into 85; the seller has to see that first. */}
+                  {publishedPrice !== null ? <Text style={styles.publishNote}>Se publicará como {formatMoney(publishedPrice)} USD</Text> : null}
+                </View>
 
                 <View style={styles.fieldGrid}>
                   <View style={styles.gridField}>
@@ -354,7 +379,7 @@ export function ListingForm({
                       error={errors.bathrooms}
                     />
                   </View>
-                  <View style={styles.gridField}>
+                  <View style={[styles.gridField, styles.previewGroup]}>
                     <Field
                       label="Superficie (m²)"
                       required
@@ -365,6 +390,7 @@ export function ListingForm({
                       keyboardType="decimal-pad"
                       inputMode="decimal"
                     />
+                    {publishedArea !== null ? <Text style={styles.publishNote}>Se publicará como {publishedArea} m²</Text> : null}
                   </View>
                 </View>
 
@@ -401,15 +427,6 @@ export function ListingForm({
                 </ChoiceField>
               </View>
 
-              <View style={styles.fieldCard}>
-                <ListingPhotos photos={draft.photos ?? []} busy={photoBusy} disabled={submitting} onBusy={setPhotoBusy}
-                  onChange={photos => {
-                    changeField('photos', photos);
-                    changeField('photoUri', photos[0]?.uri);
-                  }}
-                  onError={message => setErrors(current => ({ ...current, photos: message }))} />
-                {errors.photos || errors.photoUri ? <FieldError message={errors.photos ?? errors.photoUri!} /> : null}
-              </View>
             </View>
           ) : null}
 
@@ -432,7 +449,7 @@ export function ListingForm({
                 <Text style={styles.reviewLocation}>
                   {draft.location.trim()}, {draft.province.trim()}
                 </Text>
-                <Text style={styles.reviewPrice}>$ {draft.price.trim()} USD</Text>
+                <Text style={styles.reviewPrice}>{publishedPrice !== null ? `${formatMoney(publishedPrice)} USD` : 'Precio sin indicar'}</Text>
                 <View style={styles.reviewFacts}>
                   <Fact icon="bed-outline" value={`${draft.bedrooms.trim()} hab.`} />
                   <Fact icon="water-outline" value={`${draft.bathrooms.trim()} baños`} />
@@ -460,6 +477,7 @@ export function ListingForm({
             </View>
           ) : null}
 
+          {stepIssues.length > 0 ? <Notice error>Revisa estos campos antes de continuar: {stepIssues.join(', ')}.</Notice> : null}
           <View style={styles.actions}>
             {step > 0 ? (
               <Button
@@ -603,6 +621,8 @@ const styles = StyleSheet.create({
   sectionDescription: { color: colors.muted, fontSize: 15, lineHeight: 21, maxWidth: 560 },
   fieldCard: { backgroundColor: colors.white, borderRadius: 20, padding: 16, gap: 20 },
   fieldGroup: { gap: 7 },
+  previewGroup: { gap: 6 },
+  publishNote: { color: colors.muted, fontSize: 12, lineHeight: 18 },
   labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   label: { color: colors.muted, fontSize: 13, fontWeight: '500' },
   required: { color: colors.muted },

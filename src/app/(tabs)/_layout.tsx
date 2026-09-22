@@ -5,10 +5,14 @@ import { NavigationMaterial } from '../../components/NavigationMaterial';
 import { Icon, type IconName } from '../../components/ui';
 import { colors } from '../../theme';
 import { useMessaging } from '../../messaging/MessagingProvider';
+import { useNotifications } from '../../notifications/NotificationsProvider';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  const { unreadCount } = useMessaging();
+  const { unreadCount: messageUnread } = useMessaging();
+  const { unreadCount: noticeUnread } = useNotifications();
+  // Mi espacio is the only tab that carries both inboxes, so its badge counts both.
+  const unreadCount = messageUnread + noticeUnread;
   const { width } = useWindowDimensions();
   const inset = Math.max(16, (width - 520) / 2);
   const tabIcon = (name: IconName, active: IconName) =>

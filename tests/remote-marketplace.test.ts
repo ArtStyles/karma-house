@@ -168,3 +168,14 @@ test('network failures use Spanish guidance in both global state and rejected fo
     });
   }
 });
+
+test('a Supabase rejection is a plain object, so the catalogue never shows "[object Object]"', () => {
+  // postgrest-js rejects with { message, details, hint, code }, never an Error instance.
+  const offline = { message: 'TypeError: Failed to fetch', details: '', hint: '', code: '' };
+  assert.match(remoteErrorMessage(offline), /conexión|conectar/);
+  const denied = { message: 'permission denied for function kh_map_clusters', details: null, hint: null, code: '42501' };
+  assert.equal(remoteErrorMessage(denied), 'permission denied for function kh_map_clusters');
+  for (const failure of [offline, denied, {}, null, undefined]) {
+    assert.doesNotMatch(remoteErrorMessage(failure), /\[object Object\]/);
+  }
+});

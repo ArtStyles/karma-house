@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ListingForm from '../components/ListingForm';
 import { useListing } from '../catalog/useCatalog';
 import { useAuth } from '../auth/AuthProvider';
-import { Button, Notice, PageTitle } from '../components/ui';
+import { Button, goBack, Notice, PageTitle } from '../components/ui';
 import type { Listing, ListingDraft } from '../domain/listings';
 import { normalizeMapLocation } from '../domain/geo';
 import { useMarketplace } from '../state/MarketplaceProvider';
@@ -18,15 +18,12 @@ export default function EditScreen() {
   const { user } = useAuth();
   const { listing, ready } = useListing(id);
 
-  function cancel() {
-    if (router.canGoBack()) router.back();
-    else router.replace('/my-listings');
-  }
+  const cancel = () => goBack('/my-listings');
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.header}>
-        <PageTitle title="Editar anuncio" back />
+        <PageTitle title="Editar anuncio" back fallback="/my-listings" />
         {storageError ? <Notice error>{storageError}</Notice> : null}
       </View>
 

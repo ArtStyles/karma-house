@@ -4,9 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { useMessagingActivity } from '../components/messaging/useMessagingActivity';
-import { NotificationHeader } from '../components/notifications/NotificationHeader';
 import { PushDeviceCard } from '../components/notifications/PushDeviceCard';
-import { Button, EmptyState, Icon, type IconName, Notice } from '../components/ui';
+import { Button, EmptyState, Icon, type IconName, Notice, PageTitle } from '../components/ui';
 import { notificationErrorMessage } from '../notifications/domain';
 import { reconcileNotificationPreferenceDraft, sameNotificationChoices } from '../notifications/preferenceDraft';
 import { useNotifications } from '../notifications/NotificationsProvider';
@@ -18,7 +17,7 @@ export default function NotificationSettingsScreen() {
   const store = useNotifications();
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
     <ScrollView contentContainerStyle={styles.content}>
-      <NotificationHeader title="Tus avisos" subtitle="Tus novedades, a tu manera." />
+      <PageTitle title="Tus avisos" subtitle="Tus novedades, a tu manera." back fallback="/notifications" />
       {!auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} />
         : !store.available ? <EmptyState icon="notifications-outline" title="Avisos a tu medida" description="Las preferencias estarán disponibles cuando conectes una cuenta." />
         : !auth.user ? <AccountPrompt returnTo="/notification-settings" title="Avisos a tu medida" description="Inicia sesión para elegir los avisos de mensajes, visitas y ofertas que quieres recibir." />
@@ -79,7 +78,7 @@ function PreferencesForm({ userId, preferences }: { userId: string; preferences:
     void store.loadPreferences().catch(() => {});
   }
   return <View style={styles.form}>
-    <View style={styles.intro}><View style={styles.introIcon}><Icon name="options-outline" color={colors.primary} size={27} /></View><View style={styles.introCopy}><Text style={styles.introTitle}>Lo que quieres recibir</Text><Text style={styles.description}>Elige las próximas novedades de tu bandeja y de los teléfonos que hayas activado.</Text></View></View>
+    <Text accessibilityRole="header" style={styles.groupLabel}>Lo que quieres recibir</Text>
     <View style={styles.card}>
       <PreferenceRow label="Mensajes" description="Aviso en tu teléfono cuando alguien te escriba. El chat marca siempre los no leídos." icon="chatbubble-outline" value={draft.messages} disabled={busy} onChange={value => change('messages', value)} />
       <PreferenceRow label="Visitas" description="Propuestas de visita y cambios en su estado." icon="calendar-outline" value={draft.visits} disabled={busy} onChange={value => change('visits', value)} />
@@ -103,7 +102,7 @@ function PreferenceRow({ label, description, icon, value, disabled, onChange, la
 }
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 36 }, loading: { padding: 40 }, form: { gap: 18 },
-  intro: { backgroundColor: '#EAF2FC', borderRadius: 24, padding: 20, gap: 14 }, introIcon: { width: 52, height: 52, borderRadius: 18, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' }, introCopy: { gap: 7 }, introTitle: { color: colors.ink, fontSize: 20, lineHeight: 26, fontWeight: '600', letterSpacing: -0.35 }, description: { color: '#536B85', fontSize: 13, lineHeight: 20 },
+  groupLabel: { color: colors.ink, fontSize: 15, fontWeight: '600', letterSpacing: -0.2, marginBottom: -6, paddingHorizontal: 3 },
   card: { backgroundColor: colors.white, borderWidth: 1, borderColor: '#E5ECF5', borderRadius: 24, paddingHorizontal: 18 }, row: { paddingVertical: 19, gap: 10 }, rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, rowTop: { flexDirection: 'row', alignItems: 'center', gap: 10 }, rowIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' }, rowTitle: { flex: 1, minWidth: 0, fontSize: 16, fontWeight: '600', color: colors.ink }, rowDescription: { color: colors.muted, fontSize: 13, lineHeight: 20 }, footnote: { color: colors.muted, fontSize: 12, lineHeight: 19, paddingHorizontal: 3 },
   success: { flexDirection: 'row', alignItems: 'center', gap: 8 }, successText: { flex: 1, color: colors.green, fontSize: 14, lineHeight: 21 },
 });

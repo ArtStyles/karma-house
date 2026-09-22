@@ -1,10 +1,10 @@
 import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { safeReturnTo } from '../auth/callback';
-import { Button, Icon, IconButton, Notice, type IconName } from '../components/ui';
+import { Brand, Button, goBack, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { colors, typefaces } from '../theme';
 
@@ -24,6 +24,9 @@ export default function AuthScreen() {
   const [issue, setIssue] = useState<string | null>(null);
   const [notice, setNotice] = useState<'confirmation' | 'reset' | 'updated' | null>(null);
   const returnTo = safeReturnTo(params.returnTo) as Href;
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmationRef = useRef<TextInput>(null);
 
   useEffect(() => { setMode(initialMode(params.mode)); }, [params.mode]);
   useEffect(() => {
@@ -62,8 +65,8 @@ export default function AuthScreen() {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         <View style={styles.topBar}>
-          <IconButton name="chevron-back" label="Volver" onPress={() => mode === 'forgot' ? changeMode('signin') : router.canGoBack() ? router.back() : router.replace('/profile')} />
-          <Text style={styles.wordmark}>KarmaHouse</Text>
+          <IconButton name="chevron-back" label="Volver" onPress={() => mode === 'forgot' ? changeMode('signin') : goBack('/profile')} />
+          <Brand height={22} />
           <View style={styles.backSpace} />
         </View>
         <View style={styles.content}>
@@ -91,14 +94,15 @@ export default function AuthScreen() {
                 <Text style={[styles.segmentText, mode === item && styles.segmentTextSelected]}>{item === 'signin' ? 'Entrar' : 'Crear cuenta'}</Text>
               </Pressable>)}
             </View>}
-            {mode === 'signup' && <Field label="Nombre público" icon="person-outline" value={name} onChangeText={setName} editable={!submitting} autoComplete="name" textContentType="name" autoCapitalize="words" maxLength={80} placeholder="Cómo quieres que te llamemos" />}
-            {mode !== 'recovery' && <Field label="Correo electrónico" icon="mail-outline" value={email} onChangeText={setEmail} editable={!submitting} autoComplete="email" textContentType="emailAddress" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" maxLength={254} placeholder="tu@correo.com" returnKeyType={mode === 'forgot' ? 'go' : 'next'} onSubmitEditing={mode === 'forgot' ? submit : undefined} />}
-            {mode !== 'forgot' && <Field label={mode === 'recovery' ? 'Nueva contraseña' : 'Contraseña'} icon="lock-closed-outline" value={password} onChangeText={setPassword} editable={!submitting} secureTextEntry={!showPassword} autoCapitalize="none" autoCorrect={false} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} textContentType={mode === 'signin' ? 'password' : 'newPassword'} maxLength={128} placeholder={mode === 'signin' ? 'Tu contraseña' : 'Al menos 8 caracteres'} returnKeyType={mode === 'recovery' ? 'next' : 'go'} onSubmitEditing={mode === 'recovery' ? undefined : submit}
+            {mode === 'signup' && <Field label="Nombre público" icon="person-outline" value={name} onChangeText={setName} editable={!submitting} autoComplete="name" textContentType="name" autoCapitalize="words" maxLength={80} placeholder="Cómo quieres que te llamemos" returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => emailRef.current?.focus()} />}
+            {mode !== 'recovery' && <Field label="Correo electrónico" icon="mail-outline" value={email} onChangeText={setEmail} editable={!submitting} autoComplete="email" textContentType="emailAddress" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" maxLength={254} placeholder="tu@correo.com" inputRef={emailRef} returnKeyType={mode === 'forgot' ? 'go' : 'next'} submitBehavior={mode === 'forgot' ? 'blurAndSubmit' : 'submit'} onSubmitEditing={mode === 'forgot' ? submit : () => passwordRef.current?.focus()} />}
+            {mode !== 'forgot' && <Field label={mode === 'recovery' ? 'Nueva contraseña' : 'Contraseña'} icon="lock-closed-outline" value={password} onChangeText={setPassword} editable={!submitting} secureTextEntry={!showPassword} autoCapitalize="none" autoCorrect={false} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} textContentType={mode === 'signin' ? 'password' : 'newPassword'} maxLength={128} placeholder={mode === 'signin' ? 'Tu contraseña' : 'Al menos 8 caracteres'} inputRef={passwordRef} returnKeyType={mode === 'recovery' ? 'next' : 'go'} submitBehavior={mode === 'recovery' ? 'submit' : 'blurAndSubmit'} onSubmitEditing={mode === 'recovery' ? () => confirmationRef.current?.focus() : submit}
               accessory={<Pressable style={styles.eye} accessibilityRole="button" accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} onPress={() => setShowPassword(value => !value)}><Icon name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={21} color={colors.muted} /></Pressable>} />}
-            {mode === 'recovery' && <Field label="Repite la contraseña" icon="lock-closed-outline" value={confirmation} onChangeText={setConfirmation} editable={!submitting} secureTextEntry={!showPassword} autoComplete="new-password" textContentType="newPassword" autoCapitalize="none" autoCorrect={false} maxLength={128} placeholder="La misma contraseña" returnKeyType="go" onSubmitEditing={submit} />}
+            {mode === 'recovery' && <Field label="Repite la contraseña" icon="lock-closed-outline" value={confirmation} onChangeText={setConfirmation} editable={!submitting} secureTextEntry={!showPassword} autoComplete="new-password" textContentType="newPassword" autoCapitalize="none" autoCorrect={false} maxLength={128} placeholder="La misma contraseña" inputRef={confirmationRef} returnKeyType="go" onSubmitEditing={submit} />}
             {mode === 'signin' && <Pressable accessibilityRole="button" disabled={submitting} onPress={() => changeMode('forgot')} style={styles.forgot}><Text style={styles.linkText}>¿Olvidaste tu contraseña?</Text></Pressable>}
-            {issue && <Notice error>{issue}</Notice>}
             <Button label={submitLabel} loading={submitting} onPress={submit} style={{ marginTop: 5 }} />
+            {/* Under the button the error appears where the tap was, and never pushes the button away. */}
+            {issue && <Notice error>{issue}</Notice>}
             {mode === 'signup' && <Text style={styles.helper}>Te pediremos confirmar tu correo antes de entrar.</Text>}
             {mode === 'forgot' && <Button label="Volver a entrar" secondary disabled={submitting} onPress={() => changeMode('signin')} />}
           </View>}
@@ -109,13 +113,13 @@ export default function AuthScreen() {
   </SafeAreaView>;
 }
 
-function Field({ label, icon, accessory, ...input }: TextInputProps & { label: string; icon: IconName; accessory?: React.ReactNode }) {
+function Field({ label, icon, accessory, inputRef, ...input }: TextInputProps & { label: string; icon: IconName; accessory?: React.ReactNode; inputRef?: React.Ref<TextInput> }) {
   const [focused, setFocused] = useState(false);
   return <View style={styles.field}>
     <Text style={styles.label}>{label}</Text>
     <View style={[styles.inputRow, focused && styles.inputFocused]}>
       <Icon name={icon} size={20} color={colors.muted} />
-      <TextInput {...input} accessibilityLabel={label} placeholderTextColor="#8E8E93" style={styles.input} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+      <TextInput {...input} ref={inputRef} accessibilityLabel={label} placeholderTextColor={colors.muted} style={styles.input} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
       {accessory}
     </View>
   </View>;
@@ -125,7 +129,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 },
   scroll: { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: 40, flexGrow: 1 },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, paddingBottom: 24 },
-  wordmark: { color: colors.ink, fontSize: 17, fontWeight: '600', letterSpacing: -.5 }, backSpace: { width: 44 },
+  backSpace: { width: 44 },
   content: { width: '100%', maxWidth: 440, alignSelf: 'center', paddingTop: 12 },
   symbol: { width: 62, height: 62, borderRadius: 20, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
   title: { fontFamily: typefaces.display, color: colors.ink, fontSize: 39, lineHeight: 44, fontWeight: '700', letterSpacing: -1.4 },

@@ -125,6 +125,21 @@ export function filterRangeError(filters: ListingFilters): string | null {
   return null;
 }
 
+export type ListingBoardState = 'sold' | 'rejected' | 'draft' | 'pending' | 'paused' | 'live';
+
+/**
+ * One answer to «¿está mi vivienda en el catálogo?». Commercial status and moderation each hide
+ * a listing on their own, so the owner needs them resolved into a single state, not stacked.
+ */
+export function listingBoardState(listing: Pick<Listing, 'status' | 'moderationStatus'>): ListingBoardState {
+  if (listing.status === 'sold') return 'sold';
+  if (listing.moderationStatus === 'rejected') return 'rejected';
+  if (listing.moderationStatus === 'draft') return 'draft';
+  if (listing.moderationStatus === 'pending') return 'pending';
+  if (listing.status === 'paused') return 'paused';
+  return 'live';
+}
+
 export function activeFilterCount(filters: ListingFilters): number {
   return [!!filters.query.trim(), filters.type !== 'Todas', !!filters.province?.trim(),
     !!(filters.minPrice?.trim() || filters.maxPrice.trim()), !!(filters.minArea?.trim() || filters.maxArea?.trim()),

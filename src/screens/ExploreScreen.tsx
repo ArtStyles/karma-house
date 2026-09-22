@@ -1,8 +1,8 @@
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { activeFilterCount, defaultFilters, type Listing, type ListingFilters } from '../domain/listings';
+import { activeFilterCount, defaultFilters, type ListingFilters } from '../domain/listings';
 import { useCatalogPage } from '../catalog/useCatalog';
 import { CONDITIONS } from '../domain/listingOptions';
 import { useMarketplace } from '../state/MarketplaceProvider';
@@ -10,7 +10,7 @@ import { colors, layout } from '../theme';
 import { ExploreIntro } from '../components/ExploreIntro';
 import { PropertyCard } from '../components/PropertyCard';
 import { ExploreMap } from '../components/ExploreMap';
-import { Button, EmptyState, Icon, IconButton, Notice } from '../components/ui';
+import { Brand, Button, EmptyState, Icon, IconButton, Notice } from '../components/ui';
 import { CatalogFilters, SORT_OPTIONS } from '../components/CatalogFilters';
 import { AccountMenu } from '../components/account/AccountMenu';
 import { useMessaging } from '../messaging/MessagingProvider';
@@ -32,8 +32,6 @@ export default function ExploreScreen() {
   const [filters, setFilters] = useState<ListingFilters>({ ...defaultFilters });
   const [expanded, setExpanded] = useState(false);
   const [view, setView] = useState<'list' | 'map'>('list');
-  const scroll = useRef<FlatList<Listing>>(null);
-  const resultsY = useRef(0);
   const { width } = useWindowDimensions();
   const columns = width >= 1060 ? 3 : width >= 700 ? 2 : 1;
   const { rows: result, total, hasMore, ready, loading, pageError, loadMore, refresh: refreshCatalog } = useCatalogPage(filters);
@@ -43,7 +41,6 @@ export default function ExploreScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <FlatList
-        ref={scroll}
         // numColumns cannot change on a mounted list; only a breakpoint remounts it.
         key={columns}
         data={!ready || view === 'map' ? [] : result}
@@ -60,7 +57,7 @@ export default function ExploreScreen() {
         ListEmptyComponent={!ready ? <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: 45 }} /> : view === 'map' ? <ExploreMap filters={filters} withoutLocation={result.filter(item => !item.mapLocation).length} onShowList={() => setView('list')} /> : !storageError ? <EmptyState title={hasFilters ? 'Sin coincidencias' : 'Aquí empieza tu próximo hogar'} description={hasFilters ? 'Prueba otra zona o amplía los filtros para encontrar más viviendas.' : 'Aún no hay viviendas publicadas. Si tienes una en venta, puedes preparar el primer anuncio.'} icon={hasFilters ? 'search-outline' : 'home-outline'} action={<Button label={hasFilters ? 'Ver todas las viviendas' : 'Publicar una vivienda'} onPress={() => hasFilters ? setFilters({ ...defaultFilters }) : router.push('/publish')} />} /> : null}
         ListHeaderComponent={<View>
         <View style={styles.topbar}>
-          <View style={[styles.brand, width < 360 && { gap: 5 }]}><View style={[styles.brandMark, width < 360 && { width: 26, height: 26 }]}><Icon name="home" size={width < 360 ? 15 : 18} color={colors.white} /></View><Text style={[styles.brandText, width < 360 && { fontSize: 14 }]}>KarmaHouse</Text>{mode === 'demo' && <Text style={styles.demo}>Demo</Text>}</View>
+          <View style={styles.brand}><Brand height={width < 360 ? 24 : 30} />{mode === 'demo' && <Text style={styles.demo}>Demo</Text>}</View>
           <View style={{ flexDirection: 'row', gap: width < 360 ? 4 : 8 }}>
             <NotificationBell unreadCount={notificationUnreadCount} />
             <View><IconButton name="chatbubbles-outline" label={unreadCount ? `Mensajes, ${unreadCount} sin leer` : 'Abrir mensajes'} onPress={() => router.push('/messages')} />
@@ -70,7 +67,8 @@ export default function ExploreScreen() {
           </View>
         </View>
         <View style={width >= 700 && styles.discoveryHeader}>
-        <View style={width >= 700 && styles.introColumn}><ExploreIntro /></View>
+        {/* The welcome panel is the empty-handed state; a search or a filter means the results are the page. */}
+        {!hasFilters && <View style={width >= 700 && styles.introColumn}><ExploreIntro /></View>}
         <View style={width >= 700 && styles.searchColumn}>
         <View style={styles.searchArea}>
           <View style={styles.search}>
@@ -90,7 +88,7 @@ export default function ExploreScreen() {
         </View>
         </View>
         </View>
-        <View onLayout={event => { resultsY.current = event.nativeEvent.layout.y; }} style={styles.resultsHeader}>
+        <View style={styles.resultsHeader}>
           <Text accessibilityRole="header" style={styles.sectionTitle}>{hasFilters ? 'Resultados' : 'Explora viviendas'}</Text>
         <View style={styles.viewSwitch}>
           {([{ value: 'list', label: 'Lista', icon: 'list-outline' }, { value: 'map', label: 'Mapa', icon: 'map-outline' }] as const).map(option => <Pressable key={option.value} accessibilityRole="button" accessibilityLabel={`Ver ${option.label.toLowerCase()}`} accessibilityState={{ selected: view === option.value }} onPress={() => setView(option.value)} style={[styles.viewOption, view === option.value && styles.viewSelected]}>
@@ -119,21 +117,9 @@ export default function ExploreScreen() {
         {view === 'list' && pageError && ready ? <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{pageError}</Notice><Button label="Cargar más viviendas" secondary loading={loading} onPress={loadMore} /></View>
           : view === 'list' && loading && ready ? <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
           : view === 'list' && !hasMore && result.length > 0 ? <Text style={styles.listEnd}>{total === 1 ? 'Has visto la única vivienda que coincide.' : `Has visto las ${total} viviendas que coinciden.`}</Text> : null}
-        {!hasFilters && <>
-          <Text accessibilityRole="header" style={styles.discoverTitle}>A tu manera</Text>
-          <View style={styles.shortcuts}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Explorar viviendas en el mapa" onPress={() => { setView('map'); scroll.current?.scrollToOffset({ offset: resultsY.current, animated: true }); }} style={({ pressed }) => [styles.shortcut, styles.mapShortcut, pressed && { opacity: .75 }]}>
-              <View style={styles.shortcutTop}><View style={[styles.shortcutIcon, { backgroundColor: '#DDECE5' }]}><Icon name="map-outline" size={23} color="#306D59" /></View><Icon name="arrow-up-right-box-outline" size={17} color="#306D59" /></View>
-              <Text style={styles.shortcutTitle}>Mira alrededor</Text><Text style={styles.shortcutText}>Encuentra tu zona en el mapa.</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel="Ver mis viviendas favoritas" onPress={() => router.push('/favorites')} style={({ pressed }) => [styles.shortcut, styles.favoriteShortcut, pressed && { opacity: .75 }]}>
-              <View style={styles.shortcutTop}><View style={[styles.shortcutIcon, { backgroundColor: '#E8E3F5' }]}><Icon name="heart-outline" size={23} color="#6A548A" /></View><Icon name="arrow-up-right-box-outline" size={17} color="#6A548A" /></View>
-              <Text style={styles.shortcutTitle}>Las que te gustan</Text><Text style={styles.shortcutText}>Tus favoritos, en un solo lugar.</Text>
-            </Pressable>
-          </View>
-        </>}
-        {(hasFilters || result.length > 0 || view === 'map' || !!storageError) && <Pressable accessibilityRole="button" accessibilityLabel="Publicar una vivienda" onPress={() => router.push('/publish')} style={({ pressed }) => [styles.sellerBanner, pressed && { opacity: .85 }]}>
-          <View style={styles.sellerIcon}><Icon name="key-outline" size={25} color="#FFFFFF" /></View><View style={{ flex: 1 }}><Text style={styles.sellerEyebrow}>UN NUEVO COMIENZO</Text><Text style={styles.sellerTitle}>Tu vivienda, aquí.</Text><Text style={styles.sellerText}>Dale su próximo capítulo.</Text></View><Icon name="arrow-forward" size={21} color="#FFFFFF" />
+        {/* The seller invitation closes a real list; under an empty or failed one it reads as the answer. */}
+        {(result.length > 0 || view === 'map') && !storageError && <Pressable accessibilityRole="button" accessibilityLabel="Publicar una vivienda" onPress={() => router.push('/publish')} style={({ pressed }) => [styles.sellerBanner, pressed && { opacity: .85 }]}>
+          <View style={styles.sellerIcon}><Icon name="key-outline" size={25} color="#FFFFFF" /></View><View style={{ flex: 1 }}><Text style={styles.sellerTitle}>Tu vivienda, aquí.</Text><Text style={styles.sellerText}>Dale su próximo capítulo.</Text></View><Icon name="arrow-forward" size={21} color="#FFFFFF" />
         </Pressable>}
         {mode === 'demo' && <Notice>Viviendas e imágenes de demostración. Tus anuncios y favoritos se guardan solo en este dispositivo.</Notice>}
         </View>}
@@ -144,14 +130,14 @@ export default function ExploreScreen() {
 }
 
 function FilterTag({ label, onRemove }: { label: string; onRemove(): void }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={`Quitar filtro: ${label}`} onPress={onRemove} style={styles.filterTag}><Text style={styles.filterTagText}>{label}</Text><Icon name="close-circle" size={16} color={colors.primary} /></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={`Quitar filtro: ${label}`} onPress={onRemove} hitSlop={{ top: 4, bottom: 4 }} style={styles.filterTag}><Text style={styles.filterTagText}>{label}</Text><Icon name="close-circle" size={16} color={colors.primary} /></Pressable>;
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper },
   content: { width: '100%', maxWidth: 1180, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: layout.tabContentBottom },
   topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, paddingBottom: 18 },
-  brand: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginRight: 8 }, brandMark: { width: 32, height: 32, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }, brandText: { color: colors.ink, fontWeight: '700', fontSize: 16, letterSpacing: -.5 },
+  brand: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginRight: 8 },
   demo: { color: colors.muted, fontSize: 11, backgroundColor: '#EAEAEE', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, marginLeft: 3 },
   discoveryHeader: { flexDirection: 'row', gap: 28, alignItems: 'center' }, introColumn: { flex: 1 }, searchColumn: { flex: 1, paddingBottom: 18 },
   searchArea: { flexDirection: 'row', gap: 10 }, search: { flex: 1, minHeight: 50, backgroundColor: colors.white, borderWidth: 1, borderColor: '#E1E5EB', borderRadius: 16, paddingLeft: 14, paddingRight: 4, flexDirection: 'row', alignItems: 'center', gap: 9 },
@@ -161,15 +147,14 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: colors.white, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }, segmentText: { fontSize: 13, color: colors.muted, fontWeight: '500' }, segmentTextActive: { fontWeight: '600', color: colors.ink },
   filterCount: { position: 'absolute', right: -5, top: -5, minWidth: 19, height: 19, paddingHorizontal: 4, borderRadius: 10, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.paper }, filterCountText: { color: colors.white, fontSize: 10, fontWeight: '700' }, activeFilters: { gap: 7, paddingBottom: 14 }, filterTag: { minHeight: 36, paddingHorizontal: 11, paddingVertical: 8, gap: 6, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.softBlue, borderRadius: 14 }, filterTagText: { fontSize: 12, color: colors.primary },
   resultsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 24 },
-  sectionTitle: { flex: 1, fontSize: 21, fontWeight: '700', color: colors.ink, letterSpacing: -.6 }, resultCount: { flex: 1, fontSize: 12, color: colors.muted }, resultMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  sectionTitle: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.ink, letterSpacing: -.2 }, resultCount: { flex: 1, fontSize: 12, color: colors.muted }, resultMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   sort: { flexDirection: 'row', minHeight: 44, gap: 4, alignItems: 'center' }, sortText: { fontSize: 13, color: colors.primary },
   viewSwitch: { flexDirection: 'row', padding: 3, borderRadius: 15, backgroundColor: '#EAEAEE' },
   viewOption: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12 }, viewSelected: { backgroundColor: colors.white, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' },
   listEnd: { fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 4, marginBottom: 8 },
   clear: { minHeight: 44, justifyContent: 'center', marginTop: -8, marginBottom: 6 }, clearText: { color: colors.primary, fontSize: 14 },
   row: { columnGap: '2%' }, cell: { marginBottom: 24 },
-  discoverTitle: { color: colors.ink, fontSize: 20, fontWeight: '700', letterSpacing: -.4, marginTop: 28, marginBottom: 14 }, shortcuts: { flexDirection: 'row', gap: 12 }, shortcut: { flex: 1, borderRadius: 22, padding: 16, gap: 7, borderWidth: 1 }, mapShortcut: { backgroundColor: '#EEF5F1', borderColor: '#DFEAE4' }, favoriteShortcut: { backgroundColor: '#F3F0F8', borderColor: '#E8E1F0' }, shortcutTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }, shortcutIcon: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center' }, shortcutTitle: { color: colors.ink, fontSize: 15, fontWeight: '600', letterSpacing: -.3 }, shortcutText: { fontSize: 12, lineHeight: 18, color: colors.muted },
   sellerBanner: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: '#173B60', borderRadius: 22, padding: 20, marginTop: 18, marginBottom: 10 },
-  sellerIcon: { width: 46, height: 46, borderRadius: 15, backgroundColor: '#305577', alignItems: 'center', justifyContent: 'center' }, sellerEyebrow: { color: '#AFC9E0', fontSize: 8, letterSpacing: 1.1, fontWeight: '600', marginBottom: 5 },
+  sellerIcon: { width: 46, height: 46, borderRadius: 15, backgroundColor: '#305577', alignItems: 'center', justifyContent: 'center' },
   sellerTitle: { color: colors.white, fontSize: 19, fontWeight: '600', letterSpacing: -.3 }, sellerText: { fontSize: 12, lineHeight: 18, color: '#CADBEB', marginTop: 4 },
 });

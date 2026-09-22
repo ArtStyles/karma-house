@@ -6,8 +6,8 @@ import { draftToken } from '../domain/draftPersistence';
 import { colors } from '../theme';
 import { Button, IconButton } from './ui';
 
-export function ListingPhotos({ photos, busy, disabled, onBusy, onChange, onError }: {
-  photos: PhotoDraft[]; busy: boolean; disabled: boolean; onBusy(value: boolean): void;
+export function ListingPhotos({ photos, busy, disabled, required = false, onBusy, onChange, onError }: {
+  photos: PhotoDraft[]; busy: boolean; disabled: boolean; required?: boolean; onBusy(value: boolean): void;
   onChange(photos: PhotoDraft[]): void; onError(message: string): void;
 }) {
   async function pick() {
@@ -44,7 +44,7 @@ export function ListingPhotos({ photos, busy, disabled, onBusy, onChange, onErro
     finally { onBusy(false); }
   }
   return <View style={styles.container}>
-    <Text style={styles.title}>Fotos de tu vivienda</Text>
+    <Text accessibilityRole="header" style={styles.title}>Fotos de tu vivienda{required ? <Text style={styles.caption}> *</Text> : null}</Text>
     <Text style={styles.caption}>Hasta 6 fotos. La primera será la portada.</Text>
     <View style={styles.grid}>{photos.map((photo, index) => <View key={photo.uploadId ?? photo.storagePath ?? index} style={styles.tile}>
       <Image source={{ uri: photo.uri }} style={styles.image} accessibilityLabel={`Foto ${index + 1}`} />

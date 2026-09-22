@@ -5,7 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { NavigationMaterial } from '../components/NavigationMaterial';
 import { PropertyImage } from '../components/PropertyImage';
 import { KarmaMap } from '../components/maps/KarmaMap';
-import { Button, EmptyState, Icon, IconButton, Notice, type IconName } from '../components/ui';
+import { Button, EmptyState, goBack, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors, formatMoney, typefaces } from '../theme';
 import { useListing } from '../catalog/useCatalog';
@@ -71,7 +71,7 @@ export default function DetailScreen() {
       <View style={styles.photoFrame}>
         <PropertyImage listing={listing} photoIndex={selectedPhoto} style={[styles.photo, width >= 700 && styles.widePhoto]} />
         <View style={styles.navigation}>
-          <IconButton name="chevron-back" label="Volver al catálogo" onPress={() => router.canGoBack() ? router.back() : router.replace('/')} style={styles.floatingButton} />
+          <IconButton name="chevron-back" label="Volver al catálogo" onPress={() => goBack()} style={styles.floatingButton} />
           <View style={styles.navigationTitle}><Text style={styles.navText}>{listing.type}</Text></View>
           <IconButton name={favorite ? 'heart' : 'heart-outline'} label={favorite ? 'Quitar de favoritos' : 'Guardar en favoritos'} onPress={toggle} active={favorite} style={styles.floatingButton} />
         </View>
@@ -120,7 +120,9 @@ export default function DetailScreen() {
         </View>}
         {listing.mapLocation && <View style={styles.section}>
           <View style={styles.mapHeading}><Text accessibilityRole="header" style={styles.sectionTitle}>Ubicación</Text><Text style={styles.mapPrecision}>{listing.mapLocation.precision === 'approximate' ? 'Aproximada' : 'Exacta'}</Text></View>
+          {/* A map inside a ScrollView must not eat the drag; the listing is read, not explored. */}
           <View style={styles.mapFrame}><KarmaMap
+            interactive={false}
             style={{ height: 280 }} center={listing.mapLocation} zoom={listing.mapLocation.precision === 'approximate' ? 13 : 15}
             markers={[{ id: listing.id, coordinate: listing.mapLocation, precision: listing.mapLocation.precision }]}
             selectedMarkerId={listing.id} accessibilityLabel={`Ubicación ${listing.mapLocation.precision === 'approximate' ? 'aproximada' : 'exacta'} de ${listing.title}`}
@@ -170,7 +172,7 @@ const styles = StyleSheet.create({
   badges: { flexDirection: 'row', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 4 }, statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.softGreen, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 14 }, statusDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.green }, statusText: { fontSize: 12, fontWeight: '600', color: colors.green }, inactiveBadge: { backgroundColor: '#FFF3DA' }, inactiveDot: { backgroundColor: colors.amber }, inactiveText: { color: colors.amber }, demo: { fontSize: 12, color: colors.muted },
   price: { color: colors.ink, fontSize: 34, fontWeight: '700', letterSpacing: -1.1 }, currency: { color: colors.muted, fontSize: 15, fontWeight: '500', letterSpacing: 0 }, title: { fontFamily: typefaces.display, color: colors.ink, fontWeight: '600', fontSize: 24, lineHeight: 30, letterSpacing: -.6 }, location: { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginTop: 1 }, locationText: { color: colors.muted, fontSize: 14, lineHeight: 20, flex: 1 },
   features: { flexDirection: 'row', flexWrap: 'wrap', backgroundColor: colors.white, borderRadius: 24, paddingVertical: 20, paddingHorizontal: 10, rowGap: 18 }, feature: { flex: 1, minWidth: 95, alignItems: 'center', gap: 8, paddingHorizontal: 4 }, featureValue: { fontSize: 20, fontWeight: '600', color: colors.ink, letterSpacing: -.4, textAlign: 'center' }, featureLabel: { fontSize: 12, color: colors.muted, textAlign: 'center' },
-  section: { gap: 12 }, sectionTitle: { fontSize: 21, fontWeight: '700', color: colors.ink, letterSpacing: -.4, paddingHorizontal: 2 }, group: { backgroundColor: colors.white, borderRadius: 24, padding: 20 }, description: { color: colors.ink, lineHeight: 25, fontSize: 16 },
+  section: { gap: 12 }, sectionTitle: { fontSize: 17, fontWeight: '600', color: colors.ink, letterSpacing: -.2, paddingHorizontal: 2 }, group: { backgroundColor: colors.white, borderRadius: 24, padding: 20 }, description: { color: colors.ink, lineHeight: 25, fontSize: 16 },
   mapHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, mapPrecision: { color: colors.primary, fontSize: 12, fontWeight: '600', backgroundColor: colors.softBlue, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }, mapFrame: { borderRadius: 24, overflow: 'hidden' }, mapDescription: { fontSize: 13, lineHeight: 20, color: colors.muted, paddingHorizontal: 2 },
   amenities: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 20, backgroundColor: colors.white, borderRadius: 24, padding: 20 }, amenity: { flexDirection: 'row', alignItems: 'center', gap: 10, flexBasis: '45%', flexGrow: 1, minWidth: 120 }, amenityText: { color: colors.ink, fontSize: 15, lineHeight: 21, flex: 1 },
   seller: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, backgroundColor: colors.white, borderRadius: 24 }, sellerIcon: { backgroundColor: colors.paper, width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' }, sellerCopy: { flex: 1, gap: 5 }, sellerTitle: { color: colors.ink, fontSize: 16, fontWeight: '600' }, sellerText: { color: colors.muted, fontSize: 13, lineHeight: 19 },

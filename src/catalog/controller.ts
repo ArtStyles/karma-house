@@ -1,5 +1,6 @@
 import type { Listing, ListingFilters } from '../domain/listings.ts';
 import type { CatalogRepository, SearchMode } from './types.ts';
+import { remoteErrorMessage } from '../state/remoteMarketplaceStore.ts';
 
 export interface CatalogState {
   rows: Listing[];
@@ -54,7 +55,7 @@ export function createCatalogController(repository: CatalogRepository) {
       });
     } catch (error) {
       if (epoch !== generation || mine !== sequence) return;
-      const message = error instanceof Error ? error.message : String(error);
+      const message = remoteErrorMessage(error);
       publish({
         ...state,
         ready: true,

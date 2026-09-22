@@ -4,8 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { NotificationCard } from '../components/notifications/NotificationCard';
-import { NotificationHeader } from '../components/notifications/NotificationHeader';
-import { Button, EmptyState, IconButton, Notice, Pill } from '../components/ui';
+import { Button, EmptyState, IconButton, Notice, PageTitle, Pill } from '../components/ui';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { useNotificationCenter } from '../notifications/useNotificationCenter';
 import { colors } from '../theme';
@@ -14,7 +13,7 @@ export default function NotificationsScreen() {
   const auth = useAuth();
   const store = useNotifications();
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}><View style={styles.shell}>
-    <View style={styles.inset}><NotificationHeader title="Notificaciones" subtitle="Avisos dentro de KarmaHouse" right={<IconButton name="options-outline" label="Preferencias de notificaciones" onPress={() => router.push('/notification-settings')} />} /></View>
+    <View style={styles.inset}><PageTitle title="Notificaciones" subtitle="Avisos dentro de KarmaHouse" back fallback="/profile" right={<IconButton name="options-outline" label="Preferencias de notificaciones" onPress={() => router.push('/notification-settings')} />} /></View>
     {!auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} />
       : !store.available ? <View style={styles.inset}><EmptyState icon="notifications-outline" title="Cada novedad, en su lugar" description="Los avisos estarán disponibles cuando conectes una cuenta." /></View>
       : !auth.user ? <View style={styles.inset}><AccountPrompt returnTo="/notifications" title="Mantente al tanto" description="Inicia sesión para consultar los avisos de tus mensajes, visitas y ofertas." /></View>

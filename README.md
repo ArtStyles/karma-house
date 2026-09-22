@@ -141,7 +141,7 @@ Las fotos se comprimen a JPEG, con hasta 1600 píxeles en el lado mayor, un lím
 
 La demo sin Supabase conserva el almacenamiento `@karma-house/marketplace-v1`. No se migra automáticamente al catálogo real.
 
-Las dos fotografías de demostración se generaron con `image_gen` integrado. Prompts y procedencia: [assets/images/PROVENANCE.md](assets/images/PROVENANCE.md). No representan inmuebles en venta. El icono es un dibujo vectorial original en `assets/karmahouse-icon.svg`; `scripts/render-icon.cjs` rasteriza ese SVG con Sharp y no altera las fotografías.
+Las dos fotografías de demostración se generaron con `image_gen` integrado. Prompts y procedencia: [assets/images/PROVENANCE.md](assets/images/PROVENANCE.md). No representan inmuebles en venta. El logo (`assets/karmahouse-logo.png`) es la marca oficial de la plataforma; `scripts/render-logo.py` deriva de él el símbolo, el icono de la app, el favicon y el icono de notificaciones sin alterar las fotografías.
 
 ## Preparación antes de abrir al público
 

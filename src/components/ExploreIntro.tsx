@@ -24,14 +24,14 @@ export function ExploreIntro() {
 }
 
 const styles = StyleSheet.create({
-  panel: { backgroundColor: '#EAF2FC', borderRadius: 25, paddingHorizontal: 20, paddingVertical: 22, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', borderWidth: 1, borderColor: '#DFEAF7', marginBottom: 18 },
-  compactPanel: { paddingHorizontal: 15, paddingVertical: 18 }, compactTitle: { fontSize: 24, lineHeight: 28, letterSpacing: -.9 }, compactArt: { width: 62, marginLeft: 0, transform: [{ scale: .78 }, { translateX: 3 }] },
-  copy: { flex: 1, zIndex: 1 }, eyebrow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 9 }, dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.primary },
-  eyebrowText: { fontSize: 9, fontWeight: '700', letterSpacing: 1, color: '#426482' },
-  title: { fontSize: 28, lineHeight: 31, letterSpacing: -1, fontWeight: '700', color: '#143658' }, subtitle: { color: '#486580', fontSize: 12, lineHeight: 18, marginTop: 10 },
-  art: { width: 94, height: 125, marginLeft: 2 }, halo: { width: 135, height: 135, borderRadius: 68, backgroundColor: '#D9E8FA', position: 'absolute', left: -15, top: 0 },
+  panel: { backgroundColor: '#EAF2FC', borderRadius: 25, paddingHorizontal: 20, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', borderWidth: 1, borderColor: '#DFEAF7', marginBottom: 18 },
+  compactPanel: { paddingHorizontal: 15, paddingVertical: 14 }, compactTitle: { fontSize: 24, lineHeight: 28, letterSpacing: -.9 }, compactArt: { width: 62, marginLeft: 0, transform: [{ scale: .78 }, { translateX: 3 }] },
+  copy: { flex: 1, zIndex: 1 }, eyebrow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 7 }, dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.primary },
+  eyebrowText: { fontSize: 11, fontWeight: '700', letterSpacing: .8, color: '#426482' },
+  title: { fontSize: 28, lineHeight: 31, letterSpacing: -1, fontWeight: '700', color: '#143658' }, subtitle: { color: '#486580', fontSize: 12, lineHeight: 18, marginTop: 8 },
+  art: { width: 94, height: 104, marginLeft: 2 }, halo: { width: 130, height: 112, borderRadius: 56, backgroundColor: '#D9E8FA', position: 'absolute', left: -15, top: -4 },
   sun: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#F7DDA7', position: 'absolute', top: 3, right: 6 },
-  backBuilding: { position: 'absolute', left: 2, top: 27, width: 31, height: 78, borderRadius: 5, backgroundColor: '#89AED7', padding: 9, gap: 9, transform: [{ rotate: '-5deg' }] },
+  backBuilding: { position: 'absolute', left: 2, bottom: 15, width: 31, height: 78, borderRadius: 5, backgroundColor: '#89AED7', padding: 9, gap: 9, transform: [{ rotate: '-5deg' }] },
   window: { width: 10, height: 9, borderRadius: 2, backgroundColor: '#E8F1FB' },
   house: { position: 'absolute', right: 2, bottom: 20, width: 70, height: 78 }, roof: { position: 'absolute', width: 51, height: 51, backgroundColor: '#316DA9', transform: [{ rotate: '45deg' }], borderRadius: 5, left: 9, top: 0 },
   facade: { position: 'absolute', bottom: 0, width: 70, height: 56, backgroundColor: '#FFFFFF', borderRadius: 5, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 8, boxShadow: '0 5px 14px rgba(28,67,111,0.12)' },

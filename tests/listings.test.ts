@@ -5,6 +5,7 @@ import test from 'node:test';
 import {
   createListing,
   filterListings,
+  listingBoardState,
   updateListing,
   validateDraft,
   type Listing,
@@ -357,3 +358,16 @@ async function waitFor(predicate: () => boolean): Promise<void> {
   }
   throw new Error('La condición esperada no ocurrió.');
 }
+
+test('the board state answers whether the listing is in the catalogue, not which field blocked it', () => {
+  assert.equal(listingBoardState({ status: 'active', moderationStatus: 'approved' }), 'live');
+  assert.equal(listingBoardState({ status: 'active' }), 'live');
+  assert.equal(listingBoardState({ status: 'paused', moderationStatus: 'approved' }), 'paused');
+  assert.equal(listingBoardState({ status: 'sold', moderationStatus: 'approved' }), 'sold');
+  // Moderation hides the listing whatever the commercial status says, so it wins over 'active'.
+  assert.equal(listingBoardState({ status: 'active', moderationStatus: 'pending' }), 'pending');
+  assert.equal(listingBoardState({ status: 'paused', moderationStatus: 'rejected' }), 'rejected');
+  assert.equal(listingBoardState({ status: 'active', moderationStatus: 'draft' }), 'draft');
+  // A sold listing is sold first: reactivating it is the owner's decision, not the reviewer's.
+  assert.equal(listingBoardState({ status: 'sold', moderationStatus: 'rejected' }), 'sold');
+});

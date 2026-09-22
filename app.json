@@ -17,7 +17,7 @@
       "googleServicesFile": "./google-services.json",
       "versionCode": 7,
       "adaptiveIcon": {
-        "backgroundColor": "#132D43",
+        "backgroundColor": "#0153A8",
         "foregroundImage": "./assets/karmahouse-icon.png"
       },
       "predictiveBackGestureEnabled": false
@@ -38,7 +38,7 @@
         "expo-notifications",
         {
           "icon": "./assets/karmahouse-notification.png",
-          "color": "#0069D9",
+          "color": "#0153A8",
           "defaultChannel": "karmahouse-updates"
         }
       ],

@@ -9,7 +9,7 @@ import { ReportConversationSheet } from '../components/messaging/ReportConversat
 import { useComposerDraft } from '../components/messaging/useComposerDraft';
 import { useMessagingActivity } from '../components/messaging/useMessagingActivity';
 import { ConversationNegotiations } from '../components/negotiations/ConversationNegotiations';
-import { Button, EmptyState, Icon, IconButton, Notice, PageTitle } from '../components/ui';
+import { Button, EmptyState, goBack, Icon, IconButton, Notice, PageTitle } from '../components/ui';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { colors } from '../theme';
@@ -151,7 +151,7 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.shell}>
         <View style={styles.chatHeader}>
-          <IconButton name="chevron-back" label="Volver" onPress={() => router.canGoBack() ? router.back() : router.replace('/messages')} />
+          <IconButton name="chevron-back" label="Volver" onPress={() => goBack('/messages')} />
           <View style={styles.person}><Text numberOfLines={1} style={styles.personName}>{conversation.otherName}</Text><Text style={styles.personHint}>Conversación sobre una vivienda</Text></View>
           <IconButton name="ellipsis-horizontal" label="Opciones de conversación" onPress={() => { Keyboard.dismiss(); setMenu(true); }} />
         </View>

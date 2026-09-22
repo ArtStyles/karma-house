@@ -4,6 +4,8 @@ import { createRowSigner } from '../data/supabaseMarketplace';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthProvider';
 import { useMarketplace } from '../state/MarketplaceProvider';
+// Supabase rejects with a plain object, never an Error, so String(error) yields "[object Object]".
+import { remoteErrorMessage } from '../state/remoteMarketplaceStore';
 import { createCatalogController, emptyCatalogState, type CatalogState } from './controller';
 import { createCatalogRepository } from './repository';
 import { COUNT_DEBOUNCE_MS, type BoundingBox, type CatalogRepository, type MapView } from './types';
@@ -76,7 +78,7 @@ export function useListing(id: string | undefined): { listing: Listing | undefin
     setState({ listing: undefined, ready: false, error: null });
     repository.byId(id, passthrough)
       .then((listing) => { if (!cancelled) setState({ listing: listing ?? undefined, ready: true, error: null }); })
-      .catch((error) => { if (!cancelled) setState({ listing: undefined, ready: true, error: error instanceof Error ? error.message : String(error) }); });
+      .catch((error) => { if (!cancelled) setState({ listing: undefined, ready: true, error: remoteErrorMessage(error) }); });
     return () => { cancelled = true; };
   }, [mode, repository, id]);
 
@@ -100,7 +102,7 @@ export function useFavoriteListings(): { listings: Listing[]; ready: boolean; er
     setState((current) => ({ ...current, ready: favoriteIds.length === 0, error: null }));
     repository.byIds(favoriteIds, passthrough)
       .then((listings) => { if (!cancelled) setState({ listings, ready: true, error: null }); })
-      .catch((error) => { if (!cancelled) setState({ listings: [], ready: true, error: error instanceof Error ? error.message : String(error) }); });
+      .catch((error) => { if (!cancelled) setState({ listings: [], ready: true, error: remoteErrorMessage(error) }); });
     return () => { cancelled = true; };
     // favoriteIds is rebuilt on every toggle, so the joined key is the stable dependency.
   }, [mode, repository, key]);
@@ -110,28 +112,32 @@ export function useFavoriteListings(): { listings: Listing[]; ready: boolean; er
   return { listings: visible, ready: mode === 'demo' ? true : state.ready, error: mode === 'demo' ? null : state.error };
 }
 
-export function useMapView(bbox: BoundingBox | null, zoom: number, filters: ListingFilters): { view: MapView; ready: boolean } {
+export function useMapView(bbox: BoundingBox | null, zoom: number, filters: ListingFilters): { view: MapView; ready: boolean; error: string | null; retry(): void } {
   const { mode, demoCatalog } = useMarketplace();
   const repository = useCatalogRepository();
   const [view, setView] = useState<MapView>({ mode: 'points', items: [] });
   const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const latest = useRef(0);
+  const retry = useCallback(() => setAttempt((value) => value + 1), []);
 
   const box = bbox ? `${bbox.west},${bbox.south},${bbox.east},${bbox.north}` : '';
   useEffect(() => {
     if (mode === 'demo' || !repository || !bbox) return;
     const mine = ++latest.current;
     setReady(false);
+    // A failed viewport must not read as an empty one; the screen needs the reason and a retry.
     repository.mapView(bbox, zoom, filters, passthrough)
-      .then((next) => { if (mine === latest.current) { setView(next); setReady(true); } })
-      .catch(() => { if (mine === latest.current) setReady(true); });
-  }, [mode, repository, box, zoom, filters]);
+      .then((next) => { if (mine === latest.current) { setView(next); setError(null); setReady(true); } })
+      .catch((failure) => { if (mine === latest.current) { setError(remoteErrorMessage(failure)); setReady(true); } });
+  }, [mode, repository, box, zoom, filters, attempt]);
 
   if (mode === 'demo') {
     const items = filterListings(demoCatalog ?? [], filters)
       .filter((item) => item.mapLocation)
       .map((item) => ({ id: item.id, price: item.price, ...item.mapLocation! }));
-    return { view: { mode: 'points', items }, ready: true };
+    return { view: { mode: 'points', items }, ready: true, error: null, retry: () => {} };
   }
-  return { view, ready };
+  return { view, ready, error, retry };
 }
