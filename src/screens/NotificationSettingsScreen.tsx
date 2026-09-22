@@ -81,11 +81,11 @@ function PreferencesForm({ userId, preferences }: { userId: string; preferences:
   return <View style={styles.form}>
     <View style={styles.intro}><View style={styles.introIcon}><Icon name="options-outline" color={colors.primary} size={27} /></View><View style={styles.introCopy}><Text style={styles.introTitle}>Lo que quieres recibir</Text><Text style={styles.description}>Elige las próximas novedades de tu bandeja y de los teléfonos que hayas activado.</Text></View></View>
     <View style={styles.card}>
-      <PreferenceRow label="Mensajes" description="Cuando alguien te escriba en una conversación." icon="chatbubble-outline" value={draft.messages} disabled={busy} onChange={value => change('messages', value)} />
+      <PreferenceRow label="Mensajes" description="Aviso en tu teléfono cuando alguien te escriba. El chat marca siempre los no leídos." icon="chatbubble-outline" value={draft.messages} disabled={busy} onChange={value => change('messages', value)} />
       <PreferenceRow label="Visitas" description="Propuestas de visita y cambios en su estado." icon="calendar-outline" value={draft.visits} disabled={busy} onChange={value => change('visits', value)} />
       <PreferenceRow label="Ofertas" description="Ofertas de compra y novedades de la negociación." icon="pricetag-outline" value={draft.offers} disabled={busy} onChange={value => change('offers', value)} last />
     </View>
-    <Text style={styles.footnote}>Desactivar una categoría evita sus próximos avisos. El historial se conserva y seguirás recibiendo mensajes, visitas y ofertas en sus secciones.</Text>
+    <Text style={styles.footnote}>Desactivar una categoría evita sus próximos avisos. Tu bandeja recoge visitas y ofertas; los mensajes se consultan en el chat.</Text>
     {!!(issue || store.preferencesError) && <Notice error>{issue || store.preferencesError}</Notice>}
     {saved && <View accessibilityLiveRegion="polite" style={styles.success}><Icon name="checkmark-circle" color={colors.green} size={19} /><Text style={styles.successText}>Preferencias guardadas.</Text></View>}
     <Button label="Guardar preferencias" onPress={() => void save()} loading={store.savingPreferences} disabled={busy || !changed} />

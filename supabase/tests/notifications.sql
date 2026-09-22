@@ -33,7 +33,9 @@ select pg_temp.notice_assert((select public.kh_send_message(conversation_id,'770
 select pg_temp.notice_assert((public.kh_notification_summary('77000000-0000-4000-8000-000000000001')->>'unreadCount')::int=0,'sender receives no self notice');
 select pg_temp.notice_actor('77000000-0000-4000-8000-000000000002');
 update notice_context set page=public.kh_list_notifications('77000000-0000-4000-8000-000000000002');
-select pg_temp.notice_assert((select page->>'unreadCount'='1' and page->'items'->0->>'category'='message' and page->'items'->0->'negotiationId'='null' from notice_context),'imitation text stays ordinary message and retry one notice');
+select pg_temp.notice_assert((select page->>'unreadCount'='0' and page->'items'='[]'::jsonb from notice_context),'message notices stay out of the bell');
+select pg_temp.notice_assert(public.kh_list_notifications('77000000-0000-4000-8000-000000000002',null,false,'offer',30)->'items'='[]'::jsonb,'imitation text stays an ordinary message');
+select pg_temp.notice_error('select public.kh_list_notifications(''77000000-0000-4000-8000-000000000002'',null,false,''message'',30)','KH_NOTIFICATION_INVALID');
 select pg_temp.notice_assert((select page::text not like '%NOTA_PRIVADA%' and page::text not like '%1234%' from notice_context),'notification excludes message contents');
 select pg_temp.notice_assert(public.kh_get_notification_preferences('77000000-0000-4000-8000-000000000002')='{"messages":true,"visits":true,"offers":true,"version":0}','default preferences');
 select pg_temp.notice_assert(public.kh_save_notification_preferences('77000000-0000-4000-8000-000000000002','{"messages":false,"visits":true,"offers":true,"expectedVersion":0}')->>'version'='1','save preferences');
@@ -47,7 +49,7 @@ update notice_context set offer=public.kh_create_negotiation('77000000-0000-4000
 select pg_temp.notice_assert((select public.kh_create_negotiation('77000000-0000-4000-8000-000000000001',payload)=offer from notice_context),'offer replay exact');
 select pg_temp.notice_actor('77000000-0000-4000-8000-000000000002');
 update notice_context set page=public.kh_list_notifications('77000000-0000-4000-8000-000000000002',null,false,'offer',30);
-select pg_temp.notice_assert((select page->>'unreadCount'='2' and jsonb_array_length(page->'items')=1 and page->'items'->0->>'negotiationId'=offer->>'id' and page::text not like '%44000%' and page::text not like '%NOTA_OFERTA_PRIVADA%' from notice_context),'preferences suppress only future messages; filtered count global and generic structured offer');
+select pg_temp.notice_assert((select page->>'unreadCount'='1' and jsonb_array_length(page->'items')=1 and page->'items'->0->>'negotiationId'=offer->>'id' and page::text not like '%44000%' and page::text not like '%NOTA_OFERTA_PRIVADA%' from notice_context),'bell counts the offer alone and keeps it generic');
 update notice_context set payload=payload||jsonb_build_object('clientRequestId','77000000-0000-4000-8000-000000000013','replacesId',offer->>'id','expectedVersion',1,'amountUsd','46000');
 update notice_context set alternate=public.kh_create_negotiation('77000000-0000-4000-8000-000000000002',payload);
 select pg_temp.notice_assert((select public.kh_create_negotiation('77000000-0000-4000-8000-000000000002',payload)=alternate from notice_context),'counter retry exact');
@@ -59,9 +61,18 @@ update notice_context set cutoff=public.kh_notification_summary('77000000-0000-4
 select public.kh_save_notification_preferences('77000000-0000-4000-8000-000000000002','{"messages":true,"visits":true,"offers":true,"expectedVersion":1}');
 select pg_temp.notice_actor('77000000-0000-4000-8000-000000000001');
 select public.kh_send_message(conversation_id,'77000000-0000-4000-8000-000000000015','Llegó después del corte','77000000-0000-4000-8000-000000000001') from notice_context;
+-- The bell ignores message notices, so reclassify this one: the assertion is about the cutoff, not the category.
+reset role;
+update kh_private.notifications set category='visit',title='Actualización de visita',body='Tienes una propuesta de visita para revisar.'
+  where seq=(select max(seq) from kh_private.notifications);
+set local role authenticated;
 select pg_temp.notice_actor('77000000-0000-4000-8000-000000000002');
 select pg_temp.notice_assert((select public.kh_read_notifications_through('77000000-0000-4000-8000-000000000002',cutoff)->>'unreadCount'='1' from notice_context),'mark all does not swallow newer notice');
 select pg_temp.notice_assert((select public.kh_read_notifications_through('77000000-0000-4000-8000-000000000002',cutoff)->>'unreadCount'='1' from notice_context),'read all idempotent');
+reset role;
+select pg_temp.notice_assert(exists(select 1 from kh_private.notifications where category='message'
+  and recipient_id='77000000-0000-4000-8000-000000000002' and read_at is null),'reading the bell leaves message notices unread so their push still goes out');
+set local role authenticated;
 update notice_context set page=public.kh_list_notifications('77000000-0000-4000-8000-000000000002',null,true,null,30);
 select pg_temp.notice_assert((select jsonb_array_length(page->'items')=1 from notice_context),'unread filter server side');
 select pg_temp.notice_assert((select public.kh_read_notification('77000000-0000-4000-8000-000000000002',(page->'items'->0->>'id')::uuid)->>'unreadCount'='0' from notice_context),'single read');
@@ -120,11 +131,14 @@ drop trigger notice_forced_failure on kh_private.notifications;
 -- Direct fixture inserts exercise trigger pagination without bypassing public RPC rate limits.
 insert into public.kh_messages(conversation_id,sender_id,client_message_id,seq,body)
 select conversation_id,'77000000-0000-4000-8000-000000000001',gen_random_uuid(),100+g,'Mensaje sintético' from notice_context cross join generate_series(1,35) g;
+-- Pagination is about the seek cursor, not the category, and the bell skips message notices.
+update kh_private.notifications set category='visit',title='Actualización de visita',body='Tienes una propuesta de visita para revisar.'
+  where message_id in (select id from public.kh_messages where body='Mensaje sintético');
 set local role authenticated;
 select pg_temp.notice_actor('77000000-0000-4000-8000-000000000002');
 update notice_context set page=public.kh_list_notifications('77000000-0000-4000-8000-000000000002');
 select pg_temp.notice_assert((select jsonb_array_length(page->'items')=30 and page->>'nextCursor'=page->'items'->29->>'seq' from notice_context),'seek page boundary and cursor');
-select pg_temp.notice_assert((select jsonb_array_length(public.kh_list_notifications('77000000-0000-4000-8000-000000000002',page->>'nextCursor')->'items')=9 from notice_context),'remaining seek page');
+select pg_temp.notice_assert((select jsonb_array_length(public.kh_list_notifications('77000000-0000-4000-8000-000000000002',page->>'nextCursor')->'items')=8 from notice_context),'remaining seek page');
 select pg_temp.notice_error('select public.kh_list_notifications(''77000000-0000-4000-8000-000000000002'',''01'')','KH_NOTIFICATION_INVALID');
 select pg_temp.notice_error('select public.kh_read_notifications_through(''77000000-0000-4000-8000-000000000002'',''9223372036854775808'')','KH_NOTIFICATION_INVALID');
 reset role;
