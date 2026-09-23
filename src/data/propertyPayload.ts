@@ -1,5 +1,6 @@
 import type { Listing, ListingDraft } from '../domain/listings.ts';
 import { normalizeMapLocation } from '../domain/geo.ts';
+import { parseDecimal } from '../domain/numericInput.ts';
 
 export function propertyPayload(draft: ListingDraft, ownerId: string, photoPaths: string[], moderation: 'draft' | 'pending', current?: Listing) {
   return {
@@ -8,7 +9,7 @@ export function propertyPayload(draft: ListingDraft, ownerId: string, photoPaths
     ...(draft.condition !== undefined ? { condition: draft.condition || null } : {}),
     ...(draft.floor !== undefined ? { floor: draft.floor.trim() ? Number(draft.floor) : null } : {}),
     ...(draft.priceNegotiable !== undefined ? { priceNegotiable: draft.priceNegotiable } : {}),
-    price: Number(draft.price), area: Number(draft.area), bedrooms: Number(draft.bedrooms), bathrooms: Number(draft.bathrooms),
+    price: parseDecimal(draft.price), area: parseDecimal(draft.area), bedrooms: Number(draft.bedrooms), bathrooms: Number(draft.bathrooms),
     amenities: [...new Set(draft.amenities.map((item) => item.trim()).filter(Boolean))], photoPaths, moderation,
     // Explicit null removes a previously published point; legacy clients omit this field.
     mapLocation: draft.mapLocation ? normalizeMapLocation(draft.mapLocation) : null,

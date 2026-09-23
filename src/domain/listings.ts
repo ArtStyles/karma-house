@@ -1,5 +1,6 @@
 import { isMapLocation, normalizeMapLocation, type MapLocation } from './geo.ts';
 import { isListingCondition, isDraftFloor, type ListingCondition } from './listingOptions.ts';
+import { parseDecimal } from './numericInput.ts';
 export type { ListingCondition } from './listingOptions.ts';
 
 export type ListingStatus = 'active' | 'paused' | 'sold';
@@ -112,7 +113,7 @@ export const defaultFilters: ListingFilters = {
 
 function filterNumber(value?: string): number | undefined {
   if (!value?.trim()) return undefined;
-  const number = Number(value);
+  const number = parseDecimal(value);
   return Number.isFinite(number) && number >= 0 ? number : undefined;
 }
 
@@ -149,7 +150,7 @@ export function activeFilterCount(filters: ListingFilters): number {
 
 export function filterListings(listings: Listing[], filters: ListingFilters): Listing[] {
   const query = normalizeSearch(filters.query);
-  const parsedMaxPrice = Number(filters.maxPrice.trim());
+  const parsedMaxPrice = parseDecimal(filters.maxPrice);
   const hasMaxPrice =
     filters.maxPrice.trim() !== '' && Number.isFinite(parsedMaxPrice) && parsedMaxPrice >= 0;
   const minBedrooms =
@@ -348,7 +349,7 @@ function validateNumber(
   rules: NumberRules,
 ): void {
   const trimmed = value.trim();
-  const parsed = Number(trimmed);
+  const parsed = parseDecimal(trimmed);
   const outsideMinimum = rules.exclusiveMin ? parsed <= rules.min : parsed < rules.min;
 
   if (
@@ -379,10 +380,10 @@ function validatedValues(
     ...(draft.floor?.trim() ? { floor: Number(draft.floor) } : {}),
     ...(draft.priceNegotiable != null ? { priceNegotiable: draft.priceNegotiable } : {}),
     ...(draft.mapLocation ? { mapLocation: normalizeMapLocation(draft.mapLocation) } : {}),
-    price: Number(draft.price.trim()),
+    price: parseDecimal(draft.price),
     bedrooms: Number(draft.bedrooms.trim()),
     bathrooms: Number(draft.bathrooms.trim()),
-    area: Number(draft.area.trim()),
+    area: parseDecimal(draft.area),
     type: draft.type,
     description: draft.description.trim(),
     amenities: normalizeAmenities(draft.amenities),

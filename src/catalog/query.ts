@@ -1,4 +1,5 @@
 import { normalizeSearch, type ListingFilters } from '../domain/listings.ts';
+import { parseDecimal } from '../domain/numericInput.ts';
 import { CATALOG_PAGE_SIZE, type CatalogCursor, type SearchMode } from './types.ts';
 
 const SORTS: ReadonlySet<string> = new Set(['recent', 'price-asc', 'price-desc', 'area-desc']);
@@ -14,7 +15,7 @@ const SEPARATOR = '|';
 /** Blank, whitespace and unparseable values are absent predicates, not zeroes. */
 function optionalNumber(value: string | undefined): number | null {
   if (typeof value !== 'string' || value.trim() === '') return null;
-  const parsed = Number(value.trim());
+  const parsed = parseDecimal(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 

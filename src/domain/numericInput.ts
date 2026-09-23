@@ -4,11 +4,18 @@ export function normalizeDecimalInput(value: string): string {
 }
 
 /**
- * The number the catalogue will actually store. «85.000» parses as 85, so the form has to be able
- * to show what it is about to publish instead of echoing the raw string back to the seller.
+ * The one reading of a typed price or area. Cubans write «85.000» for eighty-five thousand, and no
+ * price or area has three decimals, so dot-separated groups of exactly three digits are thousands.
+ * «12.5» and «0.500» keep their decimal meaning. Empty or malformed input is NaN.
  */
-export function publishedNumber(value: string): number | null {
+export function parseDecimal(value: string): number {
   const trimmed = value.trim();
-  const parsed = Number(trimmed);
-  return trimmed !== '' && Number.isFinite(parsed) ? parsed : null;
+  if (trimmed === '') return NaN;
+  return Number(/^[1-9]\d{0,2}(\.\d{3})+$/.test(trimmed) ? trimmed.replace(/\./g, '') : trimmed);
+}
+
+/** The number the catalogue will actually store, or null while the field is empty or invalid. */
+export function publishedNumber(value: string): number | null {
+  const parsed = parseDecimal(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
