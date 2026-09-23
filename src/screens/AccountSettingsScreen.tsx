@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { router } from 'expo-router';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { accountProfileError } from '../auth/accountProfile';
@@ -10,6 +10,7 @@ import { AccountPrompt } from '../components/AccountPrompt';
 import { UserAvatar } from '../components/account/UserAvatar';
 import { Button, EmptyState, Icon, Notice, PageTitle } from '../components/ui';
 import { colors } from '../theme';
+import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 
 export default function AccountSettingsScreen() {
   const auth = useAuth();
@@ -30,6 +31,7 @@ function AccountSettingsForm({ ownerId }: { ownerId: string }) {
   const [busy, setBusy] = useState<'photo' | 'save' | null>(null);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const mounted = useRef(true);
   const locked = useRef(false);
   const previousProfileName = useRef(auth.displayName);
@@ -80,7 +82,45 @@ function AccountSettingsForm({ ownerId }: { ownerId: string }) {
       <Text style={styles.description}>Elige qué novedades quieres ver en la bandeja de KarmaHouse.</Text>
       <Button label="Preferencias de notificaciones" secondary icon="notifications-outline" onPress={() => router.push('/notification-settings')} />
     </View>
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>Privacidad</Text>
+      <View style={styles.links}>
+        <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.link}>Política de privacidad</Text></Pressable>
+        <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(TERMS_URL)}><Text style={styles.link}>Términos de uso</Text></Pressable>
+      </View>
+      <Pressable accessibilityRole="button" disabled={!!busy} onPress={() => setDeleting(true)} style={({ pressed }) => [styles.danger, pressed && { opacity: .7 }]}>
+        <Icon name="trash-outline" size={19} color={colors.danger} /><Text style={styles.dangerText}>Eliminar cuenta</Text>
+      </Pressable>
+    </View>
+    <DeleteAccountSheet visible={deleting} onClose={() => setDeleting(false)} />
   </View>;
+}
+
+function DeleteAccountSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const auth = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  async function confirm() {
+    if (busy) return;
+    setBusy(true); setError('');
+    try { await auth.deleteAccount(); onClose(); router.replace('/'); }
+    catch (failure) { setError(failure instanceof Error ? failure.message : 'No pudimos eliminar tu cuenta. Vuelve a intentarlo.'); }
+    finally { setBusy(false); }
+  }
+  return <Modal visible={visible} transparent animationType="fade" onRequestClose={() => !busy && onClose()}>
+    <View style={styles.backdrop}>
+      <View accessibilityViewIsModal style={styles.sheet}>
+        <Text accessibilityRole="header" style={styles.sheetTitle}>¿Eliminar tu cuenta?</Text>
+        <Text style={styles.sheetText}>Se borran para siempre tus anuncios y sus fotos, tus favoritos, tus conversaciones, visitas y ofertas, tus avisos y tu perfil. No se puede deshacer.</Text>
+        <Text style={styles.description}>Los reportes enviados a moderación se conservan sin tus datos de cuenta.</Text>
+        {error ? <Notice error>{error}</Notice> : null}
+        <Pressable accessibilityRole="button" disabled={busy} onPress={() => void confirm()} style={({ pressed }) => [styles.dangerFilled, (pressed || busy) && { opacity: .7 }]}>
+          {busy ? <ActivityIndicator color={colors.white} /> : <Text style={styles.dangerFilledText}>{error ? 'Reintentar eliminación' : 'Eliminar definitivamente'}</Text>}
+        </Pressable>
+        <Button label="Cancelar" secondary disabled={busy} onPress={onClose} />
+      </View>
+    </View>
+  </Modal>;
 }
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 }, content: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 36 }, loading: { padding: 40 },
@@ -89,5 +129,10 @@ const styles = StyleSheet.create({
   photoCopy: { alignItems: 'center', gap: 7, maxWidth: 360 }, cardTitle: { color: colors.ink, fontSize: 19, lineHeight: 25, fontWeight: '600', letterSpacing: -0.35 }, description: { color: colors.muted, fontSize: 13, lineHeight: 20 },
   photoActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: '100%' }, photoButton: { flexGrow: 1, flexBasis: 140 }, privacy: { color: '#526B89', fontSize: 11, lineHeight: 17, textAlign: 'center' },
   field: { gap: 8 }, label: { color: colors.muted, fontSize: 13, fontWeight: '500' }, input: { minHeight: 48, paddingVertical: 8, color: colors.ink, fontSize: 17, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, email: { color: colors.ink, fontSize: 16, lineHeight: 23 },
+  links: { gap: 14 }, link: { color: colors.primary, fontSize: 16, fontWeight: '500', minHeight: 24 },
+  danger: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }, dangerText: { color: colors.danger, fontSize: 16, fontWeight: '600' },
+  backdrop: { flex: 1, backgroundColor: '#00000055', justifyContent: 'center', padding: 16 }, sheet: { width: '100%', maxWidth: 460, alignSelf: 'center', backgroundColor: colors.white, borderRadius: 28, padding: 24, gap: 16 },
+  sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '700', letterSpacing: -.5 }, sheetText: { color: colors.ink, fontSize: 16, lineHeight: 24 },
+  dangerFilled: { minHeight: 52, borderRadius: 18, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 }, dangerFilledText: { color: colors.white, fontSize: 16, fontWeight: '600' },
   success: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingHorizontal: 4 }, successText: { color: colors.green, fontSize: 14, fontWeight: '500' },
 });

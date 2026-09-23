@@ -10,6 +10,7 @@ import { accountProfileError, type AccountProfileInput, type AccountRequestConte
 import { createAccountProfileRepository, saveAccountProfile } from './accountProfileRepository';
 import { runBeforeSignOut } from '../push/signOutHooks';
 import { PushError, sessionFromAccessToken } from '../push/domain';
+import { deleteAccount } from './deleteAccount';
 
 export type AuthContextValue = {
   ready: boolean;
@@ -24,6 +25,7 @@ export type AuthContextValue = {
   signIn(email: string, password: string): Promise<void>;
   signUp(name: string, email: string, password: string): Promise<{ needsConfirmation: boolean }>;
   signOut(): Promise<void>;
+  deleteAccount(): Promise<void>;
   requestPasswordReset(email: string): Promise<void>;
   updatePassword(password: string): Promise<void>;
   refreshProfile(): Promise<void>;
@@ -213,6 +215,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!sessionRef.current || sessionRef.current.user.id === signingOutUserId) acceptSession(null);
   }, [acceptSession, fail, ownerId]);
 
+  const removeAccount = useCallback(async () => {
+    const current = sessionRef.current;
+    if (!current) throw new Error('Inicia sesión con la cuenta que quieres eliminar.');
+    const actorId = current.user.id;
+    setError(null);
+    // As when signing out, this phone stops receiving the account's notices before anything is deleted.
+    try { await runBeforeSignOut(actorId); }
+    catch (cause) { throw new Error(cause instanceof PushError ? cause.message : 'No se pudieron desactivar los avisos. Comprueba tu conexión e inténtalo de nuevo.'); }
+    await deleteAccount(client(), { id: actorId, accessToken: current.access_token }, () => {
+      if (!mounted.current || sessionRef.current?.user.id !== actorId) throw new Error('La sesión cambió. Abre los ajustes con la cuenta actual.');
+    });
+    // The account no longer exists on the server, so only the local session is left to clear.
+    await client().auth.signOut({ scope: 'local' }).catch(() => {});
+    if (!sessionRef.current || sessionRef.current.user.id === actorId) acceptSession(null);
+  }, [acceptSession]);
+
   const requestPasswordReset = useCallback(async (email: string) => {
     const normalizedEmail = validateEmail(email);
     setError(null);
@@ -232,7 +250,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const matchingProfile = profile?.ownerId === user?.id ? profile : null;
   const metadataName = typeof user?.user_metadata?.display_name === 'string' ? user.user_metadata.display_name : '';
   const displayName = (matchingProfile?.displayName || metadataName || 'Mi cuenta').slice(0, 80);
-  const value = useMemo<AuthContextValue>(() => ({ ready, user, session, displayName, avatarUrl: matchingProfile?.avatarUrl ?? null, hasAvatar: !!matchingProfile?.avatarPath, profileReady: !!matchingProfile, isAdmin: matchingProfile?.isAdmin ?? false, error, signIn, signUp, signOut, requestPasswordReset, updatePassword, refreshProfile, saveProfile }), [ready, user, session, displayName, matchingProfile, error, signIn, signUp, signOut, requestPasswordReset, updatePassword, refreshProfile, saveProfile]);
+  const value = useMemo<AuthContextValue>(() => ({ ready, user, session, displayName, avatarUrl: matchingProfile?.avatarUrl ?? null, hasAvatar: !!matchingProfile?.avatarPath, profileReady: !!matchingProfile, isAdmin: matchingProfile?.isAdmin ?? false, error, signIn, signUp, signOut, deleteAccount: removeAccount, requestPasswordReset, updatePassword, refreshProfile, saveProfile }), [ready, user, session, displayName, matchingProfile, error, signIn, signUp, signOut, removeAccount, requestPasswordReset, updatePassword, refreshProfile, saveProfile]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

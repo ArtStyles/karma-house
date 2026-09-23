@@ -6,18 +6,27 @@ import type { ReportReason } from '../../messaging/types';
 import { colors } from '../../theme';
 import { Button, Icon, Notice, Pill } from '../ui';
 
-const reasons: { value: ReportReason; label: string }[] = [
+const chatReasons: { value: ReportReason; label: string }[] = [
   { value: 'spam', label: 'Spam' }, { value: 'fraud', label: 'Posible fraude' },
   { value: 'harassment', label: 'Acoso' }, { value: 'other', label: 'Otro' },
 ];
 
-export function ReportConversationSheet({ visible, onClose, onReport }: { visible: boolean; onClose: () => void; onReport: (reason: ReportReason, details: string, id: string) => Promise<void> }) {
-  const [reason, setReason] = useState<ReportReason>('spam');
+type SheetProps<R extends string> = {
+  visible: boolean; onClose: () => void; onReport: (reason: R, details: string, id: string) => Promise<void>;
+  reasons?: { value: R; label: string }[]; title?: string; description?: string; confirmation?: string;
+};
+
+/** Defaults describe a conversation report; a listing report passes its own reasons and copy. */
+export function ReportConversationSheet<R extends string = ReportReason>({ visible, onClose, onReport,
+  reasons = chatReasons as { value: R; label: string }[], title = 'Reportar conversación',
+  description = 'Cuéntanos qué ocurre. El reporte incluirá los mensajes recientes para que podamos revisarlo.',
+  confirmation = 'El equipo de KarmaHouse podrá revisar tu reporte y los mensajes recientes de esta conversación.' }: SheetProps<R>) {
+  const [reason, setReason] = useState<R>(reasons[0].value);
   const [details, setDetails] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [confirmed, setConfirmed] = useState(false);
-  const attempt = useRef<{ id: string; reason: ReportReason; details: string } | null>(null);
+  const attempt = useRef<{ id: string; reason: R; details: string } | null>(null);
   const mounted = useRef(true);
   const lock = useRef(false);
   const insets = useSafeAreaInsets();
@@ -36,7 +45,7 @@ export function ReportConversationSheet({ visible, onClose, onReport }: { visibl
   }
   function close() {
     if (busy) return;
-    if (confirmed) { setConfirmed(false); setReason('spam'); setDetails(''); setError(''); attempt.current = null; }
+    if (confirmed) { setConfirmed(false); setReason(reasons[0].value); setDetails(''); setError(''); attempt.current = null; }
     onClose();
   }
 
@@ -46,12 +55,12 @@ export function ReportConversationSheet({ visible, onClose, onReport }: { visibl
       <View accessibilityViewIsModal style={styles.sheet}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.icon}><Icon name={confirmed ? 'checkmark-circle-outline' : 'flag-outline'} color={colors.primary} size={28} /></View>
-          <Text accessibilityRole="header" style={styles.title}>{confirmed ? 'Reporte recibido' : 'Reportar conversación'}</Text>
+          <Text accessibilityRole="header" style={styles.title}>{confirmed ? 'Reporte recibido' : title}</Text>
           {confirmed ? <>
-            <Text style={styles.description}>El equipo de KarmaHouse podrá revisar tu reporte y los mensajes recientes de esta conversación.</Text>
+            <Text style={styles.description}>{confirmation}</Text>
             <Button label="Listo" onPress={close} />
           </> : <>
-            <Text style={styles.description}>Cuéntanos qué ocurre. El reporte incluirá los mensajes recientes para que podamos revisarlo.</Text>
+            <Text style={styles.description}>{description}</Text>
             <View style={styles.reasons}>{reasons.map(item => <View key={item.value} pointerEvents={busy ? 'none' : 'auto'}><Pill label={item.label} active={reason === item.value} onPress={() => { if (!busy) { setReason(item.value); setError(''); } }} /></View>)}</View>
             <Text style={styles.label}>Comentario (opcional)</Text>
             <TextInput accessibilityLabel="Comentario del reporte" value={details} onChangeText={setDetails} multiline maxLength={1000} editable={!busy} placeholder="Añade información que nos ayude a entenderlo." placeholderTextColor={colors.muted} style={styles.input} textAlignVertical="top" />

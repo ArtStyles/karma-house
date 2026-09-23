@@ -1,12 +1,13 @@
 import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { safeReturnTo } from '../auth/callback';
 import { Brand, Button, goBack, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { colors, typefaces } from '../theme';
+import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 
 type Mode = 'signin' | 'signup' | 'forgot' | 'recovery';
 const initialMode = (value: unknown): Mode => value === 'signup' || value === 'recovery' || value === 'forgot' ? value : 'signin';
@@ -104,6 +105,7 @@ export default function AuthScreen() {
             {/* Under the button the error appears where the tap was, and never pushes the button away. */}
             {issue && <Notice error>{issue}</Notice>}
             {mode === 'signup' && <Text style={styles.helper}>Te pediremos confirmar tu correo antes de entrar.</Text>}
+            {mode === 'signup' && <Text style={styles.helper}>Al crear tu cuenta aceptas los <Text accessibilityRole="link" style={styles.linkText} onPress={() => void Linking.openURL(TERMS_URL)}>Términos de uso</Text> y la <Text accessibilityRole="link" style={styles.linkText} onPress={() => void Linking.openURL(PRIVACY_URL)}>Política de privacidad</Text>.</Text>}
             {mode === 'forgot' && <Button label="Volver a entrar" secondary disabled={submitting} onPress={() => changeMode('signin')} />}
           </View>}
           <Pressable accessibilityRole="button" onPress={() => router.replace('/')} disabled={submitting} style={styles.explore}><Text style={styles.exploreText}>Seguir explorando</Text><Icon name="arrow-forward" size={17} color={colors.muted} /></Pressable>

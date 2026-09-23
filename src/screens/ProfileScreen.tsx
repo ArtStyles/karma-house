@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Icon, Notice, PageTitle } from '../components/ui';
+import { Button, Icon, IconButton, Notice, PageTitle } from '../components/ui';
+import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { useFavoriteListings } from '../catalog/useCatalog';
 import { useAuth } from '../auth/AuthProvider';
@@ -23,7 +24,7 @@ export default function ProfileScreen() {
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
     <ScrollView contentContainerStyle={styles.content}>
-      <PageTitle title="Mi espacio" />
+      <PageTitle title="Mi espacio" right={user ? <IconButton name="settings-outline" label="Ajustes de cuenta" onPress={() => router.push('/account-settings')} /> : undefined} />
 
       <View style={styles.identity}>
         <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.identityRing} />
@@ -79,7 +80,13 @@ export default function ProfileScreen() {
 
       {isAdmin && <View style={{ marginTop: 18 }}><Button label="Revisar anuncios" secondary icon="shield-checkmark-outline" onPress={() => router.push('/admin')} /></View>}
       {isAdmin && <View style={{ marginTop: 12 }}><Button label="Reportes de mensajes" secondary icon="flag-outline" onPress={() => router.push('/message-reports')} /></View>}
+      {isAdmin && <View style={{ marginTop: 12 }}><Button label="Reportes de anuncios" secondary icon="flag-outline" onPress={() => router.push('/property-reports')} /></View>}
       <Text style={styles.demoNote}>{mode === 'demo' ? 'Tus cambios se guardan en este dispositivo. Esta demo no incluye cuentas, mensajes ni publicaciones públicas.' : 'Conversa sobre cada vivienda sin publicar tu teléfono. Tus anuncios se revisan antes de aparecer en el catálogo.'}</Text>
+      <View style={styles.legal}>
+        <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.legalText}>Privacidad</Text></Pressable>
+        <Text style={styles.legalText}>·</Text>
+        <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(TERMS_URL)}><Text style={styles.legalText}>Términos de uso</Text></Pressable>
+      </View>
       {error || authError ? <Notice error>{error || authError}</Notice> : null}
       {authError && user && <Button label="Volver a cargar perfil" secondary onPress={() => void refreshProfile()} />}
       {user && <View style={{ marginTop: 22 }}><Button label="Cerrar sesión" secondary loading={busy} onPress={async () => {
@@ -122,5 +129,6 @@ const styles = StyleSheet.create({
   publishEyebrow: { color: '#4C6C93', fontSize: 10, fontWeight: '600', letterSpacing: 0.8 },
   publishTitle: { fontSize: 22, lineHeight: 28, fontWeight: '600', letterSpacing: -.5, color: colors.ink },
   publishText: { fontSize: 15, color: colors.muted, lineHeight: 22, marginBottom: 6 },
+  legal: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 14, minHeight: 44 }, legalText: { color: colors.muted, fontSize: 13, textDecorationLine: 'none' },
   demoNote: { color: colors.muted, fontSize: 13, lineHeight: 20, paddingHorizontal: 16, marginTop: 18 },
 });

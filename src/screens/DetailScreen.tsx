@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NavigationMaterial } from '../components/NavigationMaterial';
 import { PropertyImage } from '../components/PropertyImage';
@@ -12,6 +12,10 @@ import { useListing } from '../catalog/useCatalog';
 import { useAuth } from '../auth/AuthProvider';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { CONDITIONS } from '../domain/listingOptions';
+import { ReportConversationSheet } from '../components/messaging/ReportConversationSheet';
+import { createPropertyReportRepository, PROPERTY_REPORT_REASONS } from '../data/propertyReports';
+import { supabase } from '../lib/supabase';
+import { SITE_URL } from '../lib/publicSite';
 
 export default function DetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,9 +37,21 @@ export default function DetailScreen() {
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [report, setReport] = useState(false);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  useEffect(() => { setPhotoIndex(0); setError(''); setContact(false); }, [id]);
+  useEffect(() => { setPhotoIndex(0); setError(''); setContact(false); setReport(false); }, [id]);
+  const [sellerName, setSellerName] = useState('');
+  const sellerId = mode === 'cloud' && listing?.ownerId !== auth.user?.id ? listing?.ownerId : undefined;
+  useEffect(() => {
+    setSellerName('');
+    if (!supabase || !sellerId) return;
+    let alive = true;
+    // Public profiles expose only the display name, and only for owners of a published listing.
+    void supabase.from('profiles').select('display_name').eq('id', sellerId).maybeSingle()
+      .then(({ data }) => { if (alive && typeof data?.display_name === 'string') setSellerName(data.display_name); });
+    return () => { alive = false; };
+  }, [sellerId]);
   async function reload() { setRefreshing(true); try { await refresh(); } catch { /* Provider exposes the remote error. */ } finally { setRefreshing(false); } }
   if (!listing) return <SafeAreaView style={styles.safe}>{!ready ? <View style={styles.loading}><ActivityIndicator color={colors.primary} size="large" /><Text style={styles.sellerText}>Cargando vivienda…</Text></View> : storageError ? <View style={styles.body}><Notice error>{storageError}</Notice><Button label="Volver a cargar" loading={refreshing} onPress={reload} /><Button label="Volver a explorar" secondary onPress={() => router.replace('/')} /></View> : <EmptyState title="Esta vivienda no está disponible" description="Vuelve al catálogo para explorar otras viviendas." action={<Button label="Volver a explorar" onPress={() => router.replace('/')} />} />}</SafeAreaView>;
   const favorite = favoriteIds.includes(listing.id);
@@ -66,6 +82,26 @@ export default function DetailScreen() {
       if (mounted.current && currentScope.current === scope) { contactInFlight.current = false; setContactBusy(false); }
     }
   }
+  async function share() {
+    if (!listing) return;
+    // Links that open the app need a domain of its own; until then the text carries the listing and where to find KarmaHouse.
+    const message = `${listing.title}
+${formatMoney(listing.price)} USD · ${listing.location}, ${listing.province}
+${listing.bedrooms} hab. · ${listing.bathrooms} baños · ${listing.area} m²
+
+Búscala en KarmaHouse: ${SITE_URL}`;
+    try { await Share.share({ title: listing.title, message }); } catch { /* Dismissed, or this browser has no share target. */ }
+  }
+  function openReport() {
+    if (!listing) return;
+    if (!auth.user) { router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } }); return; }
+    setReport(true);
+  }
+  async function sendReport(reason: (typeof PROPERTY_REPORT_REASONS)[number]['value'], details: string, clientReportId: string) {
+    const session = auth.session;
+    if (!supabase || !session || !listing) throw new Error('Inicia sesión para reportar este anuncio.');
+    await createPropertyReportRepository(supabase, { actorId: session.user.id, accessToken: session.access_token }).report(listing.id, reason, details, clientReportId);
+  }
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.photoFrame}>
@@ -73,7 +109,10 @@ export default function DetailScreen() {
         <View style={styles.navigation}>
           <IconButton name="chevron-back" label="Volver al catálogo" onPress={() => goBack()} style={styles.floatingButton} />
           <View style={styles.navigationTitle}><Text style={styles.navText}>{listing.type}</Text></View>
-          <IconButton name={favorite ? 'heart' : 'heart-outline'} label={favorite ? 'Quitar de favoritos' : 'Guardar en favoritos'} onPress={toggle} active={favorite} style={styles.floatingButton} />
+          <View style={styles.navigationActions}>
+            <IconButton name="share-social-outline" label="Compartir vivienda" onPress={() => void share()} style={styles.floatingButton} />
+            <IconButton name={favorite ? 'heart' : 'heart-outline'} label={favorite ? 'Quitar de favoritos' : 'Guardar en favoritos'} onPress={toggle} active={favorite} style={styles.floatingButton} />
+          </View>
         </View>
         {photoCount > 1 && <View style={styles.photoControls}>
           <IconButton name="chevron-back" label="Foto anterior" onPress={() => setPhotoIndex((selectedPhoto + photoCount - 1) % photoCount)} style={styles.floatingButton} />
@@ -131,8 +170,11 @@ export default function DetailScreen() {
         </View>}
         <View style={styles.seller}>
           <View style={styles.sellerIcon}><Icon name="person" size={25} color={colors.muted} /></View>
-          <View style={styles.sellerCopy}><Text style={styles.sellerTitle}>{mode === 'cloud' ? own ? 'Publicado por ti' : 'Información del anuncio' : own ? 'Tu anuncio de prueba' : 'Perfil de demostración'}</Text><Text style={styles.sellerText}>{mode === 'cloud' ? own ? 'Gestiona los detalles desde tu espacio' : 'Detalles aportados por quien publica' : own ? 'Visible solo en este dispositivo' : 'Sin vendedor real asociado'}</Text></View>
+          <View style={styles.sellerCopy}><Text style={styles.sellerTitle}>{mode === 'cloud' ? own ? 'Publicado por ti' : sellerName || 'Información del anuncio' : own ? 'Tu anuncio de prueba' : 'Perfil de demostración'}</Text><Text style={styles.sellerText}>{mode === 'cloud' ? `Publicado el ${new Date(listing.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}` : own ? 'Visible solo en este dispositivo' : 'Sin vendedor real asociado'}</Text></View>
         </View>
+        {mode === 'cloud' && !own && <Pressable accessibilityRole="button" onPress={openReport} style={({ pressed }) => [styles.report, pressed && { opacity: .6 }]}>
+          <Icon name="flag-outline" size={17} color={colors.muted} /><Text style={styles.reportText}>Reportar anuncio</Text>
+        </Pressable>}
         {mode === 'demo' && <Notice>{listing.photoUri ? 'Esta es una publicación local de prueba. La foto seleccionada se guarda en este dispositivo.' : 'Esta vivienda es ficticia. La fotografía fue generada para mostrar cómo se verá KarmaHouse.'}</Notice>}
         {storageError ? <Notice error>{storageError}</Notice> : null}
         {error ? <Notice error>{error}</Notice> : null}
@@ -146,6 +188,9 @@ export default function DetailScreen() {
         <Button label={own ? 'Editar anuncio' : 'Contactar'} icon={own ? 'create-outline' : 'chatbubble-outline'} loading={contactBusy} disabled={!own && (!auth.ready || (Boolean(auth.user) && !messaging.ready))} onPress={() => own ? router.push(`/edit/${listing.id}`) : void contactSeller()} style={styles.contactButton} />
       </View>
     </SafeAreaView>
+    <ReportConversationSheet visible={report} onClose={() => setReport(false)} onReport={sendReport} reasons={PROPERTY_REPORT_REASONS} title="Reportar anuncio"
+      description="Cuéntanos qué ocurre con esta vivienda. El equipo de KarmaHouse lo revisará y puede retirar el anuncio."
+      confirmation="Gracias. El equipo de KarmaHouse revisará este anuncio. Quien lo publicó no sabrá quién lo reportó." />
     <Modal visible={contact} transparent animationType="fade" onRequestClose={() => setContact(false)}>
       <View style={[styles.modalBackdrop, width >= 700 && styles.wideBackdrop]}>
         <View accessibilityViewIsModal style={[styles.modal, { paddingBottom: Math.max(insets.bottom, 24) }, width >= 700 && styles.wideModal]}>
@@ -167,7 +212,7 @@ const styles = StyleSheet.create({
   photoFrame: { borderBottomLeftRadius: 32, borderBottomRightRadius: 32, overflow: 'hidden', backgroundColor: colors.border }, photo: { height: 340, width: '100%' }, widePhoto: { height: 430 },
   photoControls: { position: 'absolute', bottom: 18, left: 20, right: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, photoCount: { backgroundColor: '#00000080', color: colors.white, fontSize: 13, fontWeight: '600', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16 },
   thumbnails: { gap: 10 }, thumbnail: { width: 76, height: 60, borderRadius: 13, borderWidth: 2, borderColor: 'transparent', padding: 2, overflow: 'hidden' }, thumbnailSelected: { borderColor: colors.primary }, thumbnailImage: { width: '100%', height: '100%', borderRadius: 8 }, moderation: { color: colors.amber, fontSize: 12, fontWeight: '600' },
-  navigation: { position: 'absolute', top: 16, left: 20, right: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, floatingButton: { backgroundColor: '#FFFFFFF5' }, navigationTitle: { backgroundColor: '#FFFFFFF5', borderRadius: 22, paddingVertical: 11, paddingHorizontal: 17, flexShrink: 1 }, navText: { color: colors.ink, fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  navigation: { position: 'absolute', top: 16, left: 20, right: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, floatingButton: { backgroundColor: '#FFFFFFF5' }, navigationActions: { flexDirection: 'row', gap: 10 }, navigationTitle: { backgroundColor: '#FFFFFFF5', borderRadius: 22, paddingVertical: 11, paddingHorizontal: 17, flexShrink: 1 }, navText: { color: colors.ink, fontSize: 14, fontWeight: '600', textAlign: 'center' },
   body: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 28, gap: 24 }, summary: { gap: 9 },
   badges: { flexDirection: 'row', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 4 }, statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.softGreen, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 14 }, statusDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.green }, statusText: { fontSize: 12, fontWeight: '600', color: colors.green }, inactiveBadge: { backgroundColor: '#FFF3DA' }, inactiveDot: { backgroundColor: colors.amber }, inactiveText: { color: colors.amber }, demo: { fontSize: 12, color: colors.muted },
   price: { color: colors.ink, fontSize: 34, fontWeight: '700', letterSpacing: -1.1 }, currency: { color: colors.muted, fontSize: 15, fontWeight: '500', letterSpacing: 0 }, title: { fontFamily: typefaces.display, color: colors.ink, fontWeight: '600', fontSize: 24, lineHeight: 30, letterSpacing: -.6 }, location: { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginTop: 1 }, locationText: { color: colors.muted, fontSize: 14, lineHeight: 20, flex: 1 },
@@ -175,6 +220,7 @@ const styles = StyleSheet.create({
   section: { gap: 12 }, sectionTitle: { fontSize: 17, fontWeight: '600', color: colors.ink, letterSpacing: -.2, paddingHorizontal: 2 }, group: { backgroundColor: colors.white, borderRadius: 24, padding: 20 }, description: { color: colors.ink, lineHeight: 25, fontSize: 16 },
   mapHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, mapPrecision: { color: colors.primary, fontSize: 12, fontWeight: '600', backgroundColor: colors.softBlue, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }, mapFrame: { borderRadius: 24, overflow: 'hidden' }, mapDescription: { fontSize: 13, lineHeight: 20, color: colors.muted, paddingHorizontal: 2 },
   amenities: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 20, backgroundColor: colors.white, borderRadius: 24, padding: 20 }, amenity: { flexDirection: 'row', alignItems: 'center', gap: 10, flexBasis: '45%', flexGrow: 1, minWidth: 120 }, amenityText: { color: colors.ink, fontSize: 15, lineHeight: 21, flex: 1 },
+  report: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 44, alignSelf: 'center', paddingHorizontal: 12 }, reportText: { color: colors.muted, fontSize: 14, fontWeight: '500' },
   seller: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, backgroundColor: colors.white, borderRadius: 24 }, sellerIcon: { backgroundColor: colors.paper, width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' }, sellerCopy: { flex: 1, gap: 5 }, sellerTitle: { color: colors.ink, fontSize: 16, fontWeight: '600' }, sellerText: { color: colors.muted, fontSize: 13, lineHeight: 19 },
   actionBar: { width: '100%', borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, backgroundColor: colors.white, overflow: 'hidden' }, actionContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', columnGap: 16, rowGap: 12, paddingVertical: 13, paddingHorizontal: 20, width: '100%', maxWidth: 860, alignSelf: 'center', flexWrap: 'wrap' }, barSummary: { flexGrow: 1, gap: 4 }, barLabel: { fontSize: 12, color: colors.muted }, barPrice: { fontSize: 24, color: colors.ink, fontWeight: '700', letterSpacing: -.6 }, contactButton: { minWidth: 148, flexGrow: 1 },
   modalBackdrop: { flex: 1, backgroundColor: '#00000055', justifyContent: 'flex-end' }, wideBackdrop: { justifyContent: 'center', padding: 24 }, modal: { width: '100%', alignSelf: 'center', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, backgroundColor: colors.white, gap: 18 }, wideModal: { maxWidth: 440, borderRadius: 28 }, modalIcon: { backgroundColor: colors.softBlue, borderRadius: 28, width: 56, height: 56, alignItems: 'center', justifyContent: 'center' }, modalTitle: { color: colors.ink, fontSize: 26, fontWeight: '700', lineHeight: 32, letterSpacing: -.6 }, modalText: { color: colors.muted, fontSize: 16, lineHeight: 24 }, modalSmall: { color: colors.muted, fontSize: 13, lineHeight: 20 },

@@ -18,6 +18,8 @@ La interfaz se ha actualizado con tipografía del sistema, superficies agrupadas
 - Ubicación exacta o aproximada al publicar y explorar viviendas en el mapa.
 - Chat por vivienda, bandeja y mensajes sin leer, reintento manual, bloqueo y reportes.
 - Visitas y ofertas desde el chat: fechas en hora de Cuba, contraofertas, aceptación, rechazo y cancelación; bandeja de solicitudes e historial.
+- Compartir una vivienda, reportar un anuncio y cola de moderación para retirarlo.
+- Eliminar la cuenta desde Ajustes de cuenta, con enlaces a privacidad y términos.
 
 Con las variables públicas de Supabase configuradas, la app usa datos reales sin importar los ejemplos. Sin configuración, conserva la demo local para revisar el diseño; la mensajería y las solicitudes requieren cuentas reales. La publicación en tiendas queda para próximas entregas.
 
@@ -59,6 +61,20 @@ Se compila una variante release con JavaScript incorporado y firma de pruebas, p
 Para instalarlo, copia el APK al teléfono y ábrelo desde Archivos. Android puede pedir autorización para instalar aplicaciones desde esa aplicación. **0.1.5 conserva el identificador `com.karmahouse.karmahouse` y la firma de 0.1.4, así que se instala encima sin desinstalar y conserva sesión y borradores.** 0.1.4 sí había cambiado de identificador respecto a 0.1.3 y se instaló como otra app.
 
 [APK inicial 0.1.0: tamaño, SHA-256 y comprobaciones](docs/android-preview-verification.md) · [Ajuste de la barra inferior en 0.1.1](docs/android-tab-bar.md) · [Mapa y APK 0.1.2](docs/property-map-verification.md) · [Mensajería 0.1.3](docs/messaging-verification.md) · [Avisos Android 0.1.4](docs/android-push-verification.md) · [Catálogo paginado 0.1.5](docs/superpowers/specs/2026-09-21-catalog-pagination-design.md).
+
+## Google Play
+
+La firma de pruebas usa el `debug.keystore` público de la plantilla. Para Play, y para cualquier APK que se reparta, se compila con la clave privada de subida:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/build-android-preview.ps1 -Release
+```
+
+Lee `credentials/android-release.properties` (ignorado por Git) y deja en `artifacts/releases/` el `.aab` para Play y un `.apk` con la misma firma. **Guarda una copia de `credentials/` fuera de este equipo**: sin esa clave no se pueden publicar actualizaciones con la misma firma. Los teléfonos con un APK de prueba anterior deben desinstalarlo una vez, porque la firma cambia.
+
+`app.json` bloquea los permisos que añaden las dependencias y la app no usa (ubicación, superposición y biometría). Reportar anuncios y eliminar la cuenta dependen de la migración `20260923000100_play_compliance.sql`: `node scripts/apply-play-compliance.mjs` la prueba y la deshace; con `--commit` la aplica.
+
+Las páginas públicas (`site/`) se publican con GitHub Pages en https://artstyles.github.io/karma-house/: privacidad, términos y eliminación de cuenta, que son las URL que pide la ficha de Play. El despliegue falla mientras quede el marcador `CORREO_DE_CONTACTO`.
 
 ## Verificación
 
