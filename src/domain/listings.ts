@@ -111,6 +111,31 @@ export const defaultFilters: ListingFilters = {
   condition: '', amenities: [], negotiableOnly: false,
 };
 
+const NEW_LISTING_MS = 7 * 24 * 60 * 60 * 1000;
+/** «Nueva» for a week after the listing was created; a future or malformed date never qualifies. */
+export function isNewListing(createdAt: string, now = Date.now()): boolean {
+  const age = now - Date.parse(createdAt);
+  return age >= 0 && age < NEW_LISTING_MS;
+}
+
+/** One-tap presets on Explorar. Each owns a single filter, so the full sheet stays the source of truth. */
+export type Shortcut = ListingType | 'price' | 'bedrooms';
+export const PRICE_SHORTCUT = '30000';
+export const BEDROOM_SHORTCUT = 3;
+
+export function shortcutActive(filters: ListingFilters, shortcut: Shortcut): boolean {
+  if (shortcut === 'price') return filters.maxPrice.trim() === PRICE_SHORTCUT && !filters.minPrice?.trim();
+  if (shortcut === 'bedrooms') return filters.minBedrooms === BEDROOM_SHORTCUT;
+  return filters.type === shortcut;
+}
+
+export function toggleShortcut(filters: ListingFilters, shortcut: Shortcut): Partial<ListingFilters> {
+  const active = shortcutActive(filters, shortcut);
+  if (shortcut === 'price') return active ? { maxPrice: '' } : { maxPrice: PRICE_SHORTCUT, minPrice: '' };
+  if (shortcut === 'bedrooms') return { minBedrooms: active ? 0 : BEDROOM_SHORTCUT };
+  return { type: active ? 'Todas' : shortcut };
+}
+
 function filterNumber(value?: string): number | undefined {
   if (!value?.trim()) return undefined;
   const number = parseDecimal(value);

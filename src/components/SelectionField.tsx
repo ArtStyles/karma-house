@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme';
@@ -6,9 +6,11 @@ import { Icon, IconButton } from './ui';
 
 export type SelectOption = { value: string; label: string };
 
-export function SelectionField({ label, value, options, onChange, placeholder = 'Seleccionar', required = false, error, hint, disabled = false, inline = false }: {
+export function SelectionField({ label, value, options, onChange, placeholder = 'Seleccionar', required = false, error, hint, disabled = false, inline = false, renderTrigger }: {
   label: string; value: string; options: readonly SelectOption[]; onChange(value: string): void;
   placeholder?: string; required?: boolean; error?: string; hint?: string; disabled?: boolean; inline?: boolean;
+  /** Replaces the labelled field with any control that opens the same picker. */
+  renderTrigger?: (open: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -34,6 +36,19 @@ export function SelectionField({ label, value, options, onChange, placeholder = 
     </ScrollView>
   </>;
 
+  const modal = <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
+    <KeyboardAvoidingView style={styles.flex} behavior="padding">
+      <View style={[styles.overlay, { paddingTop: Math.max(insets.top, 20), paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Cancelar selección" onPress={close} style={StyleSheet.absoluteFill} />
+        <View accessibilityViewIsModal style={styles.sheet}>
+          <View style={styles.header}><View style={styles.headerText}><Text style={styles.eyebrow}>ELIGE UNA OPCIÓN</Text><Text accessibilityRole="header" style={styles.title}>{label}</Text></View><IconButton name="close" label="Cerrar selector" onPress={close} style={{ backgroundColor: colors.paper }} /></View>
+          {choices}
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  </Modal>;
+  if (renderTrigger) return <>{renderTrigger(() => { setQuery(''); setOpen(true); })}{modal}</>;
+
   return <View style={styles.field}>
     <Text style={styles.label}>{label}{required && <Text style={{ color: colors.primary }}> *</Text>}</Text>
     <Pressable disabled={disabled} accessibilityRole="button" accessibilityLabel={`${label}: ${selected?.label || value || placeholder}`} accessibilityHint={error || hint} accessibilityState={{ expanded: open, disabled }} onPress={() => { setQuery(''); setOpen(!open); }} style={({ pressed }) => [styles.trigger, open && styles.triggerOpen, !!error && styles.triggerError, disabled && { opacity: .5 }, pressed && { opacity: .75 }]}>
@@ -41,17 +56,7 @@ export function SelectionField({ label, value, options, onChange, placeholder = 
     </Pressable>
     {hint && !error ? <Text style={styles.hint}>{hint}</Text> : null}
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-    {inline ? open && <View style={styles.inlinePanel}>{choices}</View> : <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
-      <KeyboardAvoidingView style={styles.flex} behavior="padding">
-        <View style={[styles.overlay, { paddingTop: Math.max(insets.top, 20), paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Cancelar selección" onPress={close} style={StyleSheet.absoluteFill} />
-          <View accessibilityViewIsModal style={styles.sheet}>
-            <View style={styles.header}><View style={styles.headerText}><Text style={styles.eyebrow}>ELIGE UNA OPCIÓN</Text><Text accessibilityRole="header" style={styles.title}>{label}</Text></View><IconButton name="close" label="Cerrar selector" onPress={close} style={{ backgroundColor: colors.paper }} /></View>
-            {choices}
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>}
+    {inline ? open && <View style={styles.inlinePanel}>{choices}</View> : modal}
   </View>;
 }
 
