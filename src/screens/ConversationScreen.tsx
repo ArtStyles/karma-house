@@ -8,7 +8,13 @@ import { MessageBubble, type MessageRow } from '../components/messaging/MessageB
 import { ReportConversationSheet } from '../components/messaging/ReportConversationSheet';
 import { useComposerDraft } from '../components/messaging/useComposerDraft';
 import { useMessagingActivity } from '../components/messaging/useMessagingActivity';
-import { ConversationNegotiations } from '../components/negotiations/ConversationNegotiations';
+import { ConversationNegotiations, type NegotiationSheetRequest } from '../components/negotiations/ConversationNegotiations';
+import { NegotiationNotice } from '../components/negotiations/NegotiationNotice';
+import { ProposalCard } from '../components/negotiations/ProposalCard';
+import { useNegotiationMutations } from '../components/negotiations/useNegotiationMutations';
+import { proposalSubject } from '../negotiations/presentation';
+import type { Negotiation } from '../negotiations/types';
+import { useNegotiations } from '../negotiations/useNegotiations';
 import { Button, EmptyState, goBack, Icon, IconButton, Notice, PageTitle } from '../components/ui';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
@@ -41,7 +47,9 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
   const [busy, setBusy] = useState('');
   const [menu, setMenu] = useState(false);
   const [report, setReport] = useState(false);
-  const [negotiationsOpen, setNegotiationsOpen] = useState(false);
+  const [sheet, setSheet] = useState<NegotiationSheetRequest | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Negotiation | null>(null);
+  const negotiationsOpen = sheet !== null;
   const [discard, setDiscard] = useState<string | null>(null);
   const [atBottom, setAtBottom] = useState(false);
   const [visibleSeq, setVisibleSeq] = useState(0);
@@ -62,13 +70,12 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
   });
   const insets = useSafeAreaInsets();
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  // With the keyboard up on a 640-720 pt phone, the property and proposal cards left almost no thread.
-  const [typing, setTyping] = useState(false);
-  useEffect(() => {
-    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setTyping(true));
-    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setTyping(false));
-    return () => { show.remove(); hide.remove(); };
-  }, []);
+  // Cards in the thread act on these rows, so the store stays live for as long as the chat is open.
+  const negotiations = useNegotiations({ conversationId: id });
+  const negotiationMutations = useNegotiationMutations(userId, negotiations, async () => {
+    await latest.current.openConversation(id);
+    if (mounted.current) setReadAttempt(value => value + 1);
+  });
 
   useEffect(() => {
     if (!active) return;
@@ -94,6 +101,11 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
       ...messaging.pending.filter(item => item.conversationId === id && item.senderId === userId && !confirmedIds.has(`${item.senderId}:${item.clientMessageId}`)).map(item => ({ key: `pending:${item.clientMessageId}`, pending: item })),
     ];
   }, [history?.messages, messaging.pending, id, userId]);
+  const liveProposals = useMemo(() => new Map(negotiations.items.map(item => [item.id, item])), [negotiations.items]);
+  // A proposal or answer from the other person arrives as a message first; fetch its live row right away.
+  const latestProposalMessage = rows.reduce((last, row) => row.message?.negotiation ? row.message.id : last, '');
+  const refreshNegotiations = negotiations.refresh;
+  useEffect(() => { if (latestProposalMessage) void refreshNegotiations(); }, [latestProposalMessage, refreshNegotiations]);
 
   useEffect(() => {
     if (!active || menu || report || discard || negotiationsOpen || !atBottom || !visibleSeq || visibleSeq <= acknowledged.current || readInFlight.current) return;
@@ -151,7 +163,7 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
     {opening ? <ActivityIndicator style={styles.loading} color={colors.primary} /> : <><Notice error>{issue || syncIssue || messaging.error || 'Esta conversación no está disponible para tu cuenta.'}</Notice><Button label="Volver a intentar" secondary onPress={refreshNow} /><Button label="Ir a mensajes" onPress={() => router.replace('/messages')} style={{ marginTop: 12 }} /></>}
   </View></View></SafeAreaView>;
 
-  const lastOwnKey = [...rows].reverse().find(row => (row.message ?? row.pending).senderId === userId)?.key;
+  const lastOwnKey = [...rows].reverse().find(row => !row.message?.negotiation && (row.message ?? row.pending).senderId === userId)?.key;
   const disabledReason = conversation.blockedByMe ? 'Has bloqueado a esta persona. Puedes leer el historial y desbloquearla desde las opciones.' : conversation.blockedByOther ? 'No puedes enviar mensajes a esta persona. El historial sigue disponible.' : !conversation.propertyAvailable ? 'Esta vivienda ya no está disponible para nuevas conversaciones. Puedes consultar el historial.' : !conversation.canSend ? 'No se pueden enviar mensajes en esta conversación.' : '';
   const syncError = syncIssue || history?.error || messaging.error;
 
@@ -162,19 +174,15 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
       <View style={styles.shell}>
         <View style={styles.chatHeader}>
           <IconButton name="chevron-back" label="Volver" onPress={() => goBack('/messages')} />
-          <View style={styles.person}><Text numberOfLines={1} style={styles.personName}>{conversation.otherName}</Text><Text style={styles.personHint}>Conversación sobre una vivienda</Text></View>
+          <Pressable accessibilityRole="button" accessibilityLabel={`${conversation.otherName}. Ver vivienda: ${conversation.propertyTitle}`} disabled={!conversation.propertyAvailable} onPress={() => router.push(`/property/${conversation.propertyId}`)} style={({ pressed }) => [styles.person, pressed && { opacity: 0.7 }]}>
+            <Text numberOfLines={1} style={styles.personName}>{conversation.otherName}</Text>
+            <Text numberOfLines={1} style={[styles.personHint, conversation.propertyAvailable && styles.propertyLink]}>{conversation.propertyTitle}{conversation.propertyAvailable ? ' ›' : ''}</Text>
+          </Pressable>
           <IconButton name="ellipsis-horizontal" label="Opciones de conversación" onPress={() => { Keyboard.dismiss(); setMenu(true); }} />
         </View>
-        {!typing && <Pressable accessibilityRole="button" accessibilityLabel={`Ver vivienda: ${conversation.propertyTitle}`} disabled={!conversation.propertyAvailable} onPress={() => router.push(`/property/${conversation.propertyId}`)} style={({ pressed }) => [styles.property, pressed && { opacity: 0.7 }]}>
-          <View style={styles.propertyIcon}><Icon name="home-outline" size={23} color={colors.primary} /></View>
-          <View style={styles.propertyCopy}><Text style={styles.propertyTitle} numberOfLines={1}>{conversation.propertyTitle}</Text><Text style={styles.propertyZone} numberOfLines={1}>{conversation.propertyLocation}</Text></View>
-          {conversation.propertyAvailable && <Icon name="chevron-forward" size={16} color={colors.muted} />}
-        </Pressable>}
-        <ConversationNegotiations conversation={conversation} userId={userId} entryHidden={typing} onVisibilityChange={setNegotiationsOpen} onChanged={async () => {
-          await latest.current.openConversation(id);
-          if (mounted.current) setReadAttempt(value => value + 1);
-        }} />
+        <ConversationNegotiations conversation={conversation} userId={userId} store={negotiations} mutations={negotiationMutations} request={sheet} onClose={() => setSheet(null)} />
         {(issue || syncError) && <View style={styles.sync}><Text accessibilityRole="alert" style={styles.syncText}>{issue || syncError}</Text><Pressable accessibilityRole="button" onPress={refreshNow} style={styles.retryLink}><Text style={styles.link}>Reintentar</Text></Pressable></View>}
+        {!!negotiationMutations.issue && !sheet && <View style={styles.sync}><Text accessibilityRole="alert" style={styles.syncText}>{negotiationMutations.issue}</Text><Pressable accessibilityRole="button" onPress={negotiationMutations.clearFeedback} style={styles.retryLink}><Text style={styles.link}>Cerrar</Text></Pressable></View>}
         {!!notice && <Text accessibilityLiveRegion="polite" style={styles.notice}>{notice}</Text>}
         {readError && <View style={styles.sync}><Text style={styles.syncText}>No pudimos actualizar los mensajes leídos.</Text><Pressable accessibilityRole="button" onPress={() => setReadAttempt(value => value + 1)} style={styles.retryLink}><Text style={styles.link}>Reintentar</Text></Pressable></View>}
         <View style={styles.flex}>
@@ -201,7 +209,14 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
             const date = new Date((item.message ?? item.pending).createdAt).toLocaleDateString('es', { day: 'numeric', month: 'long' });
             const previous = index > 0 ? rows[index - 1] : undefined;
             const previousDate = previous ? new Date((previous.message ?? previous.pending).createdAt).toLocaleDateString('es', { day: 'numeric', month: 'long' }) : '';
-            return <View>{date !== previousDate && <Text style={styles.day}>{date}</Text>}<MessageBubble row={item} own={(item.message ?? item.pending).senderId === userId} showStatus={item.key === lastOwnKey} canRetry={conversation.canSend} busy={!!busy} onRetry={() => item.pending && void perform(item.pending.clientMessageId, () => latest.current.retryMessage(item.pending!.clientMessageId))} onDiscard={() => item.pending && setDiscard(item.pending.clientMessageId)} /></View>;
+            const proposal = item.message?.negotiation;
+            const time = new Date((item.message ?? item.pending).createdAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+            return <View>{date !== previousDate && <Text style={styles.day}>{date}</Text>}{proposal && item.message
+              ? proposal.action === 'created'
+                ? <ProposalCard proposal={proposal} live={liveProposals.get(proposal.id)} userId={userId} time={time} busy={negotiations.mutating}
+                    onRespond={(target, action) => void negotiationMutations.respond(target, action)} onCounter={target => setSheet({ compose: { kind: target.kind, previous: target } })} onCancelAgreement={setCancelTarget} />
+                : <NegotiationNotice answer={proposal} actorId={item.message.senderId} userId={userId} otherName={conversation.otherName} time={time} />
+              : <MessageBubble row={item} own={(item.message ?? item.pending).senderId === userId} showStatus={item.key === lastOwnKey} canRetry={conversation.canSend} busy={!!busy} onRetry={() => item.pending && void perform(item.pending.clientMessageId, () => latest.current.retryMessage(item.pending!.clientMessageId))} onDiscard={() => item.pending && setDiscard(item.pending.clientMessageId)} />}</View>;
           }}
         />
         {/* Floats over the list: in the flow it resized the list each time it appeared, making it jump. */}
@@ -210,6 +225,9 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
         {!!disabledReason && <Text style={styles.disabledReason}>{disabledReason}</Text>}
         {!!composer.error && <View style={styles.sync}><Text accessibilityRole="alert" style={styles.syncText}>{composer.error}</Text><Pressable accessibilityRole="button" onPress={() => { void composer.retry().catch(() => undefined); }} style={styles.retryLink}><Text style={styles.link}>Reintentar</Text></Pressable></View>}
         <View style={styles.composer}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Visitas y ofertas" onPress={() => { Keyboard.dismiss(); setSheet({}); }} style={({ pressed }) => [styles.plus, pressed && { opacity: 0.7 }]}>
+            <Icon name="add" size={26} color={colors.primary} />
+          </Pressable>
           <TextInput accessibilityLabel="Escribe un mensaje" placeholder={composer.ready ? 'Escribe un mensaje…' : 'Recuperando borrador…'} placeholderTextColor={colors.muted} value={composer.text} onChangeText={composer.change} multiline maxLength={2000} editable={composer.ready && !busy} style={[styles.input, !conversation.canSend && styles.mutedInput]} textAlignVertical="top" />
           <Pressable accessibilityRole="button" accessibilityLabel="Enviar mensaje" accessibilityState={{ disabled: !conversation.canSend || !composer.ready || !!busy || !composer.text.trim() }} disabled={!conversation.canSend || !composer.ready || !!busy || !composer.text.trim()} onPress={send} style={({ pressed }) => [styles.send, (!conversation.canSend || !composer.ready || !!busy || !composer.text.trim() || pressed) && styles.sendDisabled]}>
             {busy === 'send' ? <ActivityIndicator color={colors.white} /> : <Icon name="arrow-up" size={24} color={colors.white} />}
@@ -218,8 +236,14 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
         {composer.text.length > 1800 && <Text style={styles.count}>{composer.text.length}/2000</Text>}
       </View>
     </KeyboardAvoidingView>
-    <Modal visible={menu || !!discard} transparent animationType="fade" onRequestClose={() => { if (!busy) { setMenu(false); setDiscard(null); } }}>
+    <Modal visible={menu || !!discard || !!cancelTarget} transparent animationType="fade" onRequestClose={() => { if (!busy && !negotiations.mutating) { setMenu(false); setDiscard(null); setCancelTarget(null); } }}>
       <View style={[styles.backdrop, { paddingBottom: Math.max(insets.bottom, 20), paddingTop: Math.max(insets.top, 20) }]}><View accessibilityViewIsModal style={styles.actionSheet}>
+        {cancelTarget ? <>
+          <Text style={styles.sheetTitle}>¿Cancelar el acuerdo?</Text>
+          <Text style={styles.sheetDescription}>La {proposalSubject(cancelTarget)} ya estaba aceptada. Si la cancelas, {conversation.otherName} lo verá en el chat.</Text>
+          <Button label="Cancelar acuerdo" loading={negotiations.mutating} onPress={() => { const target = cancelTarget; void negotiationMutations.respond(target, 'cancel').finally(() => { if (mounted.current) setCancelTarget(null); }); }} />
+          <Button label="Mantener acuerdo" secondary disabled={negotiations.mutating} onPress={() => setCancelTarget(null)} />
+        </> : <>
         <Text style={styles.sheetTitle}>{discard ? 'Descartar mensaje' : 'Opciones de conversación'}</Text>
         <Text style={styles.sheetDescription}>{discard ? 'Se quitará de la bandeja de salida de este dispositivo. No se borran mensajes ya recibidos por la otra persona.' : conversation.blockedByMe ? 'Puedes volver a permitir mensajes con esta persona.' : 'Al bloquear, no podréis enviaros mensajes en ninguna de vuestras conversaciones. El historial se conserva.'}</Text>
         {discard ? <Button label="Confirmar descarte" loading={busy === 'discard'} disabled={!!busy} onPress={() => void perform('discard', async () => { await latest.current.discardMessage(discard); if (mounted.current) setDiscard(null); })} /> : <>
@@ -228,6 +252,7 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
         </>}
         {!!issue && <Notice error>{issue}</Notice>}
         <Button label="Cancelar" secondary disabled={!!busy} onPress={() => { setMenu(false); setDiscard(null); }} />
+        </>}
       </View></View>
     </Modal>
     <ReportConversationSheet visible={report} onClose={() => setReport(false)} onReport={(reason, details, clientId) => latest.current.reportConversation(id, reason, details, clientId)} />
@@ -239,7 +264,8 @@ function message(failure: unknown, fallback: string) { return failure instanceof
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 }, shell: { flex: 1, width: '100%', maxWidth: 800, alignSelf: 'center' }, padding: { paddingHorizontal: 20 }, loading: { padding: 36 },
   chatHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }, person: { flex: 1, gap: 3 }, personName: { color: colors.ink, fontSize: 18, fontWeight: '600' }, personHint: { color: colors.muted, fontSize: 12 },
-  property: { marginHorizontal: 16, padding: 12, backgroundColor: colors.white, borderRadius: 18, flexDirection: 'row', gap: 11, alignItems: 'center', marginBottom: 8 }, propertyIcon: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: colors.softBlue }, propertyCopy: { flex: 1, gap: 4 }, propertyTitle: { color: colors.ink, fontSize: 14, fontWeight: '600' }, propertyZone: { color: colors.muted, fontSize: 12 },
+  propertyLink: { color: colors.primary },
+  plus: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
   messages: { paddingHorizontal: 18, paddingVertical: 12, flexGrow: 1 }, older: { alignSelf: 'center', marginBottom: 12 }, day: { color: colors.muted, textAlign: 'center', fontSize: 12, fontWeight: '500', marginTop: 14, marginBottom: 10 },
   sync: { marginHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFF2F0', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 }, syncText: { flex: 1, fontSize: 12, lineHeight: 17, color: colors.danger }, retryLink: { minHeight: 44, justifyContent: 'center' }, link: { color: colors.primary, fontSize: 13, fontWeight: '600' },
   notice: { marginHorizontal: 20, paddingVertical: 8, color: colors.green, fontSize: 12, lineHeight: 18 }, disabledReason: { color: colors.muted, fontSize: 12, lineHeight: 18, paddingHorizontal: 20, paddingVertical: 9, backgroundColor: '#EEEEF2' },

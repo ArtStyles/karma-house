@@ -1,34 +1,41 @@
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../auth/AuthProvider';
 import type { Conversation } from '../../messaging/types';
-import { useNegotiations } from '../../negotiations/useNegotiations';
+import type { useNegotiations } from '../../negotiations/useNegotiations';
 import type { Negotiation, NegotiationKind } from '../../negotiations/types';
 import { colors } from '../../theme';
 import { Button, Icon, Notice } from '../ui';
 import { NegotiationCard } from './NegotiationCard';
 import { NegotiationComposer, type ProposalTarget } from './NegotiationComposer';
 import { NegotiationSheet } from './NegotiationSheet';
-import { useNegotiationMutations } from './useNegotiationMutations';
+import type { useNegotiationMutations } from './useNegotiationMutations';
 import { useProposalDrafts } from './useProposalDrafts';
 
-/** `entryHidden` hides only the entry card; the sheet stays mounted so open proposals keep their drafts. */
-export interface ConversationNegotiationsProps { conversation:Conversation; userId:string; entryHidden?:boolean; onChanged():Promise<void>; onVisibilityChange?(open:boolean):void }
+/** Open the sheet on the history, or straight on the form for a kind (and the proposal it answers). */
+export type NegotiationSheetRequest = { compose?: { kind: NegotiationKind; previous?: Negotiation } };
+/**
+ * The chat owns the proposals store and the mutations, because its cards act on the same rows; this sheet
+ * is the history and the proposal form. `request` null keeps it closed while drafts stay mounted.
+ */
+export interface ConversationNegotiationsProps {
+  conversation:Conversation; userId:string; store:ReturnType<typeof useNegotiations>; mutations:ReturnType<typeof useNegotiationMutations>;
+  request:NegotiationSheetRequest|null; onClose():void;
+}
 export function ConversationNegotiations(props:ConversationNegotiationsProps){return <ConversationNegotiationsBody key={`${props.userId}:${props.conversation.id}`} {...props}/>}
-function ConversationNegotiationsBody({conversation,userId,entryHidden=false,onChanged,onVisibilityChange}:ConversationNegotiationsProps){
+function ConversationNegotiationsBody({conversation,userId,store,mutations,request,onClose}:ConversationNegotiationsProps){
   const auth=useAuth();
   const drafts=useProposalDrafts();
-  const [open,setOpen]=useState(false),[showComposer,setShowComposer]=useState(false),[target,setTarget]=useState<ProposalTarget|null>(null);
-  const visibility=useRef(onVisibilityChange);visibility.current=onVisibilityChange;
-  useEffect(()=>()=>visibility.current?.(false),[]);
-  const store=useNegotiations({conversationId:conversation.id,enabled:open});
-  const mutations=useNegotiationMutations(userId,store,onChanged);
+  const open=request!==null;
+  const [showComposer,setShowComposer]=useState(false),[target,setTarget]=useState<ProposalTarget|null>(null);
+  // Each opening decides where the sheet starts: a card asking for a counterproposal skips the history.
+  useEffect(()=>{if(!request)return;if(request.compose)compose(request.compose.kind,request.compose.previous);else setShowComposer(false)},[request]);
   const authorized=auth.user?.id===userId&&store.userId===userId;
   const canSend=authorized&&conversation.canSend;
   const previous=target?.previous?store.items.find(item=>item.id===target.previous?.id):undefined;
   const staleAlternative=!!target?.previous&&(previous?previous.status!=='pending'||!previous.canAct:store.ready&&!store.loading);
   const reason=conversation.blockedByMe||conversation.blockedByOther?'Hay un bloqueo en esta conversación. Puedes consultar el historial, retirar propuestas propias o cancelar acuerdos.':'El anuncio no está disponible. Puedes consultar el historial, retirar propuestas propias o cancelar acuerdos.';
-  function close(){if(store.mutating)return;setOpen(false);visibility.current?.(false)}
+  function close(){if(store.mutating)return;onClose()}
   function compose(kind:NegotiationKind,previous?:Negotiation){
     const same=target?.kind===kind&&target.previous?.id===previous?.id;
     if(!same)setTarget({conversationId:conversation.id,kind,previous});
@@ -36,9 +43,6 @@ function ConversationNegotiationsBody({conversation,userId,entryHidden=false,onC
   }
   const pending=(kind:NegotiationKind)=>store.items.some(item=>item.kind===kind&&item.status==='pending');
   return <>
-    {!entryHidden&&<Pressable accessibilityRole="button" accessibilityLabel="Visitas y ofertas" onPress={()=>{Keyboard.dismiss();setOpen(true);visibility.current?.(true)}} style={({pressed})=>[styles.entry,pressed&&{opacity:.7}]}>
-      <View style={styles.entryIcon}><Icon name="calendar-outline" color={colors.primary} size={20}/></View><View style={styles.entryCopy}><Text style={styles.entryTitle}>Visitas y ofertas</Text><Text style={styles.entryText}>Acuerda una fecha o un importe.</Text></View><Icon name="chevron-forward" color={colors.primary} size={17}/>
-    </Pressable>}
     <NegotiationSheet visible={open} busy={store.mutating} onClose={close}>
       {target&&<View style={!showComposer&&styles.hidden}><NegotiationComposer key={`${target.kind}:${target.previous?.id??'new'}`} target={target} draft={drafts.get(target)} updateDraft={patch=>drafts.update(target,patch)} disabled={!canSend||staleAlternative} disabledReason={staleAlternative?'La propuesta anterior cambió o ya no está en esta lista. Vuelve al historial para elegir una propuesta pendiente.':reason} onCreate={mutations.create} onRefresh={store.refresh} onBack={()=>setShowComposer(false)} onConfirmed={()=>{drafts.discard(target);setTarget(null);setShowComposer(false)}}/></View>}
       {!showComposer&&<>
@@ -57,4 +61,4 @@ function ConversationNegotiationsBody({conversation,userId,entryHidden=false,onC
     </NegotiationSheet>
   </>;
 }
-const styles=StyleSheet.create({hidden:{display:'none'},entry:{flexDirection:'row',alignItems:'center',gap:10,padding:12,borderRadius:18,backgroundColor:'#EDF4FC',borderWidth:1,borderColor:'#DEEBF9',marginTop:8,marginHorizontal:16},entryIcon:{width:36,height:36,borderRadius:13,backgroundColor:colors.white,alignItems:'center',justifyContent:'center'},entryCopy:{flex:1,minWidth:0,gap:3},entryTitle:{color:colors.ink,fontSize:13,fontWeight:'600'},entryText:{color:'#57708E',fontSize:12,lineHeight:17},intro:{gap:6},property:{color:colors.ink,fontSize:18,lineHeight:24,fontWeight:'600',letterSpacing:-.3},description:{color:colors.muted,fontSize:13,lineHeight:20},newActions:{flexDirection:'row',flexWrap:'wrap',gap:9},newAction:{flexGrow:1,flexBasis:155},hint:{fontSize:12,lineHeight:18,color:colors.muted},listHeading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:15,marginTop:8},sectionTitle:{fontSize:17,fontWeight:'600',color:colors.ink},link:{fontSize:13,color:colors.primary,paddingVertical:9},loading:{padding:25},empty:{padding:23,borderRadius:23,backgroundColor:colors.white,gap:12,alignItems:'flex-start'},emptyTitle:{fontSize:18,lineHeight:24,fontWeight:'600',color:colors.ink},feedback:{flexDirection:'row',gap:8,alignItems:'center'},feedbackText:{flex:1,color:colors.green,fontSize:13,lineHeight:20}});
+const styles=StyleSheet.create({hidden:{display:'none'},intro:{gap:6},property:{color:colors.ink,fontSize:18,lineHeight:24,fontWeight:'600',letterSpacing:-.3},description:{color:colors.muted,fontSize:13,lineHeight:20},newActions:{flexDirection:'row',flexWrap:'wrap',gap:9},newAction:{flexGrow:1,flexBasis:155},hint:{fontSize:12,lineHeight:18,color:colors.muted},listHeading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:15,marginTop:8},sectionTitle:{fontSize:17,fontWeight:'600',color:colors.ink},link:{fontSize:13,color:colors.primary,paddingVertical:9},loading:{padding:25},empty:{padding:23,borderRadius:23,backgroundColor:colors.white,gap:12,alignItems:'flex-start'},emptyTitle:{fontSize:18,lineHeight:24,fontWeight:'600',color:colors.ink},feedback:{flexDirection:'row',gap:8,alignItems:'center'},feedbackText:{flex:1,color:colors.green,fontSize:13,lineHeight:20}});
