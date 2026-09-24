@@ -1,8 +1,8 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Icon, IconButton, Notice, PageTitle } from '../components/ui';
+import { Button, Icon, IconButton, Notice, PageTitle, type IconName } from '../components/ui';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { useFavoriteListings } from '../catalog/useCatalog';
@@ -78,6 +78,24 @@ export default function ProfileScreen() {
         <Button label={mode === 'cloud' ? 'Publicar mi vivienda' : 'Crear anuncio de prueba'} onPress={() => router.push('/publish')} icon="add-outline" />
       </View>
 
+      {/* Explorar no longer carries the account menu, so the account lives here in plain sight. */}
+      {user && <>
+        <Text style={styles.sectionLabel}>Cuenta</Text>
+        <View style={styles.group}>
+          <AccountRow icon="settings-outline" title="Ajustes de cuenta" description="Nombre, foto, privacidad y eliminar cuenta" onPress={() => router.push('/account-settings')} />
+          <View style={styles.separator} />
+          <AccountRow icon="notifications-outline" title="Preferencias de notificaciones" description="Qué avisos quieres recibir" onPress={() => router.push('/notification-settings')} />
+          <View style={styles.separator} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Cerrar sesión" disabled={busy} onPress={async () => {
+            setBusy(true); setError('');
+            try { await signOut(); } catch { setError('No pudimos cerrar la sesión. Inténtalo de nuevo.'); } finally { setBusy(false); }
+          }} style={({ pressed }) => [styles.row, styles.compactRow, pressed && styles.pressed]}>
+            <View style={[styles.rowIcon, styles.dangerIcon]}>{busy ? <ActivityIndicator size="small" color={colors.danger} /> : <Icon name="log-out-outline" size={21} color={colors.danger} />}</View>
+            <Text style={[styles.rowTitle, { color: colors.danger, flex: 1 }]}>Cerrar sesión</Text>
+          </Pressable>
+        </View>
+      </>}
+
       {isAdmin && <View style={{ marginTop: 18 }}><Button label="Revisar anuncios" secondary icon="shield-checkmark-outline" onPress={() => router.push('/admin')} /></View>}
       {isAdmin && <View style={{ marginTop: 12 }}><Button label="Reportes de mensajes" secondary icon="flag-outline" onPress={() => router.push('/message-reports')} /></View>}
       {isAdmin && <View style={{ marginTop: 12 }}><Button label="Reportes de anuncios" secondary icon="flag-outline" onPress={() => router.push('/property-reports')} /></View>}
@@ -89,12 +107,15 @@ export default function ProfileScreen() {
       </View>
       {error || authError ? <Notice error>{error || authError}</Notice> : null}
       {authError && user && <Button label="Volver a cargar perfil" secondary onPress={() => void refreshProfile()} />}
-      {user && <View style={{ marginTop: 22 }}><Button label="Cerrar sesión" secondary loading={busy} onPress={async () => {
-        setBusy(true); setError('');
-        try { await signOut(); } catch { setError('No pudimos cerrar la sesión. Inténtalo de nuevo.'); } finally { setBusy(false); }
-      }} /></View>}
     </ScrollView>
   </SafeAreaView>;
+}
+
+function AccountRow({ icon, title, description, onPress }: { icon: IconName; title: string; description: string; onPress(): void }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+    <View style={styles.rowIcon}><Icon name={icon} size={21} color={colors.primary} /></View>
+    <View style={styles.rowBody}><View style={styles.rowCopy}><Text style={styles.rowTitle}>{title}</Text><Text style={styles.rowDescription}>{description}</Text></View><Icon name="chevron-forward" size={17} color={colors.muted} /></View>
+  </Pressable>;
 }
 
 const styles = StyleSheet.create({
@@ -114,6 +135,7 @@ const styles = StyleSheet.create({
   row: { minHeight: 79, flexDirection: 'row', alignItems: 'center', gap: 13, paddingLeft: 16, paddingRight: 18, paddingVertical: 15 },
   pressed: { backgroundColor: colors.paper },
   rowIcon: { width: 39, height: 39, borderRadius: 13, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
+  compactRow: { minHeight: 60 }, dangerIcon: { backgroundColor: colors.softDanger },
   listingsIcon: { backgroundColor: '#EAF3EE' }, favoritesIcon: { backgroundColor: '#F8ECEF' },
   rowBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   rowCopy: { flex: 1, gap: 4 },
