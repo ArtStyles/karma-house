@@ -42,7 +42,7 @@ export function SelectionField({ label, value, options, onChange, placeholder = 
     {hint && !error ? <Text style={styles.hint}>{hint}</Text> : null}
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
     {inline ? open && <View style={styles.inlinePanel}>{choices}</View> : <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior="padding">
         <View style={[styles.overlay, { paddingTop: Math.max(insets.top, 20), paddingBottom: Math.max(insets.bottom, 16) }]}>
           <Pressable accessibilityRole="button" accessibilityLabel="Cancelar selección" onPress={close} style={StyleSheet.absoluteFill} />
           <View accessibilityViewIsModal style={styles.sheet}>

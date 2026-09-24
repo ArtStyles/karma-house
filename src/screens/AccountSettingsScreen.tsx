@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { router } from 'expo-router';
-import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { accountProfileError } from '../auth/accountProfile';
@@ -15,7 +15,7 @@ import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 export default function AccountSettingsScreen() {
   const auth = useAuth();
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <PageTitle title="Ajustes de cuenta" back />
         {!isSupabaseConfigured ? <EmptyState icon="person-outline" title="Tu perfil, a tu manera" description="La foto y el nombre de tu cuenta estarán disponibles con el servicio conectado." /> : !auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : !auth.user ? <AccountPrompt returnTo="/account-settings" title="Tu perfil, a tu manera" description="Inicia sesión para personalizar el nombre y la foto de tu cuenta." /> : !auth.profileReady ? <View style={styles.card}><Notice error={!!auth.error}>{auth.error || 'Cargando tu perfil…'}</Notice><Button label="Volver a cargar perfil" secondary onPress={() => void auth.refreshProfile()} /></View> : <AccountSettingsForm key={auth.user.id} ownerId={auth.user.id} />}

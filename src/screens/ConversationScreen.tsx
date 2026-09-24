@@ -148,7 +148,9 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
   const syncError = syncIssue || history?.error || messaging.error;
 
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    {/* Android runs edge-to-edge (targetSdk 36), so the window no longer shrinks for the keyboard:
+        without padding on Android too, the keyboard covers the composer. */}
+    <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <View style={styles.shell}>
         <View style={styles.chatHeader}>
           <IconButton name="chevron-back" label="Volver" onPress={() => goBack('/messages')} />

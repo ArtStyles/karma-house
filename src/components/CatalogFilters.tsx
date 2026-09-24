@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activeFilterCount, defaultFilters, filterRangeError, type ListingFilters } from '../domain/listings';
 import { AMENITIES, CONDITIONS, PROVINCES } from '../domain/listingOptions';
@@ -24,7 +24,7 @@ export function CatalogFilters({ filters, total, onApply, onClose }: { filters: 
   const count = error ? 0 : total;
   const selectedCount = activeFilterCount({ ...draft, query: '' });
   return <Modal transparent visible animationType="fade" onRequestClose={onClose}>
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <View style={[styles.overlay, width >= 700 && { justifyContent: 'center' }, { paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 12) }]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cancelar filtros" onPress={onClose} style={StyleSheet.absoluteFill} />
         <View accessibilityViewIsModal style={styles.sheet}>

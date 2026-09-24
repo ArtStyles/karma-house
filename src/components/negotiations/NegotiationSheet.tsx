@@ -12,7 +12,7 @@ export function NegotiationSheet({ visible, title = 'Visitas y ofertas', busy = 
     document.addEventListener('keydown',close);return()=>document.removeEventListener('keydown',close);
   },[visible,busy,onClose]);
   return <Modal transparent visible={visible} animationType="fade" onRequestClose={()=>{if(!busy)onClose()}}>
-    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS==='ios'?'padding':undefined}>
+    <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <View style={[styles.overlay,{paddingTop:Math.max(insets.top,16),paddingBottom:Math.max(insets.bottom,16)}]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cerrar panel de solicitudes" disabled={busy} onPress={onClose} style={StyleSheet.absoluteFill}/>
         <View accessibilityViewIsModal style={styles.sheet}>

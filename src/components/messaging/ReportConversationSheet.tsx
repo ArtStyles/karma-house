@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createMessageId } from '../../messaging/domain';
 import type { ReportReason } from '../../messaging/types';
@@ -50,7 +50,7 @@ export function ReportConversationSheet<R extends string = ReportReason>({ visib
   }
 
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
     <View style={[styles.backdrop, { paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 16) }]}>
       <View accessibilityViewIsModal style={styles.sheet}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">

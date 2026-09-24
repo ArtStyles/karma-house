@@ -231,7 +231,7 @@ export function ListingForm({
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
       keyboardVerticalOffset={Platform.OS === 'ios' ? 16 : 0}
       style={styles.flex}
     >
