@@ -12,9 +12,10 @@ import { NegotiationSheet } from './NegotiationSheet';
 import { useNegotiationMutations } from './useNegotiationMutations';
 import { useProposalDrafts } from './useProposalDrafts';
 
-export interface ConversationNegotiationsProps { conversation:Conversation; userId:string; onChanged():Promise<void>; onVisibilityChange?(open:boolean):void }
+/** `entryHidden` hides only the entry card; the sheet stays mounted so open proposals keep their drafts. */
+export interface ConversationNegotiationsProps { conversation:Conversation; userId:string; entryHidden?:boolean; onChanged():Promise<void>; onVisibilityChange?(open:boolean):void }
 export function ConversationNegotiations(props:ConversationNegotiationsProps){return <ConversationNegotiationsBody key={`${props.userId}:${props.conversation.id}`} {...props}/>}
-function ConversationNegotiationsBody({conversation,userId,onChanged,onVisibilityChange}:ConversationNegotiationsProps){
+function ConversationNegotiationsBody({conversation,userId,entryHidden=false,onChanged,onVisibilityChange}:ConversationNegotiationsProps){
   const auth=useAuth();
   const drafts=useProposalDrafts();
   const [open,setOpen]=useState(false),[showComposer,setShowComposer]=useState(false),[target,setTarget]=useState<ProposalTarget|null>(null);
@@ -35,9 +36,9 @@ function ConversationNegotiationsBody({conversation,userId,onChanged,onVisibilit
   }
   const pending=(kind:NegotiationKind)=>store.items.some(item=>item.kind===kind&&item.status==='pending');
   return <>
-    <Pressable accessibilityRole="button" accessibilityLabel="Visitas y ofertas" onPress={()=>{Keyboard.dismiss();setOpen(true);visibility.current?.(true)}} style={({pressed})=>[styles.entry,pressed&&{opacity:.7}]}>
+    {!entryHidden&&<Pressable accessibilityRole="button" accessibilityLabel="Visitas y ofertas" onPress={()=>{Keyboard.dismiss();setOpen(true);visibility.current?.(true)}} style={({pressed})=>[styles.entry,pressed&&{opacity:.7}]}>
       <View style={styles.entryIcon}><Icon name="calendar-outline" color={colors.primary} size={20}/></View><View style={styles.entryCopy}><Text style={styles.entryTitle}>Visitas y ofertas</Text><Text style={styles.entryText}>Acuerda una fecha o un importe.</Text></View><Icon name="chevron-forward" color={colors.primary} size={17}/>
-    </Pressable>
+    </Pressable>}
     <NegotiationSheet visible={open} busy={store.mutating} onClose={close}>
       {target&&<View style={!showComposer&&styles.hidden}><NegotiationComposer key={`${target.kind}:${target.previous?.id??'new'}`} target={target} draft={drafts.get(target)} updateDraft={patch=>drafts.update(target,patch)} disabled={!canSend||staleAlternative} disabledReason={staleAlternative?'La propuesta anterior cambió o ya no está en esta lista. Vuelve al historial para elegir una propuesta pendiente.':reason} onCreate={mutations.create} onRefresh={store.refresh} onBack={()=>setShowComposer(false)} onConfirmed={()=>{drafts.discard(target);setTarget(null);setShowComposer(false)}}/></View>}
       {!showComposer&&<>
@@ -56,4 +57,4 @@ function ConversationNegotiationsBody({conversation,userId,onChanged,onVisibilit
     </NegotiationSheet>
   </>;
 }
-const styles=StyleSheet.create({hidden:{display:'none'},entry:{flexDirection:'row',alignItems:'center',gap:10,padding:12,borderRadius:18,backgroundColor:'#EDF4FC',borderWidth:1,borderColor:'#DEEBF9',marginTop:8,marginHorizontal:16},entryIcon:{width:36,height:36,borderRadius:13,backgroundColor:colors.white,alignItems:'center',justifyContent:'center'},entryCopy:{flex:1,minWidth:0,gap:3},entryTitle:{color:colors.ink,fontSize:13,fontWeight:'600'},entryText:{color:'#57708E',fontSize:11,lineHeight:16},intro:{gap:6},property:{color:colors.ink,fontSize:18,lineHeight:24,fontWeight:'600',letterSpacing:-.3},description:{color:colors.muted,fontSize:13,lineHeight:20},newActions:{flexDirection:'row',flexWrap:'wrap',gap:9},newAction:{flexGrow:1,flexBasis:155},hint:{fontSize:11,lineHeight:18,color:colors.muted},listHeading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:15,marginTop:8},sectionTitle:{fontSize:17,fontWeight:'600',color:colors.ink},link:{fontSize:13,color:colors.primary,paddingVertical:9},loading:{padding:25},empty:{padding:23,borderRadius:23,backgroundColor:colors.white,gap:12,alignItems:'flex-start'},emptyTitle:{fontSize:18,lineHeight:24,fontWeight:'600',color:colors.ink},feedback:{flexDirection:'row',gap:8,alignItems:'center'},feedbackText:{flex:1,color:colors.green,fontSize:13,lineHeight:20}});
+const styles=StyleSheet.create({hidden:{display:'none'},entry:{flexDirection:'row',alignItems:'center',gap:10,padding:12,borderRadius:18,backgroundColor:'#EDF4FC',borderWidth:1,borderColor:'#DEEBF9',marginTop:8,marginHorizontal:16},entryIcon:{width:36,height:36,borderRadius:13,backgroundColor:colors.white,alignItems:'center',justifyContent:'center'},entryCopy:{flex:1,minWidth:0,gap:3},entryTitle:{color:colors.ink,fontSize:13,fontWeight:'600'},entryText:{color:'#57708E',fontSize:12,lineHeight:17},intro:{gap:6},property:{color:colors.ink,fontSize:18,lineHeight:24,fontWeight:'600',letterSpacing:-.3},description:{color:colors.muted,fontSize:13,lineHeight:20},newActions:{flexDirection:'row',flexWrap:'wrap',gap:9},newAction:{flexGrow:1,flexBasis:155},hint:{fontSize:12,lineHeight:18,color:colors.muted},listHeading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:15,marginTop:8},sectionTitle:{fontSize:17,fontWeight:'600',color:colors.ink},link:{fontSize:13,color:colors.primary,paddingVertical:9},loading:{padding:25},empty:{padding:23,borderRadius:23,backgroundColor:colors.white,gap:12,alignItems:'flex-start'},emptyTitle:{fontSize:18,lineHeight:24,fontWeight:'600',color:colors.ink},feedback:{flexDirection:'row',gap:8,alignItems:'center'},feedbackText:{flex:1,color:colors.green,fontSize:13,lineHeight:20}});

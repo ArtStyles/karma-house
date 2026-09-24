@@ -62,6 +62,13 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
   });
   const insets = useSafeAreaInsets();
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  // With the keyboard up on a 640-720 pt phone, the property and proposal cards left almost no thread.
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setTyping(true));
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setTyping(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   useEffect(() => {
     if (!active) return;
@@ -144,6 +151,7 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
     {opening ? <ActivityIndicator style={styles.loading} color={colors.primary} /> : <><Notice error>{issue || syncIssue || messaging.error || 'Esta conversación no está disponible para tu cuenta.'}</Notice><Button label="Volver a intentar" secondary onPress={refreshNow} /><Button label="Ir a mensajes" onPress={() => router.replace('/messages')} style={{ marginTop: 12 }} /></>}
   </View></View></SafeAreaView>;
 
+  const lastOwnKey = [...rows].reverse().find(row => (row.message ?? row.pending).senderId === userId)?.key;
   const disabledReason = conversation.blockedByMe ? 'Has bloqueado a esta persona. Puedes leer el historial y desbloquearla desde las opciones.' : conversation.blockedByOther ? 'No puedes enviar mensajes a esta persona. El historial sigue disponible.' : !conversation.propertyAvailable ? 'Esta vivienda ya no está disponible para nuevas conversaciones. Puedes consultar el historial.' : !conversation.canSend ? 'No se pueden enviar mensajes en esta conversación.' : '';
   const syncError = syncIssue || history?.error || messaging.error;
 
@@ -157,21 +165,27 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
           <View style={styles.person}><Text numberOfLines={1} style={styles.personName}>{conversation.otherName}</Text><Text style={styles.personHint}>Conversación sobre una vivienda</Text></View>
           <IconButton name="ellipsis-horizontal" label="Opciones de conversación" onPress={() => { Keyboard.dismiss(); setMenu(true); }} />
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Ver vivienda: ${conversation.propertyTitle}`} disabled={!conversation.propertyAvailable} onPress={() => router.push(`/property/${conversation.propertyId}`)} style={({ pressed }) => [styles.property, pressed && { opacity: 0.7 }]}>
+        {!typing && <Pressable accessibilityRole="button" accessibilityLabel={`Ver vivienda: ${conversation.propertyTitle}`} disabled={!conversation.propertyAvailable} onPress={() => router.push(`/property/${conversation.propertyId}`)} style={({ pressed }) => [styles.property, pressed && { opacity: 0.7 }]}>
           <View style={styles.propertyIcon}><Icon name="home-outline" size={23} color={colors.primary} /></View>
           <View style={styles.propertyCopy}><Text style={styles.propertyTitle} numberOfLines={1}>{conversation.propertyTitle}</Text><Text style={styles.propertyZone} numberOfLines={1}>{conversation.propertyLocation}</Text></View>
           {conversation.propertyAvailable && <Icon name="chevron-forward" size={16} color={colors.muted} />}
-        </Pressable>
-        <ConversationNegotiations conversation={conversation} userId={userId} onVisibilityChange={setNegotiationsOpen} onChanged={async () => {
+        </Pressable>}
+        <ConversationNegotiations conversation={conversation} userId={userId} entryHidden={typing} onVisibilityChange={setNegotiationsOpen} onChanged={async () => {
           await latest.current.openConversation(id);
           if (mounted.current) setReadAttempt(value => value + 1);
         }} />
         {(issue || syncError) && <View style={styles.sync}><Text accessibilityRole="alert" style={styles.syncText}>{issue || syncError}</Text><Pressable accessibilityRole="button" onPress={refreshNow} style={styles.retryLink}><Text style={styles.link}>Reintentar</Text></Pressable></View>}
         {!!notice && <Text accessibilityLiveRegion="polite" style={styles.notice}>{notice}</Text>}
         {readError && <View style={styles.sync}><Text style={styles.syncText}>No pudimos actualizar los mensajes leídos.</Text><Pressable accessibilityRole="button" onPress={() => setReadAttempt(value => value + 1)} style={styles.retryLink}><Text style={styles.link}>Reintentar</Text></Pressable></View>}
-        <FlatList ref={list} data={rows} keyExtractor={item => item.key} style={styles.flex} contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive"
+        <View style={styles.flex}>
+        <FlatList ref={list} data={rows} keyExtractor={item => item.key} style={styles.flex} contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           viewabilityConfig={viewabilityConfig.current} onViewableItemsChanged={onViewableItemsChanged.current}
-          onLayout={event => { metrics.current.height = event.nativeEvent.layout.height; updateBottom(); }}
+          onLayout={event => {
+            metrics.current.height = event.nativeEvent.layout.height;
+            // The keyboard shrinks the list from below. Keep the latest message in view if it was.
+            if (follow.current) requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));
+            else updateBottom();
+          }}
           onScroll={event => { metrics.current = { height: event.nativeEvent.layoutMeasurement.height, content: event.nativeEvent.contentSize.height, offset: event.nativeEvent.contentOffset.y }; updateBottom(); }} scrollEventThrottle={100}
           onContentSizeChange={(_, content) => {
             const anchor = prepend.current;
@@ -187,10 +201,12 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
             const date = new Date((item.message ?? item.pending).createdAt).toLocaleDateString('es', { day: 'numeric', month: 'long' });
             const previous = index > 0 ? rows[index - 1] : undefined;
             const previousDate = previous ? new Date((previous.message ?? previous.pending).createdAt).toLocaleDateString('es', { day: 'numeric', month: 'long' }) : '';
-            return <View>{date !== previousDate && <Text style={styles.day}>{date}</Text>}<MessageBubble row={item} own={(item.message ?? item.pending).senderId === userId} canRetry={conversation.canSend} busy={!!busy} onRetry={() => item.pending && void perform(item.pending.clientMessageId, () => latest.current.retryMessage(item.pending!.clientMessageId))} onDiscard={() => item.pending && setDiscard(item.pending.clientMessageId)} /></View>;
+            return <View>{date !== previousDate && <Text style={styles.day}>{date}</Text>}<MessageBubble row={item} own={(item.message ?? item.pending).senderId === userId} showStatus={item.key === lastOwnKey} canRetry={conversation.canSend} busy={!!busy} onRetry={() => item.pending && void perform(item.pending.clientMessageId, () => latest.current.retryMessage(item.pending!.clientMessageId))} onDiscard={() => item.pending && setDiscard(item.pending.clientMessageId)} /></View>;
           }}
         />
+        {/* Floats over the list: in the flow it resized the list each time it appeared, making it jump. */}
         {!atBottom && rows.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Ir al final de la conversación" onPress={() => { follow.current = true; list.current?.scrollToEnd({ animated: true }); }} style={styles.toBottom}><Icon name="arrow-down" size={17} color={colors.primary} /><Text style={styles.link}>Ir al final</Text></Pressable>}
+        </View>
         {!!disabledReason && <Text style={styles.disabledReason}>{disabledReason}</Text>}
         {!!composer.error && <View style={styles.sync}><Text accessibilityRole="alert" style={styles.syncText}>{composer.error}</Text><Pressable accessibilityRole="button" onPress={() => { void composer.retry().catch(() => undefined); }} style={styles.retryLink}><Text style={styles.link}>Reintentar</Text></Pressable></View>}
         <View style={styles.composer}>
@@ -222,14 +238,14 @@ function message(failure: unknown, fallback: string) { return failure instanceof
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 }, shell: { flex: 1, width: '100%', maxWidth: 800, alignSelf: 'center' }, padding: { paddingHorizontal: 20 }, loading: { padding: 36 },
-  chatHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }, person: { flex: 1, gap: 3 }, personName: { color: colors.ink, fontSize: 18, fontWeight: '600' }, personHint: { color: colors.muted, fontSize: 11 },
+  chatHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }, person: { flex: 1, gap: 3 }, personName: { color: colors.ink, fontSize: 18, fontWeight: '600' }, personHint: { color: colors.muted, fontSize: 12 },
   property: { marginHorizontal: 16, padding: 12, backgroundColor: colors.white, borderRadius: 18, flexDirection: 'row', gap: 11, alignItems: 'center', marginBottom: 8 }, propertyIcon: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: colors.softBlue }, propertyCopy: { flex: 1, gap: 4 }, propertyTitle: { color: colors.ink, fontSize: 14, fontWeight: '600' }, propertyZone: { color: colors.muted, fontSize: 12 },
-  messages: { paddingHorizontal: 18, paddingVertical: 12, flexGrow: 1 }, older: { alignSelf: 'center', marginBottom: 12 }, day: { color: colors.muted, textAlign: 'center', fontSize: 11, fontWeight: '500', marginTop: 14, marginBottom: 10 },
+  messages: { paddingHorizontal: 18, paddingVertical: 12, flexGrow: 1 }, older: { alignSelf: 'center', marginBottom: 12 }, day: { color: colors.muted, textAlign: 'center', fontSize: 12, fontWeight: '500', marginTop: 14, marginBottom: 10 },
   sync: { marginHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFF2F0', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 }, syncText: { flex: 1, fontSize: 12, lineHeight: 17, color: colors.danger }, retryLink: { minHeight: 44, justifyContent: 'center' }, link: { color: colors.primary, fontSize: 13, fontWeight: '600' },
   notice: { marginHorizontal: 20, paddingVertical: 8, color: colors.green, fontSize: 12, lineHeight: 18 }, disabledReason: { color: colors.muted, fontSize: 12, lineHeight: 18, paddingHorizontal: 20, paddingVertical: 9, backgroundColor: '#EEEEF2' },
-  toBottom: { alignSelf: 'center', flexDirection: 'row', gap: 6, alignItems: 'center', minHeight: 44, paddingHorizontal: 18, backgroundColor: colors.white, borderRadius: 22, marginBottom: 6 },
+  toBottom: { position: 'absolute', bottom: 10, alignSelf: 'center', flexDirection: 'row', gap: 6, alignItems: 'center', minHeight: 44, paddingHorizontal: 18, backgroundColor: colors.white, borderRadius: 22, boxShadow: '0 2px 10px rgba(0,0,0,0.12)' },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, padding: 14, paddingTop: 10, backgroundColor: colors.white, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   input: { flex: 1, minHeight: 46, maxHeight: 128, fontSize: 16, lineHeight: 23, paddingTop: 11, paddingBottom: 11, paddingHorizontal: 15, backgroundColor: colors.paper, borderRadius: 23, color: colors.ink }, mutedInput: { opacity: 0.6 },
-  send: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }, sendDisabled: { opacity: 0.45 }, count: { fontSize: 10, color: colors.muted, textAlign: 'right', paddingHorizontal: 20, paddingBottom: 6, backgroundColor: colors.white },
+  send: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }, sendDisabled: { opacity: 0.45 }, count: { fontSize: 12, color: colors.muted, textAlign: 'right', paddingHorizontal: 20, paddingBottom: 6, backgroundColor: colors.white },
   backdrop: { flex: 1, justifyContent: 'center', backgroundColor: '#17233170', paddingHorizontal: 20 }, actionSheet: { width: '100%', maxWidth: 480, alignSelf: 'center', padding: 24, borderRadius: 28, backgroundColor: colors.white, gap: 14 }, sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '600' }, sheetDescription: { color: colors.muted, fontSize: 15, lineHeight: 22 },
 });

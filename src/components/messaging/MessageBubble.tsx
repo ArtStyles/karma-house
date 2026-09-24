@@ -5,7 +5,8 @@ import { Icon } from '../ui';
 
 export type MessageRow = { key: string; message: ChatMessage; pending?: never } | { key: string; pending: PendingMessage; message?: never };
 
-export function MessageBubble({ row, own, canRetry, busy, onRetry, onDiscard }: { row: MessageRow; own: boolean; canRetry: boolean; busy: boolean; onRetry: () => void; onDiscard: () => void }) {
+/** `showStatus` marks the latest own message; pending and failed ones always show their state. */
+export function MessageBubble({ row, own, showStatus = false, canRetry, busy, onRetry, onDiscard }: { row: MessageRow; own: boolean; showStatus?: boolean; canRetry: boolean; busy: boolean; onRetry: () => void; onDiscard: () => void }) {
   const item = row.message ?? row.pending;
   const failed = row.pending?.status === 'failed';
   return <View style={[styles.row, own && styles.ownRow]}>
@@ -13,7 +14,7 @@ export function MessageBubble({ row, own, canRetry, busy, onRetry, onDiscard }: 
       <Text selectable style={[styles.body, own && styles.ownBody]}>{item.body}</Text>
       <View style={styles.metadata}>
         <Text style={[styles.time, own && styles.ownTime]}>{new Date(item.createdAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</Text>
-        {own && <Text style={[styles.time, styles.ownTime]}>{row.pending ? failed ? 'No enviado' : 'Enviando…' : 'Enviado'}</Text>}
+        {own && (row.pending || showStatus) && <Text style={[styles.time, styles.ownTime]}>{row.pending ? failed ? 'No enviado' : 'Enviando…' : 'Enviado'}</Text>}
       </View>
     </View>
     {failed && <View style={styles.failure}>
@@ -36,7 +37,7 @@ const styles = StyleSheet.create({
   ownBubble: { backgroundColor: colors.primary, borderBottomLeftRadius: 20, borderBottomRightRadius: 6 },
   failedBubble: { backgroundColor: '#375D88' }, body: { color: colors.ink, fontSize: 16, lineHeight: 23 }, ownBody: { color: colors.white },
   metadata: { flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 7, marginTop: 5 },
-  time: { fontSize: 10, lineHeight: 15, color: colors.muted }, ownTime: { color: '#E0EEFF' },
+  time: { fontSize: 12, lineHeight: 16, color: colors.muted }, ownTime: { color: '#E0EEFF' },
   failure: { maxWidth: '90%', alignItems: 'flex-end', paddingTop: 5 }, error: { color: colors.danger, fontSize: 12, lineHeight: 17 },
   actions: { flexDirection: 'row', gap: 16 }, action: { minHeight: 44, flexDirection: 'row', gap: 5, alignItems: 'center', paddingHorizontal: 2 },
   actionText: { color: colors.primary, fontWeight: '600', fontSize: 13 }, discardText: { color: colors.muted, fontSize: 13 }, dimmed: { opacity: 0.45 },
