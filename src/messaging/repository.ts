@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { ChatMessage, Conversation, MessagingRepository, MessagingRequestContext } from './types.ts';
+import type { ChatMessage, Conversation, MessageNegotiation, MessagingRepository, MessagingRequestContext } from './types.ts';
 import { isUuid, MESSAGE_PAGE_SIZE, MessagingError } from './domain.ts';
 
 export function createSupabaseMessagingRepository(client: SupabaseClient): MessagingRepository {
@@ -78,7 +78,20 @@ export function decodeChatMessage(value: unknown): ChatMessage {
   // PostgreSQL btrim removes ASCII spaces; received text must not be re-normalized
   // with the composer's stricter trim or UTF-16 length rules.
   if (!body.replace(/^ +| +$/g, '') || body.includes('\u0000')) throw invalidResponse();
-  return { id: uuid(item.id), conversationId: uuid(item.conversationId), seq: integer(item.seq, 1), clientMessageId: uuid(item.clientMessageId), senderId: uuid(item.senderId), body, createdAt: date(item.createdAt) };
+  return { id: uuid(item.id), conversationId: uuid(item.conversationId), seq: integer(item.seq, 1), clientMessageId: uuid(item.clientMessageId), senderId: uuid(item.senderId), body, createdAt: date(item.createdAt), negotiation: decodeMessageNegotiation(item.negotiation) };
+}
+
+/** Anything unreadable becomes null, so the message still shows as its text summary. */
+function decodeMessageNegotiation(value: unknown): MessageNegotiation | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const item = value as Record<string, unknown>;
+  const actions: unknown[] = ['created', 'accepted', 'declined', 'cancelled'];
+  const offer = item.kind === 'offer' && typeof item.amountUsd === 'number' && Number.isFinite(item.amountUsd) && item.amountUsd > 0 && item.visitAt === null;
+  const visit = item.kind === 'visit' && item.amountUsd === null && typeof item.visitAt === 'string' && Number.isFinite(Date.parse(item.visitAt));
+  if (!isUuid(item.id) || !isUuid(item.createdBy) || !actions.includes(item.action) || !(offer || visit)
+    || typeof item.note !== 'string' || !(item.parentId === null || isUuid(item.parentId))) return null;
+  return { id: item.id, action: item.action as MessageNegotiation['action'], kind: item.kind as MessageNegotiation['kind'], createdBy: item.createdBy,
+    amountUsd: item.amountUsd as number | null, visitAt: item.visitAt as string | null, note: item.note, parentId: item.parentId as string | null };
 }
 
 export function decodeConversation(value: unknown): Conversation {

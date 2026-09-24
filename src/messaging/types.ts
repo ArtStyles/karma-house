@@ -1,4 +1,9 @@
-export interface ChatMessage { id: string; conversationId: string; seq: number; clientMessageId: string; senderId: string; body: string; createdAt: string }
+/** The proposal a summary message stands for: `created` is the proposal itself, the rest are answers to it. */
+export interface MessageNegotiation {
+  id: string; action: 'created' | 'accepted' | 'declined' | 'cancelled'; kind: 'offer' | 'visit'; createdBy: string;
+  amountUsd: number | null; visitAt: string | null; note: string; parentId: string | null;
+}
+export interface ChatMessage { id: string; conversationId: string; seq: number; clientMessageId: string; senderId: string; body: string; createdAt: string; negotiation?: MessageNegotiation | null }
 export interface Conversation { id: string; propertyId: string; propertyTitle: string; propertyLocation: string; buyerId: string; sellerId: string; otherUserId: string; otherName: string; lastMessage: string | null; lastMessageAt: string | null; lastSeq: number; unreadCount: number; blockedByMe: boolean; blockedByOther: boolean; canSend: boolean; propertyAvailable: boolean; createdAt: string }
 export type ReportReason = 'spam' | 'fraud' | 'harassment' | 'other';
 export interface ChatReport { id: string; conversationId: string; propertyTitle: string; reporterId: string; reportedUserId: string; reason: ReportReason; details: string; status: 'open' | 'reviewed'; createdAt: string; reviewNote: string | null; context: ChatMessage[] }
