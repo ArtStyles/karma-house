@@ -1,6 +1,6 @@
-import type { Listing, ListingStatus, ListingType, ModerationStatus } from '../domain/listings.ts';
+import type { Listing, ListingOperation, ListingStatus, ListingType, ModerationStatus, SwapBalance } from '../domain/listings.ts';
 import { isMapLocation, normalizeMapLocation } from '../domain/geo.ts';
-import { isListingCondition, type ListingCondition } from '../domain/listingOptions.ts';
+import { isListingCondition, isListingOperation, isProvince, isSwapBalance, type ListingCondition } from '../domain/listingOptions.ts';
 
 export interface RemotePropertyRow {
   id: string;
@@ -17,9 +17,14 @@ export interface RemotePropertyRow {
   location_precision?: string | null;
   price: number | string;
   bedrooms: number;
-  bathrooms: number;
-  area: number | string;
-  type: ListingType;
+  bathrooms: number | null;
+  area: number | string | null;
+  type: ListingType | null;
+  operation?: ListingOperation | null;
+  swap_wants?: string | null;
+  swap_provinces?: string[] | null;
+  swap_balance?: SwapBalance | null;
+  swap_amount?: number | string | null;
   description: string;
   amenities: string[];
   photo_paths: string[];
@@ -35,16 +40,23 @@ export interface RemotePropertyRow {
  * shows. A list page then signs one URL per listing instead of six.
  */
 export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap<string, string>, photos: 'cover' | 'all' = 'all'): Listing {
+  const operation: ListingOperation = row?.operation ?? 'sale';
   if (!row || !row.id || !row.owner_id || !row.client_request_id ||
     (row.condition != null && !isListingCondition(row.condition)) ||
     (row.floor != null && (!Number.isInteger(row.floor) || row.floor < 0 || row.floor > 99)) ||
     (row.price_negotiable != null && typeof row.price_negotiable !== 'boolean') ||
+    (row.operation != null && !isListingOperation(row.operation)) ||
     !Number.isFinite(Number(row.price)) || Number(row.price) <= 0 ||
-    !Number.isFinite(Number(row.area)) || Number(row.area) <= 0 ||
-    !Number.isInteger(row.bedrooms) || !Number.isInteger(row.bathrooms) ||
-    !Number.isInteger(row.version) || row.version < 1 ||
+    !Number.isInteger(row.bedrooms) || !Number.isInteger(row.version) || row.version < 1 ||
+    (operation === 'wanted'
+      ? (row.type != null && !['Casa', 'Apartamento'].includes(row.type)) || row.area != null || row.bathrooms != null
+      : !Number.isFinite(Number(row.area)) || Number(row.area) <= 0 || !Number.isInteger(row.bathrooms) || !['Casa', 'Apartamento'].includes(row.type as string)) ||
+    (operation === 'swap'
+      ? typeof row.swap_wants !== 'string' || !row.swap_wants.trim() || !isSwapBalance(row.swap_balance)
+        || (row.swap_provinces != null && (!Array.isArray(row.swap_provinces) || !row.swap_provinces.every(isProvince)))
+        || (row.swap_amount != null && !(Number(row.swap_amount) > 0))
+      : row.swap_wants != null || row.swap_balance != null) ||
     !Number.isFinite(Date.parse(row.created_at)) ||
-    !['Casa', 'Apartamento'].includes(row.type) ||
     !['active', 'paused', 'sold'].includes(row.availability) ||
     !['draft', 'pending', 'approved', 'rejected'].includes(row.moderation) ||
     !Array.isArray(row.photo_paths) || !Array.isArray(row.amenities)) {
@@ -67,7 +79,11 @@ export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap
     ...(row.floor != null ? { floor: row.floor } : {}),
     ...(row.price_negotiable != null ? { priceNegotiable: row.price_negotiable } : {}),
     ...(mapLocation ? { mapLocation } : {}),
-    bedrooms: row.bedrooms, bathrooms: row.bathrooms, area: Number(row.area), type: row.type,
+    bedrooms: row.bedrooms,
+    ...(operation === 'wanted' ? {} : { bathrooms: row.bathrooms as number, area: Number(row.area) }),
+    ...(row.type ? { type: row.type } : {}),
+    ...(operation !== 'sale' ? { operation } : {}),
+    ...(operation === 'swap' ? { swap: { wants: row.swap_wants as string, provinces: [...(row.swap_provinces ?? [])], balance: row.swap_balance as SwapBalance, ...(row.swap_amount != null ? { amount: Number(row.swap_amount) } : {}) } } : {}),
     description: row.description, amenities: [...row.amenities], imageKey: 'vedado',
     photos: mapped, ...(mapped[0]?.uri ? { photoUri: mapped[0].uri } : {}),
     status: row.availability, moderationStatus: row.moderation,

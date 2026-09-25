@@ -1,4 +1,4 @@
-import { normalizeSearch, type ListingFilters } from '../domain/listings.ts';
+import { normalizeSearch, operationsFor, type ListingFilters, type ListingOperation } from '../domain/listings.ts';
 import { parseDecimal } from '../domain/numericInput.ts';
 import { CATALOG_PAGE_SIZE, type CatalogCursor, type SearchMode } from './types.ts';
 
@@ -53,6 +53,7 @@ export interface SearchPayload {
   min_bathrooms: number | null;
   negotiable_only: true | null;
   amenities: string[];
+  operations: ListingOperation[];
   sort: ListingFilters['sort'];
   cursor: string | null;
   with_total: boolean;
@@ -73,6 +74,7 @@ export function searchPayload(filters: ListingFilters, cursor: string | null, wi
     min_bathrooms: filters.minBathrooms && filters.minBathrooms > 0 ? Math.floor(filters.minBathrooms) : null,
     negotiable_only: filters.negotiableOnly === true ? true : null,
     amenities: (filters.amenities ?? []).map((value) => normalizeSearch(value)).filter(Boolean),
+    operations: operationsFor(filters.operation),
     sort: filters.sort,
     // Re-encoding a decoded cursor fails here, on the client, instead of at the server.
     cursor: cursor === null ? null : encodeCursor(decodeCursor(cursor)),

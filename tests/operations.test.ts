@@ -5,6 +5,11 @@ import test from 'node:test';
 import { validateDraft, createListing, updateListing, filterListings, activeFilterCount, shortcutActive, toggleShortcut, defaultFilters } from '../src/domain/listings.ts';
 import { isListingOperation, isSwapBalance, OPERATIONS, SWAP_BALANCES } from '../src/domain/listingOptions.ts';
 import { listingOperation, operationBadge, priceLabel, listingFacts, swapBalanceText, shareText, operationsFor } from '../src/domain/operations.ts';
+import { propertyPayload } from '../src/data/propertyPayload.ts';
+import { mapRemoteListing } from '../src/data/remoteMapping.ts';
+import { restoreDraft } from '../src/domain/draftPersistence.ts';
+import { decodeMarketplaceSnapshot } from '../src/state/marketplaceStore.ts';
+import { searchPayload } from '../src/catalog/query.ts';
 
 const sale = { title: 'Casa de prueba', location: 'Vedado', province: 'La Habana', price: '50000', bedrooms: '2', bathrooms: '1', area: '80', type: 'Casa', description: 'Vivienda luminosa con patio para compartir.', amenities: ['Patio'], imageKey: 'vedado', clientRequestId: 'ops-test' };
 const swap = { ...sale, operation: 'swap', swapWants: 'Apartamento en Playa o Vedado, dos habitaciones, sin diferencia.', swapProvinces: ['La Habana'], swapBalance: 'pay', swapAmount: '5000' };
@@ -77,4 +82,37 @@ test('presentation texts follow the operation', () => {
   assert.equal(shareText(b, 'https://x/p/b'), 'Busco: Busco apartamento en Playa\nHasta $ 40,000 USD · Playa o Vedado, La Habana\ndesde 2 hab · Casa o apartamento\n\nhttps://x/p/b');
   assert.equal(shareText(w, 'https://x/p/w'), 'Permuta: Casa de prueba\nValor estimado $ 50,000 USD · Vedado, La Habana\n2 hab · 1 baño · 80 m²\n\nhttps://x/p/w');
   assert.equal(shareText(s, 'https://x/p/s'), 'Casa de prueba\n$ 50,000 USD · Vedado, La Habana\n2 hab · 1 baño · 80 m²\n\nhttps://x/p/s');
+});
+
+const row = { id: 'home', owner_id: 'seller', client_request_id: 'ops-test', title: 'Casa', location: 'Vedado', province: 'La Habana', price: 50000, bedrooms: 2, bathrooms: 1, area: 80, type: 'Casa', description: 'Vivienda luminosa con patio para compartir.', amenities: [], photo_paths: [], availability: 'active', moderation: 'approved', review_note: null, version: 1, created_at: '2026-09-26T00:00:00.000Z' };
+
+test('the payload carries the operation and the swap fields', () => {
+  const p = propertyPayload(swap, 'seller', [], 'pending');
+  assert.equal(p.operation, 'swap'); assert.equal(p.swapWants, swap.swapWants); assert.deepEqual(p.swapProvinces, ['La Habana']); assert.equal(p.swapBalance, 'pay'); assert.equal(p.swapAmount, 5000);
+  const w = propertyPayload(wanted, 'seller', [], 'pending');
+  assert.equal(w.operation, 'wanted'); assert.equal(w.type, null); assert.equal(w.area, null); assert.equal(w.bathrooms, null); assert.equal(w.mapLocation, null);
+  const s = propertyPayload(sale, 'seller', [], 'pending');
+  assert.equal(s.operation, 'sale'); assert.equal('swapWants' in s, false);
+});
+test('remote rows map the operation, allow nulls only for wanted ads and default to sale', () => {
+  assert.equal(mapRemoteListing(row, new Map()).operation, undefined);
+  const s = mapRemoteListing({ ...row, operation: 'swap', swap_wants: 'Apartamento en Playa con dos habitaciones.', swap_provinces: ['La Habana'], swap_balance: 'receive', swap_amount: '2000' }, new Map());
+  assert.equal(s.operation, 'swap'); assert.deepEqual(s.swap, { wants: 'Apartamento en Playa con dos habitaciones.', provinces: ['La Habana'], balance: 'receive', amount: 2000 });
+  const b = mapRemoteListing({ ...row, operation: 'wanted', type: null, area: null, bathrooms: null }, new Map());
+  assert.equal(b.operation, 'wanted'); assert.equal(b.type, undefined); assert.equal(b.area, undefined); assert.equal(b.bathrooms, undefined);
+  assert.throws(() => mapRemoteListing({ ...row, area: null }, new Map()), /no válidos/);
+  assert.throws(() => mapRemoteListing({ ...row, operation: 'rent' }, new Map()), /no válidos/);
+  assert.throws(() => mapRemoteListing({ ...row, operation: 'swap' }, new Map()), /no válidos/, 'a swap without its fields is invalid');
+});
+test('drafts and the local snapshot keep the new fields', () => {
+  assert.deepEqual(restoreDraft(JSON.stringify(swap), sale), swap);
+  assert.deepEqual(restoreDraft(JSON.stringify(wanted), sale), wanted);
+  assert.deepEqual(restoreDraft(JSON.stringify({ ...sale, operation: 'rent' }), sale), sale);
+  const listings = [createListing(swap, { id: 'w', ...at }), createListing(wanted, { id: 'b', ...at })];
+  const decoded = decodeMarketplaceSnapshot(JSON.stringify({ version: 1, localListings: listings, favoriteIds: [] }));
+  assert.equal(decoded.issue, null); assert.deepEqual(decoded.snapshot.localListings, listings);
+});
+test('the search payload sends the operations the filter stands for', () => {
+  assert.deepEqual(searchPayload(defaultFilters, null, true).operations, ['sale', 'swap']);
+  assert.deepEqual(searchPayload({ ...defaultFilters, operation: 'wanted' }, null, true).operations, ['wanted']);
 });

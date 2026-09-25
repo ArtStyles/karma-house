@@ -6,10 +6,12 @@ import {
   type Listing,
   type ListingDraft,
   type ListingStatus,
+  type ListingType,
   type PhotoDraft,
+  type SwapBalance,
 } from '../domain/listings.ts';
 import { isMapLocation, normalizeMapLocation } from '../domain/geo.ts';
-import { isListingCondition } from '../domain/listingOptions.ts';
+import { isListingCondition, isListingOperation, isProvince, isSwapBalance } from '../domain/listingOptions.ts';
 
 export const MARKETPLACE_STORAGE_KEY = '@karma-house/marketplace-v1';
 
@@ -279,6 +281,8 @@ function buildState(
 
 function readLocalListing(value: unknown): Listing | null {
   if (!isRecord(value)) return null;
+  const wanted = value.operation === 'wanted';
+  const swap = isRecord(value.swap) ? value.swap : undefined;
   if (
     !isNonEmptyString(value.id) ||
     !isNonEmptyString(value.title) ||
@@ -290,9 +294,11 @@ function readLocalListing(value: unknown): Listing | null {
     (value.mapLocation !== undefined && !isMapLocation(value.mapLocation)) ||
     !isFiniteWithin(value.price, 0, 100_000_000, true) ||
     !isIntegerWithin(value.bedrooms, 1, 20) ||
-    !isIntegerWithin(value.bathrooms, 1, 20) ||
-    !isFiniteWithin(value.area, 0, 10_000, true) ||
-    (value.type !== 'Casa' && value.type !== 'Apartamento') ||
+    (value.operation !== undefined && !isListingOperation(value.operation)) ||
+    (wanted ? value.bathrooms !== undefined || value.area !== undefined || (value.type !== undefined && value.type !== 'Casa' && value.type !== 'Apartamento')
+      : !isIntegerWithin(value.bathrooms, 1, 20) || !isFiniteWithin(value.area, 0, 10_000, true) || (value.type !== 'Casa' && value.type !== 'Apartamento')) ||
+    (value.operation === 'swap' ? !swap || typeof swap.wants !== 'string' || !isSwapBalance(swap.balance) || !Array.isArray(swap.provinces) || !swap.provinces.every(isProvince) || (swap.amount !== undefined && !isFiniteWithin(swap.amount, 0, 100_000_000, true))
+      : value.swap !== undefined) ||
     !isNonEmptyString(value.description) ||
     !Array.isArray(value.amenities) ||
     !value.amenities.every((item) => typeof item === 'string') ||
@@ -320,9 +326,16 @@ function readLocalListing(value: unknown): Listing | null {
     ...(isMapLocation(value.mapLocation) ? { mapLocation: normalizeMapLocation(value.mapLocation) } : {}),
     price: String(value.price),
     bedrooms: String(value.bedrooms),
-    bathrooms: String(value.bathrooms),
-    area: String(value.area),
-    type: value.type,
+    bathrooms: wanted ? '' : String(value.bathrooms),
+    area: wanted ? '' : String(value.area),
+    type: (value.type ?? '') as ListingDraft['type'],
+    ...(isListingOperation(value.operation) ? { operation: value.operation } : {}),
+    ...(swap ? {
+      swapWants: swap.wants as string,
+      swapProvinces: [...(swap.provinces as string[])],
+      swapBalance: swap.balance as SwapBalance,
+      swapAmount: swap.amount === undefined ? '' : String(swap.amount),
+    } : {}),
     description: value.description,
     amenities: value.amenities,
     imageKey: value.imageKey as Listing['imageKey'],
@@ -343,9 +356,17 @@ function readLocalListing(value: unknown): Listing | null {
     ...(draft.mapLocation ? { mapLocation: draft.mapLocation } : {}),
     price: value.price,
     bedrooms: value.bedrooms,
-    bathrooms: value.bathrooms,
-    area: value.area,
-    type: value.type,
+    ...(wanted ? {} : { bathrooms: value.bathrooms as number, area: value.area as number }),
+    ...(value.type ? { type: value.type as ListingType } : {}),
+    ...(isListingOperation(value.operation) ? { operation: value.operation } : {}),
+    ...(swap ? {
+      swap: {
+        wants: (swap.wants as string).trim(),
+        provinces: [...(swap.provinces as string[])],
+        balance: swap.balance as SwapBalance,
+        ...(swap.amount === undefined ? {} : { amount: swap.amount as number }),
+      },
+    } : {}),
     description: value.description.trim(),
     amenities: [...new Set(value.amenities.map((item) => item.trim()).filter(Boolean))],
     imageKey: value.imageKey as Listing['imageKey'],

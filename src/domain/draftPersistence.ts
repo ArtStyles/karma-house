@@ -1,13 +1,13 @@
 import type { ListingDraft } from './listings.ts';
 import { isMapLocation, normalizeMapLocation } from './geo.ts';
-import { isDraftFloor, isListingCondition } from './listingOptions.ts';
+import { isDraftFloor, isListingCondition, isListingOperation, isProvince, isSwapBalance } from './listingOptions.ts';
 
 export function restoreDraft(raw: string | null, fallback: ListingDraft): ListingDraft {
   if (!raw) return fallback;
   try {
     const value = JSON.parse(raw);
     const strings = ['title', 'location', 'province', 'price', 'bedrooms', 'bathrooms', 'area', 'description'];
-    if (!value || !strings.every(key => typeof value[key] === 'string') || !['Casa', 'Apartamento'].includes(value.type)
+    if (!value || !strings.every(key => typeof value[key] === 'string') || !['', 'Casa', 'Apartamento'].includes(value.type)
       || !Array.isArray(value.amenities) || !value.amenities.every((item: unknown) => typeof item === 'string')
       || !['vedado', 'interior', 'terrace'].includes(value.imageKey)
       || (value.photoUri !== undefined && typeof value.photoUri !== 'string')
@@ -15,6 +15,11 @@ export function restoreDraft(raw: string | null, fallback: ListingDraft): Listin
       || (value.condition !== undefined && value.condition !== '' && !isListingCondition(value.condition))
       || (value.floor !== undefined && !isDraftFloor(value.floor))
       || (value.priceNegotiable != null && typeof value.priceNegotiable !== 'boolean')
+      || (value.operation !== undefined && !isListingOperation(value.operation))
+      || (value.swapWants !== undefined && typeof value.swapWants !== 'string')
+      || (value.swapAmount !== undefined && typeof value.swapAmount !== 'string')
+      || (value.swapBalance !== undefined && value.swapBalance !== '' && !isSwapBalance(value.swapBalance))
+      || (value.swapProvinces !== undefined && (!Array.isArray(value.swapProvinces) || !value.swapProvinces.every(isProvince)))
       || (value.photos !== undefined && (!Array.isArray(value.photos) || value.photos.length > 6 || !value.photos.every((photo: { uri?: unknown; storagePath?: unknown; uploadId?: unknown }) => photo && typeof photo.uri === 'string'
         && (photo.storagePath === undefined || typeof photo.storagePath === 'string') && (photo.uploadId === undefined || typeof photo.uploadId === 'string'))))
       || (value.clientRequestId !== undefined && !/^[A-Za-z0-9_-]{1,100}$/.test(value.clientRequestId))
