@@ -18,6 +18,7 @@ import { NotificationBell } from '../components/notifications/NotificationBell';
 
 const shortcuts: { value: Shortcut; label: string }[] = [
   { value: 'Casa', label: 'Casas' }, { value: 'Apartamento', label: 'Apartamentos' },
+  { value: 'swap', label: 'Permutas' }, { value: 'wanted', label: 'Busco' },
   { value: 'price', label: 'Hasta $30.000' }, { value: 'bedrooms', label: '3+ hab.' },
 ];
 const provinceOptions = [{ value: '', label: 'Toda Cuba' }, ...PROVINCES.map(value => ({ value, label: value }))];
@@ -44,12 +45,12 @@ export default function ExploreScreen() {
   const filterCount = activeFilterCount({ ...filters, query: '' });
   const change = (next: Partial<ListingFilters>) => setFilters(old => ({ ...old, ...next }));
   // Short enough to share one line with the sort and map controls at 320 pt.
-  const homes = `${total} ${total === 1 ? 'vivienda' : 'viviendas'}`;
+  const homes = filters.operation === 'wanted' ? `${total} ${total === 1 ? 'búsqueda' : 'búsquedas'}` : `${total} ${total === 1 ? 'vivienda' : 'viviendas'}`;
   const count = !ready ? 'Cargando…' : filters.province ? `${homes} en ${filters.province}` : hasFilters ? `${total} ${total === 1 ? 'encontrada' : 'encontradas'}` : mode === 'demo' ? `${homes} de prueba` : homes;
   // Tags list only what no shortcut already shows, so a filter never appears twice.
   const priceTag = !!(filters.minPrice || filters.maxPrice) && !shortcutActive(filters, 'price');
   const bedroomTag = filters.minBedrooms > 0 && !shortcutActive(filters, 'bedrooms');
-  const hasTags = priceTag || bedroomTag || !!filters.minArea || !!filters.maxArea || !!filters.minBathrooms || !!filters.condition || !!filters.negotiableOnly || !!filters.amenities?.length;
+  const hasTags = priceTag || bedroomTag || !!filters.minArea || !!filters.maxArea || !!filters.minBathrooms || !!filters.condition || !!filters.negotiableOnly || !!filters.amenities?.length || (filters.operation ?? 'offers') === 'sale';
   // Above the floating tab bar, which sits max(inset + 8, 16) from the bottom and is 68 tall.
   const toggleBottom = Math.max(insets.bottom + 8, 16) + 68 + 12;
   return (
@@ -106,6 +107,7 @@ export default function ExploreScreen() {
             </Pressable>
           </View>
           {hasTags && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activeFilters}>
+            {filters.operation === 'sale' && <FilterTag label="Solo venta" onRemove={() => change({ operation: 'offers' })} />}
             {priceTag && <FilterTag label={`${filters.minPrice || '0'} – ${filters.maxPrice || 'sin límite'} USD`} onRemove={() => change({ minPrice: '', maxPrice: '' })} />}
             {!!(filters.minArea || filters.maxArea) && <FilterTag label={`${filters.minArea || '0'} – ${filters.maxArea || 'sin límite'} m²`} onRemove={() => change({ minArea: '', maxArea: '' })} />}
             {bedroomTag && <FilterTag label={`${filters.minBedrooms}+ hab.`} onRemove={() => change({ minBedrooms: 0 })} />}

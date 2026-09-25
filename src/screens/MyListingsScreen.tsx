@@ -7,6 +7,7 @@ import { AccountPrompt } from '../components/AccountPrompt';
 import { PropertyImage } from '../components/PropertyImage';
 import { Button, EmptyState, Icon, Notice, PageTitle } from '../components/ui';
 import { listingBoardState, type Listing, type ListingBoardState, type ListingStatus } from '../domain/listings';
+import { operationBadge } from '../domain/operations';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { remoteErrorMessage } from '../state/remoteMarketplaceStore';
 import { colors, formatMoney } from '../theme';
@@ -82,6 +83,7 @@ export default function MyListingsScreen() {
                 <View style={[styles.statusDot, { backgroundColor: tone.color }]} />
                 <Text style={[styles.status, { color: tone.color }]}>{boardLabels[state]}</Text>
               </View>
+              {!!operationBadge(item) && <Text style={styles.operation}>{operationBadge(item)}</Text>}
               <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
               <Text style={styles.price}>{formatMoney(item.price)} <Text style={styles.currency}>USD</Text></Text>
               <Text style={styles.location} numberOfLines={1}>{item.location}</Text>
@@ -141,6 +143,7 @@ const styles = StyleSheet.create({
   statusDot: { width: 5, height: 5, borderRadius: 3 },
   status: { fontSize: 12, fontWeight: '600' },
   reviewButton: { marginTop: 16 },
+  operation: { color: colors.primary, fontSize: 12, fontWeight: '600' },
   title: { color: colors.ink, fontSize: 17, lineHeight: 22, fontWeight: '600', letterSpacing: -.3 },
   price: { color: colors.ink, fontSize: 16, fontWeight: '600', letterSpacing: -.2 },
   currency: { color: colors.muted, fontSize: 12, fontWeight: '400' },

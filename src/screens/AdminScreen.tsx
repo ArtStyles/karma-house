@@ -7,6 +7,7 @@ import { AccountPrompt } from '../components/AccountPrompt';
 import { PropertyImage } from '../components/PropertyImage';
 import { Button, EmptyState, Notice, PageTitle } from '../components/ui';
 import type { Listing } from '../domain/listings';
+import { listingFacts, operationBadge, typeLabel } from '../domain/operations';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { remoteErrorMessage, type ReviewDecision } from '../state/remoteMarketplaceStore';
 import { colors, formatMoney } from '../theme';
@@ -87,8 +88,8 @@ export default function AdminScreen() {
                 </ScrollView>
                 <Text accessibilityRole="header" style={styles.title}>{listing.title}</Text>
                 <Text style={styles.price}>{formatMoney(listing.price)} USD</Text>
-                <Text style={styles.meta}>{listing.type} · {listing.location}, {listing.province}</Text>
-                <Text style={styles.meta}>{listing.bedrooms} hab. · {listing.bathrooms} baños · {listing.area} m²</Text>
+                <Text style={styles.meta}>{[operationBadge(listing), typeLabel(listing)].filter(Boolean).join(' · ')} · {listing.location}, {listing.province}</Text>
+                <Text style={styles.meta}>{listingFacts(listing)}</Text>
                 <Text style={styles.description}>{listing.description}</Text>
                 {listing.amenities.length > 0 && <Text style={styles.meta}>{listing.amenities.join(' · ')}</Text>}
                 {listing.ownerId === user.id ? <Notice>Este anuncio es tuyo. Otra cuenta administradora debe revisarlo.</Notice> :

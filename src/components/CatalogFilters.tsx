@@ -23,6 +23,7 @@ export function CatalogFilters({ filters, total, onApply, onClose }: { filters: 
   // The count is the server total for the applied filters; an invalid range still shows none.
   const count = error ? 0 : total;
   const selectedCount = activeFilterCount({ ...draft, query: '' });
+  const [one, many] = (draft.operation ?? 'offers') === 'wanted' ? ['búsqueda', 'búsquedas'] : ['vivienda', 'viviendas'];
   return <Modal transparent visible animationType="fade" onRequestClose={onClose}>
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <View style={[styles.overlay, width >= 700 && { justifyContent: 'center' }, { paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 12) }]}>
@@ -32,6 +33,9 @@ export function CatalogFilters({ filters, total, onApply, onClose }: { filters: 
           <ScrollView keyboardShouldPersistTaps="handled" style={styles.scroll} contentContainerStyle={styles.content}>
             {!!draft.query && <View style={styles.query}><Icon name="search-outline" size={17} color={colors.primary} /><Text style={styles.queryText}>Buscando «{draft.query}»</Text></View>}
             <View style={styles.section}><Text style={styles.sectionTitle}>Vivienda y ubicación</Text>
+              <Text style={styles.label}>Operación</Text>
+              <View style={styles.choices}>{([['offers', 'Venta y permuta'], ['sale', 'Venta'], ['swap', 'Permuta'], ['wanted', 'Busco']] as const).map(([value, label]) =>
+                <Pill key={value} label={label} active={(draft.operation ?? 'offers') === value} onPress={() => change({ operation: value })} />)}</View>
               <View style={styles.choices}>{(['Todas', 'Casa', 'Apartamento'] as const).map(type => <Pill key={type} label={type} active={draft.type === type} onPress={() => change({ type })} />)}</View>
               <SelectionField inline label="Provincia" value={draft.province ?? ''} options={[{ value: '', label: 'Todas las provincias' }, ...PROVINCES.map(value => ({ value, label: value }))]} onChange={province => change({ province })} />
             </View>
@@ -51,8 +55,8 @@ export function CatalogFilters({ filters, total, onApply, onClose }: { filters: 
             <View style={styles.section}><SelectionField inline label="Ordenar por" value={draft.sort} options={SORT_OPTIONS} onChange={sort => change({ sort: sort as ListingFilters['sort'] })} /></View>
           </ScrollView>
           <View style={styles.footer}>
-            {error ? <Notice error>{error}</Notice> : <Text accessibilityLiveRegion="polite" style={styles.resultText}>{count === 1 ? '1 vivienda coincide con tu búsqueda' : `${count} viviendas coinciden con tu búsqueda`}</Text>}
-            <View style={styles.actions}><Button secondary label="Limpiar" onPress={() => setDraft({ ...defaultFilters, query: filters.query, amenities: [] })} style={styles.clear} /><Button disabled={!!error} label={`Ver ${count} ${count === 1 ? 'vivienda' : 'viviendas'}`} onPress={() => { if (!error) { onApply(draft); onClose(); } }} style={styles.apply} /></View>
+            {error ? <Notice error>{error}</Notice> : <Text accessibilityLiveRegion="polite" style={styles.resultText}>{count === 1 ? `1 ${one} coincide con tu búsqueda` : `${count} ${many} coinciden con tu búsqueda`}</Text>}
+            <View style={styles.actions}><Button secondary label="Limpiar" onPress={() => setDraft({ ...defaultFilters, query: filters.query, amenities: [] })} style={styles.clear} /><Button disabled={!!error} label={`Ver ${count} ${count === 1 ? one : many}`} onPress={() => { if (!error) { onApply(draft); onClose(); } }} style={styles.apply} /></View>
           </View>
         </View>
       </View>
