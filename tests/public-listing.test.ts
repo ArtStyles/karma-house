@@ -55,6 +55,8 @@ test('renderListing shows every photo, the details and the description with line
   assert.ok(html.includes('<li>Balcón</li><li>Patio</li>'));
   assert.ok(html.includes(`href="karmahouse://property/${row.id}"`));
   assert.ok(html.includes(`href="${site}"`));
+  assert.ok(html.includes(`<a class="more" id="more" href="${site}">`));
+  assert.ok(html.includes("location.href=document.getElementById('more').href"));
 });
 test('renderListing without photos or optional fields still renders', () => {
   const html = renderListing({ ...row, amenities: null, condition: null, floor: null, price_negotiable: null, description: '' }, [], site, self);

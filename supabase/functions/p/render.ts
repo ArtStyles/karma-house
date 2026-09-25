@@ -117,9 +117,9 @@ ${gallery}
 ${about}
 ${amenities}
 <p class="muted">Para contactar con quien publica, guardar la vivienda o verla en el mapa, ábrela en KarmaHouse.</p>
-<nav class="bar"><a class="open" id="open" href="${deepLink}">Abrir en KarmaHouse</a><a class="more" href="${site}">Ver más viviendas</a></nav>
+<nav class="bar"><a class="open" id="open" href="${deepLink}">Abrir en KarmaHouse</a><a class="more" id="more" href="${site}">Ver más viviendas</a></nav>
 <script>
-document.getElementById('open').addEventListener('click',function(){setTimeout(function(){if(document.visibilityState==='visible')location.href='${site}'},1500)});
+document.getElementById('open').addEventListener('click',function(){setTimeout(function(){if(document.visibilityState==='visible')location.href=document.getElementById('more').href},1500)});
 </script>`;
   return page(title, head, body);
 }
