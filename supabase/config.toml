@@ -1,0 +1,8 @@
+# Only what the Edge Function deploy needs. `project_id` names the local instance for the
+# CLI; the remote project ref is passed with --project-ref in CI.
+project_id = "karma-house"
+
+[functions.p]
+# The listing page is public: WhatsApp, Telegram and browsers fetch it without a token.
+verify_jwt = false
+entrypoint = "./functions/p/index.ts"
