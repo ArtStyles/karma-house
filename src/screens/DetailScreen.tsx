@@ -15,7 +15,7 @@ import { CONDITIONS } from '../domain/listingOptions';
 import { ReportConversationSheet } from '../components/messaging/ReportConversationSheet';
 import { createPropertyReportRepository, PROPERTY_REPORT_REASONS } from '../data/propertyReports';
 import { supabase } from '../lib/supabase';
-import { SITE_URL } from '../lib/publicSite';
+import { listingShareUrl } from '../lib/publicSite';
 
 export default function DetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -84,13 +84,12 @@ export default function DetailScreen() {
   }
   async function share() {
     if (!listing) return;
-    // Links that open the app need a domain of its own; until then the text carries the listing and where to find KarmaHouse.
     const message = `${listing.title}
 ${formatMoney(listing.price)} USD · ${listing.location}, ${listing.province}
 ${listing.bedrooms} hab. · ${listing.bathrooms} baños · ${listing.area} m²
 
-Búscala en KarmaHouse: ${SITE_URL}`;
-    try { await Share.share({ title: listing.title, message }); } catch { /* Dismissed, or this browser has no share target. */ }
+${listingShareUrl(listing.id)}`;
+    try { await Share.share({ title: listing.title, message, url: listingShareUrl(listing.id) }); } catch { /* Dismissed, or this browser has no share target. */ }
   }
   function openReport() {
     if (!listing) return;

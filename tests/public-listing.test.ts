@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { describeListing, escapeHtml, formatPrice, type PublicListingRow } from '../supabase/functions/p/render.ts';
 import { renderListing, renderUnavailable } from '../supabase/functions/p/render.ts';
+import { listingShareUrl, SITE_URL } from '../src/lib/publicSite.ts';
 
 export const row: PublicListingRow = {
   id: '33000000-0000-4000-8000-000000000003',
@@ -72,4 +73,13 @@ test('renderUnavailable points back to the site', () => {
   assert.ok(html.includes('Ya no está disponible'));
   assert.ok(html.includes(`href="${site}"`));
   assert.ok(html.includes('<meta name="robots" content="noindex">'));
+});
+
+test('listingShareUrl targets the Edge Function and falls back to the site', () => {
+  const previous = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co/';
+  assert.equal(listingShareUrl(row.id), `https://example.supabase.co/functions/v1/p/${row.id}`);
+  delete process.env.EXPO_PUBLIC_SUPABASE_URL;
+  assert.equal(listingShareUrl(row.id), SITE_URL);
+  if (previous !== undefined) process.env.EXPO_PUBLIC_SUPABASE_URL = previous;
 });
