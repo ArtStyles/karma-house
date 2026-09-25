@@ -3,6 +3,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -25,8 +26,9 @@ import { LocationPicker } from './maps/LocationPicker';
 import { normalizeMapLocation } from '../domain/geo';
 import { Button, Icon, Notice, Pill } from './ui';
 import { SelectionField } from './SelectionField';
-import { AMENITIES, CONDITIONS, PROVINCES } from '../domain/listingOptions';
-import { normalizeDecimalInput, publishedNumber } from '../domain/numericInput';
+import { AMENITIES, CONDITIONS, OPERATIONS, PROVINCES, SWAP_BALANCES, type ListingOperation } from '../domain/listingOptions';
+import { normalizeDecimalInput, parseDecimal, publishedNumber } from '../domain/numericInput';
+import { swapBalanceText } from '../domain/operations';
 
 type DraftErrors = DraftValidation['errors'];
 
@@ -41,11 +43,15 @@ export interface ListingFormProps {
   draftStorageKey?: string;
 }
 
-const stepFields: (keyof ListingDraft)[][] = [
-  ['title', 'type', 'location', 'province', 'mapLocation'],
-  ['price', 'bedrooms', 'bathrooms', 'area', 'condition', 'floor', 'priceNegotiable', 'description', 'amenities', 'photoUri', 'photos'],
-  [],
-];
+function stepFieldsFor(operation: ListingOperation): (keyof ListingDraft)[][] {
+  if (operation === 'wanted') return [['title', 'type', 'location', 'province'], ['price', 'bedrooms', 'description'], []];
+  return [
+    ['title', 'type', 'location', 'province', 'mapLocation'],
+    ['price', 'bedrooms', 'bathrooms', 'area', 'condition', 'floor', 'priceNegotiable', 'description', 'amenities', 'photoUri', 'photos',
+      ...(operation === 'swap' ? ['swapWants', 'swapProvinces', 'swapBalance', 'swapAmount'] as const : [])],
+    [],
+  ];
+}
 
 /** The names the seller reads on screen, so a validation summary names fields they can find. */
 const fieldLabels: Partial<Record<keyof ListingDraft, string>> = {
@@ -54,6 +60,8 @@ const fieldLabels: Partial<Record<keyof ListingDraft, string>> = {
   area: 'Superficie', condition: 'Estado de conservación', floor: 'Planta de acceso',
   priceNegotiable: 'Precio negociable', description: 'Descripción', amenities: 'Comodidades',
   photos: 'Fotos', photoUri: 'Fotos',
+  operation: 'Qué publicas', swapWants: 'Qué buscas a cambio', swapProvinces: 'Provincias que aceptas',
+  swapBalance: 'Diferencia', swapAmount: 'Importe de la diferencia',
 };
 
 const roomOptions = Array.from({ length: 20 }, (_, index) => ({ value: String(index + 1), label: String(index + 1) }));
@@ -82,6 +90,12 @@ export function ListingForm({
   const [reloading, setReloading] = useState(false);
   const [discardRequested, setDiscardRequested] = useState(false);
   const [savedWarning, setSavedWarning] = useState('');
+  const [chosen, setChosen] = useState(false);
+  const operation = draft.operation ?? 'sale';
+  const wanted = operation === 'wanted';
+  const stepFields = stepFieldsFor(operation);
+  // A restored draft that already names its operation skips the chooser.
+  const choosing = hydrated && !initialDraft && draft.operation === undefined && !chosen;
   const completed = useRef(false);
   const submitLock = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -153,7 +167,7 @@ export function ListingForm({
 
   function validateCurrentStep(): boolean {
     const result = validateDraft(draft);
-    if (cloud && !(draft.photos?.length)) result.errors.photos = 'Añade al menos una foto real de tu vivienda.';
+    if (cloud && !wanted && !(draft.photos?.length)) result.errors.photos = 'Añade al menos una foto real de tu vivienda.';
     const currentFields = stepFields[step];
     const currentErrors = Object.fromEntries(
       currentFields
@@ -176,7 +190,7 @@ export function ListingForm({
     if (submitLock.current || !hydrated || photoBusy || versionConflict || savedWarning) return;
 
     const result = validateDraft(draft);
-    if (cloud && !(draft.photos?.length)) result.errors.photos = 'Añade al menos una foto real de tu vivienda.';
+    if (cloud && !wanted && !(draft.photos?.length)) result.errors.photos = 'Añade al menos una foto real de tu vivienda.';
     if (Object.keys(result.errors).length) {
       setErrors(result.errors);
       const firstInvalidStep = stepFields.findIndex((fields) =>
@@ -199,6 +213,7 @@ export function ListingForm({
       if (!initialDraft) {
         persistence?.beginNext();
         setDraft({ ...cloneDraft(emptyDraft), clientRequestId: draftToken() });
+        setChosen(false);
         setStep(0);
         setErrors({});
       }
@@ -242,6 +257,24 @@ export function ListingForm({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.formShell}>
+          {choosing ? (
+            <View style={styles.section}>
+              <SectionHeading title="¿Qué quieres publicar?" description="Elige una opción. Después no se puede cambiar sin crear otro anuncio." />
+              {OPERATIONS.map((item) => (
+                <Pressable key={item.value} accessibilityRole="button" accessibilityLabel={item.label}
+                  onPress={() => {
+                    changeField('operation', item.value);
+                    if (item.value === 'wanted') { changeField('type', ''); changeField('photos', []); changeField('photoUri', undefined); changeField('mapLocation', undefined); }
+                    setChosen(true);
+                  }}
+                  style={({ pressed }) => [styles.fieldCard, styles.operationOption, pressed && { opacity: .8 }]}>
+                  <Icon name={item.value === 'sale' ? 'pricetag-outline' : item.value === 'swap' ? 'swap-horizontal-outline' : 'search-outline'} size={25} color={colors.primary} />
+                  <View style={{ flex: 1 }}><Text style={styles.operationTitle}>{item.label}</Text><Text style={styles.operationText}>{item.description}</Text></View>
+                  <Icon name="chevron-forward" size={19} color={colors.muted} />
+                </Pressable>
+              ))}
+            </View>
+          ) : <>
           <View style={styles.steps} accessibilityLabel={`Paso ${step + 1} de 3`}>
             {['Vivienda', 'Detalles', 'Revisar'].map((label, index) => (
               <View key={label} style={styles.stepItem}>
@@ -265,6 +298,10 @@ export function ListingForm({
 
           {step === 0 ? (
             <View style={styles.section}>
+              <View style={styles.labelRow}>
+                <Text style={styles.operationTag}>{OPERATIONS.find(o => o.value === operation)?.label}</Text>
+                {!initialDraft ? <Button label="Cambiar" secondary disabled={submitting || photoBusy} onPress={() => { setChosen(false); changeField('operation', undefined); }} /> : null}
+              </View>
               <SectionHeading
                 title="Sobre la vivienda"
                 description="Una ubicación clara ayuda a encontrar tu vivienda. Los campos con * son obligatorios."
@@ -295,13 +332,14 @@ export function ListingForm({
                     active={draft.type === 'Apartamento'}
                     onPress={() => changeField('type', 'Apartamento')}
                   />
+                  {wanted ? <Pill label="Cualquiera" active={draft.type === ''} onPress={() => changeField('type', '')} /> : null}
                 </ChoiceField>
               </View>
               <View style={styles.fieldCard}>
                 <Field
-                  label="Zona o barrio"
+                  label={wanted ? 'Zonas que te interesan' : 'Zona o barrio'}
                   required
-                  placeholder="Ej. Vedado"
+                  placeholder={wanted ? 'Ej. Playa, Vedado o Miramar' : 'Ej. Vedado'}
                   value={draft.location}
                   onChangeText={(value) => changeField('location', value)}
                   error={errors.location}
@@ -316,34 +354,38 @@ export function ListingForm({
                   onChange={(value) => changeField('province', value)}
                   error={errors.province}
                 />
-                <Text style={styles.fieldHint}>Indica el barrio o reparto. Puedes señalar la ubicación aproximada en el mapa sin publicar la dirección exacta.</Text>
+                {wanted ? null : <Text style={styles.fieldHint}>Indica el barrio o reparto. Puedes señalar la ubicación aproximada en el mapa sin publicar la dirección exacta.</Text>}
               </View>
-              <View style={styles.fieldCard}>
-                <LocationPicker value={draft.mapLocation} onChange={value => changeField('mapLocation', value)} disabled={submitting} error={errors.mapLocation} />
-              </View>
+              {!wanted ? (
+                <View style={styles.fieldCard}>
+                  <LocationPicker value={draft.mapLocation} onChange={value => changeField('mapLocation', value)} disabled={submitting} error={errors.mapLocation} />
+                </View>
+              ) : null}
             </View>
           ) : null}
 
           {step === 1 ? (
             <View style={styles.section}>
               <SectionHeading
-                title="Los detalles"
-                description="Cuantos más detalles, más fácil será encontrarla con los filtros."
+                title={wanted ? 'Lo que buscas' : 'Los detalles'}
+                description={wanted ? 'Cuanto más claro, mejores mensajes recibirás.' : 'Cuantos más detalles, más fácil será encontrarla con los filtros.'}
               />
               {/* Photos are required in the cloud, so they open the step instead of closing it. */}
-              <View style={styles.fieldCard}>
-                <ListingPhotos required={cloud} photos={draft.photos ?? []} busy={photoBusy} disabled={submitting} onBusy={setPhotoBusy}
-                  onChange={photos => {
-                    changeField('photos', photos);
-                    changeField('photoUri', photos[0]?.uri);
-                  }}
-                  onError={message => setErrors(current => ({ ...current, photos: message }))} />
-                {errors.photos || errors.photoUri ? <FieldError message={errors.photos ?? errors.photoUri!} /> : null}
-              </View>
+              {!wanted ? (
+                <View style={styles.fieldCard}>
+                  <ListingPhotos required={cloud} photos={draft.photos ?? []} busy={photoBusy} disabled={submitting} onBusy={setPhotoBusy}
+                    onChange={photos => {
+                      changeField('photos', photos);
+                      changeField('photoUri', photos[0]?.uri);
+                    }}
+                    onError={message => setErrors(current => ({ ...current, photos: message }))} />
+                  {errors.photos || errors.photoUri ? <FieldError message={errors.photos ?? errors.photoUri!} /> : null}
+                </View>
+              ) : null}
               <View style={styles.fieldCard}>
                 <View style={styles.previewGroup}>
                   <Field
-                    label="Precio en USD"
+                    label={wanted ? 'Presupuesto máximo en USD' : operation === 'swap' ? 'Valor estimado en USD' : 'Precio en USD'}
                     required
                     placeholder="85000"
                     value={draft.price}
@@ -354,12 +396,13 @@ export function ListingForm({
                   />
                   {/* A thousands separator turns «85.000» into 85; the seller has to see that first. */}
                   {publishedPrice !== null ? <Text style={styles.publishNote}>Se publicará como {formatMoney(publishedPrice)} USD</Text> : null}
+                  {operation === 'swap' ? <Text style={styles.fieldHint}>Sirve para que te encuentren por precio; no es una oferta.</Text> : null}
                 </View>
 
                 <View style={styles.fieldGrid}>
                   <View style={styles.gridField}>
                     <SelectionField
-                      label="Habitaciones"
+                      label={wanted ? 'Habitaciones mínimas' : 'Habitaciones'}
                       required
                       placeholder="Seleccionar"
                       value={draft.bedrooms}
@@ -368,6 +411,7 @@ export function ListingForm({
                       error={errors.bedrooms}
                     />
                   </View>
+                  {!wanted ? <>
                   <View style={styles.gridField}>
                     <SelectionField
                       label="Baños"
@@ -392,11 +436,14 @@ export function ListingForm({
                     />
                     {publishedArea !== null ? <Text style={styles.publishNote}>Se publicará como {publishedArea} m²</Text> : null}
                   </View>
+                  </> : null}
                 </View>
 
+                {!wanted ? <>
                 <SelectionField label="Precio negociable" value={draft.priceNegotiable == null ? '' : draft.priceNegotiable ? 'yes' : 'no'} options={[{ value: '', label: 'Sin especificar' }, { value: 'yes', label: 'Sí, acepto negociar' }, { value: 'no', label: 'No, precio fijo' }]} onChange={value => changeField('priceNegotiable', value === '' ? null : value === 'yes')} error={errors.priceNegotiable} />
                 <SelectionField label="Estado de conservación" value={draft.condition ?? ''} options={[{ value: '', label: 'Sin especificar' }, ...CONDITIONS]} onChange={value => changeField('condition', value as ListingDraft['condition'])} error={errors.condition} hint="Describe el estado actual, no las reformas que se podrían hacer." />
                 <SelectionField label="Planta de acceso" value={draft.floor ?? ''} options={floorOptions} onChange={value => changeField('floor', value)} error={errors.floor} hint="La planta donde se encuentra la entrada de la vivienda. Opcional." />
+                </> : null}
 
                 <Field
                   label="Descripción"
@@ -414,6 +461,7 @@ export function ListingForm({
                 <Text style={styles.characterCount}>{draft.description.length}/2000 caracteres</Text>
               </View>
 
+              {!wanted ? (
               <View style={styles.fieldCard}>
                 <ChoiceField label="Comodidades (opcional)" error={errors.amenities}>
                   {Array.from(new Set([...AMENITIES, ...draft.amenities])).map((item) => (
@@ -426,6 +474,20 @@ export function ListingForm({
                   ))}
                 </ChoiceField>
               </View>
+              ) : null}
+
+              {operation === 'swap' ? (
+                <View style={styles.fieldCard}>
+                  <SectionHeading title="A cambio busco" description="Describe qué vivienda aceptarías y en qué provincias." />
+                  <Field label="Qué buscas a cambio" required multiline numberOfLines={4} textAlignVertical="top" maxLength={500} value={draft.swapWants ?? ''} onChangeText={value => changeField('swapWants', value)} error={errors.swapWants} placeholder="Ej. Apartamento de dos habitaciones en Playa o Vedado, con balcón." />
+                  <ChoiceField label="Provincias que aceptas (opcional)" error={errors.swapProvinces}>
+                    {PROVINCES.map(province => <Pill key={province} label={province} active={draft.swapProvinces?.includes(province)} icon={draft.swapProvinces?.includes(province) ? 'checkmark-circle' : 'add-outline'}
+                      onPress={() => changeField('swapProvinces', draft.swapProvinces?.includes(province) ? draft.swapProvinces.filter(item => item !== province) : [...(draft.swapProvinces ?? []), province])} />)}
+                  </ChoiceField>
+                  <SelectionField label="Diferencia de dinero" required value={draft.swapBalance ?? ''} options={[{ value: '', label: 'Elige una opción' }, ...SWAP_BALANCES]} onChange={value => changeField('swapBalance', value as ListingDraft['swapBalance'])} error={errors.swapBalance} />
+                  {draft.swapBalance && draft.swapBalance !== 'none' ? <Field label="Importe de la diferencia (USD, opcional)" keyboardType="decimal-pad" inputMode="decimal" value={draft.swapAmount ?? ''} onChangeText={value => changeField('swapAmount', normalizeDecimalInput(value))} error={errors.swapAmount} /> : null}
+                </View>
+              ) : null}
 
             </View>
           ) : null}
@@ -433,10 +495,10 @@ export function ListingForm({
           {step === 2 ? (
             <View style={styles.section}>
               <SectionHeading
-                title="Revisa tu anuncio"
+                title={wanted ? 'Revisa tu búsqueda' : 'Revisa tu anuncio'}
                 description="Podrás editarlo después desde Mi espacio."
               />
-              {draft.photoUri ? (
+              {wanted ? null : draft.photoUri ? (
                 <Image source={{ uri: draft.photoUri }} style={styles.reviewPhoto} resizeMode="cover" />
               ) : (
                 <View style={styles.reviewPhotoPlaceholder}>
@@ -449,7 +511,14 @@ export function ListingForm({
                 <Text style={styles.reviewLocation}>
                   {draft.location.trim()}, {draft.province.trim()}
                 </Text>
+                {operation !== 'sale' ? <Text style={styles.reviewLocation}>{wanted ? 'Presupuesto máximo' : 'Valor estimado'}</Text> : null}
                 <Text style={styles.reviewPrice}>{publishedPrice !== null ? `${formatMoney(publishedPrice)} USD` : 'Precio sin indicar'}</Text>
+                {wanted ? (
+                  <View style={styles.reviewFacts}>
+                    <Fact icon="bed-outline" value={`desde ${draft.bedrooms.trim()} hab.`} />
+                    <Fact icon="home-outline" value={draft.type || 'Casa o apartamento'} />
+                  </View>
+                ) : <>
                 <View style={styles.reviewFacts}>
                   <Fact icon="bed-outline" value={`${draft.bedrooms.trim()} hab.`} />
                   <Fact icon="water-outline" value={`${draft.bathrooms.trim()} baños`} />
@@ -460,8 +529,14 @@ export function ListingForm({
                 {draft.condition ? <Text style={styles.reviewLocation}>Estado: {CONDITIONS.find(item => item.value === draft.condition)?.label}</Text> : null}
                 {draft.floor !== undefined && draft.floor !== '' ? <Text style={styles.reviewLocation}>{draft.floor === '0' ? 'Planta baja' : `Planta ${draft.floor}`}</Text> : null}
                 {draft.priceNegotiable != null ? <Text style={styles.reviewLocation}>{draft.priceNegotiable ? 'Precio negociable' : 'Precio fijo'}</Text> : null}
+                </>}
                 <Text style={styles.reviewDescription}>{draft.description.trim()}</Text>
-                {draft.amenities.length > 0 ? (
+                {operation === 'swap' ? <>
+                  <Text style={styles.reviewLocation}>A cambio busca: {draft.swapWants?.trim()}</Text>
+                  {draft.swapProvinces?.length ? <Text style={styles.reviewLocation}>{draft.swapProvinces.join(', ')}</Text> : null}
+                  {draft.swapBalance ? <Text style={styles.reviewLocation}>{swapBalanceText({ balance: draft.swapBalance, amount: draft.swapAmount?.trim() ? parseDecimal(draft.swapAmount) : undefined })}</Text> : null}
+                </> : null}
+                {!wanted && draft.amenities.length > 0 ? (
                   <View style={styles.reviewAmenities}>
                     {draft.amenities.map((item) => (
                       <View key={item} style={styles.amenityTag}>
@@ -471,9 +546,11 @@ export function ListingForm({
                   </View>
                 ) : null}
               </View>
-              <View style={styles.fieldCard}>
-                <LocationPicker value={draft.mapLocation} readOnly />
-              </View>
+              {!wanted ? (
+                <View style={styles.fieldCard}>
+                  <LocationPicker value={draft.mapLocation} readOnly />
+                </View>
+              ) : null}
             </View>
           ) : null}
 
@@ -525,6 +602,7 @@ export function ListingForm({
               onPress={onCancel}
             />
           ) : null}
+          </>}
 
           <Text style={styles.demoNote}>
             {cloud ? 'Tu borrador se guarda en este dispositivo. Al enviarlo, revisaremos el anuncio antes de publicarlo. Los cambios posteriores también requieren revisión.' : 'Demostración: se guarda en este dispositivo, sin publicarse en internet.'}
@@ -662,6 +740,10 @@ const styles = StyleSheet.create({
   amenityTagText: { color: colors.ink, fontSize: 13 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingTop: 2 },
   actionButton: { flexGrow: 1, minWidth: 145 },
+  operationOption: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  operationTitle: { fontSize: 17, fontWeight: '600', color: colors.ink },
+  operationText: { fontSize: 14, color: colors.muted },
+  operationTag: { color: colors.primary, fontSize: 15, fontWeight: '600' },
   demoNote: { color: colors.muted, fontSize: 13, lineHeight: 18, textAlign: 'center', paddingHorizontal: 12 },
 });
 
