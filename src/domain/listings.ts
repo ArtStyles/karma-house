@@ -314,7 +314,7 @@ export function updateListing(listing: Listing, draft: ListingDraft): Listing {
     throw new Error('Solo puedes editar anuncios locales.');
   }
 
-  const { photoUri: _previousPhotoUri, photos: _previousPhotos, mapLocation: _previousMapLocation, condition, floor, priceNegotiable, operation, swap, ...listingWithoutPhoto } = listing;
+  const { photoUri: _previousPhotoUri, photos: _previousPhotos, mapLocation: _previousMapLocation, area: _previousArea, bathrooms: _previousBathrooms, type: _previousType, condition, floor, priceNegotiable, operation, swap, ...listingWithoutPhoto } = listing;
   return {
     ...listingWithoutPhoto,
     ...(draft.condition === undefined && condition !== undefined ? { condition } : {}),

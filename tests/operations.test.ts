@@ -2,7 +2,7 @@
 // @ts-nocheck -- Pure domain modules run directly in Node.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validateDraft, createListing, filterListings, activeFilterCount, shortcutActive, toggleShortcut, defaultFilters } from '../src/domain/listings.ts';
+import { validateDraft, createListing, updateListing, filterListings, activeFilterCount, shortcutActive, toggleShortcut, defaultFilters } from '../src/domain/listings.ts';
 import { isListingOperation, isSwapBalance, OPERATIONS, SWAP_BALANCES } from '../src/domain/listingOptions.ts';
 import { listingOperation, operationBadge, priceLabel, listingFacts, swapBalanceText, shareText, operationsFor } from '../src/domain/operations.ts';
 
@@ -47,6 +47,8 @@ test('a wanted ad needs no photos, area, bathrooms, type or map', () => {
   assert.equal(listing.operation, 'wanted');
   assert.equal(listing.area, undefined); assert.equal(listing.bathrooms, undefined); assert.equal(listing.type, undefined);
   assert.equal(listing.bedrooms, 2); assert.equal(listing.price, 40000);
+  const edited = updateListing(createListing(sale, { id: 'e', ...at }), wanted);
+  assert.equal(edited.area, undefined); assert.equal(edited.bathrooms, undefined); assert.equal(edited.type, undefined); assert.equal(edited.operation, 'wanted');
 });
 test('the catalogue hides wanted ads unless asked and the shortcuts toggle the operation', () => {
   const rows = [createListing(sale, { id: 's', ...at }), createListing(swap, { id: 'w', ...at }), createListing(wanted, { id: 'b', ...at })];
