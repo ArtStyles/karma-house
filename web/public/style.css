@@ -16,8 +16,9 @@ img { max-width: 100%; height: auto; display: block; }
 .nav nav a { color: var(--muted); text-decoration: none; }
 .nav nav a:hover { color: var(--ink); }
 @media (max-width: 640px) { .nav nav { display: none; } }
+@media (max-width: 480px) { .nav .btn { padding: 8px 12px; font-size: 14px; } .brand { font-size: 18px; } }
 
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border-radius: 14px; font-weight: 600; text-decoration: none; border: 1px solid var(--border); color: var(--ink); background: var(--card); }
+.btn { white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 20px; border-radius: 14px; font-weight: 600; text-decoration: none; border: 1px solid var(--border); color: var(--ink); background: var(--card); }
 .btn.primary { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
 .btn.big { padding: 16px 26px; font-size: 17px; }
 .btn svg { width: 20px; height: 20px; fill: currentColor; }
