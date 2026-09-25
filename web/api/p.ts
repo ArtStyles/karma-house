@@ -152,6 +152,9 @@ export async function handle(request: Request, env: Env, fetchImpl: typeof fetch
   const id = url.searchParams.get('id') ?? url.pathname.split('/').filter(Boolean).pop() ?? '';
   if (!UUID.test(id)) return unavailable();
 
+  // The reason is public-safe (a status code or a missing variable name) and saves a trip to the logs.
+  const unavailable503 = (reason: string) => new Response(`Service Unavailable: ${reason}`, { status: 503, headers: { 'Retry-After': '30' } });
+  if (!env.supabaseUrl || !env.anonKey) return unavailable503('missing SUPABASE_URL or SUPABASE_ANON_KEY');
   const base = env.supabaseUrl.replace(/\/+$/, '');
   const auth = { apikey: env.anonKey, Authorization: `Bearer ${env.anonKey}` };
   let row: Row | undefined;
@@ -160,8 +163,9 @@ export async function handle(request: Request, env: Env, fetchImpl: typeof fetch
     if (!rows.ok) throw new Error(`rest ${rows.status}`);
     [row] = (await rows.json()) as Row[];
   } catch (error) {
-    console.error('properties query failed', error instanceof Error ? error.message : error);
-    return new Response('Service Unavailable', { status: 503, headers: { 'Retry-After': '30' } });
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error('properties query failed', reason);
+    return unavailable503(reason);
   }
   if (!row) return unavailable();
 

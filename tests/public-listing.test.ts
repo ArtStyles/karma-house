@@ -137,6 +137,10 @@ test('handle answers 503 when the REST call fails and 405 for other methods', as
   const down = await handle(get(`/api/p?id=${row.id}`), env, fakeFetch({ status: 500 }).fetch);
   assert.equal(down.status, 503);
   assert.equal(down.headers.get('retry-after'), '30');
+  assert.equal(await down.text(), 'Service Unavailable: rest 500');
+  const unconfigured = await handle(get(`/api/p?id=${row.id}`), { ...env, anonKey: '' }, fakeFetch({ status: 200, body: [dbRow] }).fetch);
+  assert.equal(unconfigured.status, 503);
+  assert.equal(await unconfigured.text(), 'Service Unavailable: missing SUPABASE_URL or SUPABASE_ANON_KEY');
   const offline = await handle(get(`/api/p?id=${row.id}`), env, (async () => { throw new Error('offline'); }) as unknown as typeof fetch);
   assert.equal(offline.status, 503);
   const post = await handle(new Request(`https://karmahouse.vercel.app/api/p?id=${row.id}`, { method: 'POST' }), env, fakeFetch({ status: 200, body: [dbRow] }).fetch);
