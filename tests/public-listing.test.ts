@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { describeListing, escapeHtml, formatPrice, type PublicListingRow } from '../web/lib/render.ts';
-import { renderListing, renderUnavailable } from '../web/lib/render.ts';
+import { describeListing, escapeHtml, formatPrice, type PublicListingRow } from '../web/api/p.ts';
+import { renderListing, renderUnavailable } from '../web/api/p.ts';
 import { listingShareUrl, PUBLIC_PAGES_URL } from '../src/lib/publicSite.ts';
 import { handle, type Env } from '../web/api/p.ts';
 
