@@ -15,7 +15,7 @@ También se entregó el centro de avisos dentro de la app, con preferencias, con
 | 3 | Cargar rápido al crecer el catálogo | Búsqueda/filtros y cursor en servidor; lista virtualizada; cargar fotos según necesidad | Medición con catálogos crecientes y redes lentas, equivalencia de filtros y conservación de favoritos |
 | 3 | Ver conversaciones actualizadas con menos consultas repetidas | Eventos privados de Supabase Realtime y recuperación incremental después de reconectar | Reconexión sin huecos en historial, permisos por participante y medición de consultas/transferencia |
 | 3 | Detectar problemas y medir el recorrido de compra | Sentry para errores técnicos; eventos agregados de búsqueda, contacto, visita y oferta | Fallos diagnosticables por versión; sin texto de chats, fotos, credenciales ni datos personales en telemetría |
-| 4 | Compartir una vivienda y regresar cuando aparezca una adecuada | Dominio y fichas públicas; Android App Links/iOS Universal Links; búsquedas guardadas y alertas | Enlace funciona con/sin app, solo expone anuncios públicos, alertas deduplicadas y cancelables |
+| 4 | Compartir una vivienda y regresar cuando aparezca una adecuada | Ficha pública entregada ([verificación](public-listing-verification.md)); pendientes dominio propio, Android App Links/iOS Universal Links, búsquedas guardadas y alertas | Enlace funciona con/sin app, solo expone anuncios públicos, alertas deduplicadas y cancelables |
 
 ## Dependencias actuales observadas en el código
 

@@ -18,7 +18,7 @@ La interfaz se ha actualizado con tipografía del sistema, superficies agrupadas
 - Ubicación exacta o aproximada al publicar y explorar viviendas en el mapa.
 - Chat por vivienda, bandeja y mensajes sin leer, reintento manual, bloqueo y reportes.
 - Visitas y ofertas desde el chat: fechas en hora de Cuba, contraofertas, aceptación, rechazo y cancelación; bandeja de solicitudes e historial.
-- Compartir una vivienda, reportar un anuncio y cola de moderación para retirarlo.
+- Compartir una vivienda como enlace a su ficha pública (vista previa con foto y precio, botón para abrir la app), reportar un anuncio y cola de moderación para retirarlo.
 - Eliminar la cuenta desde Ajustes de cuenta, con enlaces a privacidad y términos.
 
 Con las variables públicas de Supabase configuradas, la app usa datos reales sin importar los ejemplos. Sin configuración, conserva la demo local para revisar el diseño; la mensajería y las solicitudes requieren cuentas reales. La publicación en tiendas queda para próximas entregas.
@@ -75,6 +75,8 @@ Lee `credentials/android-release.properties` (ignorado por Git) y deja en `artif
 `app.json` bloquea los permisos que añaden las dependencias y la app no usa (ubicación, superposición y biometría). Reportar anuncios y eliminar la cuenta dependen de la migración `20260923000100_play_compliance.sql`: `node scripts/apply-play-compliance.mjs` la prueba y la deshace; con `--commit` la aplica.
 
 Las páginas públicas (`site/`) se publican con GitHub Pages en https://artstyles.github.io/karma-house/: privacidad, términos y eliminación de cuenta, que son las URL que pide la ficha de Play. El despliegue falla mientras quede el marcador `CORREO_DE_CONTACTO`.
+
+La ficha pública de cada anuncio la sirve la Edge Function `supabase/functions/p` (`/functions/v1/p/<id>`), desplegada por el workflow `functions` con los secretos `SUPABASE_ACCESS_TOKEN` y `SUPABASE_PROJECT_REF`. `scripts/verify-public-listing.mjs` la comprueba; [evidencia](docs/public-listing-verification.md).
 
 ## Verificación
 
