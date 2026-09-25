@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>KarmaHouse · Compra, vende y permuta viviendas en Cuba</title>
-<meta name="description" content="KarmaHouse reúne casas y apartamentos en Cuba, revisados antes de publicarse. Mapa, chat privado, visitas y ofertas desde la app. Descarga gratis para Android.">
+<title>KarmaHouse · Viviendas en Cuba</title>
+<meta name="description" content="Casas y apartamentos en Cuba, revisados antes de publicarse. Explora por provincia, mira el mapa y negocia por chat. Descarga gratis para Android.">
 <link rel="canonical" href="https://karmahouse.vercel.app/">
 <link rel="icon" href="karmahouse-mark.png">
 <meta property="og:type" content="website">
@@ -18,139 +18,189 @@
 </head>
 <body>
 
-<header class="nav">
+<header class="top">
   <div class="wrap">
     <a class="brand" href="./"><img src="karmahouse-mark.png" alt=""><span><b>Karma</b>House</span></a>
     <nav>
+      <a href="#viviendas">Viviendas</a>
       <a href="#como-funciona">Cómo funciona</a>
-      <a href="#funciones">Funciones</a>
-      <a href="#confianza">Confianza</a>
+      <a href="#app">La app</a>
       <a href="#preguntas">Preguntas</a>
-      <a href="#descargar">Descargar</a>
     </nav>
-    <a class="btn primary" href="#descargar">Descargar app</a>
+    <a class="btn ghost" href="#descargar">Descargar</a>
   </div>
 </header>
 
-<main class="wrap">
-
-  <section class="hero" id="inicio">
-    <div>
-      <h1>Tu próximo hogar en Cuba, sin intermediarios.</h1>
-      <p>KarmaHouse reúne casas y apartamentos revisados antes de publicarse. Busca por provincia y precio, mira la zona en el mapa y habla con quien vende sin publicar tu teléfono. Coordina visitas y envía ofertas desde el mismo chat.</p>
-      <div class="actions">
-        <a class="btn primary big" href="#descargar">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-6-6h4V4h4v6h4z"/><path d="M4 18h16v2H4z"/></svg>
-          Descargar para Android
-        </a>
-        <a class="btn big" href="#como-funciona">Ver cómo funciona</a>
-      </div>
-      <p class="note">Gratis. Sin comisiones. Publicar es tan sencillo como subir seis fotos.</p>
+<section class="hero">
+  <div class="wrap">
+    <h1>Encuentra casa en Cuba. Sin intermediarios.</h1>
+    <p>Anuncios revisados uno a uno, ubicación en el mapa y conversación privada con quien vende. Visitas y ofertas, todo en un mismo hilo.</p>
+    <form class="search" id="search" action="#viviendas">
+      <label>Provincia
+        <select name="province" id="province">
+          <option value="">Toda Cuba</option>
+        </select>
+      </label>
+      <label>Precio máximo (USD)
+        <input name="max" id="max" type="number" min="0" step="1000" placeholder="Sin límite" inputmode="numeric">
+      </label>
+      <button type="submit">Ver viviendas</button>
+    </form>
+    <div class="sub">
+      <span>Gratis y sin comisiones</span>
+      <span>·</span>
+      <a href="#descargar">Descargar para Android</a>
     </div>
-    <figure>
-      <img src="vedado.jpg" width="1200" height="800" alt="Casa de estilo habanero de los años cuarenta con terraza y jardín" fetchpriority="high">
-      <figcaption><b>$ 85,000 USD</b>Vedado, La Habana · 3 hab · 2 baños</figcaption>
-    </figure>
-  </section>
+  </div>
+</section>
 
-  <section id="como-funciona">
-    <h2>Cómo funciona</h2>
-    <p class="lead">Cuatro pasos, de la primera búsqueda al apretón de manos.</p>
-    <div class="grid">
-      <div class="card"><span class="num">1</span><h3>Explora</h3><p>Filtra por provincia, precio, habitaciones y estado. Ordena por lo más reciente o por precio y recorre el mapa con las viviendas agrupadas por zona.</p></div>
-      <div class="card"><span class="num">2</span><h3>Publica</h3><p>Sube hasta seis fotos, describe la vivienda y marca la ubicación exacta o aproximada. Un equipo la revisa antes de que aparezca en el catálogo.</p></div>
-      <div class="card"><span class="num">3</span><h3>Conversa</h3><p>Cada vivienda tiene su chat privado. Nadie ve tu número. Puedes bloquear o reportar en un toque.</p></div>
-      <div class="card"><span class="num">4</span><h3>Cierra</h3><p>Propón una visita con fecha y hora de Cuba, haz una oferta o una contraoferta y acepta desde el chat. Todo queda en tu historial.</p></div>
-    </div>
-  </section>
+<div class="stats">
+  <div class="wrap">
+    <div><strong id="stat-count">—</strong><span>viviendas publicadas ahora mismo</span></div>
+    <div><strong>16</strong><span>provincias, de Pinar del Río a Guantánamo</span></div>
+    <div><strong>0 %</strong><span>de comisión para quien compra o vende</span></div>
+  </div>
+</div>
 
-  <section id="funciones">
-    <h2>Todo lo que necesitas, en una app</h2>
-    <p class="lead">Pensada para redes lentas y datos contados: páginas pequeñas, fotos optimizadas y sin publicidad.</p>
-    <div class="grid">
-      <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></div><h3>Catálogo revisado</h3><p>Solo se publica lo aprobado. Anuncios pausados o vendidos desaparecen del catálogo.</p></div>
-      <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div><h3>Mapa por zonas</h3><p>Mira dónde está cada vivienda y acércate por barrio. Quien publica elige si muestra la ubicación exacta o aproximada.</p></div>
-      <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg></div><h3>Chat privado</h3><p>Bandeja con mensajes sin leer, reintento si falla la red, bloqueo y reportes.</p></div>
-      <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div><h3>Visitas y ofertas</h3><p>Fechas en hora de Cuba, contraofertas, aceptación, rechazo y cancelación. Bandeja de solicitudes e historial.</p></div>
-      <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-2.5A4.5 4.5 0 0 1 20 10c0 6-8 11-8 11z"/></svg></div><h3>Favoritos</h3><p>Guarda viviendas y recupéralas en cualquier teléfono con tu cuenta.</p></div>
-      <div class="card"><div class="icon"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10 21h4"/></svg></div><h3>Avisos</h3><p>Entérate de respuestas, visitas y ofertas dentro de la app y con notificaciones en Android.</p></div>
-    </div>
-  </section>
-
-  <section id="confianza">
-    <div class="split">
-      <img src="interior.jpg" width="900" height="600" alt="Interior luminoso de un apartamento" loading="lazy">
+<section id="viviendas">
+  <div class="wrap">
+    <div class="head">
       <div>
-        <h2>Confianza antes que velocidad</h2>
-        <p class="lead">Cada anuncio pasa por revisión humana y cada persona controla qué comparte.</p>
-        <ul>
-          <li>Revisión previa: aprobamos o rechazamos con un motivo antes de publicar.</li>
-          <li>Tu teléfono no aparece en ningún anuncio. Se conversa dentro de la app.</li>
-          <li>Reporta anuncios o conversaciones; una cola de moderación los retira.</li>
-          <li>Elimina tu cuenta y tus datos desde Ajustes cuando quieras.</li>
+        <p class="eyebrow">Catálogo</p>
+        <h2 id="listings-title">Últimas viviendas publicadas</h2>
+      </div>
+      <a href="#descargar">Ver todas en la app →</a>
+    </div>
+    <div class="listings" id="listings"><p class="empty">Cargando viviendas…</p></div>
+  </div>
+</section>
+
+<section class="steps-section" id="como-funciona">
+  <div class="wrap">
+    <p class="eyebrow">Cómo funciona</p>
+    <h2>De la búsqueda al acuerdo, en cuatro pasos</h2>
+    <div class="steps">
+      <div class="step"><i>1</i><h3>Explora</h3><p>Filtra por provincia, precio, habitaciones y estado. Recorre el mapa con las viviendas agrupadas por zona.</p></div>
+      <div class="step"><i>2</i><h3>Publica</h3><p>Seis fotos, una descripción y la ubicación exacta o aproximada. Se revisa antes de aparecer en el catálogo.</p></div>
+      <div class="step"><i>3</i><h3>Conversa</h3><p>Cada vivienda tiene su chat privado. Tu número no se publica. Bloquea o reporta en un toque.</p></div>
+      <div class="step"><i>4</i><h3>Cierra</h3><p>Propón una visita con fecha y hora de Cuba, haz una oferta o contraoferta y acepta desde el chat.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="app">
+  <div class="wrap">
+    <div class="row">
+      <div>
+        <p class="eyebrow">Negociación</p>
+        <h2>El chat es la mesa de negociación</h2>
+        <p>Las visitas y las ofertas viven dentro de la conversación, como tarjetas con su estado. Nada de capturas, ni de números apuntados en un papel.</p>
+        <ul class="checks">
+          <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Propuestas de visita en hora de Cuba, con aceptación o cambio de fecha.</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Ofertas y contraofertas con historial; cada acuerdo queda registrado.</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Avisos de respuestas dentro de la app y notificaciones en Android.</li>
         </ul>
       </div>
-    </div>
-  </section>
-
-  <section id="descargar">
-    <div class="download">
-      <div>
-        <h2>Descarga KarmaHouse</h2>
-        <p class="lead">Android 8 o superior. La app pesa poco y funciona con datos móviles.</p>
-        <div class="actions">
-          <a class="btn primary big" href="https://github.com/ArtStyles/karma-house/releases/latest/download/KarmaHouse.apk">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-6-6h4V4h4v6h4z"/><path d="M4 18h16v2H4z"/></svg>
-            Descargar APK
-          </a>
-          <a class="btn big" href="https://github.com/ArtStyles/karma-house/releases/latest">Todas las versiones</a>
+      <div class="media">
+        <div class="phone" aria-hidden="true">
+          <div class="screen">
+            <div class="bar"><b>Casa en el Vedado</b><span>$ 85,000</span></div>
+            <div class="item"><img src="interior.jpg" alt=""><div><strong>Vedado, La Habana</strong><span>3 hab · 2 baños · 120 m²</span></div></div>
+            <div class="msg">
+              <p>Hola, ¿sigue disponible?</p>
+              <p class="me">Sí. ¿Quieres verla el sábado?</p>
+              <div class="offer"><b>Visita · sábado 27, 10:30</b><small>Aceptada</small></div>
+              <div class="offer"><b>Oferta · $ 80,000</b><span>Pendiente de respuesta</span></div>
+            </div>
+          </div>
         </div>
-        <p class="soon">iPhone: en preparación. Google Play: en revisión.</p>
-      </div>
-      <div>
-        <h3>Cómo instalar</h3>
-        <ol>
-          <li>Descarga el APK y ábrelo desde <b>Archivos</b> o la barra de notificaciones.</li>
-          <li>Si Android lo pide, permite instalar aplicaciones desde esa fuente.</li>
-          <li>Abre KarmaHouse, crea tu cuenta con tu correo y confirma el enlace.</li>
-          <li>Para actualizar, instala el nuevo APK encima: conserva sesión y borradores.</li>
-        </ol>
-        <p class="soon">Cada versión publica su suma <code>SHA-256</code> junto al archivo para comprobar la descarga.</p>
       </div>
     </div>
-  </section>
 
-  <section id="preguntas">
-    <h2>Preguntas frecuentes</h2>
-    <details><summary>¿Cuánto cuesta publicar o contactar?</summary><p>Nada. KarmaHouse no cobra por publicar, buscar ni conversar, y no interviene en la negociación.</p></details>
-    <details><summary>¿Por qué mi anuncio no aparece enseguida?</summary><p>Se revisa antes de publicarse para evitar anuncios falsos o incompletos. Si se rechaza, verás el motivo en Mis anuncios y podrás corregirlo.</p></details>
-    <details><summary>¿Quién ve mi teléfono o mi correo?</summary><p>Nadie. Los demás usuarios solo ven tu nombre. La conversación ocurre dentro de la app y puedes bloquear a cualquiera.</p></details>
-    <details><summary>Me compartieron un enlace de una vivienda. ¿Qué hago?</summary><p>Ábrelo: verás la ficha completa en el navegador. Con la app instalada, el botón «Abrir en KarmaHouse» te lleva a esa vivienda para guardarla o escribir.</p></details>
-    <details><summary>¿Funciona sin Internet?</summary><p>Para ver el catálogo y conversar necesitas conexión. Los borradores de tus anuncios se guardan en el teléfono hasta que tengas datos.</p></details>
-  </section>
+    <div class="row flip">
+      <div>
+        <p class="eyebrow">Confianza</p>
+        <h2>Revisado antes de publicarse</h2>
+        <p>Un equipo aprueba o rechaza cada anuncio con un motivo. Lo pausado o vendido desaparece del catálogo. Quien publica decide si muestra la ubicación exacta o solo la zona.</p>
+        <ul class="checks">
+          <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Sin teléfonos ni correos visibles: se habla dentro de la app.</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Reportes de anuncios y conversaciones con cola de moderación.</li>
+          <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Elimina tu cuenta y tus datos desde Ajustes cuando quieras.</li>
+        </ul>
+      </div>
+      <div class="media"><img src="interior.jpg" width="900" height="600" alt="Interior luminoso de un apartamento" loading="lazy"></div>
+    </div>
+  </div>
+</section>
 
-</main>
+<section class="band" id="descargar">
+  <div class="wrap">
+    <div>
+      <p class="eyebrow" style="color:#fff;opacity:.7">Descarga</p>
+      <h2>KarmaHouse para Android</h2>
+      <p>Pensada para redes lentas y datos contados: páginas pequeñas, fotos optimizadas y sin publicidad. Android 8 o superior.</p>
+      <div class="actions">
+        <a class="btn primary" href="https://github.com/ArtStyles/karma-house/releases/latest/download/KarmaHouse.apk">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-6-6h4V4h4v6h4z"/><path d="M4 18h16v2H4z"/></svg>
+          Descargar APK
+        </a>
+        <a class="btn ghost" href="https://github.com/ArtStyles/karma-house/releases/latest">Todas las versiones</a>
+      </div>
+      <p class="fine">iPhone en preparación · Google Play en revisión · Cada versión publica su <code>SHA-256</code> junto al archivo.</p>
+    </div>
+    <div>
+      <ol>
+        <li>Descarga el APK y ábrelo desde <b>Archivos</b> o la barra de notificaciones.</li>
+        <li>Si Android lo pide, permite instalar aplicaciones desde esa fuente.</li>
+        <li>Crea tu cuenta con tu correo y confirma el enlace que recibes.</li>
+        <li>Para actualizar, instala el nuevo APK encima: conserva sesión y borradores.</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section id="preguntas">
+  <div class="wrap">
+    <p class="eyebrow">Preguntas frecuentes</p>
+    <h2>Lo que suelen preguntarnos</h2>
+    <div class="faq">
+      <details><summary>¿Cuánto cuesta publicar o contactar?</summary><p>Nada. KarmaHouse no cobra por publicar, buscar ni conversar, y no interviene en la negociación.</p></details>
+      <details><summary>¿Por qué mi anuncio no aparece enseguida?</summary><p>Se revisa antes de publicarse para evitar anuncios falsos o incompletos. Si se rechaza, verás el motivo en Mis anuncios y podrás corregirlo.</p></details>
+      <details><summary>¿Quién ve mi teléfono o mi correo?</summary><p>Nadie. Los demás usuarios solo ven tu nombre. La conversación ocurre dentro de la app y puedes bloquear a cualquiera.</p></details>
+      <details><summary>Me compartieron un enlace de una vivienda. ¿Qué hago?</summary><p>Ábrelo: verás la ficha completa en el navegador. Con la app instalada, «Abrir en KarmaHouse» te lleva a esa vivienda para guardarla o escribir.</p></details>
+      <details><summary>¿Funciona sin Internet?</summary><p>Para ver el catálogo y conversar necesitas conexión. Los borradores de tus anuncios se guardan en el teléfono hasta que tengas datos.</p></details>
+      <details><summary>¿Puedo publicar permutas o alquileres?</summary><p>Hoy el catálogo es de compraventa. Permuta y alquiler están en el plan; si te interesan, escríbenos.</p></details>
+    </div>
+  </div>
+</section>
 
 <footer>
   <div class="wrap">
     <div class="cols">
       <div>
         <a class="brand" href="./"><img src="karmahouse-mark.png" alt=""><span><b>Karma</b>House</span></a>
-        <p>Compra, venta y permuta de viviendas en Cuba. Anuncios revisados, mapa y chat privado.</p>
+        <p style="max-width:320px">Compra y venta de viviendas en Cuba. Anuncios revisados, mapa y chat privado. Hecho en Cuba.</p>
       </div>
       <div>
-        <h4>Producto</h4>
+        <h4>Explorar</h4>
         <ul>
+          <li><a href="#viviendas">Últimas viviendas</a></li>
           <li><a href="#como-funciona">Cómo funciona</a></li>
-          <li><a href="#funciones">Funciones</a></li>
-          <li><a href="#descargar">Descargar para Android</a></li>
+          <li><a href="#app">La app</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Descargar</h4>
+        <ul>
+          <li><a href="#descargar">Android (APK)</a></li>
+          <li><a href="https://github.com/ArtStyles/karma-house/releases/latest">Todas las versiones</a></li>
           <li><a href="https://github.com/ArtStyles/karma-house">Código en GitHub</a></li>
         </ul>
       </div>
       <div>
         <h4>Legal y ayuda</h4>
         <ul>
-          <li><a href="https://artstyles.github.io/karma-house/privacidad.html">Política de privacidad</a></li>
+          <li><a href="https://artstyles.github.io/karma-house/privacidad.html">Privacidad</a></li>
           <li><a href="https://artstyles.github.io/karma-house/terminos.html">Términos de uso</a></li>
           <li><a href="https://artstyles.github.io/karma-house/eliminar-cuenta.html">Eliminar tu cuenta</a></li>
           <li><a href="mailto:hernandezfrankjames@gmail.com">Contacto</a></li>
@@ -159,10 +209,57 @@
     </div>
     <div class="legal">
       <span>© 2026 KarmaHouse</span>
-      <span>Hecho en Cuba · Las imágenes de esta página son ilustrativas y no corresponden a anuncios reales.</span>
+      <span>Las fotografías de esta página son ilustrativas; las viviendas del catálogo son anuncios reales.</span>
     </div>
   </div>
 </footer>
 
+<script>
+(function () {
+  // Same public credentials the app ships with: anon can only read approved, active listings.
+  var URL_ = 'https://iuhvlpucclqbytuqflci.supabase.co';
+  var KEY = 'sb_publishable_ojbi8_h-uXOq_rkZyi7m8w_ZDm0qkzU';
+  var H = { apikey: KEY, Authorization: 'Bearer ' + KEY };
+  var PROVINCES = ['Pinar del Río', 'Artemisa', 'La Habana', 'Mayabeque', 'Matanzas', 'Villa Clara', 'Cienfuegos', 'Sancti Spíritus', 'Ciego de Ávila', 'Camagüey', 'Las Tunas', 'Holguín', 'Granma', 'Santiago de Cuba', 'Guantánamo', 'Isla de la Juventud'];
+  var sel = document.getElementById('province');
+  PROVINCES.forEach(function (p) { var o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o); });
+  var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var money = function (n) { return String(Math.round(Number(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+  var box = document.getElementById('listings');
+
+  function load(province, max) {
+    var q = URL_ + '/rest/v1/properties?select=id,title,location,province,price,bedrooms,bathrooms,area,photo_paths&moderation=eq.approved&availability=eq.active&order=created_at.desc&limit=8';
+    if (province) q += '&province=eq.' + encodeURIComponent(province);
+    if (max) q += '&price=lte.' + encodeURIComponent(max);
+    box.innerHTML = '<p class="empty">Cargando viviendas…</p>';
+    fetch(q, { headers: H }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (rows) {
+      if (!rows.length) { box.innerHTML = '<p class="empty">Ninguna vivienda con esos filtros por ahora. Prueba otra provincia o abre la app para guardar la búsqueda.</p>'; return; }
+      var covers = rows.map(function (r) { return r.photo_paths && r.photo_paths[0]; }).filter(Boolean);
+      return fetch(URL_ + '/storage/v1/object/sign/property-photos', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, H), body: JSON.stringify({ expiresIn: 3600, paths: covers }) })
+        .then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
+        .then(function (signed) {
+          var url = {};
+          signed.forEach(function (s) { if (s.signedURL && !s.error) url[s.path] = URL_ + '/storage/v1' + s.signedURL; });
+          box.innerHTML = rows.map(function (r) {
+            var cover = r.photo_paths && url[r.photo_paths[0]];
+            return '<a class="listing" href="/p/' + r.id + '"><div class="ph">' + (cover ? '<img loading="lazy" alt="" src="' + esc(cover) + '">' : '') + '</div>'
+              + '<strong>$ ' + money(r.price) + ' USD</strong><em>' + esc(r.title) + '</em><span>' + esc(r.location) + ', ' + esc(r.province) + ' · ' + r.bedrooms + ' hab · ' + r.bathrooms + ' baños · ' + Number(r.area) + ' m²</span></a>';
+          }).join('');
+        });
+    }).catch(function () { box.innerHTML = '<p class="empty">No pudimos cargar el catálogo ahora mismo. Ábrelo en la app o vuelve a intentarlo.</p>'; });
+  }
+
+  fetch(URL_ + '/rest/v1/properties?select=id&moderation=eq.approved&availability=eq.active&limit=1', { headers: Object.assign({ Prefer: 'count=exact', Range: '0-0' }, H) })
+    .then(function (r) { var m = /\/(\d+)$/.exec(r.headers.get('content-range') || ''); if (m) document.getElementById('stat-count').textContent = m[1]; }).catch(function () {});
+  load('', '');
+  document.getElementById('search').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var p = sel.value, m = document.getElementById('max').value;
+    document.getElementById('listings-title').textContent = p || m ? 'Viviendas' + (p ? ' en ' + p : '') + (m ? ' hasta $ ' + money(m) : '') : 'Últimas viviendas publicadas';
+    load(p, m);
+    document.getElementById('viviendas').scrollIntoView({ behavior: 'smooth' });
+  });
+})();
+</script>
 </body>
 </html>
