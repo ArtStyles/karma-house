@@ -25,7 +25,7 @@ Migración `supabase/migrations/20260926000100_operations.sql`.
   - `wanted`: `type` en (`Casa`,`Apartamento`, nulo = cualquiera), `area` y `bathrooms` ignorados y guardados nulos, `amenities` vacías, `photoPaths` vacío o no, `mapLocation` guardado nulo, `condition`/`floor`/`priceNegotiable` nulos. `price` = presupuesto máximo (>0), `bedrooms` = habitaciones mínimas (1-20). Error `KH_INVALID_WANTED`.
   - El payload canónico incluye `operation` y los `swap*`, así la idempotencia por `clientRequestId` sigue funcionando.
 - `kh_catalog_where(f)`: si `f->'operations'` es un array no vacío de valores válidos, `p.operation = any(...)`; si falta, `p.operation in ('sale','swap')`. Valor inválido → `KH_INVALID_OPERATION`. `kh_search_properties` no cambia de firma.
-- `kh_map_clusters`: añade `and p.operation <> 'wanted'` (redundante con `latitude is not null`, explícito por claridad).
+- `kh_map_clusters`: sin cambios. Un busco nunca guarda coordenadas, así que `latitude is not null` ya lo excluye; la suite lo comprueba.
 - Todo lo demás (chat, favoritos, reportes, visitas y ofertas, avisos, ficha pública por `id`) funciona sin cambios porque cuelga de `property_id`.
 
 ### Ficha pública (`web/api/p.ts`)
