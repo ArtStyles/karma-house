@@ -74,3 +74,14 @@ Secretos del repositorio que el usuario crea: `SUPABASE_ACCESS_TOKEN` (token per
 ## Fuera de alcance
 
 Dominio propio y App Links verificados; enlace de descarga del APK en el sitio (sin release publicada); mapa en la ficha; contadores de visitas; limitación de tasa propia (se confía en los límites de Supabase; la ficha solo expone datos ya públicos para `anon`).
+
+## Cambio del 25 de septiembre: Vercel en lugar de Edge Function
+
+La Edge Function se desplegó y respondió, pero el gateway de Supabase reescribe a `text/plain` con `Content-Security-Policy: default-src 'none'; sandbox` cualquier HTML servido desde `*.supabase.co` (medida anti-phishing; solo un dominio propio de pago lo evita). Además recorta `/functions/v1` de la ruta que ve la función, así que `og:url` salía mal. Se descartó la opción A. El usuario tiene cuenta en Vercel con proyectos que cargan desde ETECSA sin VPN, y eligió Vercel (plan Hobby) frente a prerenderizar en GitHub Pages.
+
+Lo que cambia respecto a las secciones anteriores:
+
+- **Servidor:** proyecto Vercel con Root Directory `web/`. `web/api/p.ts` exporta `GET(request)` (función Web estándar, sin dependencias) y `handle(request, env, fetch)` para probarla con un `fetch` falso. `web/vercel.json` reescribe `/p/:id` a `/api/p?id=:id` y redirige `/` al sitio. `web/lib/render.ts` es el mismo módulo puro. Lee con la clave `anon` por REST (`/rest/v1/properties?...&moderation=eq.approved&availability=eq.active`) y firma las fotos con `POST /storage/v1/object/sign/property-photos` (`expiresIn: 3600`), lo que la política `kh_photo_read` ya permite. Variables de entorno del proyecto: `SUPABASE_URL`, `SUPABASE_ANON_KEY`. Cabecera de caché `public, s-maxage=300, stale-while-revalidate=60`. Errores como antes: `404`, `503` con `Retry-After: 30` (también si `fetch` lanza), `405`; si la firma falla o lanza, `200` sin fotos.
+- **Cliente:** `PUBLIC_PAGES_URL = 'https://karmahouse.vercel.app/'` en `publicSite.ts`; `listingShareUrl(id)` = `${PUBLIC_PAGES_URL}p/${id}`. Se ajusta si el proyecto recibe otro dominio.
+- **Despliegue:** integración Git de Vercel sobre `main` (Root Directory `web`, Framework «Other», sin build). Se eliminan `supabase/functions/`, `supabase/config.toml` y `.github/workflows/functions.yml`; la función `p` desplegada se borra desde el panel de Supabase y los dos secretos de GitHub sobran.
+- **Verificación:** pruebas de `handle` con `fetch` falso (200 con fotos, firma fallida, 404 sin tocar Supabase para ids malformados, 503, 405); `scripts/verify-public-listing.mjs [url]` contra el dominio real exige `Content-Type: text/html`.

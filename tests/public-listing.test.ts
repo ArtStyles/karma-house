@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { describeListing, escapeHtml, formatPrice, type PublicListingRow } from '../supabase/functions/p/render.ts';
-import { renderListing, renderUnavailable } from '../supabase/functions/p/render.ts';
-import { listingShareUrl, SITE_URL } from '../src/lib/publicSite.ts';
+import { describeListing, escapeHtml, formatPrice, type PublicListingRow } from '../web/lib/render.ts';
+import { renderListing, renderUnavailable } from '../web/lib/render.ts';
+import { listingShareUrl, PUBLIC_PAGES_URL } from '../src/lib/publicSite.ts';
+import { handle, type Env } from '../web/api/p.ts';
 
 export const row: PublicListingRow = {
   id: '33000000-0000-4000-8000-000000000003',
@@ -75,11 +76,69 @@ test('renderUnavailable points back to the site', () => {
   assert.ok(html.includes('<meta name="robots" content="noindex">'));
 });
 
-test('listingShareUrl targets the Edge Function and falls back to the site', () => {
-  const previous = process.env.EXPO_PUBLIC_SUPABASE_URL;
-  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co/';
-  assert.equal(listingShareUrl(row.id), `https://example.supabase.co/functions/v1/p/${row.id}`);
-  delete process.env.EXPO_PUBLIC_SUPABASE_URL;
-  assert.equal(listingShareUrl(row.id), SITE_URL);
-  if (previous !== undefined) process.env.EXPO_PUBLIC_SUPABASE_URL = previous;
+test('listingShareUrl points at the public page of the listing', () => {
+  assert.equal(listingShareUrl(row.id), `${PUBLIC_PAGES_URL}p/${row.id}`);
+  assert.ok(PUBLIC_PAGES_URL.startsWith('https://') && PUBLIC_PAGES_URL.endsWith('/'));
+});
+
+const env: Env = { supabaseUrl: 'https://example.supabase.co/', anonKey: 'anon-key', publicOrigin: 'https://karmahouse.vercel.app' };
+const dbRow = { ...row, photo_paths: ['u/a/one.jpg', 'u/a/two.jpg'] };
+function fakeFetch(rest: { status: number; body?: unknown }, sign?: { status: number; body?: unknown } | Error): { fetch: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
+  const calls: { url: string; init?: RequestInit }[] = [];
+  const respond = (reply: { status: number; body?: unknown }) => new Response(JSON.stringify(reply.body ?? null), { status: reply.status, headers: { 'Content-Type': 'application/json' } });
+  const fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    calls.push({ url, init });
+    if (url.includes('/rest/v1/')) return respond(rest);
+    if (sign instanceof Error) throw sign;
+    return respond(sign ?? { status: 500 });
+  }) as typeof fetch;
+  return { fetch, calls };
+}
+const get = (path: string) => new Request(`https://karmahouse.vercel.app${path}`);
+
+test('handle renders an approved listing with signed photos and the canonical page url', async () => {
+  const { fetch, calls } = fakeFetch({ status: 200, body: [dbRow] }, { status: 200, body: [{ signedURL: '/object/sign/property-photos/u/a/one.jpg?token=1' }, { signedURL: '/object/sign/property-photos/u/a/two.jpg?token=2' }] });
+  const response = await handle(get(`/api/p?id=${row.id}`), env, fetch);
+  const html = await response.text();
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), 'text/html; charset=utf-8');
+  assert.equal(response.headers.get('cache-control'), 'public, s-maxage=300, stale-while-revalidate=60');
+  assert.ok(html.includes('<meta property="og:image" content="https://example.supabase.co/storage/v1/object/sign/property-photos/u/a/one.jpg?token=1">'));
+  assert.equal((html.match(/<img loading="lazy"/g) ?? []).length, 2);
+  assert.ok(html.includes(`<link rel="canonical" href="https://karmahouse.vercel.app/p/${row.id}">`));
+  assert.equal(calls.length, 2);
+  assert.ok(calls[0].url.startsWith(`https://example.supabase.co/rest/v1/properties?select=`));
+  assert.ok(calls[0].url.includes(`id=eq.${row.id}&moderation=eq.approved&availability=eq.active`));
+  assert.ok(!calls[0].url.includes('owner_id') && !calls[0].url.includes('latitude'));
+  assert.equal((calls[0].init?.headers as Record<string, string>).apikey, 'anon-key');
+  assert.equal(calls[1].url, 'https://example.supabase.co/storage/v1/object/sign/property-photos');
+  assert.deepEqual(JSON.parse(String(calls[1].init?.body)), { expiresIn: 3600, paths: dbRow.photo_paths });
+});
+test('handle still renders when photo signing fails', async () => {
+  for (const sign of [{ status: 400 }, new Error('offline')]) {
+    const response = await handle(get(`/api/p?id=${row.id}`), env, fakeFetch({ status: 200, body: [dbRow] }, sign).fetch);
+    const html = await response.text();
+    assert.equal(response.status, 200);
+    assert.ok(!html.includes('og:image') && !html.includes('<img'));
+  }
+});
+test('handle answers 404 for unknown, hidden or malformed ids without touching Supabase', async () => {
+  const missing = fakeFetch({ status: 200, body: [] });
+  const hidden = await handle(get(`/api/p?id=${row.id}`), env, missing.fetch);
+  assert.equal(hidden.status, 404);
+  assert.ok((await hidden.text()).includes('Ya no está disponible'));
+  assert.equal(missing.calls.length, 1);
+  const bogus = fakeFetch({ status: 200, body: [dbRow] });
+  for (const path of ['/api/p?id=not-a-uuid', '/api/p', `/api/p?id=${row.id}%27`]) assert.equal((await handle(get(path), env, bogus.fetch)).status, 404);
+  assert.equal(bogus.calls.length, 0);
+});
+test('handle answers 503 when the REST call fails and 405 for other methods', async () => {
+  const down = await handle(get(`/api/p?id=${row.id}`), env, fakeFetch({ status: 500 }).fetch);
+  assert.equal(down.status, 503);
+  assert.equal(down.headers.get('retry-after'), '30');
+  const offline = await handle(get(`/api/p?id=${row.id}`), env, (async () => { throw new Error('offline'); }) as unknown as typeof fetch);
+  assert.equal(offline.status, 503);
+  const post = await handle(new Request(`https://karmahouse.vercel.app/api/p?id=${row.id}`, { method: 'POST' }), env, fakeFetch({ status: 200, body: [dbRow] }).fetch);
+  assert.equal(post.status, 405);
 });

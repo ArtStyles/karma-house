@@ -4,5 +4,5 @@
     "strict": true,
     "allowImportingTsExtensions": true
   },
-  "exclude": ["node_modules", "tests", "dist", "artifacts", "supabase/functions/**/index.ts"]
+  "exclude": ["node_modules", "tests", "dist", "artifacts"]
 }
