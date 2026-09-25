@@ -1,7 +1,7 @@
 import { isMapLocation, normalizeMapLocation, type MapLocation } from './geo.ts';
-import { isListingCondition, isDraftFloor, type ListingCondition } from './listingOptions.ts';
+import { isListingCondition, isDraftFloor, isListingOperation, isProvince, isSwapBalance, type ListingCondition, type ListingOperation, type SwapBalance } from './listingOptions.ts';
 import { parseDecimal } from './numericInput.ts';
-export type { ListingCondition } from './listingOptions.ts';
+export type { ListingCondition, ListingOperation, SwapBalance } from './listingOptions.ts';
 
 export type ListingStatus = 'active' | 'paused' | 'sold';
 export type ModerationStatus = 'draft' | 'pending' | 'approved' | 'rejected';
@@ -15,6 +15,9 @@ export interface PhotoDraft {
 
 export type ListingType = 'Casa' | 'Apartamento';
 
+export interface ListingSwap { wants: string; provinces: string[]; balance: SwapBalance; amount?: number }
+export type OperationFilter = 'offers' | ListingOperation;
+
 export interface Listing {
   id: string;
   title: string;
@@ -26,12 +29,15 @@ export interface Listing {
   priceNegotiable?: boolean;
   price: number;
   bedrooms: number;
-  bathrooms: number;
-  area: number;
-  type: ListingType;
+  bathrooms?: number;
+  area?: number;
+  type?: ListingType;
   description: string;
   amenities: string[];
   imageKey: 'vedado' | 'interior' | 'terrace';
+  /** Absent means a sale: local, demo and older remote rows never carry it. */
+  operation?: ListingOperation;
+  swap?: ListingSwap;
   photoUri?: string;
   owner: 'demo' | 'local' | 'remote';
   ownerId?: string;
@@ -49,6 +55,11 @@ export interface ListingDraft {
   floor?: string;
   priceNegotiable?: boolean | null;
   expectedVersion?: number;
+  operation?: ListingOperation;
+  swapWants?: string;
+  swapProvinces?: string[];
+  swapBalance?: SwapBalance | '';
+  swapAmount?: string;
   title: string;
   location: string;
   province: string;
@@ -57,7 +68,7 @@ export interface ListingDraft {
   bedrooms: string;
   bathrooms: string;
   area: string;
-  type: ListingType;
+  type: ListingType | '';
   description: string;
   amenities: string[];
   imageKey: Listing['imageKey'];
@@ -80,6 +91,7 @@ export interface ListingFilters {
   condition?: ListingCondition | '';
   amenities?: string[];
   negotiableOnly?: boolean;
+  operation?: OperationFilter;
 }
 
 export interface DraftValidation {
@@ -109,6 +121,7 @@ export const defaultFilters: ListingFilters = {
   sort: 'recent',
   province: '', minPrice: '', minArea: '', maxArea: '', minBathrooms: 0,
   condition: '', amenities: [], negotiableOnly: false,
+  operation: 'offers',
 };
 
 const NEW_LISTING_MS = 7 * 24 * 60 * 60 * 1000;
@@ -119,13 +132,14 @@ export function isNewListing(createdAt: string, now = Date.now()): boolean {
 }
 
 /** One-tap presets on Explorar. Each owns a single filter, so the full sheet stays the source of truth. */
-export type Shortcut = ListingType | 'price' | 'bedrooms';
+export type Shortcut = ListingType | 'price' | 'bedrooms' | 'swap' | 'wanted';
 export const PRICE_SHORTCUT = '30000';
 export const BEDROOM_SHORTCUT = 3;
 
 export function shortcutActive(filters: ListingFilters, shortcut: Shortcut): boolean {
   if (shortcut === 'price') return filters.maxPrice.trim() === PRICE_SHORTCUT && !filters.minPrice?.trim();
   if (shortcut === 'bedrooms') return filters.minBedrooms === BEDROOM_SHORTCUT;
+  if (shortcut === 'swap' || shortcut === 'wanted') return (filters.operation ?? 'offers') === shortcut;
   return filters.type === shortcut;
 }
 
@@ -133,6 +147,7 @@ export function toggleShortcut(filters: ListingFilters, shortcut: Shortcut): Par
   const active = shortcutActive(filters, shortcut);
   if (shortcut === 'price') return active ? { maxPrice: '' } : { maxPrice: PRICE_SHORTCUT, minPrice: '' };
   if (shortcut === 'bedrooms') return { minBedrooms: active ? 0 : BEDROOM_SHORTCUT };
+  if (shortcut === 'swap' || shortcut === 'wanted') return { operation: active ? 'offers' : shortcut };
   return { type: active ? 'Todas' : shortcut };
 }
 
@@ -170,6 +185,7 @@ export function activeFilterCount(filters: ListingFilters): number {
   return [!!filters.query.trim(), filters.type !== 'Todas', !!filters.province?.trim(),
     !!(filters.minPrice?.trim() || filters.maxPrice.trim()), !!(filters.minArea?.trim() || filters.maxArea?.trim()),
     filters.minBedrooms > 0, (filters.minBathrooms ?? 0) > 0, !!filters.condition, !!filters.negotiableOnly,
+    (filters.operation ?? 'offers') !== 'offers',
   ].filter(Boolean).length + new Set((filters.amenities ?? []).map(normalizeSearch).filter(Boolean)).size;
 }
 
@@ -186,19 +202,21 @@ export function filterListings(listings: Listing[], filters: ListingFilters): Li
   const minArea = filterNumber(filters.minArea); const maxArea = filterNumber(filters.maxArea);
   const province = normalizeSearch(filters.province ?? '');
   const amenities = (filters.amenities ?? []).map(normalizeSearch).filter(Boolean);
+  const operations = operationsFor(filters.operation);
 
   return listings
+    .filter((listing) => operations.includes(listing.operation ?? 'sale'))
     .filter((listing) => listing.status === 'active')
     .filter((listing) => !listing.moderationStatus || listing.moderationStatus === 'approved')
     .filter((listing) => filters.type === 'Todas' || listing.type === filters.type)
     .filter((listing) => !hasMaxPrice || listing.price <= parsedMaxPrice)
     .filter((listing) => minPrice === undefined || listing.price >= minPrice)
-    .filter((listing) => minArea === undefined || listing.area >= minArea)
-    .filter((listing) => maxArea === undefined || listing.area <= maxArea)
+    .filter((listing) => minArea === undefined || (listing.area ?? -1) >= minArea)
+    .filter((listing) => maxArea === undefined || (listing.area ?? -1) <= maxArea)
     .filter((listing) => !province || normalizeSearch(listing.province) === province)
     .filter((listing) => !filters.condition || listing.condition === filters.condition)
     .filter((listing) => !filters.negotiableOnly || listing.priceNegotiable === true)
-    .filter((listing) => !(filters.minBathrooms && filters.minBathrooms > 0) || listing.bathrooms >= filters.minBathrooms)
+    .filter((listing) => !(filters.minBathrooms && filters.minBathrooms > 0) || (listing.bathrooms ?? -1) >= filters.minBathrooms)
     .filter((listing) => amenities.every(amenity => listing.amenities.some(value => normalizeSearch(value) === amenity)))
     .filter((listing) => listing.bedrooms >= minBedrooms)
     .filter((listing) => {
@@ -216,73 +234,55 @@ export function filterListings(listings: Listing[], filters: ListingFilters): Li
     .sort((left, right) => {
       if (filters.sort === 'price-asc') return left.price - right.price;
       if (filters.sort === 'price-desc') return right.price - left.price;
-      if (filters.sort === 'area-desc') return right.area - left.area;
+      if (filters.sort === 'area-desc') return (right.area ?? 0) - (left.area ?? 0);
       return Date.parse(right.createdAt) - Date.parse(left.createdAt);
     });
 }
 
 export function validateDraft(draft: ListingDraft): DraftValidation {
   const errors: DraftValidation['errors'] = {};
+  const operation = draft.operation ?? 'sale';
+  if (!isListingOperation(operation)) { errors.operation = 'Selecciona qué quieres publicar.'; return { ok: false, errors }; }
+  const wanted = operation === 'wanted';
   if (draft.condition !== undefined && draft.condition !== '' && !isListingCondition(draft.condition)) errors.condition = 'Selecciona un estado de vivienda válido.';
   if (draft.floor !== undefined && !isDraftFloor(draft.floor)) errors.floor = 'La planta debe ser un número entero entre 0 y 99.';
   if (draft.priceNegotiable != null && typeof draft.priceNegotiable !== 'boolean') errors.priceNegotiable = 'Indica si el precio es negociable.';
 
   validateText(draft.title, 'title', 3, 100, errors, 'El título');
-  validateText(draft.location, 'location', 2, 80, errors, 'La ubicación');
+  validateText(draft.location, 'location', 2, 80, errors, wanted ? 'La zona' : 'La ubicación');
   validateText(draft.province, 'province', 2, 80, errors, 'La provincia');
   validateText(draft.description, 'description', 20, 2000, errors, 'La descripción');
-  validateNumber(draft.price, 'price', errors, {
-    label: 'El precio',
-    min: 0,
-    max: 100_000_000,
-    exclusiveMin: true,
-  });
-  validateNumber(draft.bedrooms, 'bedrooms', errors, {
-    label: 'Los dormitorios',
-    min: 1,
-    max: 20,
-    integer: true,
-  });
-  validateNumber(draft.bathrooms, 'bathrooms', errors, {
-    label: 'Los baños',
-    min: 1,
-    max: 20,
-    integer: true,
-  });
-  validateNumber(draft.area, 'area', errors, {
-    label: 'El área',
-    min: 0,
-    max: 10_000,
-    exclusiveMin: true,
-  });
-
-  if (draft.type !== 'Casa' && draft.type !== 'Apartamento') {
-    errors.type = 'Selecciona un tipo de vivienda válido.';
+  validateNumber(draft.price, 'price', errors, { label: wanted ? 'El presupuesto máximo' : operation === 'swap' ? 'El valor estimado' : 'El precio', min: 0, max: 100_000_000, exclusiveMin: true });
+  validateNumber(draft.bedrooms, 'bedrooms', errors, { label: wanted ? 'Las habitaciones mínimas' : 'Los dormitorios', min: 1, max: 20, integer: true });
+  if (wanted) {
+    if (draft.type !== '' && draft.type !== 'Casa' && draft.type !== 'Apartamento') errors.type = 'Selecciona un tipo de vivienda válido.';
+    if (draft.mapLocation !== undefined) errors.mapLocation = 'Un anuncio de búsqueda no lleva ubicación en el mapa.';
+  } else {
+    validateNumber(draft.bathrooms, 'bathrooms', errors, { label: 'Los baños', min: 1, max: 20, integer: true });
+    validateNumber(draft.area, 'area', errors, { label: 'El área', min: 0, max: 10_000, exclusiveMin: true });
+    if (draft.type !== 'Casa' && draft.type !== 'Apartamento') errors.type = 'Selecciona un tipo de vivienda válido.';
+    if (draft.mapLocation !== undefined && !isMapLocation(draft.mapLocation)) errors.mapLocation = 'Selecciona una ubicación válida en el mapa.';
   }
-  if (!['vedado', 'interior', 'terrace'].includes(draft.imageKey)) {
-    errors.imageKey = 'Selecciona una imagen válida.';
+  if (operation === 'swap') {
+    validateText(draft.swapWants ?? '', 'swapWants', 20, 500, errors, 'Lo que buscas a cambio');
+    if (!isSwapBalance(draft.swapBalance)) errors.swapBalance = 'Indica si hay diferencia de dinero.';
+    const provinces = draft.swapProvinces ?? [];
+    if (!Array.isArray(provinces) || provinces.some((value) => !isProvince(value)) || new Set(provinces).size !== provinces.length) errors.swapProvinces = 'Elige provincias válidas, sin repetir.';
+    if (draft.swapBalance && draft.swapBalance !== 'none' && draft.swapAmount?.trim()) {
+      validateNumber(draft.swapAmount, 'swapAmount', errors, { label: 'La diferencia', min: 0, max: 100_000_000, exclusiveMin: true });
+    }
   }
+  if (!['vedado', 'interior', 'terrace'].includes(draft.imageKey)) errors.imageKey = 'Selecciona una imagen válida.';
   const amenities = normalizeAmenities(draft.amenities);
-  if (amenities.length > 20 || amenities.some((amenity) => amenity.length > 60)) {
-    errors.amenities = 'Usa hasta 20 comodidades de 60 caracteres cada una.';
-  }
-  if (draft.photos === undefined && draft.photoUri !== undefined && !isSupportedPhotoUri(draft.photoUri)) {
-    errors.photoUri = 'La foto debe ser una imagen local válida de hasta 4 MB.';
-  }
+  if (amenities.length > 20 || amenities.some((amenity) => amenity.length > 60)) errors.amenities = 'Usa hasta 20 comodidades de 60 caracteres cada una.';
+  if (draft.photos === undefined && draft.photoUri !== undefined && !isSupportedPhotoUri(draft.photoUri)) errors.photoUri = 'La foto debe ser una imagen local válida de hasta 4 MB.';
   if (draft.photos !== undefined && (
     !Array.isArray(draft.photos) || draft.photos.length > 6 ||
     draft.photos.some((photo) => !photo || typeof photo.uri !== 'string' ||
       (photo.storagePath ? !/^[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\.(?:jpe?g|png|webp)$/i.test(photo.storagePath)
         : !photo.uri.trim() || !isSupportedPhotoUri(photo.uri)))
-  )) {
-    errors.photos = 'Selecciona hasta seis fotos locales válidas de hasta 4 MB cada una.';
-  }
-  if (draft.clientRequestId !== undefined && !/^[A-Za-z0-9_-]{1,100}$/.test(draft.clientRequestId)) {
-    errors.clientRequestId = 'El identificador del borrador no es válido.';
-  }
-  if (draft.mapLocation !== undefined && !isMapLocation(draft.mapLocation)) {
-    errors.mapLocation = 'Selecciona una ubicación válida en el mapa.';
-  }
+  )) errors.photos = 'Selecciona hasta seis fotos locales válidas de hasta 4 MB cada una.';
+  if (draft.clientRequestId !== undefined && !/^[A-Za-z0-9_-]{1,100}$/.test(draft.clientRequestId)) errors.clientRequestId = 'El identificador del borrador no es válido.';
 
   return { ok: Object.keys(errors).length === 0, errors };
 }
@@ -314,12 +314,14 @@ export function updateListing(listing: Listing, draft: ListingDraft): Listing {
     throw new Error('Solo puedes editar anuncios locales.');
   }
 
-  const { photoUri: _previousPhotoUri, photos: _previousPhotos, mapLocation: _previousMapLocation, condition, floor, priceNegotiable, ...listingWithoutPhoto } = listing;
+  const { photoUri: _previousPhotoUri, photos: _previousPhotos, mapLocation: _previousMapLocation, condition, floor, priceNegotiable, operation, swap, ...listingWithoutPhoto } = listing;
   return {
     ...listingWithoutPhoto,
     ...(draft.condition === undefined && condition !== undefined ? { condition } : {}),
     ...(draft.floor === undefined && floor !== undefined ? { floor } : {}),
     ...(draft.priceNegotiable === undefined && priceNegotiable !== undefined ? { priceNegotiable } : {}),
+    ...(draft.operation === undefined && operation !== undefined ? { operation } : {}),
+    ...(draft.operation === undefined && swap !== undefined ? { swap } : {}),
     ...validatedValues(draft),
     id: listing.id,
     owner: 'local',
@@ -338,6 +340,12 @@ interface NumberRules {
   max: number;
   exclusiveMin?: boolean;
   integer?: boolean;
+}
+
+/** Which operations a catalogue request shows. Wanted ads only appear when asked for. */
+export function operationsFor(filter: OperationFilter | undefined): ListingOperation[] {
+  if (!filter || filter === 'offers') return ['sale', 'swap'];
+  return [filter];
 }
 
 /** Exported so the server payload cannot drift from the local demo filter. */
@@ -397,21 +405,26 @@ function validatedValues(
   }
 
   const photoUri = draft.photos?.[0]?.uri.trim() ?? draft.photoUri?.trim();
+  const operation = draft.operation ?? 'sale';
+  const wanted = operation === 'wanted';
+  const balance = draft.swapBalance;
+  const amount = balance && balance !== 'none' && draft.swapAmount?.trim() ? parseDecimal(draft.swapAmount) : undefined;
   return {
     title: draft.title.trim(),
     location: draft.location.trim(),
     province: draft.province.trim(),
-    ...(draft.condition ? { condition: draft.condition } : {}),
-    ...(draft.floor?.trim() ? { floor: Number(draft.floor) } : {}),
-    ...(draft.priceNegotiable != null ? { priceNegotiable: draft.priceNegotiable } : {}),
-    ...(draft.mapLocation ? { mapLocation: normalizeMapLocation(draft.mapLocation) } : {}),
+    ...(operation !== 'sale' ? { operation } : {}),
+    ...(operation === 'swap' && isSwapBalance(balance) ? { swap: { wants: (draft.swapWants ?? '').trim(), provinces: [...(draft.swapProvinces ?? [])], balance, ...(amount !== undefined ? { amount } : {}) } } : {}),
+    ...(!wanted && draft.condition ? { condition: draft.condition } : {}),
+    ...(!wanted && draft.floor?.trim() ? { floor: Number(draft.floor) } : {}),
+    ...(!wanted && draft.priceNegotiable != null ? { priceNegotiable: draft.priceNegotiable } : {}),
+    ...(!wanted && draft.mapLocation ? { mapLocation: normalizeMapLocation(draft.mapLocation) } : {}),
     price: parseDecimal(draft.price),
     bedrooms: Number(draft.bedrooms.trim()),
-    bathrooms: Number(draft.bathrooms.trim()),
-    area: parseDecimal(draft.area),
-    type: draft.type,
+    ...(!wanted ? { bathrooms: Number(draft.bathrooms.trim()), area: parseDecimal(draft.area) } : {}),
+    ...(draft.type ? { type: draft.type } : {}),
     description: draft.description.trim(),
-    amenities: normalizeAmenities(draft.amenities),
+    amenities: wanted ? [] : normalizeAmenities(draft.amenities),
     imageKey: draft.imageKey,
     ...(photoUri ? { photoUri } : {}),
     ...(draft.photos ? { photos: draft.photos.map((photo) => ({ ...photo })) } : {}),
