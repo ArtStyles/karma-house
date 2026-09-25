@@ -32,7 +32,7 @@ Edge Function `p` en `supabase/functions/p/index.ts` (Deno, sin dependencias ext
 `<html lang="es">`, sin JavaScript salvo el fallback del botón; CSS inline con la paleta de `site/style.css`.
 
 - `<title>`: título del anuncio. `<link rel="canonical">` a la propia URL.
-- `og:type=website`, `og:site_name=KarmaHouse`, `og:title`, `og:description`, `og:url`, `og:image` (primera foto firmada, si hay), `twitter:card=summary_large_image`. `og:description` = `«85.000 USD · Vedado, La Habana · 3 hab · 2 baños · 120 m²»`; el importe se formatea con separador de miles «.».
+- `og:type=website`, `og:site_name=KarmaHouse`, `og:title`, `og:description`, `og:url`, `og:image` (primera foto firmada, si hay), `twitter:card=summary_large_image`. `og:description` = `«85,000 USD · Vedado, La Habana · 3 hab · 2 baños · 120 m²»`; el importe se formatea con separador de miles «,», como en la app (`85,000`).
 - Cuerpo: cabecera con la marca y enlace al sitio; galería de todas las fotos con `<img loading="lazy">`; precio y «Negociable» si `price_negotiable`; tipo, estado (`condition` traducido con las etiquetas de `listingOptions.ts`), planta si existe, zona y provincia, hab/baños/m²; descripción con saltos de línea conservados; características (`amenities`).
 - Botón fijo inferior «Abrir en KarmaHouse» → `karmahouse://property/<id>`. Un `<script>` mínimo: al pulsarlo, si a los 1,5 s `document.visibilityState` sigue siendo `visible`, redirige a `SITE_URL`.
 - Segundo botón «Ver más viviendas» → `SITE_URL`.
