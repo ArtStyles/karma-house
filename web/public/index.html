@@ -22,7 +22,6 @@
   <div class="wrap">
     <a class="brand" href="./"><img src="karmahouse-mark.png" alt=""><span><b>Karma</b>House</span></a>
     <nav>
-      <a href="#viviendas">Viviendas</a>
       <a href="#como-funciona">Cómo funciona</a>
       <a href="#app">La app</a>
       <a href="#preguntas">Preguntas</a>
@@ -35,45 +34,21 @@
   <div class="wrap">
     <h1>Encuentra casa en Cuba. Sin intermediarios.</h1>
     <p>Anuncios revisados uno a uno, ubicación en el mapa y conversación privada con quien vende. Visitas y ofertas, todo en un mismo hilo.</p>
-    <form class="search" id="search" action="#viviendas">
-      <label>Provincia
-        <select name="province" id="province">
-          <option value="">Toda Cuba</option>
-        </select>
-      </label>
-      <label>Precio máximo (USD)
-        <input name="max" id="max" type="number" min="0" step="1000" placeholder="Sin límite" inputmode="numeric">
-      </label>
-      <button type="submit">Ver viviendas</button>
-    </form>
-    <div class="sub">
-      <span>Gratis y sin comisiones</span>
-      <span>·</span>
-      <a href="#descargar">Descargar para Android</a>
+    <div class="actions">
+      <a class="btn primary" href="#descargar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16l-6-6h4V4h4v6h4z"/><path d="M4 18h16v2H4z"/></svg>Descargar para Android</a>
+      <a class="btn ghost" href="#como-funciona">Cómo funciona</a>
     </div>
+    <p class="sub">Gratis y sin comisiones · Anuncios revisados uno a uno · Hecho en Cuba</p>
   </div>
 </section>
 
 <div class="stats">
   <div class="wrap">
-    <div><strong id="stat-count">—</strong><span>viviendas publicadas ahora mismo</span></div>
-    <div><strong>16</strong><span>provincias, de Pinar del Río a Guantánamo</span></div>
-    <div><strong>0 %</strong><span>de comisión para quien compra o vende</span></div>
+    <div><strong>100 %</strong><span>de anuncios revisados a mano</span></div>
+    <div><strong>16</strong><span>provincias de Cuba</span></div>
+    <div><strong>0 %</strong><span>de comisión al comprar o vender</span></div>
   </div>
 </div>
-
-<section id="viviendas">
-  <div class="wrap">
-    <div class="head">
-      <div>
-        <p class="eyebrow">Catálogo</p>
-        <h2 id="listings-title">Últimas viviendas publicadas</h2>
-      </div>
-      <a href="#descargar">Ver todas en la app →</a>
-    </div>
-    <div class="listings" id="listings"><p class="empty">Cargando viviendas…</p></div>
-  </div>
-</section>
 
 <section class="steps-section" id="como-funciona">
   <div class="wrap">
@@ -184,7 +159,6 @@
       <div>
         <h4>Explorar</h4>
         <ul>
-          <li><a href="#viviendas">Últimas viviendas</a></li>
           <li><a href="#como-funciona">Cómo funciona</a></li>
           <li><a href="#app">La app</a></li>
         </ul>
@@ -209,57 +183,10 @@
     </div>
     <div class="legal">
       <span>© 2026 KarmaHouse</span>
-      <span>Las fotografías de esta página son ilustrativas; las viviendas del catálogo son anuncios reales.</span>
+      <span>Las fotografías de esta página son ilustrativas y no corresponden a anuncios reales.</span>
     </div>
   </div>
 </footer>
 
-<script>
-(function () {
-  // Same public credentials the app ships with: anon can only read approved, active listings.
-  var URL_ = 'https://iuhvlpucclqbytuqflci.supabase.co';
-  var KEY = 'sb_publishable_ojbi8_h-uXOq_rkZyi7m8w_ZDm0qkzU';
-  var H = { apikey: KEY, Authorization: 'Bearer ' + KEY };
-  var PROVINCES = ['Pinar del Río', 'Artemisa', 'La Habana', 'Mayabeque', 'Matanzas', 'Villa Clara', 'Cienfuegos', 'Sancti Spíritus', 'Ciego de Ávila', 'Camagüey', 'Las Tunas', 'Holguín', 'Granma', 'Santiago de Cuba', 'Guantánamo', 'Isla de la Juventud'];
-  var sel = document.getElementById('province');
-  PROVINCES.forEach(function (p) { var o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o); });
-  var esc = function (s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
-  var money = function (n) { return String(Math.round(Number(n))).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
-  var box = document.getElementById('listings');
-
-  function load(province, max) {
-    var q = URL_ + '/rest/v1/properties?select=id,title,location,province,price,bedrooms,bathrooms,area,photo_paths&moderation=eq.approved&availability=eq.active&order=created_at.desc&limit=8';
-    if (province) q += '&province=eq.' + encodeURIComponent(province);
-    if (max) q += '&price=lte.' + encodeURIComponent(max);
-    box.innerHTML = '<p class="empty">Cargando viviendas…</p>';
-    fetch(q, { headers: H }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (rows) {
-      if (!rows.length) { box.innerHTML = '<p class="empty">Ninguna vivienda con esos filtros por ahora. Prueba otra provincia o abre la app para guardar la búsqueda.</p>'; return; }
-      var covers = rows.map(function (r) { return r.photo_paths && r.photo_paths[0]; }).filter(Boolean);
-      return fetch(URL_ + '/storage/v1/object/sign/property-photos', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, H), body: JSON.stringify({ expiresIn: 3600, paths: covers }) })
-        .then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
-        .then(function (signed) {
-          var url = {};
-          signed.forEach(function (s) { if (s.signedURL && !s.error) url[s.path] = URL_ + '/storage/v1' + s.signedURL; });
-          box.innerHTML = rows.map(function (r) {
-            var cover = r.photo_paths && url[r.photo_paths[0]];
-            return '<a class="listing" href="/p/' + r.id + '"><div class="ph">' + (cover ? '<img loading="lazy" alt="" src="' + esc(cover) + '">' : '') + '</div>'
-              + '<strong>$ ' + money(r.price) + ' USD</strong><em>' + esc(r.title) + '</em><span>' + esc(r.location) + ', ' + esc(r.province) + ' · ' + r.bedrooms + ' hab · ' + r.bathrooms + ' baños · ' + Number(r.area) + ' m²</span></a>';
-          }).join('');
-        });
-    }).catch(function () { box.innerHTML = '<p class="empty">No pudimos cargar el catálogo ahora mismo. Ábrelo en la app o vuelve a intentarlo.</p>'; });
-  }
-
-  fetch(URL_ + '/rest/v1/properties?select=id&moderation=eq.approved&availability=eq.active&limit=1', { headers: Object.assign({ Prefer: 'count=exact', Range: '0-0' }, H) })
-    .then(function (r) { var m = /\/(\d+)$/.exec(r.headers.get('content-range') || ''); if (m) document.getElementById('stat-count').textContent = m[1]; }).catch(function () {});
-  load('', '');
-  document.getElementById('search').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var p = sel.value, m = document.getElementById('max').value;
-    document.getElementById('listings-title').textContent = p || m ? 'Viviendas' + (p ? ' en ' + p : '') + (m ? ' hasta $ ' + money(m) : '') : 'Últimas viviendas publicadas';
-    load(p, m);
-    document.getElementById('viviendas').scrollIntoView({ behavior: 'smooth' });
-  });
-})();
-</script>
 </body>
 </html>
