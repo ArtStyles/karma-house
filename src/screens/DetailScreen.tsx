@@ -16,6 +16,7 @@ import { ReportConversationSheet } from '../components/messaging/ReportConversat
 import { createPropertyReportRepository, PROPERTY_REPORT_REASONS } from '../data/propertyReports';
 import { supabase } from '../lib/supabase';
 import { listingShareUrl } from '../lib/publicSite';
+import { listingOperation, operationBadge, priceLabel, shareText, swapBalanceText, typeLabel } from '../domain/operations';
 
 export default function DetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -56,6 +57,8 @@ export default function DetailScreen() {
   if (!listing) return <SafeAreaView style={styles.safe}>{!ready ? <View style={styles.loading}><ActivityIndicator color={colors.primary} size="large" /><Text style={styles.sellerText}>Cargando vivienda…</Text></View> : storageError ? <View style={styles.body}><Notice error>{storageError}</Notice><Button label="Volver a cargar" loading={refreshing} onPress={reload} /><Button label="Volver a explorar" secondary onPress={() => router.replace('/')} /></View> : <EmptyState title="Esta vivienda no está disponible" description="Vuelve al catálogo para explorar otras viviendas." action={<Button label="Volver a explorar" onPress={() => router.replace('/')} />} />}</SafeAreaView>;
   const favorite = favoriteIds.includes(listing.id);
   const own = isOwnListing(listing);
+  const operation = listingOperation(listing);
+  const wanted = operation === 'wanted';
   const photoCount = Math.min(listing.photos?.length || (listing.photoUri ? 1 : 0), 6);
   const selectedPhoto = Math.min(photoIndex, Math.max(photoCount - 1, 0));
   const moderation = listing.moderationStatus === 'draft' ? 'Borrador' : listing.moderationStatus === 'pending' ? 'En revisión' : listing.moderationStatus === 'rejected' ? 'Necesita cambios' : '';
@@ -84,11 +87,7 @@ export default function DetailScreen() {
   }
   async function share() {
     if (!listing) return;
-    const message = `${listing.title}
-${formatMoney(listing.price)} USD · ${listing.location}, ${listing.province}
-${listing.bedrooms} hab. · ${listing.bathrooms} baños · ${listing.area} m²
-
-${listingShareUrl(listing.id)}`;
+    const message = shareText(listing, listingShareUrl(listing.id));
     try { await Share.share({ title: listing.title, message, url: listingShareUrl(listing.id) }); } catch { /* Dismissed, or this browser has no share target. */ }
   }
   function openReport() {
@@ -104,10 +103,12 @@ ${listingShareUrl(listing.id)}`;
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.photoFrame}>
-        <PropertyImage listing={listing} photoIndex={selectedPhoto} style={[styles.photo, width >= 700 && styles.widePhoto]} />
+        {wanted && photoCount === 0
+          ? <View style={styles.wantedHero}><Icon name="search-outline" size={40} color={colors.primary} /><Text style={styles.wantedHeroText}>Busco vivienda</Text></View>
+          : <PropertyImage listing={listing} photoIndex={selectedPhoto} style={[styles.photo, width >= 700 && styles.widePhoto]} />}
         <View style={styles.navigation}>
           <IconButton name="chevron-back" label="Volver al catálogo" onPress={() => goBack()} style={styles.floatingButton} />
-          <View style={styles.navigationTitle}><Text style={styles.navText}>{listing.type}</Text></View>
+          <View style={styles.navigationTitle}><Text style={styles.navText}>{operationBadge(listing) || listing.type}</Text></View>
           <View style={styles.navigationActions}>
             <IconButton name="share-social-outline" label="Compartir vivienda" onPress={() => void share()} style={styles.floatingButton} />
             <IconButton name={favorite ? 'heart' : 'heart-outline'} label={favorite ? 'Quitar de favoritos' : 'Guardar en favoritos'} onPress={toggle} active={favorite} style={styles.floatingButton} />
@@ -129,21 +130,35 @@ ${listingShareUrl(listing.id)}`;
           <View style={styles.badges}>
             <View style={[styles.statusBadge, listing.status !== 'active' && styles.inactiveBadge]}>
               <View style={[styles.statusDot, listing.status !== 'active' && styles.inactiveDot]} />
-              <Text style={[styles.statusText, listing.status !== 'active' && styles.inactiveText]}>{listing.status === 'active' ? 'En venta' : listing.status === 'sold' ? 'Vendida' : 'En pausa'}</Text>
+              <Text style={[styles.statusText, listing.status !== 'active' && styles.inactiveText]}>{wanted ? listing.status === 'active' ? 'Búsqueda activa' : listing.status === 'sold' ? 'Cerrada' : 'En pausa' : listing.status === 'active' ? operation === 'swap' ? 'En permuta' : 'En venta' : listing.status === 'sold' ? 'Vendida' : 'En pausa'}</Text>
             </View>
             {mode === 'demo' ? <Text style={styles.demo}>{own ? 'Anuncio local' : 'Vivienda de muestra'}</Text> : moderation ? <Text style={styles.moderation}>{moderation}</Text> : own ? <Text style={styles.demo}>Tu anuncio</Text> : null}
           </View>
-          <Text style={styles.price}>{formatMoney(listing.price)} <Text style={styles.currency}>USD</Text></Text>
+          {operation !== 'sale' && <Text style={styles.priceLabel}>{priceLabel(listing)}</Text>}
+          <Text style={styles.price}>{wanted ? 'Hasta ' : ''}{formatMoney(listing.price)} <Text style={styles.currency}>USD</Text></Text>
           <Text accessibilityRole="header" style={styles.title}>{listing.title}</Text>
           <View style={styles.location}><Icon name="location-outline" color={colors.muted} size={17} /><Text style={styles.locationText}>{listing.location}, {listing.province}, Cuba</Text></View>
         </View>
         {own && Boolean(moderation) && <Notice>{listing.moderationStatus === 'rejected' ? listing.reviewNote || 'Revisa los detalles del anuncio antes de enviarlo de nuevo.' : listing.moderationStatus === 'pending' ? 'Tu anuncio está en revisión. Aparecerá en el catálogo cuando sea aprobado y esté en venta.' : 'Este borrador solo aparece en tu cuenta. Envíalo a revisión cuando esté listo.'}</Notice>}
         <View style={styles.features}>
-          <Feature icon="bed-outline" value={`${listing.bedrooms}`} label={listing.bedrooms === 1 ? 'Habitación' : 'Habitaciones'} />
-          <Feature icon="water-outline" value={`${listing.bathrooms}`} label={listing.bathrooms === 1 ? 'Baño' : 'Baños'} />
-          <Feature icon="expand-outline" value={`${listing.area} m²`} label="Superficie" />
+          {wanted ? <>
+            <Feature icon="bed-outline" value={`${listing.bedrooms} hab`} label="Mínimo" />
+            <Feature icon="home-outline" value={typeLabel(listing)} label="Tipo" />
+          </> : <>
+            <Feature icon="bed-outline" value={`${listing.bedrooms}`} label={listing.bedrooms === 1 ? 'Habitación' : 'Habitaciones'} />
+            <Feature icon="water-outline" value={`${listing.bathrooms}`} label={listing.bathrooms === 1 ? 'Baño' : 'Baños'} />
+            <Feature icon="expand-outline" value={`${listing.area} m²`} label="Superficie" />
+          </>}
         </View>
-        <View style={styles.section}><Text accessibilityRole="header" style={styles.sectionTitle}>Sobre esta vivienda</Text><View style={styles.group}><Text style={styles.description}>{listing.description}</Text></View></View>
+        <View style={styles.section}><Text accessibilityRole="header" style={styles.sectionTitle}>{wanted ? 'Qué busca' : 'Sobre esta vivienda'}</Text><View style={styles.group}><Text style={styles.description}>{listing.description}</Text></View></View>
+        {listing.swap && <View style={styles.section}>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>A cambio busca</Text>
+          <View style={styles.group}><Text style={styles.description}>{listing.swap.wants}</Text></View>
+          <View style={styles.amenities}>
+            <View style={styles.amenity}><Icon name="cash-outline" size={21} color={colors.primary} /><Text style={styles.amenityText}>{swapBalanceText(listing.swap)}</Text></View>
+            {listing.swap.provinces.length > 0 && <View style={styles.amenity}><Icon name="map-outline" size={21} color={colors.primary} /><Text style={styles.amenityText}>{listing.swap.provinces.join(', ')}</Text></View>}
+          </View>
+        </View>}
         {(listing.condition || listing.floor !== undefined || listing.priceNegotiable !== undefined) && <View style={styles.section}>
           <Text accessibilityRole="header" style={styles.sectionTitle}>Más detalles</Text>
           <View style={styles.amenities}>
@@ -174,7 +189,7 @@ ${listingShareUrl(listing.id)}`;
         {mode === 'cloud' && !own && <Pressable accessibilityRole="button" onPress={openReport} style={({ pressed }) => [styles.report, pressed && { opacity: .6 }]}>
           <Icon name="flag-outline" size={17} color={colors.muted} /><Text style={styles.reportText}>Reportar anuncio</Text>
         </Pressable>}
-        {mode === 'demo' && <Notice>{listing.photoUri ? 'Esta es una publicación local de prueba. La foto seleccionada se guarda en este dispositivo.' : 'Esta vivienda es ficticia. La fotografía fue generada para mostrar cómo se verá KarmaHouse.'}</Notice>}
+        {mode === 'demo' && <Notice>{own ? `Esta es una publicación local de prueba.${listing.photoUri ? ' La foto seleccionada se guarda en este dispositivo.' : ''}` : 'Esta vivienda es ficticia. La fotografía fue generada para mostrar cómo se verá KarmaHouse.'}</Notice>}
         {storageError ? <Notice error>{storageError}</Notice> : null}
         {error ? <Notice error>{error}</Notice> : null}
       </View>
@@ -183,8 +198,8 @@ ${listingShareUrl(listing.id)}`;
       <NavigationMaterial />
       {contactError ? <View style={{ paddingHorizontal: 20 }}><Notice error>{contactError}</Notice></View> : null}
       <View style={styles.actionContent}>
-        <View style={styles.barSummary}><Text style={styles.barLabel}>Precio de venta · USD</Text><Text style={styles.barPrice}>{formatMoney(listing.price)}</Text></View>
-        <Button label={own ? 'Editar anuncio' : 'Contactar'} icon={own ? 'create-outline' : 'chatbubble-outline'} loading={contactBusy} disabled={!own && (!auth.ready || (Boolean(auth.user) && !messaging.ready))} onPress={() => own ? router.push(`/edit/${listing.id}`) : void contactSeller()} style={styles.contactButton} />
+        <View style={styles.barSummary}><Text style={styles.barLabel}>{wanted ? 'Presupuesto máximo · USD' : operation === 'swap' ? 'Valor estimado · USD' : 'Precio de venta · USD'}</Text><Text style={styles.barPrice}>{formatMoney(listing.price)}</Text></View>
+        <Button label={own ? 'Editar anuncio' : wanted ? 'Tengo algo que encaja' : 'Contactar'} icon={own ? 'create-outline' : 'chatbubble-outline'} loading={contactBusy} disabled={!own && (!auth.ready || (Boolean(auth.user) && !messaging.ready))} onPress={() => own ? router.push(`/edit/${listing.id}`) : void contactSeller()} style={styles.contactButton} />
       </View>
     </SafeAreaView>
     <ReportConversationSheet visible={report} onClose={() => setReport(false)} onReport={sendReport} reasons={PROPERTY_REPORT_REASONS} title="Reportar anuncio"
@@ -208,13 +223,13 @@ function Feature({ icon, value, label }: { icon: IconName; value: string; label:
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: 860, alignSelf: 'center' },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 15 },
-  photoFrame: { borderBottomLeftRadius: 32, borderBottomRightRadius: 32, overflow: 'hidden', backgroundColor: colors.border }, photo: { height: 340, width: '100%' }, widePhoto: { height: 430 },
+  photoFrame: { borderBottomLeftRadius: 32, borderBottomRightRadius: 32, overflow: 'hidden', backgroundColor: colors.border }, photo: { height: 340, width: '100%' }, wantedHero: { height: 200, paddingTop: 40, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center', gap: 8 }, wantedHeroText: { color: colors.primary, fontSize: 16, fontWeight: '600' }, widePhoto: { height: 430 },
   photoControls: { position: 'absolute', bottom: 18, left: 20, right: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, photoCount: { backgroundColor: '#00000080', color: colors.white, fontSize: 13, fontWeight: '600', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16 },
   thumbnails: { gap: 10 }, thumbnail: { width: 76, height: 60, borderRadius: 13, borderWidth: 2, borderColor: 'transparent', padding: 2, overflow: 'hidden' }, thumbnailSelected: { borderColor: colors.primary }, thumbnailImage: { width: '100%', height: '100%', borderRadius: 8 }, moderation: { color: colors.amber, fontSize: 12, fontWeight: '600' },
   navigation: { position: 'absolute', top: 16, left: 20, right: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, floatingButton: { backgroundColor: '#FFFFFFF5' }, navigationActions: { flexDirection: 'row', gap: 10 }, navigationTitle: { backgroundColor: '#FFFFFFF5', borderRadius: 22, paddingVertical: 11, paddingHorizontal: 17, flexShrink: 1 }, navText: { color: colors.ink, fontSize: 14, fontWeight: '600', textAlign: 'center' },
   body: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 28, gap: 24 }, summary: { gap: 9 },
   badges: { flexDirection: 'row', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 4 }, statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.softGreen, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 14 }, statusDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.green }, statusText: { fontSize: 12, fontWeight: '600', color: colors.green }, inactiveBadge: { backgroundColor: '#FFF3DA' }, inactiveDot: { backgroundColor: colors.amber }, inactiveText: { color: colors.amber }, demo: { fontSize: 12, color: colors.muted },
-  price: { color: colors.ink, fontSize: 34, fontWeight: '700', letterSpacing: -1.1 }, currency: { color: colors.muted, fontSize: 15, fontWeight: '500', letterSpacing: 0 }, title: { fontFamily: typefaces.display, color: colors.ink, fontWeight: '600', fontSize: 24, lineHeight: 30, letterSpacing: -.6 }, location: { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginTop: 1 }, locationText: { color: colors.muted, fontSize: 14, lineHeight: 20, flex: 1 },
+  priceLabel: { color: colors.muted, fontSize: 13, fontWeight: '600' }, price: { color: colors.ink, fontSize: 34, fontWeight: '700', letterSpacing: -1.1 }, currency: { color: colors.muted, fontSize: 15, fontWeight: '500', letterSpacing: 0 }, title: { fontFamily: typefaces.display, color: colors.ink, fontWeight: '600', fontSize: 24, lineHeight: 30, letterSpacing: -.6 }, location: { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginTop: 1 }, locationText: { color: colors.muted, fontSize: 14, lineHeight: 20, flex: 1 },
   features: { flexDirection: 'row', flexWrap: 'wrap', backgroundColor: colors.white, borderRadius: 24, paddingVertical: 20, paddingHorizontal: 10, rowGap: 18 }, feature: { flex: 1, minWidth: 95, alignItems: 'center', gap: 8, paddingHorizontal: 4 }, featureValue: { fontSize: 20, fontWeight: '600', color: colors.ink, letterSpacing: -.4, textAlign: 'center' }, featureLabel: { fontSize: 12, color: colors.muted, textAlign: 'center' },
   section: { gap: 12 }, sectionTitle: { fontSize: 17, fontWeight: '600', color: colors.ink, letterSpacing: -.2, paddingHorizontal: 2 }, group: { backgroundColor: colors.white, borderRadius: 24, padding: 20 }, description: { color: colors.ink, lineHeight: 25, fontSize: 16 },
   mapHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, mapPrecision: { color: colors.primary, fontSize: 12, fontWeight: '600', backgroundColor: colors.softBlue, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }, mapFrame: { borderRadius: 24, overflow: 'hidden' }, mapDescription: { fontSize: 13, lineHeight: 20, color: colors.muted, paddingHorizontal: 2 },
