@@ -1,6 +1,7 @@
 // tests/operations.test.ts
 // @ts-nocheck -- Pure domain modules run directly in Node.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { validateDraft, createListing, updateListing, filterListings, activeFilterCount, shortcutActive, toggleShortcut, defaultFilters } from '../src/domain/listings.ts';
 import { isListingOperation, isSwapBalance, OPERATIONS, SWAP_BALANCES } from '../src/domain/listingOptions.ts';
@@ -117,7 +118,9 @@ test('the search payload sends the operations the filter stands for', () => {
   assert.deepEqual(searchPayload({ ...defaultFilters, operation: 'wanted' }, null, true).operations, ['wanted']);
 });
 
-import { PROPERTY_COLUMNS } from '../src/data/supabaseMarketplace.ts';
 test('every explicit property select carries the operation columns', () => {
-  for (const column of ['operation', 'swap_wants', 'swap_provinces', 'swap_balance', 'swap_amount']) assert.ok(PROPERTY_COLUMNS.split(',').includes(column), column);
+  // supabaseMarketplace.ts pulls React Native in, so read the column list from the source text.
+  const source = readFileSync(new URL('../src/data/supabaseMarketplace.ts', import.meta.url), 'utf8');
+  const columns = /PROPERTY_COLUMNS = '([^']+)'/.exec(source)![1].split(',');
+  for (const column of ['operation', 'swap_wants', 'swap_provinces', 'swap_balance', 'swap_amount']) assert.ok(columns.includes(column), column);
 });
