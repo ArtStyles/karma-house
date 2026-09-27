@@ -7,7 +7,7 @@ import { AccountPrompt } from '../components/AccountPrompt';
 import { PropertyImage } from '../components/PropertyImage';
 import { Button, EmptyState, Icon, Notice, PageTitle } from '../components/ui';
 import { listingBoardState, type Listing, type ListingBoardState, type ListingStatus } from '../domain/listings';
-import { operationBadge } from '../domain/operations';
+import { listingOperation, operationBadge } from '../domain/operations';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { remoteErrorMessage } from '../state/remoteMarketplaceStore';
 import { colors, formatMoney } from '../theme';
@@ -77,7 +77,9 @@ export default function MyListingsScreen() {
           const tone = boardTones[state];
           return <View key={item.id} style={styles.card}>
           <Pressable accessibilityRole="button" accessibilityLabel={`${item.title}. ${boardLabels[state]}. ${formatMoney(item.price)} USD. ${item.location}.`} onPress={() => router.push(`/property/${item.id}`)} style={({ pressed }) => [styles.overview, pressed && styles.pressed]}>
-            <PropertyImage listing={item} style={styles.image} />
+            {listingOperation(item) === 'wanted'
+              ? <View style={[styles.image, styles.wantedImage]}><Icon name="search-outline" size={28} color={colors.primary} /></View>
+              : <PropertyImage listing={item} style={styles.image} />}
             <View style={styles.details}>
               <View style={[styles.chip, { backgroundColor: tone.background }]}>
                 <View style={[styles.statusDot, { backgroundColor: tone.color }]} />
@@ -85,7 +87,7 @@ export default function MyListingsScreen() {
               </View>
               {!!operationBadge(item) && <Text style={styles.operation}>{operationBadge(item)}</Text>}
               <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
-              <Text style={styles.price}>{formatMoney(item.price)} <Text style={styles.currency}>USD</Text></Text>
+              <Text style={styles.price}>{listingOperation(item) === 'wanted' ? 'Hasta ' : ''}{formatMoney(item.price)} <Text style={styles.currency}>USD</Text></Text>
               <Text style={styles.location} numberOfLines={1}>{item.location}</Text>
             </View>
             <Icon name="chevron-forward" size={16} color={colors.muted} />
@@ -138,6 +140,7 @@ const styles = StyleSheet.create({
   overview: { flexDirection: 'row', gap: 13, alignItems: 'center', borderRadius: 12 },
   pressed: { opacity: .65 },
   image: { width: 92, height: 114, borderRadius: 14 },
+  wantedImage: { backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
   details: { flex: 1, gap: 6 },
   chip: { alignSelf: 'flex-start', flexDirection: 'row', gap: 6, alignItems: 'center', paddingVertical: 5, paddingHorizontal: 9, borderRadius: 12 },
   statusDot: { width: 5, height: 5, borderRadius: 3 },

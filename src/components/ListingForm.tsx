@@ -303,8 +303,8 @@ export function ListingForm({
                 {!initialDraft ? <Button label="Cambiar" secondary disabled={submitting || photoBusy} onPress={() => { setChosen(false); changeField('operation', undefined); }} /> : null}
               </View>
               <SectionHeading
-                title="Sobre la vivienda"
-                description="Una ubicación clara ayuda a encontrar tu vivienda. Los campos con * son obligatorios."
+                title={wanted ? 'Lo que buscas' : 'Sobre la vivienda'}
+                description={wanted ? 'Cuenta dónde y qué tipo de vivienda quieres.' : 'Una ubicación clara ayuda a encontrar tu vivienda. Los campos con * son obligatorios.'}
               />
               <View style={styles.fieldCard}>
                 <Field
@@ -448,7 +448,7 @@ export function ListingForm({
                 <Field
                   label="Descripción"
                   required
-                  placeholder="Cuenta cómo se distribuyen los espacios, su iluminación y ventilación, el suministro de agua y las reformas realizadas."
+                  placeholder={wanted ? 'Ej. Busco apartamento con balcón, planta baja o con ascensor, cerca del mar.' : 'Cuenta cómo se distribuyen los espacios, su iluminación y ventilación, el suministro de agua y las reformas realizadas.'}
                   value={draft.description}
                   onChangeText={(value) => changeField('description', value)}
                   error={errors.description}
@@ -457,7 +457,7 @@ export function ListingForm({
                   textAlignVertical="top"
                   inputStyle={styles.descriptionInput}
                 />
-                <View style={styles.descriptionHelp}><Icon name="bulb-outline" size={18} color={colors.primary} /><Text style={styles.fieldHint}>Incluye detalles que no se vean en las fotos. Evita repetir el precio o publicar datos personales.</Text></View>
+                <View style={styles.descriptionHelp}><Icon name="bulb-outline" size={18} color={colors.primary} /><Text style={styles.fieldHint}>{wanted ? 'Evita publicar datos personales.' : 'Incluye detalles que no se vean en las fotos. Evita repetir el precio o publicar datos personales.'}</Text></View>
                 <Text style={styles.characterCount}>{draft.description.length}/2000 caracteres</Text>
               </View>
 

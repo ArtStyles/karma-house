@@ -47,7 +47,7 @@ export function PropertyCard({ listing, horizontal = false }: { listing: Listing
         <Text numberOfLines={1} style={styles.title}>{listing.title}</Text>
         <Text numberOfLines={1} style={styles.meta}>{place}</Text>
         <Text numberOfLines={1} style={styles.meta}>{facts}</Text>
-        {horizontal && <View style={styles.detailsLink}><Text style={styles.detailsText}>Conoce esta vivienda</Text><Icon name="arrow-forward" size={17} color={colors.primary} /></View>}
+        {horizontal && <View style={styles.detailsLink}><Text style={styles.detailsText}>{listing.operation === 'wanted' ? 'Ver esta búsqueda' : 'Conoce esta vivienda'}</Text><Icon name="arrow-forward" size={17} color={colors.primary} /></View>}
       </View>
     </Pressable>
     <IconButton name={favorite ? 'heart' : 'heart-outline'} label={`${favorite ? 'Quitar de' : 'Guardar en'} favoritos: ${listing.title}`} onPress={toggle} active={favorite} style={styles.heart} />
