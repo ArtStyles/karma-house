@@ -7,16 +7,21 @@ export interface PublicListingRow {
   title: string;
   location: string;
   province: string;
-  type: string;
+  type: string | null;
   description: string;
   price: number | string;
-  area: number | string;
+  area: number | string | null;
   bedrooms: number;
-  bathrooms: number;
+  bathrooms: number | null;
   amenities: string[] | null;
   condition: string | null;
   floor: number | null;
   price_negotiable: boolean | null;
+  operation?: 'sale' | 'swap' | 'wanted' | null;
+  swap_wants?: string | null;
+  swap_provinces?: string[] | null;
+  swap_balance?: 'none' | 'pay' | 'receive' | null;
+  swap_amount?: number | string | null;
 }
 
 const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -30,7 +35,18 @@ export function formatPrice(value: number | string): string {
 }
 
 export function describeListing(row: PublicListingRow): string {
-  return `${formatPrice(row.price)} USD · ${row.location}, ${row.province} · ${row.bedrooms} hab · ${row.bathrooms} baños · ${Number(row.area)} m²`;
+  const op = row.operation ?? 'sale';
+  const place = `${row.location}, ${row.province}`;
+  if (op === 'wanted') return `Hasta ${formatPrice(row.price)} USD · ${place} · desde ${row.bedrooms} hab · ${row.type ?? 'Casa o apartamento'}`;
+  const price = op === 'swap' ? `Valor est. ${formatPrice(row.price)} USD` : `${formatPrice(row.price)} USD`;
+  return `${price} · ${place} · ${row.bedrooms} hab · ${row.bathrooms} baños · ${Number(row.area)} m²`;
+}
+
+function balanceText(row: PublicListingRow): string {
+  const amount = row.swap_amount ? formatPrice(row.swap_amount) : '';
+  if (row.swap_balance === 'pay') return amount ? `Añade hasta $ ${amount}` : 'Añade dinero';
+  if (row.swap_balance === 'receive') return amount ? `Pide $ ${amount}` : 'Pide dinero';
+  return 'Sin diferencia';
 }
 
 const CONDITION_LABELS: Record<string, string> = { new: 'Nuevo', good: 'Buen estado', 'needs-renovation': 'A reformar' };
@@ -43,6 +59,7 @@ main{max-width:760px;margin:0 auto;padding:16px 16px 120px}
 header{display:flex;align-items:center;gap:10px;margin-bottom:16px}header a{color:var(--ink);text-decoration:none;font-size:20px}header b{font-weight:700}
 .gallery{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;border-radius:20px}
 .gallery img{flex:0 0 100%;width:100%;aspect-ratio:4/3;object-fit:cover;scroll-snap-align:start;border-radius:20px;background:var(--border)}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary);margin:16px 0 0}
 h1{font-size:28px;line-height:1.2;margin:16px 0 4px;letter-spacing:-0.02em}
 .price{font-size:26px;font-weight:700;margin:0}.price small{font-size:14px;font-weight:400;color:var(--muted)}
 .muted{color:var(--muted);font-size:14px}
@@ -77,7 +94,9 @@ function header(siteUrl: string): string {
 }
 
 export function renderListing(row: PublicListingRow, photoUrls: string[], siteUrl: string, selfUrl: string): string {
-  const title = escapeHtml(row.title);
+  const op = row.operation ?? 'sale';
+  const title = escapeHtml(op === 'sale' ? row.title : `${op === 'swap' ? 'Permuta' : 'Busco'}: ${row.title}`);
+  const place = `${row.location}, ${row.province}`;
   const description = escapeHtml(describeListing(row));
   const site = escapeHtml(siteUrl);
   const self = escapeHtml(selfUrl);
@@ -95,31 +114,43 @@ export function renderListing(row: PublicListingRow, photoUrls: string[], siteUr
   const gallery = photoUrls.length
     ? `<div class="gallery">${photoUrls.map((url) => `<img loading="lazy" alt="" src="${escapeHtml(url)}">`).join('')}</div>`
     : '';
-  const details: [string, string][] = [
-    ['Tipo', row.type],
+  const details: [string, string][] = op === 'wanted' ? [
+    ['Tipo', row.type ?? 'Casa o apartamento'],
+    ['Zona', place],
+    ['Habitaciones mínimas', String(row.bedrooms)],
+  ] : [
+    ['Tipo', row.type ?? ''],
     ...(row.condition && CONDITION_LABELS[row.condition] ? [['Estado', CONDITION_LABELS[row.condition]] as [string, string]] : []),
     ...(row.floor !== null && row.floor !== undefined ? [['Planta', `Planta ${row.floor}`] as [string, string]] : []),
-    ['Zona', `${row.location}, ${row.province}`],
+    ['Zona', place],
     ['Habitaciones', String(row.bedrooms)],
     ['Baños', String(row.bathrooms)],
     ['Superficie', `${Number(row.area)} m²`],
   ];
-  const amenities = row.amenities?.length
+  const amenities = op !== 'wanted' && row.amenities?.length
     ? `<section class="card"><h2>Características</h2><ul>${row.amenities.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul></section>`
     : '';
   const about = row.description.trim()
     ? `<section class="card"><h2>Descripción</h2><p>${escapeHtml(row.description.trim()).replace(/\r?\n/g, '<br>')}</p></section>`
     : '';
+  const swap = op === 'swap'
+    ? `<section class="card"><h2>A cambio busca</h2><p>${escapeHtml((row.swap_wants ?? '').trim()).replace(/\r?\n/g, '<br>')}</p><dl><dt>Diferencia</dt><dd>${escapeHtml(balanceText(row))}</dd>${row.swap_provinces?.length ? `<dt>Provincias</dt><dd>${escapeHtml(row.swap_provinces.join(', '))}</dd>` : ''}</dl></section>`
+    : '';
+  const price = op === 'wanted'
+    ? `Hasta $ ${formatPrice(row.price)}`
+    : `$ ${formatPrice(row.price)} <small>USD${op === 'swap' ? ' · valor estimado' : ''}${row.price_negotiable ? ' · Negociable' : ''}</small>`;
   const body = `${header(siteUrl)}
 ${gallery}
-<h1>${title}</h1>
-<p class="price">$ ${formatPrice(row.price)} <small>USD${row.price_negotiable ? ' · Negociable' : ''}</small></p>
+${op === 'sale' ? '' : `<p class="eyebrow">${op === 'swap' ? 'Permuta' : 'Busco'}</p>
+`}<h1>${escapeHtml(row.title)}</h1>
+<p class="price">${price}</p>
 <p class="muted">${escapeHtml(row.location)}, ${escapeHtml(row.province)}</p>
 <section class="card"><dl>${details.map(([label, value]) => `<dt>${label}</dt><dd>${escapeHtml(value)}</dd>`).join('')}</dl></section>
 ${about}
+${swap}
 ${amenities}
-<p class="muted">Para contactar con quien publica, guardar la vivienda o verla en el mapa, ábrela en KarmaHouse.</p>
-<nav class="bar"><a class="open" id="open" href="${deepLink}">Abrir en KarmaHouse</a><a class="more" id="more" href="${site}">Ver más viviendas</a></nav>
+<p class="muted">${op === 'wanted' ? 'Para responder a esta búsqueda, ábrela en KarmaHouse.' : 'Para contactar con quien publica, guardar la vivienda o verla en el mapa, ábrela en KarmaHouse.'}</p>
+<nav class="bar"><a class="open" id="open" href="${deepLink}">${op === 'wanted' ? 'Tengo algo que encaja' : 'Abrir en KarmaHouse'}</a><a class="more" id="more" href="${site}">Ver más viviendas</a></nav>
 <script>
 document.getElementById('open').addEventListener('click',function(){setTimeout(function(){if(document.visibilityState==='visible')location.href=document.getElementById('more').href},1500)});
 </script>`;
@@ -136,7 +167,7 @@ export function renderUnavailable(siteUrl: string): string {
 
 export const SITE_URL = 'https://artstyles.github.io/karma-house/';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const COLUMNS = 'id,title,location,province,type,description,price,area,bedrooms,bathrooms,amenities,photo_paths,condition,floor,price_negotiable';
+const COLUMNS = 'id,title,location,province,type,description,price,area,bedrooms,bathrooms,amenities,photo_paths,condition,floor,price_negotiable,operation,swap_wants,swap_provinces,swap_balance,swap_amount';
 const HTML = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' };
 
 export interface Env { supabaseUrl: string; anonKey: string; publicOrigin: string }

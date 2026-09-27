@@ -146,3 +146,18 @@ test('handle answers 503 when the REST call fails and 405 for other methods', as
   const post = await handle(new Request(`https://karmahouse.vercel.app/api/p?id=${row.id}`, { method: 'POST' }), env, fakeFetch({ status: 200, body: [dbRow] }).fetch);
   assert.equal(post.status, 405);
 });
+
+test('the public page labels swaps and wanted ads', () => {
+  const swapRow = { ...row, operation: 'swap' as const, swap_wants: 'Apartamento en Playa con dos habitaciones.', swap_provinces: ['La Habana'], swap_balance: 'pay' as const, swap_amount: '5000' };
+  const swapHtml = renderListing(swapRow, photos, site, self);
+  assert.ok(swapHtml.includes('<title>Permuta: Casa en el Vedado &lt;script&gt;alert(1)&lt;/script&gt;</title>'));
+  assert.ok(swapHtml.includes('<meta property="og:description" content="Valor est. 85,000 USD · Vedado, La Habana · 3 hab · 2 baños · 120.5 m²">'));
+  assert.ok(swapHtml.includes('<h2>A cambio busca</h2>') && swapHtml.includes('Apartamento en Playa con dos habitaciones.') && swapHtml.includes('Añade hasta $ 5,000') && swapHtml.includes('<dd>La Habana</dd>'));
+  const wantedRow = { ...row, operation: 'wanted' as const, type: null, area: null, bathrooms: null, description: 'Busco con balcón, planta baja o ascensor.' };
+  const wantedHtml = renderListing(wantedRow, [], site, self);
+  assert.ok(wantedHtml.includes('<title>Busco: Casa en el Vedado &lt;script&gt;alert(1)&lt;/script&gt;</title>'));
+  assert.ok(wantedHtml.includes('<meta property="og:description" content="Hasta 85,000 USD · Vedado, La Habana · desde 3 hab · Casa o apartamento">'));
+  assert.ok(!wantedHtml.includes('Superficie') && !wantedHtml.includes('Baños') && !wantedHtml.includes('og:image'));
+  assert.ok(wantedHtml.includes('Tengo algo que encaja'));
+  assert.ok(wantedHtml.includes('<dt>Habitaciones mínimas</dt><dd>3</dd>'));
+});
