@@ -10,7 +10,7 @@ export { propertyPayload } from './propertyPayload';
 const BUCKET = 'property-photos';
 // Signed URLs are renewed by the provider while the app is foregrounded.
 const PHOTO_URL_SECONDS = 3600;
-export const PROPERTY_COLUMNS = 'id,owner_id,client_request_id,title,location,province,latitude,longitude,location_precision,condition,floor,price_negotiable,price,bedrooms,bathrooms,area,type,description,amenities,photo_paths,availability,moderation,review_note,version,created_at';
+export const PROPERTY_COLUMNS = 'id,owner_id,client_request_id,title,location,province,latitude,longitude,location_precision,condition,floor,price_negotiable,price,bedrooms,bathrooms,area,type,description,amenities,photo_paths,availability,moderation,review_note,version,created_at,operation,swap_wants,swap_provinces,swap_balance,swap_amount';
 
 /** Signs the storage paths a batch of rows needs and maps them to listings. */
 export type SignRows = (rows: RemotePropertyRow[], checkpoint: () => void, photos?: 'cover' | 'all') => Promise<Listing[]>;

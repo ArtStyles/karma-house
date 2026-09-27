@@ -116,3 +116,8 @@ test('the search payload sends the operations the filter stands for', () => {
   assert.deepEqual(searchPayload(defaultFilters, null, true).operations, ['sale', 'swap']);
   assert.deepEqual(searchPayload({ ...defaultFilters, operation: 'wanted' }, null, true).operations, ['wanted']);
 });
+
+import { PROPERTY_COLUMNS } from '../src/data/supabaseMarketplace.ts';
+test('every explicit property select carries the operation columns', () => {
+  for (const column of ['operation', 'swap_wants', 'swap_provinces', 'swap_balance', 'swap_amount']) assert.ok(PROPERTY_COLUMNS.split(',').includes(column), column);
+});
