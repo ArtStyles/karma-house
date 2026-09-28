@@ -55,7 +55,7 @@ update ops_context set sale_id=(public.kh_save_property('{
  "clientRequestId":"ops-sale","title":"Casa en venta","location":"Vedado","province":"La Habana","type":"Casa",
  "description":"Casa amplia con patio y garaje, lista para entrar.","price":90000,"area":100,"bedrooms":2,"bathrooms":1,"photoPaths":[],"moderation":"draft"}')->>'id')::uuid;
 select pg_temp.ops_assert((select operation='sale' from public.properties where id=(select sale_id from ops_context)),'no operation means a sale');
-select pg_temp.ops_error($q$select public.kh_save_property('{"clientRequestId":"ops-rent","title":"Casa","location":"Vedado","province":"La Habana","type":"Casa","description":"Casa amplia con patio y garaje, lista para entrar.","price":90000,"area":100,"bedrooms":2,"bathrooms":1,"photoPaths":[],"operation":"rent"}')$q$,'KH_INVALID_OPERATION');
+select pg_temp.ops_error($q$select public.kh_save_property('{"clientRequestId":"ops-lease","title":"Casa","location":"Vedado","province":"La Habana","type":"Casa","description":"Casa amplia con patio y garaje, lista para entrar.","price":90000,"area":100,"bedrooms":2,"bathrooms":1,"photoPaths":[],"operation":"lease"}')$q$,'KH_INVALID_OPERATION');
 -- The operation cannot change on edit.
 select pg_temp.ops_error((select format($q$select public.kh_save_property('{"id":"%s","expectedVersion":1,"clientRequestId":"ops-swap","title":"Casa para permutar","location":"Vedado","province":"La Habana","type":"Casa","description":"Casa amplia con patio, la cambio por apartamento.","price":80000,"area":120,"bedrooms":3,"bathrooms":2,"photoPaths":["26000000-0000-4000-8000-000000000001/ops-swap/photo.jpg"],"operation":"sale"}')$q$, swap_id) from ops_context),'KH_OPERATION_LOCKED');
 
@@ -72,6 +72,6 @@ select pg_temp.ops_assert((select not exists (select 1 from ops_results, jsonb_a
   'without operations the catalogue shows offers and hides wanted ads');
 select pg_temp.ops_assert((select bool_or(row->>'id'=(select wanted_id::text from ops_context)) and bool_and(row->>'operation'='wanted') from ops_results, jsonb_array_elements(r->'rows') row where name='wanted'),'operations=[wanted] returns the wanted ad and only wanted ads');
 select pg_temp.ops_assert((select bool_or(row->>'id'=(select swap_id::text from ops_context)) and bool_and(row->>'operation'='swap') from ops_results, jsonb_array_elements(r->'rows') row where name='swap'),'operations=[swap] returns the swap and only swaps');
-select pg_temp.ops_error($q$select public.kh_search_properties('{"operations":["rent"]}')$q$,'KH_INVALID_OPERATION');
+select pg_temp.ops_error($q$select public.kh_search_properties('{"operations":["lease"]}')$q$,'KH_INVALID_OPERATION');
 select pg_temp.ops_assert((select (public.kh_map_clusters('{"west":-180,"south":-90,"east":180,"north":90,"zoom":3,"operations":["wanted"]}')->'items') = '[]'::jsonb),'a wanted ad never lands on the map');
 rollback;
