@@ -1,6 +1,6 @@
 import type { ListingDraft } from './listings.ts';
 import { isMapLocation, normalizeMapLocation } from './geo.ts';
-import { isDraftFloor, isListingCondition, isListingOperation, isProvince, isSwapBalance } from './listingOptions.ts';
+import { isDraftFloor, isListingCondition, isListingOperation, isProvince, isRentPeriod, isSwapBalance, isWantedOperations } from './listingOptions.ts';
 
 export function restoreDraft(raw: string | null, fallback: ListingDraft): ListingDraft {
   if (!raw) return fallback;
@@ -20,6 +20,9 @@ export function restoreDraft(raw: string | null, fallback: ListingDraft): Listin
       || (value.swapAmount !== undefined && typeof value.swapAmount !== 'string')
       || (value.swapBalance !== undefined && value.swapBalance !== '' && !isSwapBalance(value.swapBalance))
       || (value.swapProvinces !== undefined && (!Array.isArray(value.swapProvinces) || !value.swapProvinces.every(isProvince)))
+      || (value.rentPeriod !== undefined && value.rentPeriod !== '' && !isRentPeriod(value.rentPeriod))
+      || (value.rentMinStay !== undefined && typeof value.rentMinStay !== 'string')
+      || (value.wantedOperations !== undefined && !isWantedOperations(value.wantedOperations))
       || (value.photos !== undefined && (!Array.isArray(value.photos) || value.photos.length > 6 || !value.photos.every((photo: { uri?: unknown; storagePath?: unknown; uploadId?: unknown }) => photo && typeof photo.uri === 'string'
         && (photo.storagePath === undefined || typeof photo.storagePath === 'string') && (photo.uploadId === undefined || typeof photo.uploadId === 'string'))))
       || (value.clientRequestId !== undefined && !/^[A-Za-z0-9_-]{1,100}$/.test(value.clientRequestId))

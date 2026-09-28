@@ -1,6 +1,6 @@
-import type { Listing, ListingOperation, ListingStatus, ListingType, ModerationStatus, SwapBalance } from '../domain/listings.ts';
+import type { Listing, ListingOperation, ListingStatus, ListingType, ModerationStatus, RentPeriod, SwapBalance } from '../domain/listings.ts';
 import { isMapLocation, normalizeMapLocation } from '../domain/geo.ts';
-import { isListingCondition, isListingOperation, isProvince, isSwapBalance, type ListingCondition } from '../domain/listingOptions.ts';
+import { isListingCondition, isListingOperation, isProvince, isRentMinStay, isRentPeriod, isSwapBalance, isWantedOperations, type ListingCondition } from '../domain/listingOptions.ts';
 
 export interface RemotePropertyRow {
   id: string;
@@ -25,6 +25,9 @@ export interface RemotePropertyRow {
   swap_provinces?: string[] | null;
   swap_balance?: SwapBalance | null;
   swap_amount?: number | string | null;
+  rent_period?: RentPeriod | null;
+  rent_min_stay?: number | null;
+  wanted_operations?: ListingOperation[] | null;
   description: string;
   amenities: string[];
   photo_paths: string[];
@@ -56,6 +59,10 @@ export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap
         || (row.swap_provinces != null && (!Array.isArray(row.swap_provinces) || !row.swap_provinces.every(isProvince)))
         || (row.swap_amount != null && !(Number(row.swap_amount) > 0))
       : row.swap_wants != null || row.swap_balance != null) ||
+    (operation === 'rent'
+      ? !isRentPeriod(row.rent_period) || (row.rent_min_stay != null && !isRentMinStay(row.rent_min_stay))
+      : row.rent_period != null || row.rent_min_stay != null) ||
+    (operation === 'wanted' && row.wanted_operations != null && !isWantedOperations(row.wanted_operations)) ||
     !Number.isFinite(Date.parse(row.created_at)) ||
     !['active', 'paused', 'sold'].includes(row.availability) ||
     !['draft', 'pending', 'approved', 'rejected'].includes(row.moderation) ||
@@ -84,6 +91,9 @@ export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap
     ...(row.type ? { type: row.type } : {}),
     ...(operation !== 'sale' ? { operation } : {}),
     ...(operation === 'swap' ? { swap: { wants: row.swap_wants as string, provinces: [...(row.swap_provinces ?? [])], balance: row.swap_balance as SwapBalance, ...(row.swap_amount != null ? { amount: Number(row.swap_amount) } : {}) } } : {}),
+    ...(operation === 'rent' ? { rent: { period: row.rent_period as RentPeriod, ...(row.rent_min_stay != null ? { minStay: row.rent_min_stay } : {}) } } : {}),
+    // Rows read before the column existed stand for the server default.
+    ...(operation === 'wanted' ? { wantedOperations: [...(row.wanted_operations ?? ['sale', 'swap'])] } : {}),
     description: row.description, amenities: [...row.amenities], imageKey: 'vedado',
     photos: mapped, ...(mapped[0]?.uri ? { photoUri: mapped[0].uri } : {}),
     status: row.availability, moderationStatus: row.moderation,

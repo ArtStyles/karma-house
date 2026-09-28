@@ -13,6 +13,9 @@ export function propertyPayload(draft: ListingDraft, ownerId: string, photoPaths
       swapWants: (draft.swapWants ?? '').trim(), swapProvinces: [...(draft.swapProvinces ?? [])], swapBalance: balance,
       swapAmount: balance && balance !== 'none' && draft.swapAmount?.trim() ? parseDecimal(draft.swapAmount) : null,
     } : {}),
+    ...(operation === 'rent' ? { rentPeriod: draft.rentPeriod || null, rentMinStay: draft.rentMinStay?.trim() ? Number(draft.rentMinStay) : null } : {}),
+    // Left out, the server keeps the saved list on an edit or defaults to buying or swapping.
+    ...(wanted && draft.wantedOperations ? { wantedOperations: [...draft.wantedOperations] } : {}),
     ...(!wanted && draft.condition !== undefined ? { condition: draft.condition || null } : {}),
     ...(!wanted && draft.floor !== undefined ? { floor: draft.floor.trim() ? Number(draft.floor) : null } : {}),
     ...(!wanted && draft.priceNegotiable !== undefined ? { priceNegotiable: draft.priceNegotiable } : {}),

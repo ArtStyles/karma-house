@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { validateDraft, createListing, updateListing, filterListings, activeFilterCount, shortcutActive, toggleShortcut, defaultFilters } from '../src/domain/listings.ts';
-import { isListingOperation, isSwapBalance, OPERATIONS, SWAP_BALANCES } from '../src/domain/listingOptions.ts';
-import { listingOperation, operationBadge, priceLabel, listingFacts, swapBalanceText, shareText, operationsFor } from '../src/domain/operations.ts';
+import { isListingOperation, isSwapBalance, isRentPeriod, OPERATIONS, SWAP_BALANCES, RENT_PERIODS, WANTED_OPERATIONS } from '../src/domain/listingOptions.ts';
+import { listingOperation, operationBadge, priceLabel, priceSuffix, listingFacts, swapBalanceText, shareText, operationsFor, wantedOperationsText } from '../src/domain/operations.ts';
 import { propertyPayload } from '../src/data/propertyPayload.ts';
 import { mapRemoteListing } from '../src/data/remoteMapping.ts';
 import { restoreDraft } from '../src/domain/draftPersistence.ts';
@@ -18,9 +18,9 @@ const wanted = { title: 'Busco apartamento en Playa', location: 'Playa o Vedado'
 const at = { now: '2026-09-26T00:00:00.000Z' };
 
 test('operation and balance guards accept only the known values', () => {
-  assert.deepEqual(OPERATIONS.map((o) => o.value), ['sale', 'swap', 'wanted']);
+  assert.deepEqual(OPERATIONS.map((o) => o.value), ['sale', 'swap', 'wanted', 'rent']);
   assert.deepEqual(SWAP_BALANCES.map((o) => o.value), ['none', 'pay', 'receive']);
-  assert.ok(isListingOperation('swap') && !isListingOperation('rent') && !isListingOperation(undefined));
+  assert.ok(isListingOperation('swap') && !isListingOperation('buy') && !isListingOperation(undefined));
   assert.ok(isSwapBalance('none') && !isSwapBalance(''));
 });
 test('a sale validates as before and ignores stray swap fields', () => {
@@ -108,7 +108,7 @@ test('remote rows map the operation, allow nulls only for wanted ads and default
 test('drafts and the local snapshot keep the new fields', () => {
   assert.deepEqual(restoreDraft(JSON.stringify(swap), sale), swap);
   assert.deepEqual(restoreDraft(JSON.stringify(wanted), sale), wanted);
-  assert.deepEqual(restoreDraft(JSON.stringify({ ...sale, operation: 'rent' }), sale), sale);
+  assert.deepEqual(restoreDraft(JSON.stringify({ ...sale, operation: 'buy' }), sale), sale);
   const listings = [createListing(swap, { id: 'w', ...at }), createListing(wanted, { id: 'b', ...at })];
   const decoded = decodeMarketplaceSnapshot(JSON.stringify({ version: 1, localListings: listings, favoriteIds: [] }));
   assert.equal(decoded.issue, null); assert.deepEqual(decoded.snapshot.localListings, listings);
@@ -123,4 +123,92 @@ test('every explicit property select carries the operation columns', () => {
   const source = readFileSync(new URL('../src/data/supabaseMarketplace.ts', import.meta.url), 'utf8');
   const columns = /PROPERTY_COLUMNS = '([^']+)'/.exec(source)![1].split(',');
   for (const column of ['operation', 'swap_wants', 'swap_provinces', 'swap_balance', 'swap_amount']) assert.ok(columns.includes(column), column);
+});
+
+const rent = { ...sale, operation: 'rent', rentPeriod: 'month', rentMinStay: '3', clientRequestId: 'ops-rent' };
+
+test('a rental validates like a sale plus a period and an optional minimum stay', () => {
+  assert.deepEqual(RENT_PERIODS.map((o) => o.value), ['month', 'day']);
+  assert.deepEqual(WANTED_OPERATIONS, [{ value: 'sale', label: 'Comprar' }, { value: 'swap', label: 'Permutar' }, { value: 'rent', label: 'Alquilar' }]);
+  assert.ok(isRentPeriod('day') && !isRentPeriod('week'));
+  assert.ok(validateDraft(rent).ok);
+  assert.ok(validateDraft({ ...rent, rentMinStay: '' }).ok);
+  assert.ok(validateDraft({ ...rent, rentPeriod: undefined }).errors.rentPeriod);
+  assert.ok(validateDraft({ ...rent, rentPeriod: '' }).errors.rentPeriod);
+  assert.ok(validateDraft({ ...rent, rentMinStay: '400' }).errors.rentMinStay);
+  assert.ok(validateDraft({ ...rent, rentMinStay: '2.5' }).errors.rentMinStay);
+  assert.ok(validateDraft({ ...rent, bathrooms: '' }).errors.bathrooms, 'a rental needs what a sale needs');
+  assert.deepEqual(createListing(rent, { id: 'r', ...at }).rent, { period: 'month', minStay: 3 });
+  assert.deepEqual(createListing({ ...rent, rentPeriod: 'day', rentMinStay: '' }, { id: 'r', ...at }).rent, { period: 'day' });
+  assert.equal(createListing({ ...sale, rentPeriod: 'month' }, { id: 's', ...at }).rent, undefined, 'a sale ignores stray rent fields');
+});
+test('a wanted ad says which operations it is after, buying or swapping by default', () => {
+  assert.ok(validateDraft({ ...wanted, wantedOperations: ['rent'] }).ok);
+  assert.ok(validateDraft({ ...wanted, wantedOperations: ['buy'] }).errors.wantedOperations);
+  assert.ok(validateDraft({ ...wanted, wantedOperations: [] }).errors.wantedOperations);
+  assert.ok(validateDraft({ ...wanted, wantedOperations: ['rent', 'rent'] }).errors.wantedOperations);
+  assert.deepEqual(createListing(wanted, { id: 'b', ...at }).wantedOperations, ['sale', 'swap']);
+  assert.deepEqual(createListing({ ...wanted, wantedOperations: ['rent'] }, { id: 'b', ...at }).wantedOperations, ['rent']);
+  assert.equal(createListing(sale, { id: 's', ...at }).wantedOperations, undefined);
+  const edited = updateListing(createListing({ ...wanted, wantedOperations: ['rent'] }, { id: 'b', ...at }), wanted);
+  assert.deepEqual(edited.wantedOperations, ['rent'], 'an edit without the field keeps what the ad was after');
+  assert.equal(updateListing(createListing(rent, { id: 'r', ...at }), { ...sale, operation: 'sale' }).rent, undefined, 'a sale edit drops the rent');
+});
+test('the catalogue hides rentals unless asked and the rent shortcut toggles them', () => {
+  const rows = [createListing(sale, { id: 's', ...at }), createListing(rent, { id: 'r', ...at }), createListing(wanted, { id: 'b', ...at })];
+  assert.deepEqual(filterListings(rows, defaultFilters).map((r) => r.id), ['s']);
+  assert.deepEqual(filterListings(rows, { ...defaultFilters, operation: 'rent' }).map((r) => r.id), ['r']);
+  assert.deepEqual(operationsFor('rent'), ['rent']);
+  assert.deepEqual(toggleShortcut(defaultFilters, 'rent'), { operation: 'rent' });
+  assert.ok(shortcutActive({ ...defaultFilters, operation: 'rent' }, 'rent'));
+  assert.deepEqual(toggleShortcut({ ...defaultFilters, operation: 'rent' }, 'rent'), { operation: 'offers' });
+  assert.deepEqual(searchPayload({ ...defaultFilters, operation: 'rent' }, null, true).operations, ['rent']);
+});
+test('rental and wanted texts', () => {
+  const r = createListing(rent, { id: 'r', ...at });
+  assert.equal(operationBadge(r), 'Alquiler'); assert.equal(priceLabel(r), 'Alquiler');
+  assert.equal(priceSuffix(r), ' / mes');
+  assert.equal(priceSuffix(createListing({ ...rent, rentPeriod: 'day' }, { id: 'd', ...at })), ' / noche');
+  assert.equal(priceSuffix(createListing(sale, { id: 's', ...at })), '');
+  assert.equal(listingFacts(r), '2 hab · 1 baño · 80 m²');
+  assert.equal(shareText(r, 'https://x/p/r'), 'Alquiler: Casa de prueba\n$ 50,000 USD / mes · Vedado, La Habana\n2 hab · 1 baño · 80 m²\n\nhttps://x/p/r');
+  assert.equal(wantedOperationsText({ wantedOperations: ['sale', 'swap', 'rent'] }), 'comprar, permutar o alquilar');
+  assert.equal(wantedOperationsText({ wantedOperations: ['rent'] }), 'alquilar');
+  assert.equal(wantedOperationsText({ wantedOperations: ['sale', 'swap'] }), 'comprar o permutar');
+  assert.equal(wantedOperationsText({}), 'comprar o permutar');
+});
+test('payloads, rows, drafts and the snapshot carry the rental and wanted fields', () => {
+  const p = propertyPayload(rent, 'seller', [], 'pending');
+  assert.equal(p.operation, 'rent'); assert.equal(p.rentPeriod, 'month'); assert.equal(p.rentMinStay, 3);
+  assert.equal(propertyPayload({ ...rent, rentMinStay: '' }, 'seller', [], 'pending').rentMinStay, null);
+  assert.equal('rentPeriod' in propertyPayload(sale, 'seller', [], 'pending'), false);
+  assert.deepEqual(propertyPayload({ ...wanted, wantedOperations: ['rent'] }, 'seller', [], 'pending').wantedOperations, ['rent']);
+  assert.equal('wantedOperations' in propertyPayload(wanted, 'seller', [], 'pending'), false, 'the server keeps or defaults a missing list');
+  assert.equal('wantedOperations' in propertyPayload({ ...sale, wantedOperations: ['rent'] }, 'seller', [], 'pending'), false);
+
+  const r = mapRemoteListing({ ...row, operation: 'rent', rent_period: 'day', rent_min_stay: null }, new Map());
+  assert.equal(r.operation, 'rent'); assert.deepEqual(r.rent, { period: 'day' });
+  assert.deepEqual(mapRemoteListing({ ...row, operation: 'rent', rent_period: 'month', rent_min_stay: 6 }, new Map()).rent, { period: 'month', minStay: 6 });
+  assert.throws(() => mapRemoteListing({ ...row, operation: 'rent', rent_period: 'week' }, new Map()), /no válidos/);
+  assert.throws(() => mapRemoteListing({ ...row, operation: 'rent', rent_period: 'month', rent_min_stay: 400 }, new Map()), /no válidos/);
+  assert.throws(() => mapRemoteListing({ ...row, rent_period: 'month' }, new Map()), /no válidos/, 'only a rental has a period');
+  const b = { ...row, operation: 'wanted', type: null, area: null, bathrooms: null };
+  assert.deepEqual(mapRemoteListing({ ...b, wanted_operations: ['rent'] }, new Map()).wantedOperations, ['rent']);
+  assert.deepEqual(mapRemoteListing(b, new Map()).wantedOperations, ['sale', 'swap']);
+  assert.throws(() => mapRemoteListing({ ...b, wanted_operations: ['buy'] }, new Map()), /no válidos/);
+  assert.equal(mapRemoteListing({ ...row, wanted_operations: ['sale', 'swap'] }, new Map()).wantedOperations, undefined);
+
+  const wantedRent = { ...wanted, wantedOperations: ['sale', 'rent'] };
+  assert.deepEqual(restoreDraft(JSON.stringify(rent), sale), rent);
+  assert.deepEqual(restoreDraft(JSON.stringify(wantedRent), sale), wantedRent);
+  assert.deepEqual(restoreDraft(JSON.stringify({ ...wanted, wantedOperations: ['buy'] }), sale), sale);
+  assert.deepEqual(restoreDraft(JSON.stringify({ ...rent, rentPeriod: 'week' }), sale), sale);
+
+  const listings = [createListing(rent, { id: 'r', ...at }), createListing(wantedRent, { id: 'b', ...at })];
+  const decoded = decodeMarketplaceSnapshot(JSON.stringify({ version: 1, localListings: listings, favoriteIds: [] }));
+  assert.equal(decoded.issue, null); assert.deepEqual(decoded.snapshot.localListings, listings);
+
+  const source = readFileSync(new URL('../src/data/supabaseMarketplace.ts', import.meta.url), 'utf8');
+  const columns = /PROPERTY_COLUMNS = '([^']+)'/.exec(source)![1].split(',');
+  for (const column of ['rent_period', 'rent_min_stay', 'wanted_operations']) assert.ok(columns.includes(column), column);
 });

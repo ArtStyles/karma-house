@@ -1,7 +1,7 @@
 import { isMapLocation, normalizeMapLocation, type MapLocation } from './geo.ts';
-import { isListingCondition, isDraftFloor, isListingOperation, isProvince, isSwapBalance, type ListingCondition, type ListingOperation, type SwapBalance } from './listingOptions.ts';
+import { isListingCondition, isDraftFloor, isListingOperation, isProvince, isRentPeriod, isSwapBalance, isWantedOperations, type ListingCondition, type ListingOperation, type RentPeriod, type SwapBalance } from './listingOptions.ts';
 import { parseDecimal } from './numericInput.ts';
-export type { ListingCondition, ListingOperation, SwapBalance } from './listingOptions.ts';
+export type { ListingCondition, ListingOperation, RentPeriod, SwapBalance } from './listingOptions.ts';
 
 export type ListingStatus = 'active' | 'paused' | 'sold';
 export type ModerationStatus = 'draft' | 'pending' | 'approved' | 'rejected';
@@ -16,6 +16,7 @@ export interface PhotoDraft {
 export type ListingType = 'Casa' | 'Apartamento';
 
 export interface ListingSwap { wants: string; provinces: string[]; balance: SwapBalance; amount?: number }
+export interface ListingRent { period: RentPeriod; minStay?: number }
 export type OperationFilter = 'offers' | ListingOperation;
 
 export interface Listing {
@@ -38,6 +39,9 @@ export interface Listing {
   /** Absent means a sale: local, demo and older remote rows never carry it. */
   operation?: ListingOperation;
   swap?: ListingSwap;
+  rent?: ListingRent;
+  /** Only on wanted ads: what the author would buy, swap for or rent. */
+  wantedOperations?: ListingOperation[];
   photoUri?: string;
   owner: 'demo' | 'local' | 'remote';
   ownerId?: string;
@@ -60,6 +64,9 @@ export interface ListingDraft {
   swapProvinces?: string[];
   swapBalance?: SwapBalance | '';
   swapAmount?: string;
+  rentPeriod?: RentPeriod | '';
+  rentMinStay?: string;
+  wantedOperations?: ListingOperation[];
   title: string;
   location: string;
   province: string;
@@ -132,14 +139,14 @@ export function isNewListing(createdAt: string, now = Date.now()): boolean {
 }
 
 /** One-tap presets on Explorar. Each owns a single filter, so the full sheet stays the source of truth. */
-export type Shortcut = ListingType | 'price' | 'bedrooms' | 'swap' | 'wanted';
+export type Shortcut = ListingType | 'price' | 'bedrooms' | 'swap' | 'wanted' | 'rent';
 export const PRICE_SHORTCUT = '30000';
 export const BEDROOM_SHORTCUT = 3;
 
 export function shortcutActive(filters: ListingFilters, shortcut: Shortcut): boolean {
   if (shortcut === 'price') return filters.maxPrice.trim() === PRICE_SHORTCUT && !filters.minPrice?.trim();
   if (shortcut === 'bedrooms') return filters.minBedrooms === BEDROOM_SHORTCUT;
-  if (shortcut === 'swap' || shortcut === 'wanted') return (filters.operation ?? 'offers') === shortcut;
+  if (shortcut === 'swap' || shortcut === 'wanted' || shortcut === 'rent') return (filters.operation ?? 'offers') === shortcut;
   return filters.type === shortcut;
 }
 
@@ -147,7 +154,7 @@ export function toggleShortcut(filters: ListingFilters, shortcut: Shortcut): Par
   const active = shortcutActive(filters, shortcut);
   if (shortcut === 'price') return active ? { maxPrice: '' } : { maxPrice: PRICE_SHORTCUT, minPrice: '' };
   if (shortcut === 'bedrooms') return { minBedrooms: active ? 0 : BEDROOM_SHORTCUT };
-  if (shortcut === 'swap' || shortcut === 'wanted') return { operation: active ? 'offers' : shortcut };
+  if (shortcut === 'swap' || shortcut === 'wanted' || shortcut === 'rent') return { operation: active ? 'offers' : shortcut };
   return { type: active ? 'Todas' : shortcut };
 }
 
@@ -272,6 +279,11 @@ export function validateDraft(draft: ListingDraft): DraftValidation {
       validateNumber(draft.swapAmount, 'swapAmount', errors, { label: 'La diferencia', min: 0, max: 100_000_000, exclusiveMin: true });
     }
   }
+  if (operation === 'rent') {
+    if (!isRentPeriod(draft.rentPeriod)) errors.rentPeriod = 'Indica si cobras por mes o por noche.';
+    if (draft.rentMinStay?.trim()) validateNumber(draft.rentMinStay, 'rentMinStay', errors, { label: 'La estancia mínima', min: 1, max: 365, integer: true });
+  }
+  if (wanted && draft.wantedOperations !== undefined && !isWantedOperations(draft.wantedOperations)) errors.wantedOperations = 'Elige qué buscas: comprar, permutar o alquilar.';
   if (!['vedado', 'interior', 'terrace'].includes(draft.imageKey)) errors.imageKey = 'Selecciona una imagen válida.';
   const amenities = normalizeAmenities(draft.amenities);
   if (amenities.length > 20 || amenities.some((amenity) => amenity.length > 60)) errors.amenities = 'Usa hasta 20 comodidades de 60 caracteres cada una.';
@@ -314,7 +326,7 @@ export function updateListing(listing: Listing, draft: ListingDraft): Listing {
     throw new Error('Solo puedes editar anuncios locales.');
   }
 
-  const { photoUri: _previousPhotoUri, photos: _previousPhotos, mapLocation: _previousMapLocation, area: _previousArea, bathrooms: _previousBathrooms, type: _previousType, condition, floor, priceNegotiable, operation, swap, ...listingWithoutPhoto } = listing;
+  const { photoUri: _previousPhotoUri, photos: _previousPhotos, mapLocation: _previousMapLocation, area: _previousArea, bathrooms: _previousBathrooms, type: _previousType, condition, floor, priceNegotiable, operation, swap, rent, wantedOperations, ...listingWithoutPhoto } = listing;
   return {
     ...listingWithoutPhoto,
     ...(draft.condition === undefined && condition !== undefined ? { condition } : {}),
@@ -322,7 +334,10 @@ export function updateListing(listing: Listing, draft: ListingDraft): Listing {
     ...(draft.priceNegotiable === undefined && priceNegotiable !== undefined ? { priceNegotiable } : {}),
     ...(draft.operation === undefined && operation !== undefined ? { operation } : {}),
     ...(draft.operation === undefined && swap !== undefined ? { swap } : {}),
+    ...(draft.operation === undefined && rent !== undefined ? { rent } : {}),
     ...validatedValues(draft),
+    // Like the server, an edit that leaves the list out keeps what the ad was after.
+    ...((draft.operation ?? operation) === 'wanted' && draft.wantedOperations === undefined && wantedOperations ? { wantedOperations } : {}),
     id: listing.id,
     owner: 'local',
     createdAt: listing.createdAt,
@@ -414,6 +429,8 @@ function validatedValues(
     location: draft.location.trim(),
     province: draft.province.trim(),
     ...(operation !== 'sale' ? { operation } : {}),
+    ...(operation === 'rent' && isRentPeriod(draft.rentPeriod) ? { rent: { period: draft.rentPeriod, ...(draft.rentMinStay?.trim() ? { minStay: Number(draft.rentMinStay.trim()) } : {}) } } : {}),
+    ...(wanted ? { wantedOperations: [...(draft.wantedOperations ?? ['sale', 'swap'])] } : {}),
     ...(operation === 'swap' && isSwapBalance(balance) ? { swap: { wants: (draft.swapWants ?? '').trim(), provinces: [...(draft.swapProvinces ?? [])], balance, ...(amount !== undefined ? { amount } : {}) } } : {}),
     ...(!wanted && draft.condition ? { condition: draft.condition } : {}),
     ...(!wanted && draft.floor?.trim() ? { floor: Number(draft.floor) } : {}),

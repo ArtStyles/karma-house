@@ -25,7 +25,7 @@ test('a search gets a readable name and summary', () => {
 test('saved searches decode strictly and the repository binds identity', async () => {
   const saved = { id: '88000000-0000-4000-8000-000000000001', name: 'Casas', filters: toSavedFilters(defaultFilters), enabled: true, version: 1, createdAt: '2026-09-28T00:00:00Z', updatedAt: '2026-09-28T00:00:00Z' };
   assert.deepEqual(decodeSavedSearch(saved), saved);
-  for (const bad of [{ ...saved, id: 'x' }, { ...saved, name: '' }, { ...saved, version: 0 }, { ...saved, filters: { ...saved.filters, operations: ['rent'] } }, { ...saved, enabled: 'yes' }]) assert.throws(() => decodeSavedSearch(bad));
+  for (const bad of [{ ...saved, id: 'x' }, { ...saved, name: '' }, { ...saved, version: 0 }, { ...saved, filters: { ...saved.filters, operations: ['buy'] } }, { ...saved, enabled: 'yes' }]) assert.throws(() => decodeSavedSearch(bad));
   const calls = []; const abort = new AbortController();
   const context = { userId: '88000000-0000-4000-8000-000000000002', accessToken: 'tok', signal: abort.signal, checkpoint() {} };
   const client = { rpc(name, args) { const call = { name, args }; calls.push(call); return { setHeader(k, v) { call.header = [k, v]; return this; }, abortSignal() { return Promise.resolve({ data: name === 'kh_list_saved_searches' ? [saved] : name === 'kh_save_search' ? saved : null, error: null }); } }; } };

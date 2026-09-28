@@ -5,13 +5,15 @@ import {
   validateDraft,
   type Listing,
   type ListingDraft,
+  type ListingOperation,
   type ListingStatus,
   type ListingType,
   type PhotoDraft,
+  type RentPeriod,
   type SwapBalance,
 } from '../domain/listings.ts';
 import { isMapLocation, normalizeMapLocation } from '../domain/geo.ts';
-import { isListingCondition, isListingOperation, isProvince, isSwapBalance } from '../domain/listingOptions.ts';
+import { isListingCondition, isListingOperation, isProvince, isRentMinStay, isRentPeriod, isSwapBalance, isWantedOperations } from '../domain/listingOptions.ts';
 
 export const MARKETPLACE_STORAGE_KEY = '@karma-house/marketplace-v1';
 
@@ -283,6 +285,7 @@ function readLocalListing(value: unknown): Listing | null {
   if (!isRecord(value)) return null;
   const wanted = value.operation === 'wanted';
   const swap = isRecord(value.swap) ? value.swap : undefined;
+  const rent = isRecord(value.rent) ? value.rent : undefined;
   if (
     !isNonEmptyString(value.id) ||
     !isNonEmptyString(value.title) ||
@@ -299,6 +302,9 @@ function readLocalListing(value: unknown): Listing | null {
       : !isIntegerWithin(value.bathrooms, 1, 20) || !isFiniteWithin(value.area, 0, 10_000, true) || (value.type !== 'Casa' && value.type !== 'Apartamento')) ||
     (value.operation === 'swap' ? !swap || typeof swap.wants !== 'string' || !isSwapBalance(swap.balance) || !Array.isArray(swap.provinces) || !swap.provinces.every(isProvince) || (swap.amount !== undefined && !isFiniteWithin(swap.amount, 0, 100_000_000, true))
       : value.swap !== undefined) ||
+    (value.operation === 'rent' ? !rent || !isRentPeriod(rent.period) || (rent.minStay !== undefined && !isRentMinStay(rent.minStay))
+      : value.rent !== undefined) ||
+    (wanted ? value.wantedOperations !== undefined && !isWantedOperations(value.wantedOperations) : value.wantedOperations !== undefined) ||
     !isNonEmptyString(value.description) ||
     !Array.isArray(value.amenities) ||
     !value.amenities.every((item) => typeof item === 'string') ||
@@ -336,6 +342,8 @@ function readLocalListing(value: unknown): Listing | null {
       swapBalance: swap.balance as SwapBalance,
       swapAmount: swap.amount === undefined ? '' : String(swap.amount),
     } : {}),
+    ...(rent ? { rentPeriod: rent.period as RentPeriod, rentMinStay: rent.minStay === undefined ? '' : String(rent.minStay) } : {}),
+    ...(wanted && value.wantedOperations !== undefined ? { wantedOperations: [...(value.wantedOperations as ListingOperation[])] } : {}),
     description: value.description,
     amenities: value.amenities,
     imageKey: value.imageKey as Listing['imageKey'],
@@ -367,6 +375,9 @@ function readLocalListing(value: unknown): Listing | null {
         ...(swap.amount === undefined ? {} : { amount: swap.amount as number }),
       },
     } : {}),
+    ...(rent ? { rent: { period: rent.period as RentPeriod, ...(rent.minStay === undefined ? {} : { minStay: rent.minStay as number }) } } : {}),
+    // Snapshots saved before the list existed stand for the default.
+    ...(wanted ? { wantedOperations: [...(draft.wantedOperations ?? ['sale', 'swap'])] } : {}),
     description: value.description.trim(),
     amenities: [...new Set(value.amenities.map((item) => item.trim()).filter(Boolean))],
     imageKey: value.imageKey as Listing['imageKey'],
