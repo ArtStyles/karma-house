@@ -123,7 +123,7 @@ export default function ExploreScreen() {
           </View>
           {saveNotice === 'demo' && <View style={styles.saveNotice}><Notice>Las alertas necesitan una cuenta de KarmaHouse.</Notice></View>}
           {saveNotice === 'saved' && <View style={styles.saveNotice}><Notice>Te avisaremos cuando aparezca una vivienda que encaje.</Notice><Button label="Ver mis alertas" secondary icon="bookmark-outline" onPress={() => router.push('/saved-searches')} /></View>}
-          {hasTags &&<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activeFilters}>
+          {hasTags && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activeFilters}>
             {filters.operation === 'sale' && <FilterTag label="Solo venta" onRemove={() => change({ operation: 'offers' })} />}
             {priceTag && <FilterTag label={`${filters.minPrice || '0'} – ${filters.maxPrice || 'sin límite'} USD`} onRemove={() => change({ minPrice: '', maxPrice: '' })} />}
             {!!(filters.minArea || filters.maxArea) && <FilterTag label={`${filters.minArea || '0'} – ${filters.maxArea || 'sin límite'} m²`} onRemove={() => change({ minArea: '', maxArea: '' })} />}
