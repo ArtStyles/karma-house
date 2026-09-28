@@ -1,0 +1,37 @@
+// Saved searches and alerts (supabase/migrations/20260928000100_search_alerts.sql).
+// The migration adds a table and columns and drops/recreates two notification RPCs, so --commit
+// runs once. Without --commit the migration and its suite share one transaction that rolls back;
+// with --commit the migration stays and the suite runs after it.
+import { readFileSync } from 'node:fs';
+import { createDatabaseClient } from './cloud-db.mjs';
+
+const root = new URL('../', import.meta.url);
+const migration = readFileSync(new URL('supabase/migrations/20260928000100_search_alerts.sql', root), 'utf8');
+const suite = readFileSync(new URL('supabase/tests/search_alerts.sql', root), 'utf8');
+const commit = process.argv.includes('--commit');
+const skipMigration = process.argv.includes('--suite-only');
+const db = createDatabaseClient();
+// saved_searches does not exist before the migration: count it only when it does.
+const inventory = async () => (await db.query(
+  "select (select count(*) from auth.users)::int as users, (select count(*) from public.properties)::int as properties, (select count(*) from kh_private.notifications)::int as notifications, (select count(*) from storage.objects)::int as objects, (case when to_regclass('kh_private.saved_searches') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from kh_private.saved_searches', false, true, '')))[1]::text::int end) as searches",
+)).rows[0];
+
+try {
+  await db.connect();
+  const before = await inventory();
+  if (skipMigration) await db.query(suite);
+  else if (commit) { await db.query('begin'); await db.query(migration); await db.query('commit'); console.log('migración aplicada'); await db.query(suite); }
+  // The suite's own begin only warns inside this transaction; its rollback undoes the migration too.
+  else { await db.query('begin'); await db.query(migration); await db.query(suite); }
+  const after = await inventory();
+  const unchanged = JSON.stringify(before) === JSON.stringify(after);
+  console.log(JSON.stringify({ commit, before, after, inventoryUnchanged: unchanged }));
+  if (!unchanged) throw new Error('KH_LEFTOVER: la suite dejó filas sintéticas');
+  console.log(commit ? 'suite superada sobre el esquema aplicado' : 'suite superada; nada se aplicó (usa --commit para aplicar)');
+} catch (error) {
+  await db.query('rollback').catch(() => {});
+  console.error('falló:', error.message);
+  process.exitCode = 1;
+} finally {
+  await db.end();
+}
