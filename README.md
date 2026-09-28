@@ -19,6 +19,7 @@ La interfaz se ha actualizado con tipografía del sistema, superficies agrupadas
 - Chat por vivienda, bandeja y mensajes sin leer, reintento manual, bloqueo y reportes.
 - Visitas y ofertas desde el chat: fechas en hora de Cuba, contraofertas, aceptación, rechazo y cancelación; bandeja de solicitudes e historial.
 - Publicar una permuta (con lo que buscas a cambio, provincias y diferencia) o un anuncio «Busco vivienda» sin fotos; filtro «Operación» en Explorar y fichas públicas etiquetadas.
+- Guardar búsquedas desde Explorar («Mis alertas» en Mi espacio) y recibir un aviso, en la campana y por push, cuando se apruebe una vivienda que encaje; los «busco» avisan solos y avisan a quien vende algo que encaja.
 - Compartir una vivienda como enlace a su ficha pública (vista previa con foto y precio, botón para abrir la app), reportar un anuncio y cola de moderación para retirarlo.
 - Eliminar la cuenta desde Ajustes de cuenta, con enlaces a privacidad y términos.
 
@@ -73,7 +74,7 @@ powershell -ExecutionPolicy Bypass -File scripts/build-android-preview.ps1 -Rele
 
 Lee `credentials/android-release.properties` (ignorado por Git) y deja en `artifacts/releases/` el `.aab` para Play y un `.apk` con la misma firma. **Guarda una copia de `credentials/` fuera de este equipo**: sin esa clave no se pueden publicar actualizaciones con la misma firma. Los teléfonos con un APK de prueba anterior deben desinstalarlo una vez, porque la firma cambia.
 
-`app.json` bloquea los permisos que añaden las dependencias y la app no usa (ubicación, superposición y biometría). Reportar anuncios y eliminar la cuenta dependen de la migración `20260923000100_play_compliance.sql`: `node scripts/apply-play-compliance.mjs` la prueba y la deshace; con `--commit` la aplica. Permuta y busco dependen de `20260926000100_operations.sql`: `node scripts/apply-operations.mjs` (igual, `--commit` aplica); [evidencia](docs/operations-verification.md).
+`app.json` bloquea los permisos que añaden las dependencias y la app no usa (ubicación, superposición y biometría). Reportar anuncios y eliminar la cuenta dependen de la migración `20260923000100_play_compliance.sql`: `node scripts/apply-play-compliance.mjs` la prueba y la deshace; con `--commit` la aplica. Permuta y busco dependen de `20260926000100_operations.sql`: `node scripts/apply-operations.mjs` (igual, `--commit` aplica); [evidencia](docs/operations-verification.md). Alertas: `20260928000100_search_alerts.sql` con `node scripts/apply-search-alerts.mjs`; [evidencia](docs/search-alerts-verification.md).
 
 Las páginas públicas (`site/`) se publican con GitHub Pages en https://artstyles.github.io/karma-house/: privacidad, términos y eliminación de cuenta, que son las URL que pide la ficha de Play. El despliegue falla mientras quede el marcador `CORREO_DE_CONTACTO`.
 
