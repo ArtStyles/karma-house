@@ -415,7 +415,7 @@ export function ListingForm({
                 </View>
                 {operation === 'rent' ? (
                   <View style={styles.previewGroup}>
-                    <Field label="Estancia mínima (opcional)" placeholder={perNight ? '2' : '3'} value={draft.rentMinStay ?? ''} onChangeText={value => changeField('rentMinStay', value.replace(/D/g, ''))} error={errors.rentMinStay} keyboardType="number-pad" inputMode="numeric" maxLength={3} />
+                    <Field label="Estancia mínima (opcional)" placeholder={perNight ? '2' : '3'} value={draft.rentMinStay ?? ''} onChangeText={value => changeField('rentMinStay', value.replace(/\D/g, ''))} error={errors.rentMinStay} keyboardType="number-pad" inputMode="numeric" maxLength={3} />
                     <Text style={styles.fieldHint}>Meses o noches, según el cobro.</Text>
                   </View>
                 ) : null}
