@@ -63,7 +63,7 @@ try {
   await db.connect();
   const applied = (await db.query('select sha256 from supabase_migrations.karmahouse_migration_checksums where version=$1', [version])).rows[0];
   assert.equal(applied?.sha256, sha256, 'Deployed notifications checksum differs.');
-  const acl = (await db.query("select has_function_privilege('anon','public.kh_notification_summary(uuid)','EXECUTE') as anon_summary,has_function_privilege('authenticated','public.kh_notification_summary(uuid)','EXECUTE') as member_summary,has_table_privilege('authenticated','kh_private.notifications','SELECT') as direct_select,has_function_privilege('authenticated','kh_private.chat_store_message(uuid,uuid,text,uuid,uuid)','EXECUTE') as private_source")).rows[0];
+  const acl = (await db.query("select has_function_privilege('anon','public.kh_notification_summary(uuid,boolean)','EXECUTE') as anon_summary,has_function_privilege('authenticated','public.kh_notification_summary(uuid,boolean)','EXECUTE') as member_summary,has_table_privilege('authenticated','kh_private.notifications','SELECT') as direct_select,has_function_privilege('authenticated','kh_private.chat_store_message(uuid,uuid,text,uuid,uuid)','EXECUTE') as private_source")).rows[0];
   assert.deepEqual(acl, {anon_summary:false,member_summary:true,direct_select:false,private_source:false});
   checks.push('deployed checksum and private grants');
   baseline = await inventory(db);

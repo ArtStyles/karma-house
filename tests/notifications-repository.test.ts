@@ -8,7 +8,7 @@ const page={items:[row],nextCursor:null,unreadCount:1,readThrough:row.seq};
 function fixture(data=page){
   const calls=[],abort=new AbortController(); let changed=false;
   const context={userId:recipient,accessToken:'captured-token',signal:abort.signal,checkpoint(){if(changed)throw new Error('KH_ACCOUNT_CHANGED');}};
-  const client={rpc(name,args){const call={name,args};calls.push(call);return{setHeader(k,v){call.header=[k,v];return this;},abortSignal(signal){call.signal=signal;return Promise.resolve({data:typeof data==='function'?data():data,error:null});}};}};
+  const client={rpc(name,args){const call={name,args};calls.push(call);return{setHeader(k,v){call.header=[k,v];return this;},abortSignal(signal){call.signal=signal;return Promise.resolve({data:typeof data==='function'?data(name):data,error:null});}};}};
   return {repo:createSupabaseNotificationRepository(client),context,calls,abort,change(){changed=true;}};
 }
 test('list and summary bind captured identity, JWT and signal without sharing pagination',async()=>{
@@ -41,9 +41,12 @@ test('late session changes and aborted calls cannot publish data',async()=>{
   const g=fixture();g.abort.abort();await assert.rejects(g.repo.summary(g.context),/ACCOUNT_CHANGED/);assert.equal(g.calls.length,0);
 });
 test('read operations preserve bigint cutoff and reject invalid server counts',async()=>{
-  const f=fixture({unreadCount:0});await f.repo.markAllRead(row.seq,f.context);assert.equal(f.calls[0].args.p_through_seq,row.seq);
-  await f.repo.markRead(id,f.context);assert.equal(f.calls[1].args.p_id,id);
-  const g=fixture({unreadCount:1.2});await assert.rejects(g.repo.markRead(id,g.context));
+  // The read RPCs count without alerts; the returned count comes from the summary with alerts.
+  const f=fixture(name=>name==='kh_notification_summary'?{unreadCount:2,readThrough:row.seq}:{unreadCount:0});
+  assert.deepEqual(await f.repo.markAllRead(row.seq,f.context),{unreadCount:2});assert.equal(f.calls[0].args.p_through_seq,row.seq);
+  assert.equal(f.calls[1].name,'kh_notification_summary');assert.equal(f.calls[1].args.p_include_alerts,true);
+  assert.deepEqual(await f.repo.markRead(id,f.context),{unreadCount:2});assert.equal(f.calls[2].args.p_id,id);assert.equal(f.calls[3].name,'kh_notification_summary');
+  const g=fixture({unreadCount:1.2});await assert.rejects(g.repo.markRead(id,g.context));assert.equal(g.calls.length,1,'an invalid read count stops before the summary');
   await assert.rejects(f.repo.markAllRead('01',f.context));
 });
 test('preferences validate versions and exact desired confirmation',async()=>{

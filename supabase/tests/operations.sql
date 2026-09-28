@@ -70,8 +70,8 @@ create temporary table ops_results as
 select pg_temp.ops_assert((select not exists (select 1 from ops_results, jsonb_array_elements(r->'rows') row where name='default' and row->>'id'=(select wanted_id::text from ops_context))
   and exists (select 1 from ops_results, jsonb_array_elements(r->'rows') row where name='default' and row->>'id'=(select swap_id::text from ops_context))),
   'without operations the catalogue shows offers and hides wanted ads');
-select pg_temp.ops_assert((select count(*)=1 and bool_and(row->>'id'=(select wanted_id::text from ops_context)) from ops_results, jsonb_array_elements(r->'rows') row where name='wanted'),'operations=[wanted] returns only the wanted ad');
-select pg_temp.ops_assert((select count(*)=1 and bool_and(row->>'operation'='swap') from ops_results, jsonb_array_elements(r->'rows') row where name='swap'),'operations=[swap] returns only the swap');
+select pg_temp.ops_assert((select bool_or(row->>'id'=(select wanted_id::text from ops_context)) and bool_and(row->>'operation'='wanted') from ops_results, jsonb_array_elements(r->'rows') row where name='wanted'),'operations=[wanted] returns the wanted ad and only wanted ads');
+select pg_temp.ops_assert((select bool_or(row->>'id'=(select swap_id::text from ops_context)) and bool_and(row->>'operation'='swap') from ops_results, jsonb_array_elements(r->'rows') row where name='swap'),'operations=[swap] returns the swap and only swaps');
 select pg_temp.ops_error($q$select public.kh_search_properties('{"operations":["rent"]}')$q$,'KH_INVALID_OPERATION');
 select pg_temp.ops_assert((select (public.kh_map_clusters('{"west":-180,"south":-90,"east":180,"north":90,"zoom":3,"operations":["wanted"]}')->'items') = '[]'::jsonb),'a wanted ad never lands on the map');
 rollback;

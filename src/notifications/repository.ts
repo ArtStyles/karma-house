@@ -62,6 +62,9 @@ export function createSupabaseNotificationRepository(client: SupabaseClient): No
     if (error) throw error;
     return data;
   };
+  // The read RPCs count without alerts; the bell counts with them, so ask the summary.
+  const unreadWithAlerts = async (context: MessagingRequestContext) =>
+    decodeCount(await rpc('kh_notification_summary', { p_include_alerts: true }, context));
   return {
     async summary(context) { return decodeSummary(await rpc('kh_notification_summary', { p_include_alerts: true }, context)); },
     async list(options, context) {
@@ -85,11 +88,13 @@ export function createSupabaseNotificationRepository(client: SupabaseClient): No
     },
     async markRead(id, context) {
       if (!isUuid(id)) throw invalid();
-      return decodeCount(await rpc('kh_read_notification', { p_id: id }, context));
+      decodeCount(await rpc('kh_read_notification', { p_id: id }, context));
+      return unreadWithAlerts(context);
     },
     async markAllRead(readThrough, context) {
       if (!isNotificationSequence(readThrough, true)) throw invalid();
-      return decodeCount(await rpc('kh_read_notifications_through', { p_through_seq: readThrough }, context));
+      decodeCount(await rpc('kh_read_notifications_through', { p_through_seq: readThrough }, context));
+      return unreadWithAlerts(context);
     },
     async preferences(context) { return decodePreferences(await rpc('kh_get_notification_preferences', {}, context)); },
     async savePreferences(input, context) {
