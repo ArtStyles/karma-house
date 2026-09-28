@@ -46,3 +46,10 @@ $ 350 USD / mes · Estancia mínima: 3 meses
 
 - Un busco solo de alquiler muestra «Hasta $ X» sin «/ mes» en tarjeta y ficha (solo la etiqueta del formulario lo dice).
 - Sin depósito, servicios, calendario ni precio en CUP.
+
+## Teléfono (Pixel 7 Pro, APK 0.1.8, 28 de septiembre)
+
+- Chip «Alquileres» (tras «Permutas») filtra a «1 encontrada»: tarjeta «Alquiler» con «$ 400 USD / mes» del alquiler sintético.
+- Detalle: «En alquiler», «Alquiler / $ 400 USD / mes», «Más detalles → Estancia mínima: 2 meses», barra «Alquiler · USD / mes».
+- Publicar: chooser con Vender / Permutar / Busco vivienda / Alquilar; con «Alquilar», el paso «Los detalles» muestra «Cobro: Por mes», «Precio por mes (USD)», «Estancia mínima (opcional)» y su ayuda. No se envió el anuncio (necesita fotos de la galería).
+- Fila sintética borrada por SQL.

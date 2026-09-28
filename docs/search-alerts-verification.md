@@ -50,3 +50,14 @@ Explorar muestra «Guardar búsqueda» y en demo avisa que hace falta cuenta; `/
 - Coincidencia de texto solo por prefijo (`search_vector`); sin ruta por subcadena.
 - Sin tope de alertas por aprobación (`ponytail` en `kh_review_property`).
 - `kh_search_properties` conserva su construcción de `tsquery`; `kh_catalog_tsquery` la duplica en lugar de sustituirla.
+
+## Teléfono (Pixel 7 Pro, ETECSA LTE, APK 0.1.8, 28 de septiembre)
+
+Instalado por ADB encima de 0.1.7 con la sesión conservada; controles localizados por etiqueta de accesibilidad con `uiautomator`.
+
+- Explorar → «Guardar búsqueda» → hoja con «Todas las viviendas» (Venta y permuta · Toda Cuba) → Guardar → aviso «Te avisaremos cuando aparezca una vivienda que encaje» y botón «Ver mis alertas».
+- «Mis alertas»: la búsqueda con resumen, interruptor «Activa», «Ver resultados» y «Borrar».
+- Venta sintética aprobada de otro usuario (SQL + `alert_on_approval`): la campana marca 1; la bandeja muestra la tarjeta «Alerta» con «Nueva vivienda para tu búsqueda» y el cuerpo esperado; «Ver vivienda» abre la vivienda. Un alquiler sintético aprobado a la vez no generó alerta (la búsqueda es de venta y permuta), como debe ser.
+- Push: «Activar en este teléfono» en Preferencias registró el dispositivo; el servidor canjeó el token en menos de un minuto; una segunda venta sintética aprobada produjo el push «KarmaHouse — Nueva vivienda para tu búsqueda.» en la barra del teléfono, y tocarlo abrió esa vivienda.
+- «Borrar» desde «Mis alertas» con confirmación dejó la lista vacía y el servidor sin búsquedas. Las filas sintéticas se borraron por SQL (`deleted: 3`, `alerts: 0`).
+- Preferencias: fila «Alertas de búsqueda» presente.
