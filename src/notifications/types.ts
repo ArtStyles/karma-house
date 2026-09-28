@@ -1,13 +1,15 @@
 import type { MessagingRequestContext } from '../messaging/types.ts';
 
-export type NotificationCategory = 'message' | 'visit' | 'offer';
+export type NotificationCategory = 'message' | 'visit' | 'offer' | 'alert';
 export interface AppNotification {
   id: string;
   seq: string;
   recipientId: string;
   category: NotificationCategory;
-  conversationId: string;
-  messageId: string;
+  conversationId: string | null;
+  messageId: string | null;
+  propertyId: string | null;
+  savedSearchId: string | null;
   negotiationId: string | null;
   actorId: string;
   actorName: string;
@@ -21,6 +23,7 @@ export interface NotificationPreferences {
   messages: boolean;
   visits: boolean;
   offers: boolean;
+  alerts: boolean;
   version: number;
 }
 export interface NotificationSummary { unreadCount: number; readThrough: string }
@@ -37,6 +40,7 @@ export interface SaveNotificationPreferencesInput {
   messages: boolean;
   visits: boolean;
   offers: boolean;
+  alerts: boolean;
   expectedVersion: number;
 }
 export interface NotificationRepository {

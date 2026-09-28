@@ -15,16 +15,16 @@ const tick = () => new Promise<void>(resolve => setImmediate(resolve));
 function fixture(overrides: Partial<PushRepository> = {}, native: Partial<PushAdapter> = {}) {
   let saved: string | null = null, prompts = 0, clears = 0, summaries = 0;
   const clearedResponses: string[] = [];
-  const calls: { kind: string; revision: number; userId?: string }[] = [], routes: string[] = [];
+  const calls: { kind: string; revision: number; userId?: string }[] = [], routes: unknown[] = [];
   const storage = { getItem: async () => saved, setItem: async (_key: string, value: string) => { saved = value; } };
   const store = createInstallationStore(storage, () => ({ installationId, installationSecret: 'a'.repeat(64) }));
   const repository: PushRepository = {
     register: async (input, context) => { calls.push({ kind: 'register', revision: input.revision, userId: context.userId }); return { enabled: true, revision: input.revision, platform: 'android' }; },
     disable: async input => { calls.push({ kind: 'disable', revision: input.revision }); return { enabled: false, revision: input.revision }; },
-    resolve: async (id, context) => ({ notificationId: id, recipientId: context.userId, conversationId }), ...overrides,
+    resolve: async (id, context) => ({ notificationId: id, recipientId: context.userId, conversationId, propertyId: null }), ...overrides,
   };
   const adapter: PushAdapter = { ensureChannel: async () => {}, getPermission: async () => ({ permission: 'granted', canAskAgain: true }), requestPermission: async () => { prompts++; return { permission: 'granted', canAskAgain: true }; }, getToken: async () => 'fcm-test-token-000000000000000000000000000000000000000000000000000000000000', clearLastResponse: async id => { clears++; clearedResponses.push(id); }, openSettings: async () => {}, ...native };
-  const controller = createPushController({ store, repository, adapter, projectId, navigate: id => { routes.push(id); }, refreshSummary: async () => { summaries++; } });
+  const controller = createPushController({ store, repository, adapter, projectId, navigate: target => { routes.push(target); }, refreshSummary: async () => { summaries++; } });
   return { controller, store, storage, calls, routes, clearedResponses, prompts: () => prompts, clears: () => clears, summaries: () => summaries };
 }
 
@@ -101,18 +101,25 @@ test('cold start waits for navigation and auth hydration, resolves visibility on
   await tick(); assert.deepEqual(f.routes, []);
   await f.controller.setSession(session()); await tick(); assert.deepEqual(f.routes, []);
   f.controller.setNavigationReady(true); await tick();
-  assert.deepEqual(f.routes, [conversationId]); assert.equal(f.clears(), 1);
+  assert.deepEqual(f.routes, [{ conversationId }]); assert.equal(f.clears(), 1);
   f.controller.receiveResponse('response-1', payload()); await tick(); assert.equal(f.routes.length, 1);
 });
 
+test('an alert tap opens the property it announces', async () => {
+  const f = fixture({ resolve: async (id, context) => ({ notificationId: id, recipientId: context.userId, conversationId: null, propertyId: conversationId }) });
+  await f.controller.setSession(session()); f.controller.setNavigationReady(true);
+  f.controller.receiveResponse('alert', payload()); await tick();
+  assert.deepEqual(f.routes, [{ propertyId: conversationId }]);
+});
+
 test('wrong recipient, arbitrary route, invisible notification and late account switch never navigate', async () => {
-  const pending = deferred<{ notificationId: string; recipientId: string; conversationId: string }>();
+  const pending = deferred<{ notificationId: string; recipientId: string; conversationId: string | null; propertyId: string | null }>();
   const f = fixture({ resolve: async () => pending.promise });
   await f.controller.setSession(session()); f.controller.setNavigationReady(true);
   f.controller.receiveResponse('wrong-account', payload(other)); f.controller.receiveResponse('arbitrary', { ...payload(), url: '/admin' }); await tick();
   assert.deepEqual(f.routes, []);
   f.controller.receiveResponse('late', payload()); await tick(); await f.controller.setSession(session(other));
-  pending.resolve({ notificationId: noticeId, recipientId: actor, conversationId }); await tick();
+  pending.resolve({ notificationId: noticeId, recipientId: actor, conversationId, propertyId: null }); await tick();
   assert.deepEqual(f.routes, []);
   const invisible = fixture({ resolve: async () => { throw new Error('not visible'); } });
   await invisible.controller.setSession(session()); invisible.controller.setNavigationReady(true); invisible.controller.receiveResponse('invisible', payload()); await tick();
@@ -155,11 +162,11 @@ test('after restart a failed revocation remains visibly enabled until server con
 });
 
 test('provider suspension cancels late work and can resume without losing persisted activation', async () => {
-  const pending = deferred<{ notificationId: string; recipientId: string; conversationId: string }>();
+  const pending = deferred<{ notificationId: string; recipientId: string; conversationId: string | null; propertyId: string | null }>();
   const f = fixture({ resolve: async () => pending.promise });
   await f.controller.setSession(session()); await f.controller.enable(); f.controller.setNavigationReady(true);
   f.controller.receiveResponse('unmount', payload()); await tick(); f.controller.suspend();
-  pending.resolve({ notificationId: noticeId, recipientId: actor, conversationId }); await tick(); assert.deepEqual(f.routes, []);
+  pending.resolve({ notificationId: noticeId, recipientId: actor, conversationId, propertyId: null }); await tick(); assert.deepEqual(f.routes, []);
   assert.equal(f.controller.shouldPresent(payload()), false);
   f.controller.resume(); await f.controller.refresh(); assert.equal(f.controller.getState().enabled, true);
 });

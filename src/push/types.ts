@@ -19,7 +19,8 @@ export interface RevocationInput extends InstallationIdentity { revision: number
 export interface RegistrationInput extends RevocationInput { fcmToken: string; platform: 'android'; projectId: string }
 export interface RegistrationResult { enabled: true; revision: number; platform: 'android' }
 export interface RevocationResult { enabled: false; revision: number }
-export interface ResolvedPush { notificationId: string; recipientId: string; conversationId: string }
+export interface ResolvedPush { notificationId: string; recipientId: string; conversationId: string | null; propertyId: string | null }
+export type PushTarget = { conversationId: string } | { propertyId: string };
 export interface PushRepository {
   register(input: RegistrationInput, context: PushRequestContext): Promise<RegistrationResult>;
   disable(input: RevocationInput): Promise<RevocationResult>;

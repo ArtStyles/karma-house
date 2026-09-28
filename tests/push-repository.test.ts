@@ -34,9 +34,12 @@ test('revocation is possession-only with no account JWT and validates the persis
   await assert.rejects(fixture({ enabled: false, revision: 0 }).repository.disable(input));
 });
 test('resolver verifies recipient and requested notification; malformed input never reaches transport', async () => {
-  const result = { notificationId: installationId, recipientId: userId, conversationId: sessionId };
+  const result = { notificationId: installationId, recipientId: userId, conversationId: sessionId, propertyId: null };
   const f = fixture(result); assert.deepEqual(await f.repository.resolve(installationId, f.context), result);
-  for (const patch of [{ recipientId: sessionId }, { notificationId: sessionId }, { conversationId: '../admin' }]) await assert.rejects(fixture({ ...result, ...patch }).repository.resolve(installationId, f.context));
+  const alert = { ...result, conversationId: null, propertyId: sessionId };
+  assert.deepEqual(await fixture(alert).repository.resolve(installationId, f.context), alert);
+  assert.deepEqual(await fixture({ notificationId: installationId, recipientId: userId, conversationId: sessionId }).repository.resolve(installationId, f.context), result, 'older servers omit propertyId');
+  for (const patch of [{ recipientId: sessionId }, { notificationId: sessionId }, { conversationId: '../admin' }, { propertyId: '../admin' }, { propertyId: sessionId }, { conversationId: null }]) await assert.rejects(fixture({ ...result, ...patch }).repository.resolve(installationId, f.context));
   await assert.rejects(f.repository.resolve('https://evil.test', f.context)); assert.equal(f.calls.length, 1);
 });
 test('session checks run before and after transport and raw server errors never expose tokens', async () => {

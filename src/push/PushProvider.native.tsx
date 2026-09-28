@@ -32,7 +32,9 @@ function AndroidPushProvider({ children }: PropsWithChildren) {
   const controller = useMemo(() => createPushController({
     store: nativeInstallationStore, adapter: nativePushAdapter, projectId: pushProjectId,
     repository: createPushRepository(process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() ?? '', process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ?? '', createDeadlineFetch()),
-    navigate: id => router.push({ pathname: '/messages/[id]', params: { id } }),
+    navigate: target => 'conversationId' in target
+      ? router.push({ pathname: '/messages/[id]', params: { id: target.conversationId } })
+      : router.push({ pathname: '/property/[id]', params: { id: target.propertyId } }),
     refreshSummary: () => summary.current(),
   }), []);
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState);

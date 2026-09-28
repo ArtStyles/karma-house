@@ -23,11 +23,18 @@ function decodeSummary(value: unknown): NotificationSummary {
   if (item.readThrough === '0' && count.unreadCount !== 0) throw invalid();
   return { ...count, readThrough: item.readThrough };
 }
+const categories = ['message', 'visit', 'offer', 'alert'];
 export function decodeNotification(value: unknown): AppNotification {
   const item = record(value) as unknown as AppNotification;
-  if (![item.id, item.recipientId, item.actorId, item.conversationId, item.messageId].every(isUuid)
+  // Servers before search alerts omit these fields.
+  const propertyId = item.propertyId ?? null, savedSearchId = item.savedSearchId ?? null;
+  if (![item.id, item.recipientId, item.actorId].every(isUuid)
     || item.actorId === item.recipientId || !isNotificationSequence(item.seq)
-    || !['message', 'visit', 'offer'].includes(item.category)
+    || !categories.includes(item.category)
+    || (item.category === 'alert'
+      ? item.conversationId !== null || item.messageId !== null || item.negotiationId !== null
+        || !isUuid(propertyId) || (savedSearchId !== null && !isUuid(savedSearchId))
+      : ![item.conversationId, item.messageId].every(isUuid) || propertyId !== null || savedSearchId !== null)
     || (item.negotiationId !== null && !isUuid(item.negotiationId))
     || (item.category === 'message' && item.negotiationId !== null)
     || !text(item.actorName, 200) || !text(item.propertyTitle, 200)
@@ -35,14 +42,14 @@ export function decodeNotification(value: unknown): AppNotification {
     || !timestamp(item.createdAt) || (item.readAt !== null && !timestamp(item.readAt))) throw invalid();
   return { id: item.id, seq: item.seq, recipientId: item.recipientId, category: item.category,
     conversationId: item.conversationId, messageId: item.messageId, negotiationId: item.negotiationId,
-    actorId: item.actorId, actorName: item.actorName, propertyTitle: item.propertyTitle,
+    propertyId, savedSearchId, actorId: item.actorId, actorName: item.actorName, propertyTitle: item.propertyTitle,
     title: item.title, body: item.body, createdAt: item.createdAt, readAt: item.readAt };
 }
 function decodePreferences(value: unknown): NotificationPreferences {
   const item = record(value);
   if (typeof item.messages !== 'boolean' || typeof item.visits !== 'boolean' || typeof item.offers !== 'boolean'
-    || !Number.isSafeInteger(item.version) || (item.version as number) < 0) throw invalid();
-  return { messages: item.messages, visits: item.visits, offers: item.offers, version: item.version as number };
+    || typeof item.alerts !== 'boolean' || !Number.isSafeInteger(item.version) || (item.version as number) < 0) throw invalid();
+  return { messages: item.messages, visits: item.visits, offers: item.offers, alerts: item.alerts, version: item.version as number };
 }
 export function createSupabaseNotificationRepository(client: SupabaseClient): NotificationRepository {
   const rpc = async (name: string, parameters: Record<string, unknown>, context: MessagingRequestContext): Promise<unknown> => {
@@ -56,13 +63,13 @@ export function createSupabaseNotificationRepository(client: SupabaseClient): No
     return data;
   };
   return {
-    async summary(context) { return decodeSummary(await rpc('kh_notification_summary', {}, context)); },
+    async summary(context) { return decodeSummary(await rpc('kh_notification_summary', { p_include_alerts: true }, context)); },
     async list(options, context) {
       if (options.beforeSeq !== undefined && !isNotificationSequence(options.beforeSeq)
         || options.unreadOnly !== undefined && typeof options.unreadOnly !== 'boolean'
-        || options.category !== undefined && !['message', 'visit', 'offer'].includes(options.category)) throw invalid();
+        || options.category !== undefined && !categories.includes(options.category)) throw invalid();
       const result = record(await rpc('kh_list_notifications', { p_before_seq: options.beforeSeq ?? null,
-        p_unread_only: options.unreadOnly ?? false, p_category: options.category ?? null, p_limit: NOTIFICATION_PAGE_SIZE }, context));
+        p_unread_only: options.unreadOnly ?? false, p_category: options.category ?? null, p_limit: NOTIFICATION_PAGE_SIZE, p_include_alerts: true }, context));
       const summary = decodeSummary(result);
       if (!Array.isArray(result.items) || result.items.length > NOTIFICATION_PAGE_SIZE
         || result.nextCursor !== null && !isNotificationSequence(result.nextCursor)) throw invalid();
@@ -86,10 +93,11 @@ export function createSupabaseNotificationRepository(client: SupabaseClient): No
     },
     async preferences(context) { return decodePreferences(await rpc('kh_get_notification_preferences', {}, context)); },
     async savePreferences(input, context) {
-      if (![input.messages, input.visits, input.offers].every(value => typeof value === 'boolean')
+      if (![input.messages, input.visits, input.offers, input.alerts].every(value => typeof value === 'boolean')
         || !Number.isSafeInteger(input.expectedVersion) || input.expectedVersion < 0) throw invalid();
       const result = decodePreferences(await rpc('kh_save_notification_preferences', { p_payload: input }, context));
-      if (result.messages !== input.messages || result.visits !== input.visits || result.offers !== input.offers) throw invalid();
+      if (result.messages !== input.messages || result.visits !== input.visits || result.offers !== input.offers
+        || result.alerts !== input.alerts) throw invalid();
       return result;
     },
   };

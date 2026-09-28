@@ -57,7 +57,7 @@ function PreferencesForm({ userId, preferences }: { userId: string; preferences:
   const changed = !sameNotificationChoices(draft, preferences);
   const busy = store.savingPreferences || store.preferencesLoading;
   const checkpoint = () => { if (!mounted.current || actor.current !== userId) throw new Error('KH_ACCOUNT_CHANGED'); };
-  function change(key: 'messages' | 'visits' | 'offers', value: boolean) {
+  function change(key: 'messages' | 'visits' | 'offers' | 'alerts', value: boolean) {
     if (busy) return;
     setDraft(current => ({ ...current, [key]: value })); setSaved(false); setIssue('');
   }
@@ -66,7 +66,7 @@ function PreferencesForm({ userId, preferences }: { userId: string; preferences:
     locked.current = true; setSaved(false); setIssue('');
     try {
       checkpoint();
-      const result = await store.savePreferences({ messages: draft.messages, visits: draft.visits, offers: draft.offers, expectedVersion: draft.version });
+      const result = await store.savePreferences({ messages: draft.messages, visits: draft.visits, offers: draft.offers, alerts: draft.alerts, expectedVersion: draft.version });
       checkpoint(); setDraft(result); setSaved(true);
     } catch (error) {
       if (mounted.current && actor.current === userId) setIssue(notificationErrorMessage(error));
@@ -82,9 +82,10 @@ function PreferencesForm({ userId, preferences }: { userId: string; preferences:
     <View style={styles.card}>
       <PreferenceRow label="Mensajes" description="Aviso en tu teléfono cuando alguien te escriba. El chat marca siempre los no leídos." icon="chatbubble-outline" value={draft.messages} disabled={busy} onChange={value => change('messages', value)} />
       <PreferenceRow label="Visitas" description="Propuestas de visita y cambios en su estado." icon="calendar-outline" value={draft.visits} disabled={busy} onChange={value => change('visits', value)} />
-      <PreferenceRow label="Ofertas" description="Ofertas de compra y novedades de la negociación." icon="pricetag-outline" value={draft.offers} disabled={busy} onChange={value => change('offers', value)} last />
+      <PreferenceRow label="Ofertas" description="Ofertas de compra y novedades de la negociación." icon="pricetag-outline" value={draft.offers} disabled={busy} onChange={value => change('offers', value)} />
+      <PreferenceRow label="Alertas de búsqueda" description="Cuando se publique una vivienda que encaje con tus búsquedas guardadas o tu busco, y cuando alguien busque lo que publicas." icon="search-outline" value={draft.alerts} disabled={busy} onChange={value => change('alerts', value)} last />
     </View>
-    <Text style={styles.footnote}>Desactivar una categoría evita sus próximos avisos. Tu bandeja recoge visitas y ofertas; los mensajes se consultan en el chat.</Text>
+    <Text style={styles.footnote}>Desactivar una categoría evita sus próximos avisos. Tu bandeja recoge visitas, ofertas y alertas; los mensajes se consultan en el chat.</Text>
     {!!(issue || store.preferencesError) && <Notice error>{issue || store.preferencesError}</Notice>}
     {saved && <View accessibilityLiveRegion="polite" style={styles.success}><Icon name="checkmark-circle" color={colors.green} size={19} /><Text style={styles.successText}>Preferencias guardadas.</Text></View>}
     <Button label="Guardar preferencias" onPress={() => void save()} loading={store.savingPreferences} disabled={busy || !changed} />

@@ -1,12 +1,12 @@
 import { changed, isFcmToken, isUuid, nextRevision, parsePushPayload, PushError, registrationError, revocationError } from './domain.ts';
-import type { InstallationState, InstallationStore, PushAdapter, PushPayload, PushRepository, PushRequestContext, PushSession, PushState } from './types.ts';
+import type { InstallationState, InstallationStore, PushAdapter, PushPayload, PushRepository, PushRequestContext, PushSession, PushState, PushTarget } from './types.ts';
 
 interface Dependencies {
   store: InstallationStore;
   repository: PushRepository;
   adapter: PushAdapter;
   projectId: string;
-  navigate(conversationId: string): void;
+  navigate(target: PushTarget): void;
   refreshSummary(): Promise<void>;
 }
 const sameSession = (a: PushSession | null, b: PushSession | null) => a?.userId === b?.userId && a?.sessionId === b?.sessionId;
@@ -177,8 +177,11 @@ export function createPushController({ store, repository, adapter, projectId, na
         processingResponseId = response.id;
         try {
           const resolved = await repository.resolve(response.payload.notificationId, request); request.checkpoint();
-          if (resolved.notificationId === response.payload.notificationId && resolved.recipientId === request.userId && isUuid(resolved.conversationId)) navigate(resolved.conversationId);
-        } catch { /* Deleted, blocked, stale and inaccessible notices do not open a conversation. */ }
+          if (resolved.notificationId === response.payload.notificationId && resolved.recipientId === request.userId) {
+            if (isUuid(resolved.conversationId)) navigate({ conversationId: resolved.conversationId });
+            else if (isUuid(resolved.propertyId)) navigate({ propertyId: resolved.propertyId });
+          }
+        } catch { /* Deleted, blocked, stale and inaccessible notices open nothing. */ }
         finally { request.release(); processingResponseId = null; await clearResponse(response.id); }
       }
     } finally { handlingResponses = false; }

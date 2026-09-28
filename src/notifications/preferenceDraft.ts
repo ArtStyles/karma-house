@@ -1,7 +1,7 @@
 import type { NotificationPreferences } from './types.ts';
 
 export function sameNotificationChoices(left: NotificationPreferences, right: NotificationPreferences) {
-  return left.messages === right.messages && left.visits === right.visits && left.offers === right.offers;
+  return left.messages === right.messages && left.visits === right.visits && left.offers === right.offers && left.alerts === right.alerts;
 }
 
 /** Keep intentional edits, but adopt the server version when those choices are confirmed. */

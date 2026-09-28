@@ -41,8 +41,11 @@ export function createPushRepository(url: string, publicKey: string, fetcher: ty
     async resolve(notificationId, context) {
       if (!isUuid(notificationId) || !isUuid(context.userId)) throw invalid();
       const result = await rpc('kh_resolve_push_notification', { p_actor_id: context.userId, p_notification_id: notificationId }, context);
-      if (result.notificationId !== notificationId || result.recipientId !== context.userId || !isUuid(result.conversationId)) throw invalid();
-      return { notificationId, recipientId: context.userId, conversationId: result.conversationId };
+      // Exactly one target: a conversation, or the property of a search alert. Older servers omit propertyId.
+      const conversationId = result.conversationId ?? null, propertyId = result.propertyId ?? null;
+      if (result.notificationId !== notificationId || result.recipientId !== context.userId
+        || (conversationId === null ? !isUuid(propertyId) : !isUuid(conversationId) || propertyId !== null)) throw invalid();
+      return { notificationId, recipientId: context.userId, conversationId: conversationId as string | null, propertyId: propertyId as string | null };
     },
   };
 }

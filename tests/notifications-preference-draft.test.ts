@@ -3,11 +3,13 @@ import test from 'node:test';
 import { reconcileNotificationPreferenceDraft } from '../src/notifications/preferenceDraft.ts';
 import type { NotificationPreferences } from '../src/notifications/types.ts';
 
-const original: NotificationPreferences = { messages: true, visits: true, offers: true, version: 0 };
+const original: NotificationPreferences = { messages: true, visits: true, offers: true, alerts: true, version: 0 };
 
 test('a clean settings form follows preferences refreshed by another session', () => {
   const next = { ...original, offers: false, version: 1 };
   assert.deepEqual(reconcileNotificationPreferenceDraft(original, original, next), next);
+  const paused = { ...original, alerts: false };
+  assert.deepEqual(reconcileNotificationPreferenceDraft(paused, original, next), paused, 'an unsaved alerts change is kept');
 });
 
 test('a distinct unsaved preference keeps its choices and expected version for conflict detection', () => {

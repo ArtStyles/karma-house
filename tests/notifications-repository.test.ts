@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createSupabaseNotificationRepository, decodeNotification } from '../src/notifications/repository.ts';
 const recipient='77000000-0000-4000-8000-000000000001', actor='77000000-0000-4000-8000-000000000002', id='77000000-0000-4000-8000-000000000003';
-const row={id,seq:'9007199254740993',recipientId:recipient,actorId:actor,conversationId:id,messageId:id,negotiationId:null,category:'message',actorName:'Ana',propertyTitle:'Casa',title:'Nuevo mensaje',body:'Tienes un mensaje en tu conversación.',createdAt:'2026-09-20T10:00:00Z',readAt:null};
+const row={id,seq:'9007199254740993',recipientId:recipient,actorId:actor,conversationId:id,messageId:id,negotiationId:null,category:'message',actorName:'Ana',propertyTitle:'Casa',title:'Nuevo mensaje',body:'Tienes un mensaje en tu conversación.',createdAt:'2026-09-20T10:00:00Z',readAt:null,propertyId:null,savedSearchId:null};
 const page={items:[row],nextCursor:null,unreadCount:1,readThrough:row.seq};
 function fixture(data=page){
   const calls=[],abort=new AbortController(); let changed=false;
@@ -13,7 +13,7 @@ function fixture(data=page){
 }
 test('list and summary bind captured identity, JWT and signal without sharing pagination',async()=>{
   const f=fixture(); assert.deepEqual(await f.repo.list({unreadOnly:true},f.context),page);
-  assert.deepEqual(f.calls[0].args,{p_before_seq:null,p_unread_only:true,p_category:null,p_limit:30,p_actor_id:recipient});
+  assert.deepEqual(f.calls[0].args,{p_before_seq:null,p_unread_only:true,p_category:null,p_limit:30,p_include_alerts:true,p_actor_id:recipient});
   assert.deepEqual(f.calls[0].header,['Authorization','Bearer captured-token']); assert.equal(f.calls[0].signal,f.context.signal);
   const g=fixture({unreadCount:1,readThrough:row.seq});await g.repo.summary(g.context);assert.equal(g.calls[0].name,'kh_notification_summary');
 });
@@ -33,6 +33,7 @@ test('full seek page preserves a valid next cursor beyond safe integer precision
 });
 test('decoder returns an explicit public shape, rejects self and malformed identities',()=>{
   assert.deepEqual(decodeNotification({...row,privateNote:'secret'}),row);
+  const {propertyId,savedSearchId,...legacy}=row; assert.deepEqual(decodeNotification(legacy),row,'items without alert fields decode as null');
   for(const patch of [{actorId:recipient},{seq:9007199254740993},{negotiationId:actor},{readAt:'bad'},{category:'other'}]) assert.throws(()=>decodeNotification({...row,...patch}));
 });
 test('late session changes and aborted calls cannot publish data',async()=>{
@@ -46,9 +47,23 @@ test('read operations preserve bigint cutoff and reject invalid server counts',a
   await assert.rejects(f.repo.markAllRead('01',f.context));
 });
 test('preferences validate versions and exact desired confirmation',async()=>{
-  const desired={messages:false,visits:true,offers:true,expectedVersion:0};
-  const f=fixture({messages:false,visits:true,offers:true,version:1});
+  const desired={messages:false,visits:true,offers:true,alerts:true,expectedVersion:0};
+  const f=fixture({messages:false,visits:true,offers:true,alerts:true,version:1});
   assert.equal((await f.repo.savePreferences(desired,f.context)).version,1);assert.deepEqual(f.calls[0].args.p_payload,desired);
-  const g=fixture({messages:true,visits:true,offers:true,version:1});await assert.rejects(g.repo.savePreferences(desired,g.context));
-  const h=fixture({messages:true,visits:true,offers:true,version:-1});await assert.rejects(h.repo.preferences(h.context));
+  const g=fixture({messages:true,visits:true,offers:true,alerts:true,version:1});await assert.rejects(g.repo.savePreferences(desired,g.context));
+  const h=fixture({messages:true,visits:true,offers:true,alerts:true,version:-1});await assert.rejects(h.repo.preferences(h.context));
+  const i=fixture({messages:false,visits:true,offers:true,alerts:false,version:1});await assert.rejects(i.repo.savePreferences(desired,i.context),'alerts must match too');
+  const j=fixture({messages:true,visits:true,offers:true,version:1});await assert.rejects(j.repo.preferences(j.context),'alerts is required');
+});
+test('alerts decode without a conversation, list with the flag and preferences carry alerts', async () => {
+  const alert = { ...row, id: '77000000-0000-4000-8000-000000000009', seq: '9007199254740999', conversationId: null, messageId: null, negotiationId: null, category: 'alert', propertyId: id, savedSearchId: null, title: 'Nueva vivienda para tu búsqueda', body: 'Casas: Casa, 50,000 USD, Vedado' };
+  assert.equal(decodeNotification(alert).propertyId, id);
+  assert.throws(() => decodeNotification({ ...alert, propertyId: null }));
+  assert.throws(() => decodeNotification({ ...row, propertyId: id }), 'a message never carries a property');
+  const f = fixture({ ...page, items: [alert], readThrough: alert.seq });
+  await f.repo.list({ category: 'alert' }, f.context);
+  assert.equal(f.calls[0].args.p_include_alerts, true); assert.equal(f.calls[0].args.p_category, 'alert');
+  const g = fixture({ unreadCount: 0, readThrough: '0' }); await g.repo.summary(g.context); assert.equal(g.calls[0].args.p_include_alerts, true);
+  const h = fixture({ messages: true, visits: true, offers: true, alerts: false, version: 3 });
+  assert.deepEqual(await h.repo.preferences(h.context), { messages: true, visits: true, offers: true, alerts: false, version: 3 });
 });
