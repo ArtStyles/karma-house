@@ -7,7 +7,7 @@ import { AccountPrompt } from '../components/AccountPrompt';
 import { PropertyImage } from '../components/PropertyImage';
 import { Button, EmptyState, Icon, Notice, PageTitle } from '../components/ui';
 import { listingBoardState, type Listing, type ListingBoardState, type ListingStatus } from '../domain/listings';
-import { listingOperation, operationBadge } from '../domain/operations';
+import { listingOperation, operationBadge, priceSuffix } from '../domain/operations';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { remoteErrorMessage } from '../state/remoteMarketplaceStore';
 import { colors, formatMoney } from '../theme';
@@ -76,7 +76,7 @@ export default function MyListingsScreen() {
           const state = listingBoardState(item);
           const tone = boardTones[state];
           return <View key={item.id} style={styles.card}>
-          <Pressable accessibilityRole="button" accessibilityLabel={`${item.title}. ${boardLabels[state]}. ${formatMoney(item.price)} USD. ${item.location}.`} onPress={() => router.push(`/property/${item.id}`)} style={({ pressed }) => [styles.overview, pressed && styles.pressed]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`${item.title}. ${boardLabels[state]}. ${formatMoney(item.price)} USD${priceSuffix(item)}. ${item.location}.`} onPress={() => router.push(`/property/${item.id}`)} style={({ pressed }) => [styles.overview, pressed && styles.pressed]}>
             {listingOperation(item) === 'wanted'
               ? <View style={[styles.image, styles.wantedImage]}><Icon name="search-outline" size={28} color={colors.primary} /></View>
               : <PropertyImage listing={item} style={styles.image} />}
@@ -87,7 +87,7 @@ export default function MyListingsScreen() {
               </View>
               {!!operationBadge(item) && <Text style={styles.operation}>{operationBadge(item)}</Text>}
               <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
-              <Text style={styles.price}>{listingOperation(item) === 'wanted' ? 'Hasta ' : ''}{formatMoney(item.price)} <Text style={styles.currency}>USD</Text></Text>
+              <Text style={styles.price}>{listingOperation(item) === 'wanted' ? 'Hasta ' : ''}{formatMoney(item.price)} <Text style={styles.currency}>USD{priceSuffix(item)}</Text></Text>
               <Text style={styles.location} numberOfLines={1}>{item.location}</Text>
             </View>
             <Icon name="chevron-forward" size={16} color={colors.muted} />

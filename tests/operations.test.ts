@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { validateDraft, createListing, updateListing, filterListings, activeFilterCount, shortcutActive, toggleShortcut, defaultFilters } from '../src/domain/listings.ts';
 import { isListingOperation, isSwapBalance, isRentPeriod, OPERATIONS, SWAP_BALANCES, RENT_PERIODS, WANTED_OPERATIONS } from '../src/domain/listingOptions.ts';
-import { listingOperation, operationBadge, priceLabel, priceSuffix, listingFacts, swapBalanceText, shareText, operationsFor, wantedOperationsText } from '../src/domain/operations.ts';
+import { listingOperation, operationBadge, priceLabel, priceSuffix, listingFacts, swapBalanceText, shareText, operationsFor, wantedOperationsText, minStayText } from '../src/domain/operations.ts';
 import { propertyPayload } from '../src/data/propertyPayload.ts';
 import { mapRemoteListing } from '../src/data/remoteMapping.ts';
 import { restoreDraft } from '../src/domain/draftPersistence.ts';
@@ -176,6 +176,8 @@ test('rental and wanted texts', () => {
   assert.equal(wantedOperationsText({ wantedOperations: ['rent'] }), 'alquilar');
   assert.equal(wantedOperationsText({ wantedOperations: ['sale', 'swap'] }), 'comprar o permutar');
   assert.equal(wantedOperationsText({}), 'comprar o permutar');
+  assert.equal(minStayText('month', 3), '3 meses');
+  assert.equal(minStayText('day', 1), '1 noche');
 });
 test('payloads, rows, drafts and the snapshot carry the rental and wanted fields', () => {
   const p = propertyPayload(rent, 'seller', [], 'pending');

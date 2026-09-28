@@ -34,7 +34,7 @@ export function searchName(filters: ListingFilters): string {
   if (activeFilterCount(filters) === 0) return 'Todas las viviendas';
   const saved = toSavedFilters(filters);
   const operation = filters.operation ?? 'offers';
-  const parts = [operation === 'wanted' ? 'Busco' : operation === 'swap' ? 'Permutas'
+  const parts = [operation === 'wanted' ? 'Busco' : operation === 'swap' ? 'Permutas' : operation === 'rent' ? 'Alquileres'
     : saved.type === 'Casa' ? 'Casas' : saved.type === 'Apartamento' ? 'Apartamentos' : 'Viviendas'];
   if (filters.query.trim()) parts.push(`«${filters.query.trim()}»`);
   if (saved.min_bedrooms > 0) parts.push(`de ${saved.min_bedrooms}+ hab`);

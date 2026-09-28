@@ -26,9 +26,9 @@ import { LocationPicker } from './maps/LocationPicker';
 import { normalizeMapLocation } from '../domain/geo';
 import { Button, Icon, Notice, Pill } from './ui';
 import { SelectionField } from './SelectionField';
-import { AMENITIES, CONDITIONS, OPERATIONS, PROVINCES, SWAP_BALANCES, type ListingOperation } from '../domain/listingOptions';
+import { AMENITIES, CONDITIONS, OPERATIONS, PROVINCES, RENT_PERIODS, SWAP_BALANCES, WANTED_OPERATIONS, type ListingOperation } from '../domain/listingOptions';
 import { normalizeDecimalInput, parseDecimal, publishedNumber } from '../domain/numericInput';
-import { swapBalanceText } from '../domain/operations';
+import { minStayText, priceLabel, priceSuffix, swapBalanceText, wantedOperationsText } from '../domain/operations';
 
 type DraftErrors = DraftValidation['errors'];
 
@@ -44,11 +44,12 @@ export interface ListingFormProps {
 }
 
 function stepFieldsFor(operation: ListingOperation): (keyof ListingDraft)[][] {
-  if (operation === 'wanted') return [['title', 'type', 'location', 'province'], ['price', 'bedrooms', 'description'], []];
+  if (operation === 'wanted') return [['title', 'type', 'wantedOperations', 'location', 'province'], ['price', 'bedrooms', 'description'], []];
   return [
     ['title', 'type', 'location', 'province', 'mapLocation'],
     ['price', 'bedrooms', 'bathrooms', 'area', 'condition', 'floor', 'priceNegotiable', 'description', 'amenities', 'photoUri', 'photos',
-      ...(operation === 'swap' ? ['swapWants', 'swapProvinces', 'swapBalance', 'swapAmount'] as const : [])],
+      ...(operation === 'swap' ? ['swapWants', 'swapProvinces', 'swapBalance', 'swapAmount'] as const : []),
+      ...(operation === 'rent' ? ['rentPeriod', 'rentMinStay'] as const : [])],
     [],
   ];
 }
@@ -62,6 +63,7 @@ const fieldLabels: Partial<Record<keyof ListingDraft, string>> = {
   photos: 'Fotos', photoUri: 'Fotos',
   operation: 'Qué publicas', swapWants: 'Qué buscas a cambio', swapProvinces: 'Provincias que aceptas',
   swapBalance: 'Diferencia', swapAmount: 'Importe de la diferencia',
+  rentPeriod: 'Cobro', rentMinStay: 'Estancia mínima', wantedOperations: 'Qué busco',
 };
 
 const roomOptions = Array.from({ length: 20 }, (_, index) => ({ value: String(index + 1), label: String(index + 1) }));
@@ -93,6 +95,8 @@ export function ListingForm({
   const [chosen, setChosen] = useState(false);
   const operation = draft.operation ?? 'sale';
   const wanted = operation === 'wanted';
+  const wantedOperations = draft.wantedOperations ?? ['sale', 'swap'];
+  const perNight = draft.rentPeriod === 'day';
   const stepFields = stepFieldsFor(operation);
   // A restored draft that already names its operation skips the chooser.
   const choosing = hydrated && !initialDraft && draft.operation === undefined && !chosen;
@@ -265,10 +269,11 @@ export function ListingForm({
                   onPress={() => {
                     changeField('operation', item.value);
                     if (item.value === 'wanted') { changeField('type', ''); changeField('photos', []); changeField('photoUri', undefined); changeField('mapLocation', undefined); }
+                    if (item.value === 'rent' && !draft.rentPeriod) changeField('rentPeriod', 'month');
                     setChosen(true);
                   }}
                   style={({ pressed }) => [styles.fieldCard, styles.operationOption, pressed && { opacity: .8 }]}>
-                  <Icon name={item.value === 'sale' ? 'pricetag-outline' : item.value === 'swap' ? 'swap-horizontal-outline' : 'search-outline'} size={25} color={colors.primary} />
+                  <Icon name={item.value === 'sale' ? 'pricetag-outline' : item.value === 'swap' ? 'swap-horizontal-outline' : item.value === 'rent' ? 'key-outline' : 'search-outline'} size={25} color={colors.primary} />
                   <View style={{ flex: 1 }}><Text style={styles.operationTitle}>{item.label}</Text><Text style={styles.operationText}>{item.description}</Text></View>
                   <Icon name="chevron-forward" size={19} color={colors.muted} />
                 </Pressable>
@@ -334,6 +339,15 @@ export function ListingForm({
                   />
                   {wanted ? <Pill label="Cualquiera" active={draft.type === ''} onPress={() => changeField('type', '')} /> : null}
                 </ChoiceField>
+                {wanted ? (
+                  <ChoiceField label="Qué busco" error={errors.wantedOperations}>
+                    {WANTED_OPERATIONS.map(item => {
+                      const active = wantedOperations.includes(item.value);
+                      return <Pill key={item.value} label={item.label} active={active} icon={active ? 'checkmark-circle' : 'add-outline'}
+                        onPress={() => changeField('wantedOperations', active ? wantedOperations.filter(value => value !== item.value) : WANTED_OPERATIONS.map(option => option.value).filter(value => value === item.value || wantedOperations.includes(value)))} />;
+                    })}
+                  </ChoiceField>
+                ) : null}
               </View>
               <View style={styles.fieldCard}>
                 <Field
@@ -383,9 +397,10 @@ export function ListingForm({
                 </View>
               ) : null}
               <View style={styles.fieldCard}>
+                {operation === 'rent' ? <SelectionField label="Cobro" required value={draft.rentPeriod ?? ''} options={RENT_PERIODS} onChange={value => changeField('rentPeriod', value as ListingDraft['rentPeriod'])} error={errors.rentPeriod} /> : null}
                 <View style={styles.previewGroup}>
                   <Field
-                    label={wanted ? 'Presupuesto máximo en USD' : operation === 'swap' ? 'Valor estimado en USD' : 'Precio en USD'}
+                    label={wanted ? wantedOperations.length === 1 && wantedOperations[0] === 'rent' ? 'Presupuesto máximo por mes (USD)' : 'Presupuesto máximo en USD' : operation === 'swap' ? 'Valor estimado en USD' : operation === 'rent' ? `Precio por ${perNight ? 'noche' : 'mes'} (USD)` : 'Precio en USD'}
                     required
                     placeholder="85000"
                     value={draft.price}
@@ -398,6 +413,12 @@ export function ListingForm({
                   {publishedPrice !== null ? <Text style={styles.publishNote}>Se publicará como {formatMoney(publishedPrice)} USD</Text> : null}
                   {operation === 'swap' ? <Text style={styles.fieldHint}>Sirve para que te encuentren por precio; no es una oferta.</Text> : null}
                 </View>
+                {operation === 'rent' ? (
+                  <View style={styles.previewGroup}>
+                    <Field label="Estancia mínima (opcional)" placeholder={perNight ? '2' : '3'} value={draft.rentMinStay ?? ''} onChangeText={value => changeField('rentMinStay', value.replace(/D/g, ''))} error={errors.rentMinStay} keyboardType="number-pad" inputMode="numeric" maxLength={3} />
+                    <Text style={styles.fieldHint}>Meses o noches, según el cobro.</Text>
+                  </View>
+                ) : null}
 
                 <View style={styles.fieldGrid}>
                   <View style={styles.gridField}>
@@ -511,8 +532,10 @@ export function ListingForm({
                 <Text style={styles.reviewLocation}>
                   {draft.location.trim()}, {draft.province.trim()}
                 </Text>
-                {operation !== 'sale' ? <Text style={styles.reviewLocation}>{wanted ? 'Presupuesto máximo' : 'Valor estimado'}</Text> : null}
-                <Text style={styles.reviewPrice}>{publishedPrice !== null ? `${formatMoney(publishedPrice)} USD` : 'Precio sin indicar'}</Text>
+                {operation !== 'sale' ? <Text style={styles.reviewLocation}>{priceLabel({ operation })}</Text> : null}
+                <Text style={styles.reviewPrice}>{publishedPrice !== null ? `${formatMoney(publishedPrice)} USD${operation === 'rent' && draft.rentPeriod ? priceSuffix({ operation, rent: { period: draft.rentPeriod } }) : ''}` : 'Precio sin indicar'}</Text>
+                {wanted ? <Text style={styles.reviewLocation}>Busca: {wantedOperationsText({ wantedOperations })}</Text> : null}
+                {operation === 'rent' && draft.rentPeriod && draft.rentMinStay?.trim() ? <Text style={styles.reviewLocation}>Estancia mínima: {minStayText(draft.rentPeriod, Number(draft.rentMinStay))}</Text> : null}
                 {wanted ? (
                   <View style={styles.reviewFacts}>
                     <Fact icon="bed-outline" value={`desde ${draft.bedrooms.trim()} hab.`} />

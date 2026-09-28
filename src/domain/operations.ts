@@ -1,6 +1,6 @@
 // Presentation of a listing according to its operation: badge, price label, facts line
 // and share text. Pure so the card, the detail screen, the public page and tests agree.
-import type { Listing, ListingOperation, ListingSwap } from './listings.ts';
+import type { Listing, ListingOperation, ListingSwap, RentPeriod } from './listings.ts';
 import { OPERATIONS, WANTED_OPERATIONS } from './listingOptions.ts';
 export { operationsFor } from './listings.ts';
 
@@ -25,6 +25,12 @@ export function priceLabel(listing: Pick<Listing, 'operation'>): 'Precio' | 'Val
 export function priceSuffix(listing: Pick<Listing, 'operation' | 'rent'>): string {
   if (listingOperation(listing) !== 'rent' || !listing.rent) return '';
   return listing.rent.period === 'day' ? ' / noche' : ' / mes';
+}
+
+/** «3 meses», «1 noche»: the minimum stay in the unit the rental is charged by. */
+export function minStayText(period: RentPeriod, minStay: number): string {
+  const [one, many] = period === 'day' ? ['noche', 'noches'] : ['mes', 'meses'];
+  return `${minStay} ${minStay === 1 ? one : many}`;
 }
 
 /** «comprar, permutar o alquilar»: what a wanted ad is after, buying or swapping when unknown. */

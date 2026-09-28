@@ -22,7 +22,7 @@ import { useSavedSearches } from '../searches/useSavedSearches';
 
 const shortcuts: { value: Shortcut; label: string }[] = [
   { value: 'Casa', label: 'Casas' }, { value: 'Apartamento', label: 'Apartamentos' },
-  { value: 'swap', label: 'Permutas' }, { value: 'wanted', label: 'Busco' },
+  { value: 'swap', label: 'Permutas' }, { value: 'rent', label: 'Alquileres' }, { value: 'wanted', label: 'Busco' },
   { value: 'price', label: 'Hasta $30.000' }, { value: 'bedrooms', label: '3+ hab.' },
 ];
 const provinceOptions = [{ value: '', label: 'Toda Cuba' }, ...PROVINCES.map(value => ({ value, label: value }))];

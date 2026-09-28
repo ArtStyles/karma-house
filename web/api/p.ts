@@ -17,12 +17,27 @@ export interface PublicListingRow {
   condition: string | null;
   floor: number | null;
   price_negotiable: boolean | null;
-  operation?: 'sale' | 'swap' | 'wanted' | null;
+  operation?: 'sale' | 'swap' | 'wanted' | 'rent' | null;
   swap_wants?: string | null;
   swap_provinces?: string[] | null;
   swap_balance?: 'none' | 'pay' | 'receive' | null;
   swap_amount?: number | string | null;
+  rent_period?: 'month' | 'day' | null;
+  rent_min_stay?: number | null;
+  wanted_operations?: ('sale' | 'swap' | 'rent')[] | null;
 }
+
+const BADGES = { swap: 'Permuta', wanted: 'Busco', rent: 'Alquiler' } as const;
+const WANTED_WORDS = { sale: 'comprar', swap: 'permutar', rent: 'alquilar' } as const;
+
+/** «comprar, permutar o alquilar», buying or swapping when the row predates the column. */
+function wantedText(row: PublicListingRow): string {
+  const wanted = row.wanted_operations ?? ['sale', 'swap'];
+  const words = (['sale', 'swap', 'rent'] as const).filter((op) => wanted.includes(op)).map((op) => WANTED_WORDS[op]);
+  return words.length > 1 ? `${words.slice(0, -1).join(', ')} o ${words[words.length - 1]}` : words.join('');
+}
+
+const perPeriod = (row: PublicListingRow) => row.rent_period === 'day' ? 'noche' : 'mes';
 
 const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export function escapeHtml(value: string): string {
@@ -38,7 +53,7 @@ export function describeListing(row: PublicListingRow): string {
   const op = row.operation ?? 'sale';
   const place = `${row.location}, ${row.province}`;
   if (op === 'wanted') return `Hasta ${formatPrice(row.price)} USD · ${place} · desde ${row.bedrooms} hab · ${row.type ?? 'Casa o apartamento'}`;
-  const price = op === 'swap' ? `Valor est. ${formatPrice(row.price)} USD` : `${formatPrice(row.price)} USD`;
+  const price = op === 'swap' ? `Valor est. ${formatPrice(row.price)} USD` : op === 'rent' ? `Alquiler ${formatPrice(row.price)} USD/${perPeriod(row)}` : `${formatPrice(row.price)} USD`;
   return `${price} · ${place} · ${row.bedrooms} hab · ${row.bathrooms} baños · ${Number(row.area)} m²`;
 }
 
@@ -95,7 +110,7 @@ function header(siteUrl: string): string {
 
 export function renderListing(row: PublicListingRow, photoUrls: string[], siteUrl: string, selfUrl: string): string {
   const op = row.operation ?? 'sale';
-  const title = escapeHtml(op === 'sale' ? row.title : `${op === 'swap' ? 'Permuta' : 'Busco'}: ${row.title}`);
+  const title = escapeHtml(op === 'sale' ? row.title : `${BADGES[op]}: ${row.title}`);
   const place = `${row.location}, ${row.province}`;
   const description = escapeHtml(describeListing(row));
   const site = escapeHtml(siteUrl);
@@ -126,6 +141,7 @@ export function renderListing(row: PublicListingRow, photoUrls: string[], siteUr
     ['Habitaciones', String(row.bedrooms)],
     ['Baños', String(row.bathrooms)],
     ['Superficie', `${Number(row.area)} m²`],
+    ...(op === 'rent' && row.rent_min_stay ? [['Estancia mínima', `${row.rent_min_stay} ${row.rent_period === 'day' ? (row.rent_min_stay === 1 ? 'noche' : 'noches') : (row.rent_min_stay === 1 ? 'mes' : 'meses')}`] as [string, string]] : []),
   ];
   const amenities = op !== 'wanted' && row.amenities?.length
     ? `<section class="card"><h2>Características</h2><ul>${row.amenities.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul></section>`
@@ -138,14 +154,15 @@ export function renderListing(row: PublicListingRow, photoUrls: string[], siteUr
     : '';
   const price = op === 'wanted'
     ? `Hasta $ ${formatPrice(row.price)}`
-    : `$ ${formatPrice(row.price)} <small>USD${op === 'swap' ? ' · valor estimado' : ''}${row.price_negotiable ? ' · Negociable' : ''}</small>`;
+    : `$ ${formatPrice(row.price)} <small>USD${op === 'swap' ? ' · valor estimado' : op === 'rent' ? ` / ${perPeriod(row)}` : ''}${row.price_negotiable ? ' · Negociable' : ''}</small>`;
   const body = `${header(siteUrl)}
 ${gallery}
-${op === 'sale' ? '' : `<p class="eyebrow">${op === 'swap' ? 'Permuta' : 'Busco'}</p>
+${op === 'sale' ? '' : `<p class="eyebrow">${BADGES[op]}</p>
 `}<h1>${escapeHtml(row.title)}</h1>
 <p class="price">${price}</p>
 <p class="muted">${escapeHtml(row.location)}, ${escapeHtml(row.province)}</p>
-<section class="card"><dl>${details.map(([label, value]) => `<dt>${label}</dt><dd>${escapeHtml(value)}</dd>`).join('')}</dl></section>
+${op === 'wanted' ? `<p>Busca: ${wantedText(row)}</p>
+` : ''}<section class="card"><dl>${details.map(([label, value]) => `<dt>${label}</dt><dd>${escapeHtml(value)}</dd>`).join('')}</dl></section>
 ${about}
 ${swap}
 ${amenities}
@@ -167,7 +184,7 @@ export function renderUnavailable(siteUrl: string): string {
 
 export const SITE_URL = 'https://artstyles.github.io/karma-house/';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const COLUMNS = 'id,title,location,province,type,description,price,area,bedrooms,bathrooms,amenities,photo_paths,condition,floor,price_negotiable,operation,swap_wants,swap_provinces,swap_balance,swap_amount';
+const COLUMNS = 'id,title,location,province,type,description,price,area,bedrooms,bathrooms,amenities,photo_paths,condition,floor,price_negotiable,operation,swap_wants,swap_provinces,swap_balance,swap_amount,rent_period,rent_min_stay,wanted_operations';
 const HTML = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' };
 
 export interface Env { supabaseUrl: string; anonKey: string; publicOrigin: string }

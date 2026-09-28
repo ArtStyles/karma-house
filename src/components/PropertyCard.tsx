@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { isNewListing, type Listing } from '../domain/listings';
-import { listingFacts, operationBadge, priceLabel } from '../domain/operations';
+import { listingFacts, operationBadge, priceLabel, priceSuffix } from '../domain/operations';
 import { useAuth } from '../auth/AuthProvider';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors, formatMoney } from '../theme';
@@ -29,7 +29,7 @@ export function PropertyCard({ listing, horizontal = false }: { listing: Listing
     try { await toggleFavorite(listing.id); } catch { setError('No se pudo guardar el favorito. Inténtalo de nuevo.'); } finally { setSaving(false); }
   }
   return <View style={horizontal && styles.horizontalCard}>
-    <Pressable accessibilityRole="button" accessibilityLabel={`Ver ${listing.title}, ${priceLabel(listing)} ${formatMoney(listing.price)} USD, ${place}`} onPress={() => router.push(`/property/${listing.id}`)} style={({ pressed }) => [horizontal && styles.horizontal, pressed && { opacity: .85 }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`Ver ${listing.title}, ${priceLabel(listing)} ${formatMoney(listing.price)} USD${priceSuffix(listing)}, ${place}`} onPress={() => router.push(`/property/${listing.id}`)} style={({ pressed }) => [horizontal && styles.horizontal, pressed && { opacity: .85 }]}>
       <View style={horizontal && styles.wideImage}>
         {listing.operation === 'wanted' && !(listing.photos?.length)
           ? <View style={[horizontal ? styles.horizontalImage : styles.image, styles.wantedImage]}><Icon name="search-outline" size={37} color={colors.primary} /><Text style={styles.wantedText}>Busco vivienda</Text></View>
@@ -41,7 +41,7 @@ export function PropertyCard({ listing, horizontal = false }: { listing: Listing
         <View style={styles.priceRow}>
           {listing.operation === 'wanted'
             ? <Text style={styles.price}>Hasta {formatMoney(listing.price)} <Text style={styles.currency}>USD</Text></Text>
-            : <Text style={styles.price}>{formatMoney(listing.price)} <Text style={styles.currency}>{listing.operation === 'swap' ? 'USD · valor est.' : 'USD'}</Text></Text>}
+            : <Text style={styles.price}>{formatMoney(listing.price)} <Text style={styles.currency}>{listing.operation === 'swap' ? 'USD · valor est.' : `USD${priceSuffix(listing)}`}</Text></Text>}
           {listing.priceNegotiable && <Text style={styles.negotiable}>Negociable</Text>}
         </View>
         <Text numberOfLines={1} style={styles.title}>{listing.title}</Text>

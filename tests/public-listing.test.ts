@@ -161,3 +161,23 @@ test('the public page labels swaps and wanted ads', () => {
   assert.ok(wantedHtml.includes('Tengo algo que encaja'));
   assert.ok(wantedHtml.includes('<dt>Habitaciones mínimas</dt><dd>3</dd>'));
 });
+
+test('the public page labels rentals and what a wanted ad is after', () => {
+  const rentRow = { ...row, operation: 'rent' as const, rent_period: 'month' as const, rent_min_stay: 3 };
+  const rentHtml = renderListing(rentRow, photos, site, self);
+  assert.ok(rentHtml.includes('<title>Alquiler: Casa en el Vedado &lt;script&gt;alert(1)&lt;/script&gt;</title>'));
+  assert.ok(rentHtml.includes('<meta property="og:title" content="Alquiler: Casa en el Vedado &lt;script&gt;alert(1)&lt;/script&gt;">'));
+  assert.ok(rentHtml.includes('<meta property="og:description" content="Alquiler 85,000 USD/mes · Vedado, La Habana · 3 hab · 2 baños · 120.5 m²">'));
+  assert.ok(rentHtml.includes('<p class="eyebrow">Alquiler</p>'));
+  assert.ok(rentHtml.includes('$ 85,000 <small>USD / mes'));
+  assert.ok(rentHtml.includes('<dt>Estancia mínima</dt><dd>3 meses</dd>'));
+  const nightly = renderListing({ ...rentRow, rent_period: 'day', rent_min_stay: null }, [], site, self);
+  assert.ok(nightly.includes('$ 85,000 <small>USD / noche') && nightly.includes('USD/noche ·'));
+  assert.ok(!nightly.includes('Estancia mínima'));
+  assert.equal(describeListing({ ...rentRow, rent_min_stay: 1, rent_period: 'day' }), 'Alquiler 85,000 USD/noche · Vedado, La Habana · 3 hab · 2 baños · 120.5 m²');
+  const wantedRow = { ...row, operation: 'wanted' as const, type: null, area: null, bathrooms: null, wanted_operations: ['rent' as const] };
+  assert.ok(renderListing(wantedRow, [], site, self).includes('Busca: alquilar'));
+  assert.ok(renderListing({ ...wantedRow, wanted_operations: ['sale', 'swap', 'rent'] }, [], site, self).includes('Busca: comprar, permutar o alquilar'));
+  assert.ok(renderListing({ ...wantedRow, wanted_operations: undefined }, [], site, self).includes('Busca: comprar o permutar'));
+  assert.ok(!rentHtml.includes('Busca:'));
+});

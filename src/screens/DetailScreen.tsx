@@ -16,7 +16,7 @@ import { ReportConversationSheet } from '../components/messaging/ReportConversat
 import { createPropertyReportRepository, PROPERTY_REPORT_REASONS } from '../data/propertyReports';
 import { supabase } from '../lib/supabase';
 import { listingShareUrl } from '../lib/publicSite';
-import { listingOperation, operationBadge, priceLabel, shareText, swapBalanceText, typeLabel } from '../domain/operations';
+import { listingOperation, minStayText, operationBadge, priceLabel, priceSuffix, shareText, swapBalanceText, typeLabel, wantedOperationsText } from '../domain/operations';
 
 export default function DetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -130,12 +130,12 @@ export default function DetailScreen() {
           <View style={styles.badges}>
             <View style={[styles.statusBadge, listing.status !== 'active' && styles.inactiveBadge]}>
               <View style={[styles.statusDot, listing.status !== 'active' && styles.inactiveDot]} />
-              <Text style={[styles.statusText, listing.status !== 'active' && styles.inactiveText]}>{wanted ? listing.status === 'active' ? 'Búsqueda activa' : listing.status === 'sold' ? 'Cerrada' : 'En pausa' : listing.status === 'active' ? operation === 'swap' ? 'En permuta' : 'En venta' : listing.status === 'sold' ? 'Vendida' : 'En pausa'}</Text>
+              <Text style={[styles.statusText, listing.status !== 'active' && styles.inactiveText]}>{wanted ? listing.status === 'active' ? 'Búsqueda activa' : listing.status === 'sold' ? 'Cerrada' : 'En pausa' : listing.status === 'active' ? operation === 'swap' ? 'En permuta' : operation === 'rent' ? 'En alquiler' : 'En venta' : listing.status === 'sold' ? operation === 'rent' ? 'Alquilada' : 'Vendida' : 'En pausa'}</Text>
             </View>
             {mode === 'demo' ? <Text style={styles.demo}>{own ? 'Anuncio local' : 'Vivienda de muestra'}</Text> : moderation ? <Text style={styles.moderation}>{moderation}</Text> : own ? <Text style={styles.demo}>Tu anuncio</Text> : null}
           </View>
           {operation !== 'sale' && <Text style={styles.priceLabel}>{priceLabel(listing)}</Text>}
-          <Text style={styles.price}>{wanted ? 'Hasta ' : ''}{formatMoney(listing.price)} <Text style={styles.currency}>USD</Text></Text>
+          <Text style={styles.price}>{wanted ? 'Hasta ' : ''}{formatMoney(listing.price)} <Text style={styles.currency}>USD{priceSuffix(listing)}</Text></Text>
           <Text accessibilityRole="header" style={styles.title}>{listing.title}</Text>
           <View style={styles.location}><Icon name="location-outline" color={colors.muted} size={17} /><Text style={styles.locationText}>{listing.location}, {listing.province}, Cuba</Text></View>
         </View>
@@ -151,6 +151,7 @@ export default function DetailScreen() {
             <Feature icon="expand-outline" value={`${listing.area} m²`} label="Superficie" />
           </>}
         </View>
+        {wanted && <Text style={styles.wantedOperations}>Busca: {wantedOperationsText(listing)}</Text>}
         <View style={styles.section}><Text accessibilityRole="header" style={styles.sectionTitle}>{wanted ? 'Qué busca' : 'Sobre esta vivienda'}</Text><View style={styles.group}><Text style={styles.description}>{listing.description}</Text></View></View>
         {listing.swap && <View style={styles.section}>
           <Text accessibilityRole="header" style={styles.sectionTitle}>A cambio busca</Text>
@@ -160,12 +161,13 @@ export default function DetailScreen() {
             {listing.swap.provinces.length > 0 && <View style={styles.amenity}><Icon name="map-outline" size={21} color={colors.primary} /><Text style={styles.amenityText}>{listing.swap.provinces.join(', ')}</Text></View>}
           </View>
         </View>}
-        {(listing.condition || listing.floor !== undefined || listing.priceNegotiable !== undefined) && <View style={styles.section}>
+        {(listing.condition || listing.floor !== undefined || listing.priceNegotiable !== undefined || listing.rent?.minStay !== undefined) && <View style={styles.section}>
           <Text accessibilityRole="header" style={styles.sectionTitle}>Más detalles</Text>
           <View style={styles.amenities}>
             {listing.condition && <View style={styles.amenity}><Icon name="construct-outline" size={21} color={colors.primary} /><Text style={styles.amenityText}>{CONDITIONS.find(item => item.value === listing.condition)?.label}</Text></View>}
             {listing.floor !== undefined && <View style={styles.amenity}><Icon name="layers-outline" size={21} color={colors.primary} /><Text style={styles.amenityText}>{listing.floor === 0 ? 'Planta baja' : `Planta ${listing.floor}`}</Text></View>}
             {listing.priceNegotiable !== undefined && <View style={styles.amenity}><Icon name="pricetag-outline" size={21} color={colors.primary} /><Text style={styles.amenityText}>{listing.priceNegotiable ? 'Precio negociable' : 'Precio fijo'}</Text></View>}
+            {listing.rent?.minStay !== undefined && <View style={styles.amenity}><Icon name="calendar-outline" size={21} color={colors.primary} /><Text style={styles.amenityText}>Estancia mínima: {minStayText(listing.rent.period, listing.rent.minStay)}</Text></View>}
           </View>
         </View>}
         {listing.amenities.length > 0 && <View style={styles.section}>
@@ -199,7 +201,7 @@ export default function DetailScreen() {
       <NavigationMaterial />
       {contactError ? <View style={{ paddingHorizontal: 20 }}><Notice error>{contactError}</Notice></View> : null}
       <View style={styles.actionContent}>
-        <View style={styles.barSummary}><Text style={styles.barLabel}>{wanted ? 'Presupuesto máximo · USD' : operation === 'swap' ? 'Valor estimado · USD' : 'Precio de venta · USD'}</Text><Text style={styles.barPrice}>{formatMoney(listing.price)}</Text></View>
+        <View style={styles.barSummary}><Text style={styles.barLabel}>{wanted ? 'Presupuesto máximo · USD' : operation === 'swap' ? 'Valor estimado · USD' : operation === 'rent' ? `Alquiler · USD${priceSuffix(listing)}` : 'Precio de venta · USD'}</Text><Text style={styles.barPrice}>{formatMoney(listing.price)}</Text></View>
         <Button label={own ? 'Editar anuncio' : wanted ? 'Tengo algo que encaja' : 'Contactar'} icon={own ? 'create-outline' : 'chatbubble-outline'} loading={contactBusy} disabled={!own && (!auth.ready || (Boolean(auth.user) && !messaging.ready))} onPress={() => own ? router.push(`/edit/${listing.id}`) : void contactSeller()} style={styles.contactButton} />
       </View>
     </SafeAreaView>
@@ -230,6 +232,7 @@ const styles = StyleSheet.create({
   navigation: { position: 'absolute', top: 16, left: 20, right: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }, floatingButton: { backgroundColor: '#FFFFFFF5' }, navigationActions: { flexDirection: 'row', gap: 10 }, navigationTitle: { backgroundColor: '#FFFFFFF5', borderRadius: 22, paddingVertical: 11, paddingHorizontal: 17, flexShrink: 1 }, navText: { color: colors.ink, fontSize: 14, fontWeight: '600', textAlign: 'center' },
   body: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 28, gap: 24 }, summary: { gap: 9 },
   badges: { flexDirection: 'row', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 4 }, statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.softGreen, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 14 }, statusDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.green }, statusText: { fontSize: 12, fontWeight: '600', color: colors.green }, inactiveBadge: { backgroundColor: '#FFF3DA' }, inactiveDot: { backgroundColor: colors.amber }, inactiveText: { color: colors.amber }, demo: { fontSize: 12, color: colors.muted },
+  wantedOperations: { color: colors.ink, fontSize: 15, fontWeight: '600' },
   priceLabel: { color: colors.muted, fontSize: 13, fontWeight: '600' }, price: { color: colors.ink, fontSize: 34, fontWeight: '700', letterSpacing: -1.1 }, currency: { color: colors.muted, fontSize: 15, fontWeight: '500', letterSpacing: 0 }, title: { fontFamily: typefaces.display, color: colors.ink, fontWeight: '600', fontSize: 24, lineHeight: 30, letterSpacing: -.6 }, location: { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginTop: 1 }, locationText: { color: colors.muted, fontSize: 14, lineHeight: 20, flex: 1 },
   features: { flexDirection: 'row', flexWrap: 'wrap', backgroundColor: colors.white, borderRadius: 24, paddingVertical: 20, paddingHorizontal: 10, rowGap: 18 }, feature: { flex: 1, minWidth: 95, alignItems: 'center', gap: 8, paddingHorizontal: 4 }, featureValue: { fontSize: 20, fontWeight: '600', color: colors.ink, letterSpacing: -.4, textAlign: 'center' }, featureLabel: { fontSize: 12, color: colors.muted, textAlign: 'center' },
   section: { gap: 12 }, sectionTitle: { fontSize: 17, fontWeight: '600', color: colors.ink, letterSpacing: -.2, paddingHorizontal: 2 }, group: { backgroundColor: colors.white, borderRadius: 24, padding: 20 }, description: { color: colors.ink, lineHeight: 25, fontSize: 16 },

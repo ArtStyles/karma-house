@@ -34,7 +34,7 @@ export function CatalogFilters({ filters, total, onApply, onClose }: { filters: 
             {!!draft.query && <View style={styles.query}><Icon name="search-outline" size={17} color={colors.primary} /><Text style={styles.queryText}>Buscando «{draft.query}»</Text></View>}
             <View style={styles.section}><Text style={styles.sectionTitle}>Vivienda y ubicación</Text>
               <Text style={styles.label}>Operación</Text>
-              <View style={styles.choices}>{([['offers', 'Venta y permuta'], ['sale', 'Venta'], ['swap', 'Permuta'], ['wanted', 'Busco']] as const).map(([value, label]) =>
+              <View style={styles.choices}>{([['offers', 'Venta y permuta'], ['sale', 'Venta'], ['swap', 'Permuta'], ['rent', 'Alquiler'], ['wanted', 'Busco']] as const).map(([value, label]) =>
                 <Pill key={value} label={label} active={(draft.operation ?? 'offers') === value} onPress={() => change({ operation: value })} />)}</View>
               <View style={styles.choices}>{(['Todas', 'Casa', 'Apartamento'] as const).map(type => <Pill key={type} label={type} active={draft.type === type} onPress={() => change({ type })} />)}</View>
               <SelectionField inline label="Provincia" value={draft.province ?? ''} options={[{ value: '', label: 'Todas las provincias' }, ...PROVINCES.map(value => ({ value, label: value }))]} onChange={province => change({ province })} />

@@ -19,6 +19,8 @@ test('a search gets a readable name and summary', () => {
   assert.equal(searchName({ ...defaultFilters, type: 'Apartamento', minBedrooms: 3, province: 'Matanzas' }), 'Apartamentos de 3+ hab en Matanzas');
   assert.equal(searchName({ ...defaultFilters, operation: 'swap' }), 'Permutas en toda Cuba');
   assert.equal(searchName({ ...defaultFilters, operation: 'wanted', province: 'La Habana' }), 'Busco en La Habana');
+  assert.equal(searchName({ ...defaultFilters, operation: 'rent', province: 'La Habana' }), 'Alquileres en La Habana');
+  assert.equal(describeSearch(toSavedFilters({ ...defaultFilters, operation: 'rent' })), 'Alquiler · Toda Cuba');
   assert.equal(searchName({ ...defaultFilters, query: 'vedado' }), 'Viviendas «vedado» en toda Cuba');
   assert.equal(describeSearch(toSavedFilters({ ...defaultFilters, minPrice: '10000', maxPrice: '30000', minBathrooms: 2, condition: 'good', negotiableOnly: true })), 'Venta y permuta · Toda Cuba · $ 10,000 – $ 30,000 · 2+ baños · Buen estado · Negociable');
 });
