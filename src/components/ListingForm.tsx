@@ -268,7 +268,7 @@ export function ListingForm({
                 <Pressable key={item.value} accessibilityRole="button" accessibilityLabel={item.label}
                   onPress={() => {
                     changeField('operation', item.value);
-                    if (item.value === 'wanted') { changeField('type', ''); changeField('photos', []); changeField('photoUri', undefined); changeField('mapLocation', undefined); }
+                    if (item.value === 'wanted') { changeField('type', ''); changeField('photos', []); changeField('photoUri', undefined); changeField('mapLocation', undefined); changeField('wantedOperations', ['sale', 'swap']); }
                     if (item.value === 'rent' && !draft.rentPeriod) changeField('rentPeriod', 'month');
                     setChosen(true);
                   }}
