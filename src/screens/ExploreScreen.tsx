@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activeFilterCount, defaultFilters, shortcutActive, toggleShortcut, type ListingFilters, type Shortcut } from '../domain/listings';
@@ -15,6 +15,10 @@ import { CatalogFilters, SORT_OPTIONS } from '../components/CatalogFilters';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { NotificationBell } from '../components/notifications/NotificationBell';
+import { SaveSearchSheet } from '../components/SaveSearchSheet';
+import { useAuth } from '../auth/AuthProvider';
+import { fromSavedFilters } from '../searches/domain';
+import { useSavedSearches } from '../searches/useSavedSearches';
 
 const shortcuts: { value: Shortcut; label: string }[] = [
   { value: 'Casa', label: 'Casas' }, { value: 'Apartamento', label: 'Apartamentos' },
@@ -31,6 +35,16 @@ export default function ExploreScreen() {
   async function reload() { setRefreshing(true); try { await Promise.all([refresh(), refreshCatalog()]); } catch { /* Provider and catalogue expose their own errors. */ } finally { setRefreshing(false); } }
   const [filters, setFilters] = useState<ListingFilters>({ ...defaultFilters });
   const [expanded, setExpanded] = useState(false);
+  const auth = useAuth();
+  const { search } = useLocalSearchParams<{ search?: string }>();
+  const [saving, setSaving] = useState(false);
+  const [saveNotice, setSaveNotice] = useState<'demo' | 'saved' | null>(null);
+  function saveSearch() {
+    if (mode === 'demo') return setSaveNotice('demo');
+    if (!auth.ready) return;
+    if (!auth.user) return router.push({ pathname: '/auth', params: { returnTo: '/' } });
+    setSaveNotice(null); setSaving(true);
+  }
   const [view, setView] = useState<'list' | 'map'>('list');
   // The floating toggle only appears once the results line has scrolled away: on a short list it
   // would sit over the seller invitation, and at the end of a long one the bottom padding clears it.
@@ -102,11 +116,14 @@ export default function ExploreScreen() {
           <View style={styles.resultMeta}>
             <Text style={styles.resultCount}>{count}</Text>
             <Pressable accessibilityRole="button" accessibilityLabel="Cambiar orden de viviendas" onPress={() => setExpanded(true)} style={styles.sort}><Text style={styles.sortText}>{SORT_OPTIONS.find(option => option.value === filters.sort)?.label}</Text><Icon name="chevron-down" size={13} color={colors.primary} /></Pressable>
+            <IconButton name="bookmark-outline" label="Guardar búsqueda" onPress={saveSearch} />
             <Pressable accessibilityRole="button" accessibilityLabel={view === 'list' ? 'Ver en el mapa' : 'Ver en lista'} onPress={toggleView} hitSlop={{ top: 5, bottom: 5 }} style={({ pressed }) => [styles.inlineToggle, pressed && { opacity: .7 }]}>
               <Icon name={view === 'list' ? 'map-outline' : 'list-outline'} size={16} color={colors.ink} /><Text style={styles.inlineToggleText}>{view === 'list' ? 'Mapa' : 'Lista'}</Text>
             </Pressable>
           </View>
-          {hasTags && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activeFilters}>
+          {saveNotice === 'demo' && <View style={styles.saveNotice}><Notice>Las alertas necesitan una cuenta de KarmaHouse.</Notice></View>}
+          {saveNotice === 'saved' && <View style={styles.saveNotice}><Notice>Te avisaremos cuando aparezca una vivienda que encaje.</Notice><Button label="Ver mis alertas" secondary icon="bookmark-outline" onPress={() => router.push('/saved-searches')} /></View>}
+          {hasTags &&<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activeFilters}>
             {filters.operation === 'sale' && <FilterTag label="Solo venta" onRemove={() => change({ operation: 'offers' })} />}
             {priceTag && <FilterTag label={`${filters.minPrice || '0'} – ${filters.maxPrice || 'sin límite'} USD`} onRemove={() => change({ minPrice: '', maxPrice: '' })} />}
             {!!(filters.minArea || filters.maxArea) && <FilterTag label={`${filters.minArea || '0'} – ${filters.maxArea || 'sin límite'} m²`} onRemove={() => change({ minArea: '', maxArea: '' })} />}
@@ -134,6 +151,8 @@ export default function ExploreScreen() {
         <Icon name="map-outline" size={18} color={colors.white} /><Text style={styles.viewToggleText}>Mapa</Text>
       </Pressable>}
       {expanded && <CatalogFilters filters={filters} total={total} onApply={setFilters} onClose={() => setExpanded(false)} />}
+      {saving && <SaveSearchSheet filters={filters} onClose={() => setSaving(false)} onSaved={() => { setSaving(false); setSaveNotice('saved'); }} />}
+      {!!search && mode === 'cloud' && !!auth.user && <SavedSearchParam key={search} id={search} onApply={setFilters} />}
     </SafeAreaView>
   );
 }
@@ -146,6 +165,20 @@ function ShortcutChip({ label, active, onPress, icon, chevron = false, toggle = 
     <Text style={[styles.shortcutText, active && styles.shortcutTextActive]}>{label}</Text>
     {chevron && <Icon name="chevron-down" size={14} color={tint} />}
   </Pressable>;
+}
+
+/** Mounted only while `?search=<id>` is present: applies that saved search once, then drops the parameter. */
+function SavedSearchParam({ id, onApply }: { id: string; onApply(filters: ListingFilters): void }) {
+  const { items, loading } = useSavedSearches();
+  const started = useRef(false);
+  useEffect(() => {
+    if (loading) { started.current = true; return; }
+    if (!started.current) return;
+    const found = items.find(item => item.id === id);
+    if (found) onApply(fromSavedFilters(found.filters));
+    router.setParams({ search: undefined });
+  }, [loading, items, id, onApply]);
+  return null;
 }
 
 function CardSkeleton() {
@@ -181,6 +214,7 @@ const styles = StyleSheet.create({
   resultCount: { flex: 1, fontSize: 14, color: colors.muted },
   sort: { flexDirection: 'row', minHeight: 44, gap: 4, alignItems: 'center' }, sortText: { fontSize: 14, color: colors.primary },
   inlineToggle: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 34, paddingHorizontal: 12, borderRadius: 17, borderWidth: 1, borderColor: '#D9DEE6', backgroundColor: colors.white }, inlineToggleText: { fontSize: 14, fontWeight: '500', color: colors.ink },
+  saveNotice: { gap: 8, marginBottom: 10 },
   activeFilters: { gap: 7, paddingBottom: 10 }, filterTag: { minHeight: 36, paddingHorizontal: 11, paddingVertical: 8, gap: 6, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.softBlue, borderRadius: 14 }, filterTagText: { fontSize: 13, color: colors.primary },
   clear: { minHeight: 44, justifyContent: 'center', marginTop: -6, marginBottom: 4 }, clearText: { color: colors.primary, fontSize: 14 },
   listEnd: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: 4, marginBottom: 8 },

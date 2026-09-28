@@ -140,6 +140,7 @@ export default function DetailScreen() {
           <View style={styles.location}><Icon name="location-outline" color={colors.muted} size={17} /><Text style={styles.locationText}>{listing.location}, {listing.province}, Cuba</Text></View>
         </View>
         {own && Boolean(moderation) && <Notice>{listing.moderationStatus === 'rejected' ? listing.reviewNote || 'Revisa los detalles del anuncio antes de enviarlo de nuevo.' : listing.moderationStatus === 'pending' ? 'Tu anuncio está en revisión. Aparecerá en el catálogo cuando sea aprobado y esté en venta.' : 'Este borrador solo aparece en tu cuenta. Envíalo a revisión cuando esté listo.'}</Notice>}
+        {mode === 'cloud' && wanted && own && listing.moderationStatus === 'approved' && <Notice>Te avisaremos cuando aparezca una vivienda que encaje.</Notice>}
         <View style={styles.features}>
           {wanted ? <>
             <Feature icon="bed-outline" value={`${listing.bedrooms} hab`} label="Mínimo" />

@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Icon, IconButton, Notice, PageTitle, type IconName } from '../components/ui';
@@ -12,6 +12,7 @@ import { colors, layout } from '../theme';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { AccountMenu } from '../components/account/AccountMenu';
+import { useSavedSearches } from '../searches/useSavedSearches';
 
 export default function ProfileScreen() {
   const { favoriteIds, ownListings: own, mode } = useMarketplace();
@@ -21,6 +22,11 @@ export default function ProfileScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const { listings: favorites } = useFavoriteListings();
+  const savedSearches = useSavedSearches();
+  // Tabs stay mounted: recount alerts saved or removed elsewhere when Mi espacio comes back into view.
+  const refreshSearches = savedSearches.refresh;
+  const seen = useRef(false);
+  useFocusEffect(useCallback(() => { if (seen.current) void refreshSearches(); seen.current = true; }, [refreshSearches]));
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
     <ScrollView contentContainerStyle={styles.content}>
@@ -69,6 +75,16 @@ export default function ProfileScreen() {
             <View style={styles.accessory}><Text style={styles.count}>{favorites.length}</Text><Icon name="chevron-forward" size={17} color={colors.muted} /></View>
           </View>
         </Pressable>
+        {mode === 'cloud' && <>
+          <View style={styles.separator} />
+          <Pressable accessibilityRole="button" accessibilityLabel={`Mis alertas, ${savedSearches.items.length}`} onPress={() => router.push('/saved-searches')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+            <View style={styles.rowIcon}><Icon name="bookmark-outline" size={21} color={colors.primary} /></View>
+            <View style={styles.rowBody}>
+              <View style={styles.rowCopy}><Text style={styles.rowTitle}>Mis alertas</Text><Text style={styles.rowDescription}>Búsquedas guardadas que te avisan</Text></View>
+              <View style={styles.accessory}><Text style={styles.count}>{savedSearches.items.length}</Text><Icon name="chevron-forward" size={17} color={colors.muted} /></View>
+            </View>
+          </Pressable>
+        </>}
       </View>
 
       <View style={styles.publish}>
