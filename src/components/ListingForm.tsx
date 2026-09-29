@@ -26,7 +26,7 @@ import { LocationPicker } from './maps/LocationPicker';
 import { normalizeMapLocation } from '../domain/geo';
 import { Button, Icon, Notice, Pill } from './ui';
 import { SelectionField } from './SelectionField';
-import { AMENITIES, CONDITIONS, OPERATIONS, PROVINCES, RENT_PERIODS, SWAP_BALANCES, WANTED_OPERATIONS, type ListingOperation } from '../domain/listingOptions';
+import { AMENITIES, AMENITY_GROUPS, CONDITIONS, OPERATIONS, PROVINCES, RENT_PERIODS, SWAP_BALANCES, WANTED_OPERATIONS, type ListingOperation } from '../domain/listingOptions';
 import { normalizeDecimalInput, parseDecimal, publishedNumber } from '../domain/numericInput';
 import { minStayText, priceLabel, priceSuffix, swapBalanceText, wantedOperationsText } from '../domain/operations';
 import type { ImportField, ImportResult } from '../domain/importListing';
@@ -524,16 +524,26 @@ export function ListingForm({
 
               {!wanted ? (
               <View style={styles.fieldCard}>
-                <ChoiceField label="Comodidades (opcional)" error={errors.amenities}>
-                  {Array.from(new Set([...AMENITIES, ...draft.amenities])).map((item) => (
-                    <Pill
-                      key={item}
-                      label={item}
-                      active={selectedAmenities.has(item)}
-                      onPress={() => toggleAmenity(item)}
-                    />
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>Comodidades (opcional)</Text>
+                  {[...AMENITY_GROUPS, { title: 'Otras', items: [...new Set(draft.amenities)].filter((item) => !AMENITIES.includes(item)) }]
+                    .filter((group) => group.items.length).map((group) => (
+                    <View key={group.title} style={styles.amenityGroup}>
+                      <Text style={styles.amenityGroupTitle}>{group.title}</Text>
+                      <View style={styles.choiceRow}>
+                        {group.items.map((item) => (
+                          <Pill
+                            key={item}
+                            label={item}
+                            active={selectedAmenities.has(item)}
+                            onPress={() => toggleAmenity(item)}
+                          />
+                        ))}
+                      </View>
+                    </View>
                   ))}
-                </ChoiceField>
+                  {errors.amenities ? <FieldError message={errors.amenities} /> : null}
+                </View>
               </View>
               ) : null}
 
@@ -800,6 +810,7 @@ const styles = StyleSheet.create({
   reviewType: { color: colors.ink, fontSize: 15, fontWeight: '600' },
   reviewDescription: { color: colors.ink, fontSize: 17, lineHeight: 25 },
   reviewAmenities: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  amenityGroup: { gap: 8, marginTop: 4 }, amenityGroupTitle: { color: colors.ink, fontSize: 14, fontWeight: '600' },
   amenityTag: { backgroundColor: colors.paper, borderRadius: 12, paddingVertical: 7, paddingHorizontal: 11 },
   amenityTagText: { color: colors.ink, fontSize: 13 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingTop: 2 },

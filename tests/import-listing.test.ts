@@ -6,7 +6,7 @@ import {
 } from '../src/domain/importListing.ts';
 import { findPlace, PLACES } from '../src/domain/places.ts';
 import { emptyDraft, validateDraft, type ListingDraft } from '../src/domain/listings.ts';
-import { AMENITIES, PROVINCES } from '../src/domain/listingOptions.ts';
+import { AMENITIES, AMENITY_GROUPS, PROVINCES } from '../src/domain/listingOptions.ts';
 
 const CONTACT_NOTE = 'Quitamos 1 dato de contacto: en KarmaHouse se habla por el chat.';
 const complete = (draft: Partial<ListingDraft>) => validateDraft({ ...emptyDraft, ...draft, imageKey: 'vedado', clientRequestId: 'import-test' });
@@ -149,6 +149,16 @@ test('negotiable price and condition need their words', () => {
   assert.equal(detectCondition('casa amplia'), undefined);
 });
 
+test('the amenity catalogue is grouped and keeps every earlier value verbatim', () => {
+  assert.deepEqual(AMENITY_GROUPS.map((group) => group.title), ['Servicios', 'Espacios', 'Equipamiento']);
+  assert.deepEqual([...AMENITIES], AMENITY_GROUPS.flatMap((group) => group.items));
+  assert.equal(new Set(AMENITIES).size, AMENITIES.length);
+  assert.ok(AMENITIES.length <= 20);
+  for (const earlier of ['Balcón', 'Patio', 'Garaje', 'Amueblado', 'Aire acondicionado', 'Ascensor', 'Terraza', 'Piscina', 'Cisterna', 'Tanque de agua', 'Entrada independiente']) {
+    assert.ok(AMENITIES.includes(earlier), earlier);
+  }
+});
+
 test('amenities map every synonym to the catalogue once', () => {
   const cases: [string, string[]][] = [
     ['Balcón', ['Balcón']], ['5 balcones', ['Balcón']], ['Patio comun c/un vecino', ['Patio']], ['Garaje', ['Garaje']],
@@ -162,7 +172,7 @@ test('amenities map every synonym to the catalogue once', () => {
   ];
   for (const [text, amenities] of cases) assert.deepEqual(detectAmenities(text), amenities, text);
   const all = detectAmenities('balcón, patio, garaje, terraza, piscina, cisterna, ascensor, tanque, split, puerta calle, amueblado, balcones');
-  assert.deepEqual(all, [...AMENITIES]);
+  assert.deepEqual(all, ['Cisterna', 'Tanque de agua', 'Patio', 'Terraza', 'Balcón', 'Garaje', 'Piscina', 'Amueblado', 'Aire acondicionado', 'Ascensor', 'Entrada independiente']);
 });
 
 test('places match whole words without accents, earliest first, and fall back to the province', () => {
@@ -246,7 +256,7 @@ test('full sale listed line by line', () => {
   const result = parseListingText(ad);
   assert.deepEqual(result.draft, {
     operation: 'sale', title: 'Casa en Playa', type: 'Casa', location: 'Playa', province: 'La Habana', price: '10000',
-    bedrooms: '2', bathrooms: '1', amenities: ['Patio', 'Amueblado', 'Tanque de agua'],
+    bedrooms: '2', bathrooms: '1', amenities: ['Tanque de agua', 'Patio', 'Amueblado'],
     description: [
       '~Casas de Yuli~', 'Venta de Casa en playa', 'Consta:', 'Sala', 'Cocina', 'Comedor', '2 cuartos', 'Baño',
       'Patio comun c/un vecino', 'CARACTERÍSTICAS:', 'GAS DE LA CALLE', 'TANQUE ELEVADO GRANDE', 'TELÉFONO FIJO',
@@ -266,7 +276,7 @@ test('full sale written as a paragraph', () => {
   assert.deepEqual(result.draft, {
     operation: 'sale', title: 'Apartamento en Vedado', type: 'Apartamento',
     location: 'Vedado', province: 'La Habana', price: '45000', bedrooms: '2', bathrooms: '1', area: '85', floor: '3',
-    condition: 'good', priceNegotiable: true, amenities: ['Balcón', 'Cisterna', 'Tanque de agua'],
+    condition: 'good', priceNegotiable: true, amenities: ['Cisterna', 'Tanque de agua', 'Balcón'],
     description: 'Vendo apartamento en el Vedado, zona alta, calle 27 y a Paseo. 3er piso, 2 dormitorios independientes, 1 1/2 baños, '
       + 'sala comedor, cocina, balcón a la calle, 85 m2. Buen estado constructivo, tanque y cisterna con motor de agua, 110V y 220V. '
       + 'Precio 45.000 USD negociable.',
@@ -287,7 +297,7 @@ test('full swap', () => {
   const result = parseListingText(ad);
   assert.deepEqual(result.draft, {
     operation: 'swap', title: 'Permuto casa en Cruces, Cienfuegos', type: 'Casa', location: 'Cruces', province: 'Cienfuegos',
-    bedrooms: '3', bathrooms: '2', area: '140', amenities: ['Garaje', 'Terraza'],
+    bedrooms: '3', bathrooms: '2', area: '140', amenities: ['Terraza', 'Garaje'],
     swapWants: 'apartamento en La Habana, preferiblemente en Centro Habana o Plaza',
     description: ad.split('\n').slice(0, 3).join('\n'),
   });

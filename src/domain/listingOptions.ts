@@ -12,10 +12,13 @@ export const CONDITIONS: readonly { value: ListingCondition; label: string }[] =
   { value: 'good', label: 'Buen estado' },
   { value: 'needs-renovation', label: 'A reformar' },
 ];
-export const AMENITIES: readonly string[] = [
-  'Balcón', 'Patio', 'Garaje', 'Amueblado', 'Aire acondicionado', 'Ascensor',
-  'Terraza', 'Piscina', 'Cisterna', 'Tanque de agua', 'Entrada independiente',
+/** What Cuban ads advertise, grouped for the form and the filters. The server does not whitelist values. */
+export const AMENITY_GROUPS: readonly { title: string; items: readonly string[] }[] = [
+  { title: 'Servicios', items: ['Gas de la calle', 'Agua todos los días', 'Teléfono fijo', 'Respaldo eléctrico', 'Cisterna', 'Tanque de agua'] },
+  { title: 'Espacios', items: ['Portal', 'Patio', 'Terraza', 'Balcón', 'Azotea o placa libre', 'Garaje', 'Parqueo', 'Piscina'] },
+  { title: 'Equipamiento', items: ['Amueblado', 'Aire acondicionado', 'Ascensor', 'Entrada independiente'] },
 ];
+export const AMENITIES: readonly string[] = AMENITY_GROUPS.flatMap((group) => group.items);
 export function isListingCondition(value: unknown): value is ListingCondition {
   return value === 'new' || value === 'good' || value === 'needs-renovation';
 }
