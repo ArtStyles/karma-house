@@ -4,9 +4,12 @@ import { colors } from '../theme';
 import { Icon } from './ui';
 import { useEffect, useState } from 'react';
 
-export function PropertyImage({ listing, style, photoIndex = 0 }: { listing: Pick<Listing, 'photoUri' | 'imageKey' | 'title' | 'owner' | 'photos'>; style?: StyleProp<ViewStyle>; photoIndex?: number }) {
+/** `thumb` prefers the small cover copy lists need; either variant falls back to the other when only one was signed. */
+export function PropertyImage({ listing, style, photoIndex = 0, variant = 'full' }: { listing: Pick<Listing, 'photoUri' | 'imageKey' | 'title' | 'owner' | 'photos' | 'coverThumb'>; style?: StyleProp<ViewStyle>; photoIndex?: number; variant?: 'thumb' | 'full' }) {
   const [failed, setFailed] = useState(false);
-  const uri = listing.photos?.[photoIndex]?.uri || (photoIndex === 0 ? listing.photoUri : undefined);
+  const full = listing.photos?.[photoIndex]?.uri || (photoIndex === 0 ? listing.photoUri : undefined);
+  const thumb = photoIndex === 0 ? listing.coverThumb?.uri : undefined;
+  const uri = variant === 'thumb' ? thumb || full : full || thumb;
   useEffect(() => setFailed(false), [uri, listing.imageKey, listing.owner]);
   const source = uri ? { uri } : listing.owner === 'remote' ? null : listing.imageKey === 'interior' ? require('../../assets/images/interior-demo.png') : require('../../assets/images/vedado-demo.png');
   return <View style={[styles.container, style]}>{failed || !source ? <View style={styles.placeholder} accessibilityLabel={failed ? 'No se pudo cargar la fotografía' : 'Sin fotografía disponible'}><Icon name="image-outline" size={32} color={colors.muted} /><Text style={styles.placeholderText}>{failed ? 'Foto no disponible' : 'Sin fotografía'}</Text></View> : <Image key={uri || listing.imageKey} source={source} accessibilityLabel={`${listing.title}${listing.photos && listing.photos.length > 1 ? `, foto ${photoIndex + 1}` : ''}`} style={styles.image} resizeMode="cover" onError={() => setFailed(true)} />}</View>;

@@ -1,40 +1,25 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Listing, PhotoDraft } from '../domain/listings';
+import type { PhotoDraft } from '../domain/listings';
 import type { MarketplaceStorage } from '../state/marketplaceStore';
 import type { RemoteMarketplaceRepository } from '../state/remoteMarketplaceStore';
-import { collectPages, mapRemoteListing, mergeListings, type RemotePropertyRow } from './remoteMapping';
-import { uploadDraftPhotos, type PhotoUploadPort } from './photoUpload';
+import { collectPages, type RemotePropertyRow } from './remoteMapping';
+import { uploadCoverThumb, uploadDraftPhotos, type PhotoUploadPort } from './photoUpload';
 import { propertyPayload } from './propertyPayload';
+import { createRowSigner as createCachedRowSigner, type SignRows } from './rowSigner';
+import { createSignedUrlCache } from './signedUrlCache';
 export { propertyPayload } from './propertyPayload';
+export type { SignRows } from './rowSigner';
 
 const BUCKET = 'property-photos';
-// Signed URLs are renewed by the provider while the app is foregrounded.
-const PHOTO_URL_SECONDS = 3600;
-export const PROPERTY_COLUMNS = 'id,owner_id,client_request_id,title,location,province,latitude,longitude,location_precision,condition,floor,price_negotiable,price,bedrooms,bathrooms,area,type,description,amenities,photo_paths,availability,moderation,review_note,version,created_at,operation,swap_wants,swap_provinces,swap_balance,swap_amount,rent_period,rent_min_stay,wanted_operations';
-
-/** Signs the storage paths a batch of rows needs and maps them to listings. */
-export type SignRows = (rows: RemotePropertyRow[], checkpoint: () => void, photos?: 'cover' | 'all') => Promise<Listing[]>;
+// One cache for every signer: the catalogue, the account and public profiles reuse the same links,
+// so the image cache keeps hitting the same URL. Kept on sign-out: they are links to public photos.
+const photoLinks = createSignedUrlCache({ storage: AsyncStorage, now: Date.now });
+export const PROPERTY_COLUMNS = 'id,owner_id,client_request_id,title,location,province,latitude,longitude,location_precision,condition,floor,price_negotiable,price,bedrooms,bathrooms,area,type,description,amenities,photo_paths,availability,moderation,review_note,version,created_at,operation,swap_wants,swap_provinces,swap_balance,swap_amount,rent_period,rent_min_stay,wanted_operations,cover_thumb_path';
 
 /** Shared by the marketplace repository and the paginated catalogue repository. */
 export function createRowSigner(client: SupabaseClient): SignRows {
-  const bucket = client.storage.from(BUCKET);
-  return async (rows, checkpoint, photos = 'all') => {
-    checkpoint();
-    const paths = [...new Set(rows.flatMap((row) => photos === 'cover' ? row.photo_paths.slice(0, 1) : row.photo_paths))];
-    const signedUrls = new Map<string, string>();
-    for (let start = 0; start < paths.length; start += 100) {
-      checkpoint();
-      const { data, error } = await bucket.createSignedUrls(paths.slice(start, start + 100), PHOTO_URL_SECONDS);
-      checkpoint();
-      if (error) throw error;
-      for (const item of data ?? []) {
-        if (item.error || !item.path || !item.signedUrl) throw new Error('No se pudieron cargar las fotos autorizadas del anuncio. Inténtalo de nuevo.');
-        signedUrls.set(item.path, item.signedUrl);
-      }
-    }
-    if (paths.some((path) => !signedUrls.has(path))) throw new Error('Faltan fotos del anuncio en la respuesta del servidor.');
-    return rows.map((row) => mapRemoteListing(row, signedUrls, photos));
-  };
+  return createCachedRowSigner(client.storage.from(BUCKET), photoLinks);
 }
 
 export function createSupabaseMarketplaceRepository(client: SupabaseClient, storage: MarketplaceStorage): RemoteMarketplaceRepository {
@@ -109,8 +94,9 @@ export function createSupabaseMarketplaceRepository(client: SupabaseClient, stor
       const photos: PhotoDraft[] = draft.photos ?? (draft.photoUri ? [{ uri: draft.photoUri }] : []);
       if (moderation === 'pending' && photos.length === 0) throw new Error('Añade al menos una fotografía para enviar el anuncio a revisión.');
       const photoPaths = await uploadDraftPhotos(photos, ownerId, requestId, photoPort, checkpoint);
+      const coverThumbPath = await uploadCoverThumb(photos[0], photoPaths, photoPort, checkpoint);
       checkpoint();
-      const payload = propertyPayload(draft, ownerId, photoPaths, moderation, current);
+      const payload = propertyPayload(draft, ownerId, photoPaths, moderation, current, coverThumbPath);
       const { data, error } = await client.rpc('kh_save_property', { p_payload: payload });
       checkpoint();
       if (error) throw error;

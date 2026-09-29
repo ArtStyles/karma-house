@@ -4,6 +4,12 @@ import test from 'node:test';
 import { createSignedUrlCache, SIGNED_URL_SECONDS } from '../src/data/signedUrlCache.ts';
 import { createOfflineSnapshot, snapshotAgeText } from '../src/catalog/offlineSnapshot.ts';
 import { createDataSaver } from '../src/settings/dataSaver.ts';
+import { createRowSigner } from '../src/data/rowSigner.ts';
+import { mapRemoteListing } from '../src/data/remoteMapping.ts';
+import { propertyPayload } from '../src/data/propertyPayload.ts';
+import { uploadCoverThumb } from '../src/data/photoUpload.ts';
+import { validateDraft } from '../src/domain/listings.ts';
+import { restoreDraft } from '../src/domain/draftPersistence.ts';
 
 const HOUR = 3600_000;
 const DAY = 24 * HOUR;
@@ -189,4 +195,117 @@ test('the data saver is off by default and remembers the choice', async () => {
   assert.equal(await saver.read(), false);
   for (const raw of ['true', '0', '', '{"on":true}', ' 1']) assert.equal(await createDataSaver({ storage: memoryStorage({ k: raw }), key: 'k' }).read(), false, raw);
   assert.equal(await createDataSaver({ storage: { getItem: async () => { throw new Error('disk'); } } }).read(), false);
+});
+
+// Cover thumbnails and reusable photo links.
+const OWNER = 'owner-a';
+const propertyRow = (id, photoPaths, thumb) => ({
+  id, owner_id: OWNER, client_request_id: `req-${id}`, title: 'Casa de prueba', location: 'Vedado', province: 'La Habana', price: 100, bedrooms: 2, bathrooms: 1, area: 40,
+  type: 'Casa', description: 'Una casa de prueba con descripción completa.', amenities: [], photo_paths: photoPaths, availability: 'active', moderation: 'approved',
+  review_note: null, version: 1, created_at: '2026-09-17T00:00:00.000Z', ...(thumb === undefined ? {} : { cover_thumb_path: thumb }),
+});
+const draft = { title: 'Casa de prueba', location: 'Vedado', province: 'La Habana', price: '100', bedrooms: '2', bathrooms: '1', area: '40', type: 'Casa', description: 'Una casa de prueba con descripción completa.', amenities: [], imageKey: 'vedado' };
+function fakeBucket() {
+  const calls = [];
+  return {
+    calls,
+    async createSignedUrls(paths, expiresIn) {
+      calls.push({ paths, expiresIn });
+      return { data: paths.map((path) => ({ path, signedUrl: `https://signed/${path}?n=${calls.length}`, error: null })), error: null };
+    },
+  };
+}
+
+test('a row maps its cover thumbnail and rejects a malformed one', () => {
+  const urls = new Map([['o/r/a_t.jpg', 'https://t'], ['o/r/a.jpg', 'https://a']]);
+  assert.deepEqual(mapRemoteListing(propertyRow('p1', ['o/r/a.jpg'], 'o/r/a_t.jpg'), urls).coverThumb, { uri: 'https://t', storagePath: 'o/r/a_t.jpg' });
+  assert.equal(mapRemoteListing(propertyRow('p1', ['o/r/a.jpg'], null), urls).coverThumb, undefined);
+  assert.equal(mapRemoteListing(propertyRow('p1', ['o/r/a.jpg']), urls).coverThumb, undefined, 'rows read before the column existed');
+  assert.throws(() => mapRemoteListing(propertyRow('p1', ['o/r/a.jpg'], 42), urls), /no válidos/);
+});
+
+test('the payload sends the cover thumbnail only when there is one', () => {
+  const clientDraft = { ...draft, clientRequestId: 'r' };
+  assert.equal(propertyPayload(clientDraft, OWNER, ['o/r/a.jpg'], 'pending', undefined, 'o/r/a_t.jpg').coverThumbPath, 'o/r/a_t.jpg');
+  assert.equal('coverThumbPath' in propertyPayload(clientDraft, OWNER, ['o/r/a.jpg'], 'pending'), false, 'left out, the server keeps or clears it');
+});
+
+test('the cover thumbnail is uploaded once next to the cover, and skipped when unusable', async () => {
+  const uploaded = new Map();
+  const port = {
+    readLocal: async () => { throw new Error('not local'); },
+    exists: async (path) => uploaded.has(path),
+    upload: async (path, bytes, type) => { assert.ok(bytes instanceof ArrayBuffer); uploaded.set(path, type); },
+  };
+  const cover = { uri: 'data:image/jpeg;base64,AQID', uploadId: 'a', thumbUri: 'data:image/jpeg;base64,BAUG' };
+  assert.equal(await uploadCoverThumb(cover, [`${OWNER}/r/a.jpg`, `${OWNER}/r/b.jpg`], port, () => {}), `${OWNER}/r/a_t.jpg`);
+  assert.equal(await uploadCoverThumb(cover, [`${OWNER}/r/a.jpg`], port, () => {}), `${OWNER}/r/a_t.jpg`, 'a retry reuses the upload');
+  assert.deepEqual([...uploaded], [[`${OWNER}/r/a_t.jpg`, 'image/jpeg']]);
+  assert.equal(await uploadCoverThumb({ ...cover, thumbUri: undefined }, [`${OWNER}/r/a.jpg`], port, () => {}), undefined);
+  assert.equal(await uploadCoverThumb(undefined, [], port, () => {}), undefined);
+  assert.equal(await uploadCoverThumb({ ...cover, thumbUri: 'file:///gone_t.jpg' }, [`${OWNER}/r/a.jpg`], port, () => {}), undefined, 'a lost file never blocks publishing');
+  assert.equal(await uploadCoverThumb({ ...cover, thumbUri: 'data:image/png;base64,AQID' }, [`${OWNER}/r/a.jpg`], port, () => {}), undefined);
+  assert.equal(await uploadCoverThumb(cover, [`${OWNER}/r/a.jpg`, `${OWNER}/r/a_t.jpg`], port, () => {}), undefined, 'never one of the photos');
+  assert.equal(await uploadCoverThumb(cover, [`${OWNER}/r/${'x'.repeat(100)}.jpg`], port, () => {}), undefined, 'the name stays within 100 characters');
+  await assert.rejects(uploadCoverThumb(cover, [`${OWNER}/r/c.jpg`], port, () => { throw new Error('Sesión cambiada'); }), /Sesión/);
+  assert.equal(uploaded.has(`${OWNER}/r/c_t.jpg`), false);
+});
+
+test('a draft keeps a local cover thumbnail and rejects a remote one', () => {
+  assert.ok(validateDraft({ ...draft, photos: [{ uri: 'file:///a.jpg', thumbUri: 'file:///a_t.jpg' }] }).ok);
+  assert.equal(validateDraft({ ...draft, photos: [{ uri: 'file:///a.jpg', thumbUri: 'https://evil.test/x.jpg' }] }).ok, false);
+  const saved = { ...draft, photos: [{ uri: 'file:///a.jpg', uploadId: 'a', thumbUri: 'file:///a_t.jpg' }] };
+  assert.deepEqual(restoreDraft(JSON.stringify(saved), draft), saved);
+  assert.deepEqual(restoreDraft(JSON.stringify({ ...saved, photos: [{ uri: 'file:///a.jpg', thumbUri: 7 }] }), draft), draft);
+});
+
+test('the row signer asks the server once per path and reuses the links afterwards', async () => {
+  const { now } = clock();
+  const bucket = fakeBucket();
+  const sign = createRowSigner(bucket, createSignedUrlCache({ storage: memoryStorage(), now }), now);
+  const rows = [propertyRow('p1', ['o/r/a.jpg', 'o/r/b.jpg']), propertyRow('p2', ['o/r/c.jpg'])];
+  const first = await sign(rows, () => {}, 'all');
+  assert.deepEqual(bucket.calls, [{ paths: ['o/r/a.jpg', 'o/r/b.jpg', 'o/r/c.jpg'], expiresIn: SIGNED_URL_SECONDS }]);
+  const second = await sign(rows, () => {}, 'all');
+  assert.equal(bucket.calls.length, 1, 'the same paths make no second request');
+  assert.deepEqual(second.map((l) => l.photos.map((p) => p.uri)), first.map((l) => l.photos.map((p) => p.uri)));
+  await sign([propertyRow('p3', ['o/r/a.jpg', 'o/r/d.jpg'])], () => {}, 'all');
+  assert.deepEqual(bucket.calls[1].paths, ['o/r/d.jpg'], 'only the missing path is signed');
+});
+
+test('a link close to expiring is signed again and the links survive a restart', async () => {
+  const { state, now } = clock();
+  const storage = memoryStorage();
+  const bucket = fakeBucket();
+  const rows = [propertyRow('p1', ['o/r/a.jpg'])];
+  await createRowSigner(bucket, createSignedUrlCache({ storage, now }), now)(rows, () => {}, 'all');
+  const restarted = createRowSigner(bucket, createSignedUrlCache({ storage, now }), now);
+  await restarted(rows, () => {}, 'all');
+  assert.equal(bucket.calls.length, 1, 'a restart hydrates the stored links');
+  state.time += 6 * DAY;
+  const [renewed] = await restarted(rows, () => {}, 'all');
+  assert.equal(bucket.calls.length, 2);
+  assert.equal(renewed.photos[0].uri, 'https://signed/o/r/a.jpg?n=2');
+});
+
+test('catalogue rows sign the cover thumbnail when they have one, else the cover', async () => {
+  const { now } = clock();
+  const bucket = fakeBucket();
+  const sign = createRowSigner(bucket, createSignedUrlCache({ storage: memoryStorage(), now }), now);
+  const [withThumb, legacy] = await sign([propertyRow('p1', ['o/r/a.jpg', 'o/r/b.jpg'], 'o/r/a_t.jpg'), propertyRow('p2', ['o/r/c.jpg', 'o/r/d.jpg'], null)], () => {}, 'cover');
+  assert.deepEqual(bucket.calls[0].paths, ['o/r/a_t.jpg', 'o/r/c.jpg']);
+  assert.equal(withThumb.coverThumb.uri, 'https://signed/o/r/a_t.jpg?n=1');
+  assert.equal(withThumb.photoUri, undefined, 'a card never downloads the full cover');
+  assert.equal(legacy.coverThumb, undefined);
+  assert.equal(legacy.photoUri, 'https://signed/o/r/c.jpg?n=1');
+});
+
+test('a signing failure or a missing path is an error and nothing is cached', async () => {
+  const { now } = clock();
+  const cache = createSignedUrlCache({ storage: memoryStorage(), now });
+  const broken = { createSignedUrls: async (paths) => ({ data: paths.map((path) => ({ path, signedUrl: '', error: 'Object not found' })), error: null }) };
+  await assert.rejects(createRowSigner(broken, cache, now)([propertyRow('p1', ['o/r/a.jpg'])], () => {}, 'all'), /fotos/);
+  assert.deepEqual(cache.missing(['o/r/a.jpg']), ['o/r/a.jpg']);
+  const partial = { createSignedUrls: async () => ({ data: [], error: null }) };
+  await assert.rejects(createRowSigner(partial, cache, now)([propertyRow('p1', ['o/r/a.jpg'])], () => {}, 'all'), /Faltan/);
 });

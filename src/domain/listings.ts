@@ -11,6 +11,8 @@ export interface PhotoDraft {
   storagePath?: string;
   /** Stable per selected photo, persisted with the draft for safe upload retries. */
   uploadId?: string;
+  /** Local 480 px copy of the cover, uploaded next to it as `<name>_t.jpg`. Only the first photo has one. */
+  thumbUri?: string;
 }
 
 export type ListingType = 'Casa' | 'Apartamento';
@@ -50,6 +52,8 @@ export interface Listing {
   version?: number;
   clientRequestId?: string;
   photos?: PhotoDraft[];
+  /** Small copy of the cover for lists; `uri` is empty when it was not signed. */
+  coverThumb?: { uri: string; storagePath: string };
   status: ListingStatus;
   createdAt: string;
 }
@@ -292,7 +296,8 @@ export function validateDraft(draft: ListingDraft): DraftValidation {
     !Array.isArray(draft.photos) || draft.photos.length > 6 ||
     draft.photos.some((photo) => !photo || typeof photo.uri !== 'string' ||
       (photo.storagePath ? !/^[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\.(?:jpe?g|png|webp)$/i.test(photo.storagePath)
-        : !photo.uri.trim() || !isSupportedPhotoUri(photo.uri)))
+        : !photo.uri.trim() || !isSupportedPhotoUri(photo.uri)) ||
+      (photo.thumbUri !== undefined && (typeof photo.thumbUri !== 'string' || !photo.thumbUri.trim() || !isSupportedPhotoUri(photo.thumbUri))))
   )) errors.photos = 'Selecciona hasta seis fotos locales válidas de hasta 4 MB cada una.';
   if (draft.clientRequestId !== undefined && !/^[A-Za-z0-9_-]{1,100}$/.test(draft.clientRequestId)) errors.clientRequestId = 'El identificador del borrador no es válido.';
 

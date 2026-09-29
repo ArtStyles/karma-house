@@ -1,10 +1,32 @@
-import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { ImageManipulator, SaveFormat, type ImageRef } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Image, Platform, StyleSheet, Text, View } from 'react-native';
 import type { PhotoDraft } from '../domain/listings';
 import { draftToken } from '../domain/draftPersistence';
 import { colors } from '../theme';
 import { Button, IconButton } from './ui';
+
+/** Copies a rendered file out of the cache folder so a saved draft still finds it after a restart. */
+async function keepLocally(uri: string, name: string): Promise<string> {
+  const { Directory, File, Paths } = await import('expo-file-system');
+  const directory = new Directory(Paths.document, 'karmahouse', 'listing-photos');
+  directory.create({ idempotent: true, intermediates: true });
+  const destination = new File(directory, name);
+  new File(uri).copy(destination);
+  return destination.uri;
+}
+
+/** The catalogue card's copy of the cover: longest side 480 px. Best effort, the card falls back to the cover. */
+async function coverThumb(source: string | ImageRef, name: string): Promise<string | undefined> {
+  try {
+    const image = typeof source === 'string' ? await ImageManipulator.manipulate(source).renderAsync() : source;
+    const context = ImageManipulator.manipulate(image);
+    if (Math.max(image.width, image.height) > 480) context.resize(image.width >= image.height ? { width: 480 } : { height: 480 });
+    const thumb = await (await context.renderAsync()).saveAsync({ format: SaveFormat.JPEG, compress: .6, base64: Platform.OS === 'web' });
+    if (Platform.OS === 'web') return thumb.base64 ? `data:image/jpeg;base64,${thumb.base64}` : undefined;
+    return await keepLocally(thumb.uri, `${name}_t.jpg`);
+  } catch { return undefined; }
+}
 
 export function ListingPhotos({ photos, busy, disabled, required = false, onBusy, onChange, onError }: {
   photos: PhotoDraft[]; busy: boolean; disabled: boolean; required?: boolean; onBusy(value: boolean): void;
@@ -20,7 +42,8 @@ export function ListingPhotos({ photos, busy, disabled, required = false, onBusy
       for (const asset of result.assets.slice(0, 6 - photos.length)) {
         const uploadId = draftToken();
         const context = ImageManipulator.manipulate(asset.uri);
-        if (Math.max(asset.width, asset.height) > 1600) context.resize(asset.width >= asset.height ? { width: 1600, height: null } : { height: 1600, width: null });
+        // Leave the other side out: the web resizer reads `null` as a zero height.
+        if (Math.max(asset.width, asset.height) > 1600) context.resize(asset.width >= asset.height ? { width: 1600 } : { height: 1600 });
         const rendered = await context.renderAsync();
         const image = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: .72, base64: Platform.OS === 'web' });
         let uri = image.uri;
@@ -28,27 +51,35 @@ export function ListingPhotos({ photos, busy, disabled, required = false, onBusy
           if (!image.base64 || image.base64.length * .75 > 4 * 1024 * 1024) throw new Error('Esta foto es demasiado grande. Prueba con otra imagen.');
           uri = `data:image/jpeg;base64,${image.base64}`;
         } else {
-          const { Directory, File, Paths } = await import('expo-file-system');
-          const source = new File(uri);
-          if (source.size > 4 * 1024 * 1024) throw new Error('Esta foto debe ocupar menos de 4 MB.');
-          const directory = new Directory(Paths.document, 'karmahouse', 'listing-photos');
-          directory.create({ idempotent: true, intermediates: true });
-          const destination = new File(directory, `${uploadId}.jpg`);
-          source.copy(destination);
-          uri = destination.uri;
+          const { File } = await import('expo-file-system');
+          if (new File(uri).size > 4 * 1024 * 1024) throw new Error('Esta foto debe ocupar menos de 4 MB.');
+          uri = await keepLocally(uri, `${uploadId}.jpg`);
         }
-        additions.push({ uri, uploadId });
+        // Only the cover gets a thumbnail.
+        const thumbUri = photos.length === 0 && additions.length === 0 ? await coverThumb(rendered, uploadId) : undefined;
+        additions.push({ uri, uploadId, ...(thumbUri ? { thumbUri } : {}) });
       }
       onChange([...photos, ...additions]);
     } catch (error) { onError(error instanceof Error ? error.message : 'No pudimos preparar las fotos. Inténtalo otra vez.'); }
     finally { onBusy(false); }
+  }
+  async function remove(index: number) {
+    const next = photos.filter((_, i) => i !== index);
+    const cover = next[0];
+    // A stored photo has no local file to shrink: without a thumbnail the server clears it and cards use the cover.
+    if (index !== 0 || !cover || cover.thumbUri || cover.storagePath) { onChange(next); return; }
+    onBusy(true);
+    try {
+      const thumbUri = await coverThumb(cover.uri, cover.uploadId ?? draftToken());
+      onChange([thumbUri ? { ...cover, thumbUri } : cover, ...next.slice(1)]);
+    } finally { onBusy(false); }
   }
   return <View style={styles.container}>
     <Text accessibilityRole="header" style={styles.title}>Fotos de tu vivienda{required ? <Text style={styles.caption}> *</Text> : null}</Text>
     <Text style={styles.caption}>Hasta 6 fotos. La primera será la portada.</Text>
     <View style={styles.grid}>{photos.map((photo, index) => <View key={photo.uploadId ?? photo.storagePath ?? index} style={styles.tile}>
       <Image source={{ uri: photo.uri }} style={styles.image} accessibilityLabel={`Foto ${index + 1}`} />
-      {!disabled && !busy && <IconButton name="close" label={`Quitar foto ${index + 1}`} onPress={() => onChange(photos.filter((_, i) => i !== index))} style={styles.remove} />}
+      {!disabled && !busy && <IconButton name="close" label={`Quitar foto ${index + 1}`} onPress={() => void remove(index)} style={styles.remove} />}
       <Text style={styles.number}>{index === 0 ? 'Portada' : `${index + 1}`}</Text>
     </View>)}</View>
     {photos.length < 6 && <Button label={photos.length ? 'Añadir fotos' : 'Elegir fotos'} secondary icon="images-outline" onPress={() => void pick()} loading={busy} disabled={disabled} />}

@@ -316,7 +316,8 @@ function readLocalListing(value: unknown): Listing | null {
     (value.photoUri !== undefined &&
       (typeof value.photoUri !== 'string' || !isSupportedPhotoUri(value.photoUri))) ||
     (value.photos !== undefined && (!Array.isArray(value.photos) || value.photos.some((photo) =>
-      !isRecord(photo) || typeof photo.uri !== 'string' || !isSupportedPhotoUri(photo.uri) || photo.storagePath !== undefined))) ||
+      !isRecord(photo) || typeof photo.uri !== 'string' || !isSupportedPhotoUri(photo.uri) || photo.storagePath !== undefined ||
+      (photo.thumbUri !== undefined && (typeof photo.thumbUri !== 'string' || !isSupportedPhotoUri(photo.thumbUri)))))) ||
     (value.clientRequestId !== undefined && (typeof value.clientRequestId !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(value.clientRequestId)))
   ) {
     return null;

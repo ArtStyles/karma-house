@@ -31,6 +31,8 @@ export interface RemotePropertyRow {
   description: string;
   amenities: string[];
   photo_paths: string[];
+  /** Absent on rows read before the column existed, null when the listing has no thumbnail. */
+  cover_thumb_path?: string | null;
   availability: ListingStatus;
   moderation: ModerationStatus;
   review_note: string | null;
@@ -40,7 +42,8 @@ export interface RemotePropertyRow {
 
 /**
  * `photos: 'cover'` keeps only the first storage path, which is all a catalogue card
- * shows. A list page then signs one URL per listing instead of six.
+ * shows. A list page then signs one URL per listing instead of six (or just the cover
+ * thumbnail, in which case the cover's `uri` stays empty).
  */
 export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap<string, string>, photos: 'cover' | 'all' = 'all'): Listing {
   const operation: ListingOperation = row?.operation ?? 'sale';
@@ -66,7 +69,8 @@ export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap
     !Number.isFinite(Date.parse(row.created_at)) ||
     !['active', 'paused', 'sold'].includes(row.availability) ||
     !['draft', 'pending', 'approved', 'rejected'].includes(row.moderation) ||
-    !Array.isArray(row.photo_paths) || !Array.isArray(row.amenities)) {
+    !Array.isArray(row.photo_paths) || !Array.isArray(row.amenities) ||
+    (row.cover_thumb_path != null && typeof row.cover_thumb_path !== 'string')) {
     throw new Error('El servidor devolvió datos de propiedad no válidos.');
   }
   const wanted = photos === 'cover' ? row.photo_paths.slice(0, 1) : row.photo_paths;
@@ -97,6 +101,7 @@ export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap
     ...(operation === 'wanted' ? { wantedOperations: [...(row.wanted_operations ?? ['sale', 'swap'])] } : {}),
     description: row.description, amenities: [...row.amenities], imageKey: 'vedado',
     photos: mapped, ...(mapped[0]?.uri ? { photoUri: mapped[0].uri } : {}),
+    ...(row.cover_thumb_path ? { coverThumb: { uri: signedUrls.get(row.cover_thumb_path) ?? '', storagePath: row.cover_thumb_path } } : {}),
     status: row.availability, moderationStatus: row.moderation,
     ...(row.review_note ? { reviewNote: row.review_note } : {}), version: row.version, createdAt: row.created_at,
   };

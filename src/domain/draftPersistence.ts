@@ -25,8 +25,9 @@ export function restoreDraft(raw: string | null, fallback: ListingDraft): Listin
       || (value.rentPeriod !== undefined && value.rentPeriod !== '' && !isRentPeriod(value.rentPeriod))
       || (value.rentMinStay !== undefined && typeof value.rentMinStay !== 'string')
       || (value.wantedOperations !== undefined && !isWantedOperations(value.wantedOperations))
-      || (value.photos !== undefined && (!Array.isArray(value.photos) || value.photos.length > 6 || !value.photos.every((photo: { uri?: unknown; storagePath?: unknown; uploadId?: unknown }) => photo && typeof photo.uri === 'string'
-        && (photo.storagePath === undefined || typeof photo.storagePath === 'string') && (photo.uploadId === undefined || typeof photo.uploadId === 'string'))))
+      || (value.photos !== undefined && (!Array.isArray(value.photos) || value.photos.length > 6 || !value.photos.every((photo: { uri?: unknown; storagePath?: unknown; uploadId?: unknown; thumbUri?: unknown }) => photo && typeof photo.uri === 'string'
+        && (photo.storagePath === undefined || typeof photo.storagePath === 'string') && (photo.uploadId === undefined || typeof photo.uploadId === 'string')
+        && (photo.thumbUri === undefined || typeof photo.thumbUri === 'string'))))
       || (value.clientRequestId !== undefined && !/^[A-Za-z0-9_-]{1,100}$/.test(value.clientRequestId))
       || (value.expectedVersion !== undefined && (!Number.isInteger(value.expectedVersion) || value.expectedVersion < 1))) return fallback;
     const photos = value.photos?.map((photo: NonNullable<ListingDraft['photos']>[number]) => {

@@ -63,3 +63,25 @@ export async function uploadDraftPhotos(photos: PhotoDraft[], ownerId: string, r
   }
   return paths;
 }
+
+/**
+ * Uploads the cover's thumbnail as `<cover name>_t.jpg` beside the uploaded photos. Best effort:
+ * an unreadable or unusable thumbnail returns nothing and the catalogue falls back to the cover.
+ */
+export async function uploadCoverThumb(cover: PhotoDraft | undefined, photoPaths: string[], port: Pick<PhotoUploadPort, 'upload' | 'exists' | 'readLocal'>, checkpoint: () => void): Promise<string | undefined> {
+  if (!cover?.thumbUri || !photoPaths[0]) return undefined;
+  const path = photoPaths[0].replace(/\.[A-Za-z]+$/, '_t.jpg');
+  if (!/^[^/]+\/[^/]+\/[A-Za-z0-9_-]{1,100}\.jpg$/.test(path) || photoPaths.includes(path)) return undefined;
+  let data: { bytes: ArrayBuffer; contentType: string };
+  try {
+    data = cover.thumbUri.startsWith('data:') ? decodePhotoDataUri(cover.thumbUri) : await port.readLocal(cover.thumbUri);
+  } catch { return undefined; }
+  checkpoint();
+  if (data.contentType !== 'image/jpeg' || data.bytes.byteLength === 0 || data.bytes.byteLength > MAX_PHOTO_BYTES) return undefined;
+  if (!await port.exists(path)) {
+    checkpoint();
+    await port.upload(path, data.bytes, data.contentType);
+  }
+  checkpoint();
+  return path;
+}

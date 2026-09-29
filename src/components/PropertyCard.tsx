@@ -33,7 +33,7 @@ export function PropertyCard({ listing, horizontal = false }: { listing: Listing
       <View style={horizontal && styles.wideImage}>
         {listing.operation === 'wanted' && !(listing.photos?.length)
           ? <View style={[horizontal ? styles.horizontalImage : styles.image, styles.wantedImage]}><Icon name="search-outline" size={37} color={colors.primary} /><Text style={styles.wantedText}>Busco vivienda</Text></View>
-          : <PropertyImage listing={listing} style={horizontal ? styles.horizontalImage : styles.image} />}
+          : <PropertyImage listing={listing} variant="thumb" style={horizontal ? styles.horizontalImage : styles.image} />}
         {badge ? <Text style={[styles.badge, badge === 'Nueva' && styles.newBadge, !!operation && badge === operation && styles.operationBadge]}>{badge}</Text> : null}
         {photos > 1 && <View style={styles.photoCount}><Icon name="images-outline" size={13} color={colors.white} /><Text style={styles.photoCountText}>{photos}</Text></View>}
       </View>
