@@ -174,10 +174,15 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
       <View style={styles.shell}>
         <View style={styles.chatHeader}>
           <IconButton name="chevron-back" label="Volver" onPress={() => goBack('/messages')} />
-          <Pressable accessibilityRole="button" accessibilityLabel={`${conversation.otherName}. Ver vivienda: ${conversation.propertyTitle}`} disabled={!conversation.propertyAvailable} onPress={() => router.push(`/property/${conversation.propertyId}`)} style={({ pressed }) => [styles.person, pressed && { opacity: 0.7 }]}>
-            <Text numberOfLines={1} style={styles.personName}>{conversation.otherName}</Text>
-            <Text numberOfLines={1} style={[styles.personHint, conversation.propertyAvailable && styles.propertyLink]}>{conversation.propertyTitle}{conversation.propertyAvailable ? ' ›' : ''}</Text>
-          </Pressable>
+          <View style={styles.person}>
+            {/* A chat partner can always see the other's profile, even without active listings. */}
+            <Pressable accessibilityRole="button" accessibilityLabel={`Ver el perfil de ${conversation.otherName}`} onPress={() => router.push(`/user/${conversation.otherUserId}`)} style={({ pressed }) => pressed && { opacity: 0.7 }}>
+              <Text numberOfLines={1} style={styles.personName}>{conversation.otherName}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Ver vivienda: ${conversation.propertyTitle}`} disabled={!conversation.propertyAvailable} onPress={() => router.push(`/property/${conversation.propertyId}`)} style={({ pressed }) => pressed && { opacity: 0.7 }}>
+              <Text numberOfLines={1} style={[styles.personHint, conversation.propertyAvailable && styles.propertyLink]}>{conversation.propertyTitle}{conversation.propertyAvailable ? ' ›' : ''}</Text>
+            </Pressable>
+          </View>
           <IconButton name="ellipsis-horizontal" label="Opciones de conversación" onPress={() => { Keyboard.dismiss(); setMenu(true); }} />
         </View>
         <ConversationNegotiations conversation={conversation} userId={userId} store={negotiations} mutations={negotiationMutations} request={sheet} onClose={() => setSheet(null)} />

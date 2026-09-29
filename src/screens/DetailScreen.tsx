@@ -15,6 +15,9 @@ import { CONDITIONS } from '../domain/listingOptions';
 import { ReportConversationSheet } from '../components/messaging/ReportConversationSheet';
 import { createPropertyReportRepository, PROPERTY_REPORT_REASONS } from '../data/propertyReports';
 import { supabase } from '../lib/supabase';
+import { UserAvatar } from '../components/account/UserAvatar';
+import { levelLabel } from '../profiles/domain';
+import { usePublicProfile } from '../profiles/usePublicProfile';
 import { listingShareUrl } from '../lib/publicSite';
 import { listingOperation, minStayText, operationBadge, priceLabel, priceSuffix, shareText, swapBalanceText, typeLabel, wantedOperationsText } from '../domain/operations';
 
@@ -42,17 +45,10 @@ export default function DetailScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   useEffect(() => { setPhotoIndex(0); setError(''); setContact(false); setReport(false); }, [id]);
-  const [sellerName, setSellerName] = useState('');
-  const sellerId = mode === 'cloud' && listing?.ownerId !== auth.user?.id ? listing?.ownerId : undefined;
-  useEffect(() => {
-    setSellerName('');
-    if (!supabase || !sellerId) return;
-    let alive = true;
-    // Public profiles expose only the display name, and only for owners of a published listing.
-    void supabase.from('profiles').select('display_name').eq('id', sellerId).maybeSingle()
-      .then(({ data }) => { if (alive && typeof data?.display_name === 'string') setSellerName(data.display_name); });
-    return () => { alive = false; };
-  }, [sellerId]);
+  const sellerId = mode === 'cloud' && listing?.ownerId && listing.ownerId !== auth.user?.id ? listing.ownerId : undefined;
+  // Only owners of an approved, active listing (or someone already in a chat) have a public profile.
+  const seller = usePublicProfile(sellerId);
+  const sellerProfile = sellerId ? seller.profile : null;
   async function reload() { setRefreshing(true); try { await refresh(); } catch { /* Provider exposes the remote error. */ } finally { setRefreshing(false); } }
   if (!listing) return <SafeAreaView style={styles.safe}>{!ready ? <View style={styles.loading}><ActivityIndicator color={colors.primary} size="large" /><Text style={styles.sellerText}>Cargando vivienda…</Text></View> : storageError ? <View style={styles.body}><Notice error>{storageError}</Notice><Button label="Volver a cargar" loading={refreshing} onPress={reload} /><Button label="Volver a explorar" secondary onPress={() => router.replace('/')} /></View> : <EmptyState title="Esta vivienda no está disponible" description="Vuelve al catálogo para explorar otras viviendas." action={<Button label="Volver a explorar" onPress={() => router.replace('/')} />} />}</SafeAreaView>;
   const favorite = favoriteIds.includes(listing.id);
@@ -185,10 +181,15 @@ export default function DetailScreen() {
           /></View>
           <Text style={styles.mapDescription}>{listing.mapLocation.precision === 'approximate' ? 'El área de 800 m muestra la zona de la vivienda. El punto exacto no se publica.' : 'Punto indicado por quien publica la vivienda.'}</Text>
         </View>}
-        <View style={styles.seller}>
-          <View style={styles.sellerIcon}><Icon name="person" size={25} color={colors.muted} /></View>
-          <View style={styles.sellerCopy}><Text style={styles.sellerTitle}>{mode === 'cloud' ? own ? 'Publicado por ti' : sellerName || 'Información del anuncio' : own ? 'Tu anuncio de prueba' : 'Perfil de demostración'}</Text><Text style={styles.sellerText}>{mode === 'cloud' ? `Publicado el ${new Date(listing.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}` : own ? 'Visible solo en este dispositivo' : 'Sin vendedor real asociado'}</Text></View>
-        </View>
+        <Pressable accessibilityRole={sellerProfile ? 'button' : undefined} accessibilityLabel={sellerProfile ? `Ver el perfil de ${sellerProfile.displayName}` : undefined} disabled={!sellerProfile} onPress={() => sellerProfile && router.push(`/user/${sellerProfile.id}`)} style={({ pressed }) => [styles.seller, pressed && { opacity: .7 }]}>
+          {sellerProfile ? <UserAvatar size={50} avatarUrl={seller.avatarUrl} name={sellerProfile.displayName} accessibilityLabel={`Foto de ${sellerProfile.displayName}`} /> : <View style={styles.sellerIcon}><Icon name="person" size={25} color={colors.muted} /></View>}
+          <View style={styles.sellerCopy}>
+            <Text style={styles.sellerTitle}>{mode === 'cloud' ? own ? 'Publicado por ti' : sellerProfile?.displayName || 'Información del anuncio' : own ? 'Tu anuncio de prueba' : 'Perfil de demostración'}</Text>
+            {sellerProfile && <View style={styles.sellerBadges}><Text style={styles.sellerLevel}>{levelLabel(sellerProfile.level)}</Text>{sellerProfile.verified && <><Icon name="shield-checkmark" size={14} color={colors.green} /><Text style={styles.sellerVerified}>Verificado por KarmaHouse</Text></>}</View>}
+            <Text style={styles.sellerText}>{mode === 'cloud' ? `Publicado el ${new Date(listing.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}` : own ? 'Visible solo en este dispositivo' : 'Sin vendedor real asociado'}</Text>
+          </View>
+          {sellerProfile && <Icon name="chevron-forward" size={18} color={colors.muted} />}
+        </Pressable>
         {mode === 'cloud' && !own && <Pressable accessibilityRole="button" onPress={openReport} style={({ pressed }) => [styles.report, pressed && { opacity: .6 }]}>
           <Icon name="flag-outline" size={17} color={colors.muted} /><Text style={styles.reportText}>Reportar anuncio</Text>
         </Pressable>}
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
   mapHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, mapPrecision: { color: colors.primary, fontSize: 12, fontWeight: '600', backgroundColor: colors.softBlue, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }, mapFrame: { borderRadius: 24, overflow: 'hidden' }, mapDescription: { fontSize: 13, lineHeight: 20, color: colors.muted, paddingHorizontal: 2 },
   amenities: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16, rowGap: 20, backgroundColor: colors.white, borderRadius: 24, padding: 20 }, amenity: { flexDirection: 'row', alignItems: 'center', gap: 10, flexBasis: '45%', flexGrow: 1, minWidth: 120 }, amenityText: { color: colors.ink, fontSize: 15, lineHeight: 21, flex: 1 },
   report: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 44, alignSelf: 'center', paddingHorizontal: 12 }, reportText: { color: colors.muted, fontSize: 14, fontWeight: '500' },
-  seller: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, backgroundColor: colors.white, borderRadius: 24 }, sellerIcon: { backgroundColor: colors.paper, width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' }, sellerCopy: { flex: 1, gap: 5 }, sellerTitle: { color: colors.ink, fontSize: 16, fontWeight: '600' }, sellerText: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+  seller: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, backgroundColor: colors.white, borderRadius: 24 }, sellerIcon: { backgroundColor: colors.paper, width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' }, sellerCopy: { flex: 1, gap: 5 }, sellerTitle: { color: colors.ink, fontSize: 16, fontWeight: '600' }, sellerBadges: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' }, sellerLevel: { color: colors.primary, fontSize: 13, fontWeight: '600', marginRight: 4 }, sellerVerified: { color: colors.green, fontSize: 13, fontWeight: '600' }, sellerText: { color: colors.muted, fontSize: 13, lineHeight: 19 },
   actionBar: { width: '100%', borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border, backgroundColor: colors.white, overflow: 'hidden' }, actionContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', columnGap: 16, rowGap: 12, paddingVertical: 13, paddingHorizontal: 20, width: '100%', maxWidth: 860, alignSelf: 'center', flexWrap: 'wrap' }, barSummary: { flexGrow: 1, gap: 4 }, barLabel: { fontSize: 12, color: colors.muted }, barPrice: { fontSize: 24, color: colors.ink, fontWeight: '700', letterSpacing: -.6 }, contactButton: { minWidth: 148, flexGrow: 1 },
   modalBackdrop: { flex: 1, backgroundColor: '#00000055', justifyContent: 'flex-end' }, wideBackdrop: { justifyContent: 'center', padding: 24 }, modal: { width: '100%', alignSelf: 'center', borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 28, backgroundColor: colors.white, gap: 18 }, wideModal: { maxWidth: 440, borderRadius: 28 }, modalIcon: { backgroundColor: colors.softBlue, borderRadius: 28, width: 56, height: 56, alignItems: 'center', justifyContent: 'center' }, modalTitle: { color: colors.ink, fontSize: 26, fontWeight: '700', lineHeight: 32, letterSpacing: -.6 }, modalText: { color: colors.muted, fontSize: 16, lineHeight: 24 }, modalSmall: { color: colors.muted, fontSize: 13, lineHeight: 20 },
 });

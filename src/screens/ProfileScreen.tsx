@@ -84,6 +84,10 @@ export default function ProfileScreen() {
               <View style={styles.accessory}><Text style={styles.count}>{savedSearches.items.length}</Text><Icon name="chevron-forward" size={17} color={colors.muted} /></View>
             </View>
           </Pressable>
+          {user && own.some(item => item.status === 'active' && item.moderationStatus === 'approved') && <>
+            <View style={styles.separator} />
+            <AccountRow icon="person-circle-outline" title="Ver mi perfil público" description="Lo que ven quienes visitan tus anuncios" onPress={() => router.push(`/user/${user.id}`)} />
+          </>}
         </>}
       </View>
 
