@@ -29,6 +29,8 @@ import { SelectionField } from './SelectionField';
 import { AMENITIES, CONDITIONS, OPERATIONS, PROVINCES, RENT_PERIODS, SWAP_BALANCES, WANTED_OPERATIONS, type ListingOperation } from '../domain/listingOptions';
 import { normalizeDecimalInput, parseDecimal, publishedNumber } from '../domain/numericInput';
 import { minStayText, priceLabel, priceSuffix, swapBalanceText, wantedOperationsText } from '../domain/operations';
+import type { ImportField, ImportResult } from '../domain/importListing';
+import { ImportListingSheet } from './ImportListingSheet';
 
 type DraftErrors = DraftValidation['errors'];
 
@@ -66,7 +68,16 @@ const fieldLabels: Partial<Record<keyof ListingDraft, string>> = {
   rentPeriod: 'Cobro', rentMinStay: 'Estancia mínima', wantedOperations: 'Qué busco',
 };
 
-const roomOptions = Array.from({ length: 20 }, (_, index) => ({ value: String(index + 1), label: String(index + 1) }));
+/** «Rellenamos desde tu texto: título del anuncio, precio en USD. Falta: baños.» plus each note on its own line. */
+function importSummary({ detected, missing, notes }: ImportResult): string {
+  const names = (fields: ImportField[]) => fields.map((field) => { const label = fieldLabels[field] ?? field; return label[0].toLowerCase() + label.slice(1); }).join(', ');
+  return [
+    [detected.length ? `Rellenamos desde tu texto: ${names(detected)}.` : 'No encontramos datos que rellenar en tu texto.', missing.length ? `Falta: ${names(missing)}.` : ''].filter(Boolean).join(' '),
+    ...notes,
+  ].join('\n');
+}
+
+const roomOptions =Array.from({ length: 20 }, (_, index) => ({ value: String(index + 1), label: String(index + 1) }));
 const floorOptions = [{ value: '', label: 'Sin especificar' }, ...Array.from({ length: 100 }, (_, value) => ({ value: String(value), label: value === 0 ? 'Planta baja' : `Planta ${value}` }))];
 
 export function ListingForm({
@@ -93,6 +104,9 @@ export function ListingForm({
   const [discardRequested, setDiscardRequested] = useState(false);
   const [savedWarning, setSavedWarning] = useState('');
   const [chosen, setChosen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  // Component state on purpose: the notice describes this paste, not a draft restored after a restart.
+  const [imported, setImported] = useState<ImportResult | null>(null);
   const operation = draft.operation ?? 'sale';
   const wanted = operation === 'wanted';
   const wantedOperations = draft.wantedOperations ?? ['sale', 'swap'];
@@ -112,7 +126,8 @@ export function ListingForm({
   const versionConflict = hasDraftVersionConflict(draft, initialDraft);
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => { scrollRef.current?.scrollTo({ y: 0, animated: false }); }, [step]);
+  // An import starts from the «Pegar anuncio» button below the chooser; its notice sits at the top.
+  useEffect(() => { scrollRef.current?.scrollTo({ y: 0, animated: false }); }, [step, imported]);
 
   useEffect(() => {
     let active = true;
@@ -218,6 +233,7 @@ export function ListingForm({
         persistence?.beginNext();
         setDraft({ ...cloneDraft(emptyDraft), clientRequestId: draftToken() });
         setChosen(false);
+        setImported(null);
         setStep(0);
         setErrors({});
       }
@@ -230,6 +246,22 @@ export function ListingForm({
       submitLock.current = false;
       if (mounted.current) setSubmitting(false);
     }
+  }
+
+  /** Same start as the chooser, but a type the text does not name stays empty instead of «Casa». */
+  function applyImport(result: ImportResult) {
+    const kind = result.draft.operation ?? 'sale';
+    const next: ListingDraft = { ...cloneDraft(emptyDraft), type: '', ...result.draft, operation: kind, clientRequestId: draft.clientRequestId };
+    if (kind === 'wanted') next.wantedOperations = ['sale', 'swap'];
+    if (kind === 'rent') next.rentPeriod = result.draft.rentPeriod || 'month';
+    setDraft(next); setErrors({}); setSubmitError(null);
+    setImported(result); setImportOpen(false); setChosen(true); setStep(0);
+  }
+
+  function discardImport() {
+    setDraft({ ...cloneDraft(emptyDraft), clientRequestId: draft.clientRequestId });
+    setErrors({}); setSubmitError(null);
+    setImported(null); setChosen(false); setStep(0);
   }
 
   function toggleAmenity(value: string) {
@@ -278,6 +310,10 @@ export function ListingForm({
                   <Icon name="chevron-forward" size={19} color={colors.muted} />
                 </Pressable>
               ))}
+              <View style={styles.importOffer}>
+                <Text style={styles.fieldHint}>¿Ya lo tienes escrito en Revolico o WhatsApp? Pégalo y rellenamos el formulario.</Text>
+                <Button label="Pegar anuncio" icon="clipboard-outline" secondary onPress={() => setImportOpen(true)} />
+              </View>
             </View>
           ) : <>
           <View style={styles.steps} accessibilityLabel={`Paso ${step + 1} de 3`}>
@@ -297,6 +333,10 @@ export function ListingForm({
             ))}
           </View>
 
+          {imported ? <View style={styles.importNotice}>
+            <Notice>{importSummary(imported)}</Notice>
+            <Button label="Descartar lo importado" icon="trash-outline" secondary disabled={submitting || photoBusy} onPress={discardImport} />
+          </View> : null}
           {submitError ? <Notice error>{submitError}</Notice> : null}
           {submitError && onReloadLatest && <Button label="Actualizar anuncio sin perder el borrador" secondary loading={reloading} onPress={async () => { setReloading(true); try { await onReloadLatest(); } catch { /* Existing error remains visible. */ } finally { if (mounted.current) setReloading(false); } }} />}
           {draftError ? <Notice error>{draftError}</Notice> : null}
@@ -305,7 +345,7 @@ export function ListingForm({
             <View style={styles.section}>
               <View style={styles.labelRow}>
                 <Text style={styles.operationTag}>{OPERATIONS.find(o => o.value === operation)?.label}</Text>
-                {!initialDraft ? <Button label="Cambiar" secondary disabled={submitting || photoBusy} onPress={() => { setChosen(false); changeField('operation', undefined); }} /> : null}
+                {!initialDraft ? <Button label="Cambiar" secondary disabled={submitting || photoBusy} onPress={() => { setChosen(false); setImported(null); changeField('operation', undefined); }} /> : null}
               </View>
               <SectionHeading
                 title={wanted ? 'Lo que buscas' : 'Sobre la vivienda'}
@@ -632,6 +672,7 @@ export function ListingForm({
           </Text>
         </View>
       </ScrollView>
+      {importOpen ? <ImportListingSheet onClose={() => setImportOpen(false)} onImport={applyImport} /> : null}
     </KeyboardAvoidingView>
   );
 }
@@ -767,6 +808,8 @@ const styles = StyleSheet.create({
   operationTitle: { fontSize: 17, fontWeight: '600', color: colors.ink },
   operationText: { fontSize: 14, color: colors.muted },
   operationTag: { color: colors.primary, fontSize: 15, fontWeight: '600' },
+  importOffer: { gap: 10, paddingTop: 4 },
+  importNotice: { backgroundColor: colors.white, borderRadius: 20, paddingHorizontal: 16, paddingBottom: 16, gap: 4 },
   demoNote: { color: colors.muted, fontSize: 13, lineHeight: 18, textAlign: 'center', paddingHorizontal: 12 },
 });
 
