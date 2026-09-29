@@ -30,6 +30,22 @@ test('contact data and the phrases that introduce it are removed and counted', (
   assert.deepEqual(parseListingText('Vendo casa con teléfono fijo y patio').notes, []);
 });
 
+test('removing contacts leaves no connector debris and keeps connectors in real sentences', () => {
+  const cases: [string, string, number][] = [
+    ['30 USD por noche. Escribir al whatsapp +53 55550123 o a casa.vedado@example.com', '30 USD por noche.', 2],
+    ['Casa amplia. Llamar al 55550124 o al 55550125', 'Casa amplia.', 2],
+    ['Sala y comedor, 55550126 o al 55550127.\nPatio', 'Sala y comedor\nPatio', 2],
+    ['Casa en Playa. Escribir por whatsapp al wa.me/5355550128', 'Casa en Playa.', 1],
+    ['Casa linda, por whatsapp al https://wa.me/5355550129', 'Casa linda', 1],
+    ['55550130 o al\nCasa o apartamento', 'Casa o apartamento', 1],
+    ['Casa o apartamento con sala y comedor, a 2 cuadras del mar y en buen estado.', 'Casa o apartamento con sala y comedor, a 2 cuadras del mar y en buen estado.', 0],
+  ];
+  for (const [input, text, count] of cases) assert.deepEqual(stripContacts(input), { text, count }, input);
+  const result = parseListingText('Alquilo casa en Playa, 30 USD por noche. Escribir al whatsapp +53 55550123 o a casa.vedado@example.com');
+  assert.equal(result.draft.description, 'Alquilo casa en Playa, 30 USD por noche.');
+  assert.deepEqual(result.notes, ['Quitamos 2 datos de contacto: en KarmaHouse se habla por el chat.']);
+});
+
 test('operation follows the earliest keyword and defaults to an undetected sale', () => {
   assert.equal(detectOperation('Vendo casa en Playa'), 'sale');
   assert.equal(detectOperation('Venta de apartamento'), 'sale');
@@ -197,6 +213,16 @@ test('a generic title becomes type and place, a long one is cut', () => {
   assert.ok((long.draft.title ?? '').length <= 100);
 });
 
+test('a one-paragraph ad keeps the title up to the place or the type', () => {
+  const rent = parseListingText('Alquilo apartamento amueblado en el Vedado, 2do piso, 2 habitaciones, 1 baño, balcón y aire acondicionado. 40 USD por noche.');
+  assert.equal(rent.draft.title, 'Alquilo apartamento amueblado en el Vedado');
+  const sale = parseListingText('Vendo casa colonial en Santos Suárez con portal, 3 cuartos, 2 baños, patio y garaje. Precio 60000 USD.');
+  assert.equal(sale.draft.title, 'Vendo casa colonial en Santos Suárez');
+  const early = parseListingText('Vendo, por viaje, casa en Playa con garaje, 3 cuartos, 2 baños, patio y terraza. Precio 50000 USD.');
+  assert.equal(early.draft.title, 'Vendo, por viaje, casa en Playa');
+  assert.ok((parseListingText('Vendo, por viaje, casa en Playa con garaje').draft.title ?? '').length >= 15);
+});
+
 test('description is cut to 2000 characters', () => {
   const result = parseListingText(`Vendo casa en Playa. ${'Sala amplia y ventilada. '.repeat(200)}`);
   assert.equal(result.draft.description?.length, 2000);
@@ -238,7 +264,7 @@ test('full sale written as a paragraph', () => {
     + 'Precio 45.000 USD negociable. Interesados llamar al 55550122 o escribir al whatsapp +53 55550123.';
   const result = parseListingText(ad);
   assert.deepEqual(result.draft, {
-    operation: 'sale', title: 'Vendo apartamento en el Vedado, zona alta, calle 27 y a Paseo', type: 'Apartamento',
+    operation: 'sale', title: 'Apartamento en Vedado', type: 'Apartamento',
     location: 'Vedado', province: 'La Habana', price: '45000', bedrooms: '2', bathrooms: '1', area: '85', floor: '3',
     condition: 'good', priceNegotiable: true, amenities: ['Balcón', 'Cisterna', 'Tanque de agua'],
     description: 'Vendo apartamento en el Vedado, zona alta, calle 27 y a Paseo. 3er piso, 2 dormitorios independientes, 1 1/2 baños, '

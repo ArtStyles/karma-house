@@ -52,8 +52,17 @@ const LANDLINE = /(\b(?:llamar(?:[ \t]+al)?|ll[aá]mame|tel[eé]fonos?(?:[ \t]+f
 const INTRO_WORD = String.raw`(?:para[ \t]+m[aá]s[ \t]+info(?:rmaci[oó]n)?|m[aá]s[ \t]+info(?:rmaci[oó]n)?|interesad[oa]s|llamar|ll[aá]mame|ll[aá]menme|llamen|llame|escribir|escr[ií]beme|escr[ií]banme|escriban|contactar|contactos?|tel[eé]fonos?|telf?|tlf|whatsapp|wsp|cel(?:ular)?|m[oó]vil|correo|e-?mail|info(?:rmaci[oó]n)?|v[ií]a)`;
 const INTRO_LINK = String.raw`(?:al|a|o|y|el|mi|por|n[uú]mero|mediante)`;
 const INTRO = String.raw`(?:\b${INTRO_WORD}(?:[ \t.:,/-]*(?:${INTRO_WORD}|${INTRO_LINK})\b)*[ \t.:,/-]*)`;
-/** Removed contacts plus the phrase before each and the «o» / «y» / «,» that join several of them. */
-const CONTACT_RUN = new RegExp(`${INTRO}?${MARK}(?:[ \\t,/-]*(?:(?:o|y|u)\\b[ \\t,/-]*)?${INTRO}?${MARK})*`, 'giu');
+/** A joining word as a whole word; «\b» would split «vía» or «tardía». */
+const CONNECTOR = String.raw`(?<![\p{L}\p{N}])(?:o|u|y|e|a|al|por|v[ií]a|en)(?![\p{L}\p{N}])`;
+const CONNECTORS = String.raw`(?:${CONNECTOR}[ \t,/-]*)*`;
+/**
+ * Removed contacts plus the phrase before each, the joining words and «,» between several of them,
+ * and joining words right before the first or trailing after the last («por whatsapp al …», «… o al»).
+ */
+const CONTACT_RUN = new RegExp(String.raw`${CONNECTORS}${INTRO}?${MARK}(?:[ \t,/-]*${CONNECTORS}${INTRO}?${MARK})*`
+  + String.raw`(?:(?:[ \t,/-]*${CONNECTOR})+(?=[ \t,/-]*(?:[.;:!?]|$)))?`, 'giu');
+/** Nothing left but punctuation and joining words. */
+const CONNECTOR_ONLY = new RegExp(String.raw`^[\s\p{P}]*(?:${CONNECTOR}[\s\p{P}]*)*$`, 'iu');
 
 /** Removes Cuban and US phones, WhatsApp and Telegram links, emails and the phrases that introduce them. */
 export function stripContacts(text: string): { text: string; count: number } {
@@ -64,8 +73,8 @@ export function stripContacts(text: string): { text: string; count: number } {
   const lines = marked.split('\n').flatMap((line) => {
     if (!line.includes(MARK)) return [line];
     const rest = line.replace(CONTACT_RUN, ' ').replace(/[ \t]+([.,;:!?])/g, '$1').replace(/([.,;:!?])[.,;:]+/g, '$1')
-      .replace(/[\s,;]+$/, '');
-    return hasContent(rest) ? [rest] : [];
+      .replace(/[ \t]{2,}/g, ' ').replace(/[\s,;]+$/, '');
+    return CONNECTOR_ONLY.test(rest) ? [] : [rest];
   });
   return { text: tidy(lines.join('\n')), count };
 }
@@ -160,8 +169,10 @@ export function detectArea(text: string): number | undefined {
 
 // ---- 6. Type and floor ----
 
+const TYPE_WORD = /\b(?:(apartamentos?|apartamentico|aptos?|penthouse)|casas?|casita|biplanta|chalet)\b/;
+
 export function detectType(text: string): ListingType | undefined {
-  const match = /\b(?:(apartamentos?|apartamentico|aptos?|penthouse)|casas?|casita|biplanta|chalet)\b/.exec(normalizeSearch(text));
+  const match = TYPE_WORD.exec(normalizeSearch(text));
   return match ? (match[1] ? 'Apartamento' : 'Casa') : undefined;
 }
 
@@ -255,7 +266,8 @@ const GENERIC_WORDS = new Set(['se', 'vende', 'vendo', 'venta', 'en', 'de', 'la'
 /**
  * The first line that names an operation (a decorated first line is usually the seller's nickname),
  * else one that names a house or apartment, else the first with three letters; never a «Precio…»
- * line. Its first sentence, at most 100 characters. «Venta de casa
+ * line. Its first sentence, at most 100 characters; a long one that lists features stops at the
+ * first comma or «con» after the place and the type. «Venta de casa
  * en Playa» says nothing a type and a place would not, so it becomes «Casa en Playa».
  */
 export function buildTitle(text: string, type: ListingType | undefined, place: { location: string; province: string } | null): string {
@@ -265,6 +277,16 @@ export function buildTitle(text: string, type: ListingType | undefined, place: {
   if (!line) return '';
   let title = (/^.*?[.!?](?=\s|$)/.exec(line)?.[0] ?? line)
     .replace(/^[^\p{L}\p{N}¿¡(]+/u, '').replace(/[^\p{L}\p{N})]+$/u, '');
+  if (title.length > 60) {
+    // `normalizeSearch` keeps one character per character of NFC text, so indexes match `title`.
+    const folded = normalizeSearch(title);
+    const typeWord = TYPE_WORD.exec(folded);
+    const name = normalizeSearch(place?.location || place?.province || '');
+    const placeAt = name ? folded.indexOf(name) : -1;
+    const after = Math.max(typeWord ? typeWord.index + typeWord[0].length : -1, placeAt >= 0 ? placeAt + name.length : -1);
+    const cut = after >= 0 ? /,| con /.exec(folded.slice(after)) : null;
+    if (cut && after + cut.index >= 15) title = title.slice(0, after + cut.index);
+  }
   if (title.length > 100) {
     title = title.slice(0, 100);
     const space = title.lastIndexOf(' ');
