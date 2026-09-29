@@ -65,6 +65,18 @@ function balanceText(row: PublicListingRow): string {
 }
 
 const CONDITION_LABELS: Record<string, string> = { new: 'Nuevo', good: 'Buen estado', 'needs-renovation': 'A reformar' };
+const LEVEL_LABELS: Record<string, string> = { new: 'Nuevo', active: 'Activo', trusted: 'Confiable', featured: 'Destacado' };
+const levelLabel = (level: string) => Object.prototype.hasOwnProperty.call(LEVEL_LABELS, level) ? LEVEL_LABELS[level] : undefined;
+
+export interface Seller { name: string; level: string; verified: boolean }
+
+function sellerLines(seller: Seller | undefined): string {
+  const label = seller && levelLabel(seller.level);
+  if (!seller || !label) return '';
+  return `<p class="muted">Publicado por ${escapeHtml(seller.name)} · ${label}</p>
+${seller.verified ? `<p class="muted">Verificado por KarmaHouse</p>
+` : ''}`;
+}
 
 const STYLE = `
 :root{--ink:#1C1C1E;--muted:#5E6B7A;--primary:#0153A8;--paper:#F5F5F7;--card:#FFFFFF;--border:#E3E8F0}
@@ -108,7 +120,7 @@ function header(siteUrl: string): string {
   return `<header><a href="${escapeHtml(siteUrl)}"><b>Karma</b>House</a></header>`;
 }
 
-export function renderListing(row: PublicListingRow, photoUrls: string[], siteUrl: string, selfUrl: string): string {
+export function renderListing(row: PublicListingRow, photoUrls: string[], siteUrl: string, selfUrl: string, seller?: Seller): string {
   const op = row.operation ?? 'sale';
   const title = escapeHtml(op === 'sale' ? row.title : `${BADGES[op]}: ${row.title}`);
   const place = `${row.location}, ${row.province}`;
@@ -161,7 +173,7 @@ ${op === 'sale' ? '' : `<p class="eyebrow">${BADGES[op]}</p>
 `}<h1>${escapeHtml(row.title)}</h1>
 <p class="price">${price}</p>
 <p class="muted">${escapeHtml(row.location)}, ${escapeHtml(row.province)}</p>
-${op === 'wanted' ? `<p>Busca: ${wantedText(row)}</p>
+${sellerLines(seller)}${op === 'wanted' ? `<p>Busca: ${wantedText(row)}</p>
 ` : ''}<section class="card"><dl>${details.map(([label, value]) => `<dt>${label}</dt><dd>${escapeHtml(value)}</dd>`).join('')}</dl></section>
 ${about}
 ${swap}
@@ -184,11 +196,12 @@ export function renderUnavailable(siteUrl: string): string {
 
 export const SITE_URL = 'https://artstyles.github.io/karma-house/';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const COLUMNS = 'id,title,location,province,type,description,price,area,bedrooms,bathrooms,amenities,photo_paths,condition,floor,price_negotiable,operation,swap_wants,swap_provinces,swap_balance,swap_amount,rent_period,rent_min_stay,wanted_operations';
+const COLUMNS = 'id,title,location,province,type,description,price,area,bedrooms,bathrooms,amenities,photo_paths,condition,floor,price_negotiable,operation,swap_wants,swap_provinces,swap_balance,swap_amount,rent_period,rent_min_stay,wanted_operations,owner_id';
 const HTML = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' };
 
 export interface Env { supabaseUrl: string; anonKey: string; publicOrigin: string }
-type Row = PublicListingRow & { photo_paths: string[] | null };
+// owner_id is only read to ask for the seller's public profile; it is never printed.
+type Row = PublicListingRow & { photo_paths: string[] | null; owner_id: string };
 
 function unavailable(): Response {
   return new Response(renderUnavailable(SITE_URL), { status: 404, headers: HTML });
@@ -217,21 +230,44 @@ export async function handle(request: Request, env: Env, fetchImpl: typeof fetch
   }
   if (!row) return unavailable();
 
-  let photoUrls: string[] = [];
-  if (row.photo_paths?.length) {
+  const listing = row;
+  const post = (path: string, body: unknown) => fetchImpl(`${base}${path}`, {
+    method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+
+  const signPhotos = async (): Promise<string[]> => {
+    if (!listing.photo_paths?.length) return [];
     try {
-      const signed = await fetchImpl(`${base}/storage/v1/object/sign/property-photos`, {
-        method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ expiresIn: 3600, paths: row.photo_paths }),
-      });
+      const signed = await post('/storage/v1/object/sign/property-photos', { expiresIn: 3600, paths: listing.photo_paths });
       if (!signed.ok) throw new Error(`storage ${signed.status}`);
       const items = (await signed.json()) as { signedURL?: string | null; error?: string | null }[];
-      photoUrls = items.filter((item) => item.signedURL && !item.error).map((item) => `${base}/storage/v1${item.signedURL}`);
+      return items.filter((item) => item.signedURL && !item.error).map((item) => `${base}/storage/v1${item.signedURL}`);
     } catch (error) {
       // The page is still useful without photos.
       console.error('photo signing failed', error instanceof Error ? error.message : error);
+      return [];
     }
-  }
-  return new Response(renderListing(row, photoUrls, SITE_URL, `${env.publicOrigin}/p/${row.id}`), { status: 200, headers: HTML });
+  };
+
+  const loadSeller = async (): Promise<Seller | undefined> => {
+    try {
+      const response = await post('/rest/v1/rpc/kh_public_profile', { p_user_id: listing.owner_id });
+      if (!response.ok) throw new Error(`profile ${response.status}`);
+      const profile = (await response.json()) as { id?: unknown; displayName?: unknown; level?: unknown; verified?: unknown } | null;
+      if (!profile || typeof profile !== 'object' || Array.isArray(profile) || profile.id !== listing.owner_id) throw new Error('profile shape');
+      const { displayName: name, level, verified } = profile;
+      if (typeof name !== 'string' || name.length < 2 || name.length > 80) throw new Error('profile name');
+      if (typeof level !== 'string' || !levelLabel(level) || typeof verified !== 'boolean') throw new Error('profile level');
+      return { name, level, verified };
+    } catch (error) {
+      // The page is still useful without the seller line.
+      console.error('seller profile failed', error instanceof Error ? error.message : error);
+      return undefined;
+    }
+  };
+
+  const [photoUrls, seller] = await Promise.all([signPhotos(), loadSeller()]);
+  return new Response(renderListing(listing, photoUrls, SITE_URL, `${env.publicOrigin}/p/${listing.id}`, seller), { status: 200, headers: HTML });
 }
 
 export function GET(request: Request): Promise<Response> {

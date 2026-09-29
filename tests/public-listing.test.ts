@@ -81,20 +81,41 @@ test('listingShareUrl points at the public page of the listing', () => {
   assert.ok(PUBLIC_PAGES_URL.startsWith('https://') && PUBLIC_PAGES_URL.endsWith('/'));
 });
 
+test('renderListing names the seller, their level and the verification, escaped', () => {
+  const html = renderListing(row, photos, site, self, { name: 'Ana <b>López</b>', level: 'trusted', verified: true });
+  assert.ok(html.includes('<p class="muted">Publicado por Ana &lt;b&gt;López&lt;/b&gt; · Confiable</p>'));
+  assert.ok(html.includes('<p class="muted">Verificado por KarmaHouse</p>'));
+  assert.ok(!html.includes('<b>López</b>'));
+  const unverified = renderListing(row, photos, site, self, { name: 'Ana', level: 'featured', verified: false });
+  assert.ok(unverified.includes('Publicado por Ana · Destacado') && !unverified.includes('Verificado por KarmaHouse'));
+  const without = renderListing(row, photos, site, self);
+  assert.ok(!without.includes('Publicado por') && !without.includes('Verificado por KarmaHouse'));
+});
+
 const env: Env = { supabaseUrl: 'https://example.supabase.co/', anonKey: 'anon-key', publicOrigin: 'https://karmahouse.vercel.app' };
-const dbRow = { ...row, photo_paths: ['u/a/one.jpg', 'u/a/two.jpg'] };
-function fakeFetch(rest: { status: number; body?: unknown }, sign?: { status: number; body?: unknown } | Error): { fetch: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
+const ownerId = '44000000-0000-4000-8000-000000000004';
+const dbRow = { ...row, owner_id: ownerId, photo_paths: ['u/a/one.jpg', 'u/a/two.jpg'] };
+const PROFILE_URL = 'https://example.supabase.co/rest/v1/rpc/kh_public_profile';
+type Reply = { status: number; body?: unknown } | Error | Response;
+function fakeFetch(rest: { status: number; body?: unknown }, sign?: Reply, profile: Reply = { status: 404 }): { fetch: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
   const calls: { url: string; init?: RequestInit }[] = [];
-  const respond = (reply: { status: number; body?: unknown }) => new Response(JSON.stringify(reply.body ?? null), { status: reply.status, headers: { 'Content-Type': 'application/json' } });
+  const respond = (reply: Reply) => {
+    if (reply instanceof Error) throw reply;
+    if (reply instanceof Response) return reply;
+    return new Response(JSON.stringify(reply.body ?? null), { status: reply.status, headers: { 'Content-Type': 'application/json' } });
+  };
   const fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
     calls.push({ url, init });
-    if (url.includes('/rest/v1/')) return respond(rest);
-    if (sign instanceof Error) throw sign;
-    return respond(sign ?? { status: 500 });
+    if (url.includes('/rest/v1/properties')) return respond(rest);
+    if (url.includes('/storage/v1/object/sign/')) return respond(sign ?? { status: 500 });
+    if (url.includes('/rest/v1/rpc/kh_public_profile')) return respond(profile);
+    throw new Error(`unexpected ${url}`);
   }) as typeof fetch;
   return { fetch, calls };
 }
+const profile = { id: ownerId, displayName: 'Ana <b>López</b>', level: 'trusted', verified: true, responseMinutes: 30 };
+const listed = { status: 200, body: [dbRow] };
 const get = (path: string) => new Request(`https://karmahouse.vercel.app${path}`);
 
 test('handle renders an approved listing with signed photos and the canonical page url', async () => {
@@ -107,10 +128,10 @@ test('handle renders an approved listing with signed photos and the canonical pa
   assert.ok(html.includes('<meta property="og:image" content="https://example.supabase.co/storage/v1/object/sign/property-photos/u/a/one.jpg?token=1">'));
   assert.equal((html.match(/<img loading="lazy"/g) ?? []).length, 2);
   assert.ok(html.includes(`<link rel="canonical" href="https://karmahouse.vercel.app/p/${row.id}">`));
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
   assert.ok(calls[0].url.startsWith(`https://example.supabase.co/rest/v1/properties?select=`));
   assert.ok(calls[0].url.includes(`id=eq.${row.id}&moderation=eq.approved&availability=eq.active`));
-  assert.ok(!calls[0].url.includes('owner_id') && !calls[0].url.includes('latitude'));
+  assert.ok(!calls[0].url.includes('latitude'));
   assert.equal((calls[0].init?.headers as Record<string, string>).apikey, 'anon-key');
   assert.equal(calls[1].url, 'https://example.supabase.co/storage/v1/object/sign/property-photos');
   assert.deepEqual(JSON.parse(String(calls[1].init?.body)), { expiresIn: 3600, paths: dbRow.photo_paths });
@@ -121,6 +142,50 @@ test('handle still renders when photo signing fails', async () => {
     const html = await response.text();
     assert.equal(response.status, 200);
     assert.ok(!html.includes('og:image') && !html.includes('<img'));
+  }
+});
+test('handle names the seller from kh_public_profile without printing the owner id', async () => {
+  const { fetch, calls } = fakeFetch(listed, { status: 200, body: [] }, { status: 200, body: profile });
+  const response = await handle(get(`/api/p?id=${row.id}`), env, fetch);
+  const html = await response.text();
+  assert.equal(response.status, 200);
+  assert.ok(html.includes('<p class="muted">Publicado por Ana &lt;b&gt;López&lt;/b&gt; · Confiable</p>'));
+  assert.ok(html.includes('<p class="muted">Verificado por KarmaHouse</p>'));
+  assert.ok(!html.includes(ownerId));
+  assert.ok(calls[0].url.includes(',owner_id'));
+  const rpc = calls.find((call) => call.url === PROFILE_URL);
+  assert.ok(rpc);
+  assert.equal(rpc.init?.method, 'POST');
+  assert.deepEqual(rpc.init?.headers, { apikey: 'anon-key', Authorization: 'Bearer anon-key', 'Content-Type': 'application/json' });
+  assert.deepEqual(JSON.parse(String(rpc.init?.body)), { p_user_id: ownerId });
+});
+test('handle loads the seller for a listing without photos', async () => {
+  const { fetch, calls } = fakeFetch({ status: 200, body: [{ ...dbRow, photo_paths: null }] }, undefined, { status: 200, body: { ...profile, verified: false, level: 'new' } });
+  const html = await (await handle(get(`/api/p?id=${row.id}`), env, fetch)).text();
+  assert.ok(html.includes('Publicado por Ana &lt;b&gt;López&lt;/b&gt; · Nuevo') && !html.includes('Verificado por KarmaHouse'));
+  assert.deepEqual(calls.map((call) => call.url.split('?')[0]), ['https://example.supabase.co/rest/v1/properties', PROFILE_URL]);
+});
+test('handle renders without the seller line when the profile is missing or malformed', async () => {
+  const failures: Reply[] = [
+    { status: 404 },
+    { status: 500, body: profile },
+    new Error('offline'),
+    new Response('not json', { status: 200 }),
+    { status: 200, body: null },
+    { status: 200, body: [profile] },
+    { status: 200, body: { ...profile, displayName: 'A' } },
+    { status: 200, body: { ...profile, displayName: 'x'.repeat(81) } },
+    { status: 200, body: { ...profile, displayName: 42 } },
+    { status: 200, body: { ...profile, level: 'legend' } },
+    { status: 200, body: { ...profile, level: 'toString' } },
+    { status: 200, body: { ...profile, verified: 'yes' } },
+  ];
+  for (const failure of failures) {
+    const response = await handle(get(`/api/p?id=${row.id}`), env, fakeFetch(listed, { status: 200, body: [] }, failure).fetch);
+    const html = await response.text();
+    assert.equal(response.status, 200);
+    assert.ok(html.includes('<h1>Casa en el Vedado'));
+    assert.ok(!html.includes('Publicado por') && !html.includes('Verificado por KarmaHouse') && !html.includes(ownerId));
   }
 });
 test('handle answers 404 for unknown, hidden or malformed ids without touching Supabase', async () => {
