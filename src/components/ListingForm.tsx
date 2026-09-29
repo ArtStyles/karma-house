@@ -593,7 +593,7 @@ export function ListingForm({
                 ) : <>
                 <View style={styles.reviewFacts}>
                   <Fact icon="bed-outline" value={`${draft.bedrooms.trim()} hab.`} />
-                  <Fact icon="water-outline" value={`${draft.bathrooms.trim()} baños`} />
+                  <Fact icon="water-outline" value={`${draft.bathrooms.trim()} ${draft.bathrooms.trim() === '1' ? 'baño' : 'baños'}`} />
                   {draft.area.trim() ? <Fact icon="resize-outline" value={`${draft.area.trim()} m²`} /> : null}
                 </View>
                 <View style={styles.divider} />
