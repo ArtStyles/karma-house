@@ -3,7 +3,7 @@
     "name": "KarmaHouse",
     "slug": "karma-house",
     "owner": "artstyless-team",
-    "version": "0.1.10",
+    "version": "0.1.11",
     "scheme": "karmahouse",
     "orientation": "portrait",
     "icon": "./assets/karmahouse-icon.png",
@@ -15,7 +15,7 @@
     "android": {
       "package": "com.karmahouse.karmahouse",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 11,
+      "versionCode": 12,
       "adaptiveIcon": {
         "backgroundColor": "#0153A8",
         "foregroundImage": "./assets/karmahouse-icon.png"
@@ -68,7 +68,8 @@
       ],
       "expo-font",
       "expo-secure-store",
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      "./plugins/withActivityRecreationFix.cjs"
     ]
   }
 }
