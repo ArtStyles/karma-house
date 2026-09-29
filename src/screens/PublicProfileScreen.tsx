@@ -43,7 +43,7 @@ export default function PublicProfileScreen() {
           <View style={styles.facts}>
             <Fact icon="calendar-outline" text={memberSinceText(profile.memberSince)} />
             {profile.responseMinutes !== null && <Fact icon="chatbubble-ellipses-outline" text={`${responseText(profile.responseMinutes)}${profile.responseRate !== null ? ` · responde al ${Math.round(profile.responseRate)} %` : ''}`} />}
-            <Fact icon="walk-outline" text={profile.visitsAgreed === 1 ? '1 visita concertada' : `${profile.visitsAgreed} visitas concertadas`} />
+            {profile.visitsAgreed > 0 && <Fact icon="walk-outline" text={profile.visitsAgreed === 1 ? '1 visita concertada' : `${profile.visitsAgreed} visitas concertadas`} />}
             <Fact icon="home-outline" text={profile.approvedListingCount === 1 ? '1 anuncio aprobado' : `${profile.approvedListingCount} anuncios aprobados`} />
           </View>
           {auth.isAdmin && auth.user?.id !== profile.id && <Button label={profile.verified ? 'Quitar verificación' : 'Verificar'} secondary icon="shield-checkmark-outline" onPress={() => setVerifySheet(true)} />}
