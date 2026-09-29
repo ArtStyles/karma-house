@@ -47,9 +47,11 @@ const CONTACTS: RegExp[] = [
   /\+\s*53[\s.-]*\d(?:[\s.-]?\d){6,7}(?!\d)/g,
   /(?<![\d.,])(?:53[\s-]?)?5\d{3}[\s-]?\d{4}(?!\d)/g,
 ];
+/** WhatsApp as people spell it: «whatsapp», «whatsap», «watsap», «wasap». */
+const WHATSAPP = String.raw`(?:wh?ats?app?|wasap|guasap)`;
 /** A landline only counts after a word that announces it; the word stays when it is a feature («teléfono fijo»). */
-const LANDLINE = /(\b(?:llamar(?:[ \t]+al)?|ll[aá]mame|tel[eé]fonos?(?:[ \t]+fijo)?|telf?|tlf|whatsapp|wsp|m[oó]vil|cel(?:ular)?)\.?[ \t]*:?[ \t]*(?:al[ \t]+)?)(\d(?:[ -]?\d){6,7})(?!\d)/gi;
-const INTRO_WORD = String.raw`(?:para[ \t]+m[aá]s[ \t]+info(?:rmaci[oó]n)?|m[aá]s[ \t]+info(?:rmaci[oó]n)?|interesad[oa]s|llamar|ll[aá]mame|ll[aá]menme|llamen|llame|escribir|escr[ií]beme|escr[ií]banme|escriban|contactar|contactos?|tel[eé]fonos?|telf?|tlf|whatsapp|wsp|cel(?:ular)?|m[oó]vil|correo|e-?mail|info(?:rmaci[oó]n)?|v[ií]a)`;
+const LANDLINE = new RegExp(String.raw`(\b(?:llamar(?:[ \t]+al)?|ll[aá]mame|tel[eé]fonos?(?:[ \t]+fijo)?|telf?|tlf|${WHATSAPP}|wsp|m[oó]vil|cel(?:ular)?)\.?[ \t]*:?[ \t]*(?:al[ \t]+)?)(\d(?:[ -]?\d){6,7})(?!\d)`, 'gi');
+const INTRO_WORD = String.raw`(?:para[ \t]+m[aá]s[ \t]+info(?:rmaci[oó]n)?|m[aá]s[ \t]+info(?:rmaci[oó]n)?|interesad[oa]s|llamar|ll[aá]mame|ll[aá]menme|llamen|llame|escribir|escr[ií]beme|escr[ií]banme|escriban|contactar|contactos?|tel[eé]fonos?|telf?|tlf|${WHATSAPP}|wsp|cel(?:ular)?|m[oó]vil|correo|e-?mail|info(?:rmaci[oó]n)?|v[ií]a)`;
 const INTRO_LINK = String.raw`(?:al|a|o|y|el|mi|por|n[uú]mero|mediante)`;
 const INTRO = String.raw`(?:\b${INTRO_WORD}(?:[ \t.:,/-]*(?:${INTRO_WORD}|${INTRO_LINK})\b)*[ \t.:,/-]*)`;
 /** A joining word as a whole word; «\b» would split «vía» or «tardía». */
@@ -64,6 +66,16 @@ const CONTACT_RUN = new RegExp(String.raw`${CONNECTORS}${INTRO}?${MARK}(?:[ \t,/
 /** Nothing left but punctuation and joining words. */
 const CONNECTOR_ONLY = new RegExp(String.raw`^[\s\p{P}]*(?:${CONNECTOR}[\s\p{P}]*)*$`, 'iu');
 
+const CHANNEL = new RegExp(String.raw`^(?:${WHATSAPP}|wsp|privado|pv|interno|inbox|telegram|llamar|llamen|llamame|escribir|escriban|escribeme|escribanme|contactar|contacto)$`);
+const CONTACT_WORDS = new Set(['para', 'mas', 'detalles', 'info', 'informacion', 'interesados', 'interesadas', 'interesado', 'interesada',
+  'directamente', 'directo', 'al', 'a', 'por', 'el', 'la', 'mi', 'me', 'nos', 'o', 'y', 'en', 'via', 'solo', 'mensaje', 'dudas',
+  'consultas', 'cualquier', 'duda', 'consulta', 'gracias']);
+/** A sentence that only says where to write («Más detalles al privado»): it goes, but no contact was removed. */
+function isContactPhrase(sentence: string): boolean {
+  const words = normalizeSearch(sentence).split(/[^a-z0-9]+/).filter(Boolean);
+  return words.some((word) => CHANNEL.test(word)) && words.every((word) => CONTACT_WORDS.has(word) || CHANNEL.test(word));
+}
+
 /** Removes Cuban and US phones, WhatsApp and Telegram links, emails and the phrases that introduce them. */
 export function stripContacts(text: string): { text: string; count: number } {
   let count = 0;
@@ -71,8 +83,9 @@ export function stripContacts(text: string): { text: string; count: number } {
   for (const pattern of CONTACTS) marked = marked.replace(pattern, () => { count += 1; return MARK; });
   marked = marked.replace(LANDLINE, (_match, intro: string) => { count += 1; return intro + MARK; });
   const lines = marked.split('\n').flatMap((line) => {
-    if (!line.includes(MARK)) return [line];
-    const rest = line.replace(CONTACT_RUN, ' ').replace(/[ \t]+([.,;:!?])/g, '$1').replace(/([.,;:!?])[.,;:]+/g, '$1')
+    const kept = line.split(/(?<=[.!?])[ \t]+/).filter((sentence) => !isContactPhrase(sentence)).join(' ');
+    if (!line.includes(MARK)) return kept === line || hasContent(kept) ? [kept] : [];
+    const rest = kept.replace(CONTACT_RUN, ' ').replace(/[ \t]+([.,;:!?])/g, '$1').replace(/([.,;:!?])[.,;:]+/g, '$1')
       .replace(/[ \t]{2,}/g, ' ').replace(/[\s,;]+$/, '');
     return CONNECTOR_ONLY.test(rest) ? [] : [rest];
   });
@@ -101,7 +114,8 @@ export function detectOperation(text: string): ListingOperation | undefined {
 
 // ---- 4. Price ----
 
-const NUMBER = /(?<![\d.,])(\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)(?!\d)/g;
+/** «90.000,00» keeps its cents out of the number. */
+const NUMBER = /(?<![\d.,])(\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)(?:,\d{2}(?!\d))?(?!\d)/g;
 
 /** A USD price, or none. `otherCurrency` says a number was written in CUP, MLC, euros or pesos. */
 export function detectPrice(text: string): { price: number | undefined; otherCurrency: boolean } {
@@ -110,12 +124,12 @@ export function detectPrice(text: string): { price: number | undefined; otherCur
   const candidates: { value: number; strong: boolean }[] = [];
   for (const match of folded.matchAll(NUMBER)) {
     const raw = match[1];
-    const end = match.index + raw.length;
+    const end = match.index + match[0].length;
     const before = folded.slice(Math.max(0, match.index - 25), match.index);
     const thousands = /^\s*(?:mil|k)\b/.exec(folded.slice(end));
     const after = folded.slice(end + (thousands?.[0].length ?? 0), end + 40);
-    if (/^\s*(?:cup|cuc|mn|m\.n|mlc|eur|euros?|pesos)\b/.test(after)) { otherCurrency = true; continue; }
-    if (/^\s*(?:m2|m²|mt2|mts|metros|v\b|w\b|kw|km|%|x\s*\d)/.test(after)) continue;
+    if (/^\s*(?:(?:cup|cuc|mn|m\.n|mlc|eur|euros?|pesos)\b|€)/.test(after) || /€\s*$/.test(before)) { otherCurrency = true; continue; }
+    if (/^\s*(?:m2|m²|mt2|mts|metros|v\b|w\b|kw|km|%|x\s*\d|litros?\b|lts?\b|l\b)/.test(after)) continue;
     const digits = raw.replace(/\D/g, '');
     if (/^5\d{7}$/.test(digits)) continue;
     const currency = /^\s*(?:usd|us\$|\$|dolares|dls)/.test(after) || /\$\s*$/.test(before);
@@ -139,11 +153,15 @@ const COUNT = String.raw`(\d{1,2}|un|uno|una|dos|tres|cuatro|cinco|seis)`;
 const count = (value: string) => WORD_NUMBERS[value] ?? Number(value);
 const inRange = (value: number, max = 20) => (Number.isInteger(value) && value >= 1 && value <= max ? value : undefined);
 
-const BEDROOMS = new RegExp(String.raw`(?<![a-z\d/])${COUNT}\s*(?:cuartos?|habitacion(?:es)?|dormitorios?|recamaras?)\b(?!\s+de\s+(?:bano|desahogo|servicio|pilas|lavado|criad))|(?<![\d/])(\d)\s*\/\s*4\b`);
+// «Espacio para 3 cuartos» and «2 cuartos más» are what could be built, not what there is.
+const BEDROOMS = new RegExp(String.raw`(?<![a-z\d/])(?<!\bpara\s+)${COUNT}\s*(?:cuartos?|habitacion(?:es)?|dormitorios?|recamaras?)\b(?!\s+mas\b)(?!\s+de\s+(?:bano|desahogo|servicio|pilas|lavado|criad))|(?<![\d/])(\d)\s*\/\s*4\b`);
 const BATHROOMS = new RegExp(String.raw`(?<![a-z\d/])${COUNT}(?:\s+(?:y\s+)?(?:1\/2|medio))?\s*banos?\b`);
+const BATHROOM_LINE = new RegExp(String.raw`^${BATHROOMS.source}(.*)$`);
 /** «Baño» as a line or a list item, not «con baño» (an en-suite says nothing about the total). */
 const ONE_BATHROOM = /(?:^|[,;]|\by\b)[ \t]*(?:un[ \t]+)?(?:(?:sala|cuarto)[ \t]+de[ \t]+)?bano\b/m;
-const AREA = /(?<!x\s*)(?<![\d.,])(\d{1,3}(?:\.\d{3})+|\d+(?:[.,]\d+)?)\s*(?:m2|m²|mt2|mts2?|metros(?:\s+cuadrados)?)(?![a-z\d])(?!\s+(?:de\s+)?(?:frente|fondo|largo|ancho|lineales))/;
+const AREA = /(?<!x\s*)(?<![\d.,])(\d{1,3}(?:\.\d{3})+|\d+(?:[.,]\d+)?)\s*(?:m2|m²|mt2|mts2?|metros(?:\s+cuadrados)?)(?![a-z\d])(?!\s+(?:de\s+)?(?:frente|fondo|largo|ancho|lineales))(?!\s*x\s*\d)/g;
+/** «portal de 16m2»: the size of a part of the home, not of the home. */
+const AREA_OF_PART = /\b(?:portal|patio|terraza|garaje|garage|balcon|azotea|placa|jardin|sala|comedor|cocina|cuarto|habitacion|bano)(?:es|s)?\s+(?:de\s+)?(?:unos\s+|casi\s+|mas\s+de\s+)?$/;
 
 /** «3 cuartos», «1cuarto», «dos habitaciones», Cuban «3/4». Never «2 plantas» or «cuarto de desahogo». */
 export function detectBedrooms(text: string): number | undefined {
@@ -151,17 +169,24 @@ export function detectBedrooms(text: string): number | undefined {
   return match ? inRange(count(match[1] ?? match[2])) : undefined;
 }
 
-/** «2 baños», «1 1/2 baños» (the half is not counted), or 1 for a single «Baño» line or list item. */
+/**
+ * «2 baños», «1 1/2 baños» (the half is not counted), or 1 for a single «Baño» line or list item.
+ * Lines that each start with a count and say different things («1 baño principal», «1 baño de servicio») add up.
+ */
 export function detectBathrooms(text: string): number | undefined {
   const folded = normalizeSearch(text);
+  const listed = folded.split('\n').map((line) => BATHROOM_LINE.exec(line.trim())).filter((line) => line !== null);
+  const qualifiers = new Set(listed.map((line) => line[2].replace(/[^a-z0-9 ]/g, '').trim()));
+  if (listed.length > 1 && qualifiers.size === listed.length) return inRange(listed.reduce((sum, line) => sum + count(line[1]), 0));
   const match = BATHROOMS.exec(folded);
   if (match) return inRange(count(match[1]));
   return ONE_BATHROOM.test(folded) ? 1 : undefined;
 }
 
-/** Square metres; a frontage («10 mts de frente») or a side of «10x20» is not an area. */
+/** Square metres of the home; a frontage («10 mts de frente»), a side of «10x20» or a part («patio de 20 m2») is not. */
 export function detectArea(text: string): number | undefined {
-  const match = AREA.exec(normalizeSearch(text));
+  const folded = normalizeSearch(text);
+  const match = [...folded.matchAll(AREA)].find((item) => !AREA_OF_PART.test(folded.slice(Math.max(0, item.index - 30), item.index)));
   if (!match) return undefined;
   const area = parseDecimal(match[1].replace(',', '.'));
   return area > 0 && area <= 10_000 ? area : undefined;
@@ -177,25 +202,38 @@ export function detectType(text: string): ListingType | undefined {
 }
 
 const ORDINALS: Record<string, number> = { primer: 1, primero: 1, segundo: 2, tercer: 3, tercero: 3, cuarto: 4, quinto: 5, sexto: 6, septimo: 7, octavo: 8, noveno: 9, decimo: 10 };
-const FLOOR = /(?<![\d/])(\d{1,2})\s*(?:er|ero|ro|do|to|no|mo|vo|o|º|°)?\s*piso\b|\b(primer|primero|segundo|tercer|tercero|cuarto|quinto|sexto|septimo|octavo|noveno|decimo)\s+piso\b|(\bplanta\s+baja\b|\b(?:en|unos|los|son|un)\s+bajos\b)/;
+const SUFFIX = String.raw`(?:er|ero|ro|do|to|no|mo|vo|o|º|°)`;
+const ORDINAL = String.raw`(primer|primero|segundo|tercer|tercero|cuarto|quinto|sexto|septimo|octavo|noveno|decimo)`;
+// «baños en la primera planta» or «cuartos en el segundo piso» say where a room is, not where the home is.
+const NOT_A_ROOM = String.raw`(?<!\b(?:banos?|cuartos?|habitacion(?:es)?|dormitorios?|sala|cocina|comedor|terraza|patio)\b[^.,;\n]{0,25}\ben\s+(?:el|la)\s+)`;
+const FLOOR = new RegExp(NOT_A_ROOM + String.raw`(?:(?<![\d/])(\d{1,2})\s*(?:${SUFFIX}?\s*piso|${SUFFIX}\s*nivel)\b|\b${ORDINAL}\s+(?:piso|nivel)\b`
+  + String.raw`|(\bplanta\s+baja\b|\b(?:en|unos|los|son|un)\s+bajos\b|^bajos\b|\b(?:parte|la)\s+de\s+abajo\b)|((?<!\btanques?\s)\ben\s+altos?\b))`, 'm');
 
-/** «3er piso», «segundo piso», «planta baja» → 0. «5 pisos» (storeys) and «2 plantas» are not a floor. */
+/**
+ * «3er piso», «2do nivel», «segundo piso», «en altos» → 1, «planta baja» or «la parte de abajo» → 0.
+ * «5 pisos» (storeys), «2 niveles» and «2 plantas» are not a floor.
+ */
 export function detectFloor(text: string): number | undefined {
   const match = FLOOR.exec(normalizeSearch(text));
   if (!match) return undefined;
   if (match[3]) return 0;
+  if (match[4]) return 1;
   const floor = match[1] ? Number(match[1]) : ORDINALS[match[2]];
   return floor <= 99 ? floor : undefined;
 }
 
 // ---- 7. Negotiable and condition ----
 
-export function detectNegotiable(text: string): boolean {
-  return /\bnegociable\b|se escuchan ofertas|escucho ofertas|me ajusto|precio a conversar|conversable/.test(normalizeSearch(text));
+/** true when the price is open to offers, false when the ad says it is fixed, else undefined. */
+export function detectNegotiable(text: string): boolean | undefined {
+  const folded = normalizeSearch(text);
+  if (/\bno (?:es )?negociable\b|\binnegociable\b|\bprecio fijo\b|\bno se negocia\b/.test(folded)) return false;
+  return /\bnegociable\b|se escuchan ofertas|escucho ofertas|me ajusto|precio a conversar|conversable/.test(folded) || undefined;
 }
 
 const CONDITIONS: [ListingCondition, RegExp][] = [
-  ['good', /\b(?:buen estado|buenas condiciones|excelente estado|excelentes condiciones)/],
+  // «Necesita pequeños detalles» or «detalles por terminar» is not a renovation: it stays empty.
+  ['good', /\b(?:buen estado|buenas condiciones|excelente estado|excelentes condiciones|perfecto estado|totalmente restaurad|recien remodelad|recien restaurad)/],
   ['needs-renovation', /\b(?:a reparar|para reparar|necesita reparaci|a remodelar|para remodelar)/],
   ['new', /\b(?:recien construid|a estrenar|nueva construccion)/],
 ];
@@ -213,12 +251,20 @@ export function detectCondition(text: string): ListingCondition | undefined {
 // ---- 8. Amenities ----
 
 const AMENITY_PATTERNS: Record<string, RegExp> = {
+  'Gas de la calle': /\bgas de (?:la )?calle\b/,
+  // «Agua días alternos» or «un día sí y otro no» is the opposite.
+  'Agua todos los días': /\bagua (?:24\/7|(?:las )?24 horas|todos los dias|siempre|diaria)|\bno (?:le )?falta (?:el )?agua\b/,
+  'Teléfono fijo': /\btelefono fijo\b/,
+  'Respaldo eléctrico': /\brespaldo (?:energetico|electrico)|\bplanta electrica|\binversor|\bpaneles? solar/,
+  'Portal': /\bportal(?:es)?\b/,
+  'Azotea o placa libre': /\b(?:azotea|placa) libre\b/,
+  'Parqueo': /\bparqueos?\b/,
   'Balcón': /\bbalcon(?:es)?\b/,
   'Patio': /\bpatios?\b/,
   'Garaje': /\bgara[jg]es?\b/,
   // «Se deja:» heads a furniture list; «se deja vacía» is the opposite.
-  'Amueblado': /\bamueblad|con todo adentro|se deja todo|juego de sala|\bse dejan?[ \t]*(?::|\n)/,
-  'Aire acondicionado': /aire acondicionado|\bsplits?\b/,
+  'Amueblado': /\bamueblad|\bequipad|llave en mano|con todo adentro|se deja todo|juego de sala|\bse dejan?[ \t]*(?::|\n)/,
+  'Aire acondicionado': /aire acondicionado|\bsplits?\b|\bclimatizad/,
   'Ascensor': /\b(?:ascensor|elevador)(?:es)?\b/,
   'Terraza': /\bterrazas?\b/,
   'Piscina': /\bpiscinas?\b/,
@@ -227,10 +273,17 @@ const AMENITY_PATTERNS: Record<string, RegExp> = {
   'Entrada independiente': /puerta calle|entrada independiente/,
 };
 
-/** Only catalogue values, in catalogue order, once each. */
+/** «sin garaje», «no tiene patio», «ni piscina». */
+const NEGATED = /\b(?:sin|no|ni)\s+(?:(?:tiene|hay|posee|incluye|lleva)\s+)?(?:(?:el|la|los|las|un|una)\s+)?$/;
+
+/** Only catalogue values, in catalogue order, once each; a negated mention does not count. */
 export function detectAmenities(text: string): string[] {
   const folded = normalizeSearch(text);
-  return AMENITIES.filter((amenity) => AMENITY_PATTERNS[amenity]?.test(folded));
+  return AMENITIES.filter((amenity) => {
+    const pattern = AMENITY_PATTERNS[amenity];
+    return pattern && [...folded.matchAll(new RegExp(pattern.source, 'g'))]
+      .some((match) => !NEGATED.test(folded.slice(Math.max(0, match.index - 30), match.index)));
+  });
 }
 
 // ---- 10. Rent and swap ----
@@ -346,7 +399,7 @@ export function parseListingText(text: string): ImportResult {
     fill('area', asText(detectArea(clean)));
     fill('floor', asText(detectFloor(clean)));
     fill('condition', detectCondition(clean));
-    fill('priceNegotiable', detectNegotiable(clean) || undefined);
+    fill('priceNegotiable', detectNegotiable(clean));
     fill('amenities', detectAmenities(clean));
   }
   fill('description', clean.slice(0, 2000));

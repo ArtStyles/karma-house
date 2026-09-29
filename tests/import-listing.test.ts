@@ -168,11 +168,123 @@ test('amenities map every synonym to the catalogue once', () => {
     ['Municipio Regla(puerta calle)', ['Entrada independiente']], ['entrada independiente', ['Entrada independiente']],
     ['amueblado', ['Amueblado']], ['con todo adentro', ['Amueblado']], ['se deja todo', ['Amueblado']],
     ['juego de sala', ['Amueblado']], ['Se deja:\nRefrigerador\nCama', ['Amueblado']],
-    ['Su precio es 18mil se deja vacía', []], ['GAS DE LA CALLE, TELÉFONO FIJO, Placa libre, Azotea libre', []],
+    ['Su precio es 18mil se deja vacía', []],
+    ['GAS DE LA CALLE, TELÉFONO FIJO, Placa libre, Azotea libre', ['Gas de la calle', 'Teléfono fijo', 'Azotea o placa libre']],
   ];
   for (const [text, amenities] of cases) assert.deepEqual(detectAmenities(text), amenities, text);
-  const all = detectAmenities('balcón, patio, garaje, terraza, piscina, cisterna, ascensor, tanque, split, puerta calle, amueblado, balcones');
-  assert.deepEqual(all, ['Cisterna', 'Tanque de agua', 'Patio', 'Terraza', 'Balcón', 'Garaje', 'Piscina', 'Amueblado', 'Aire acondicionado', 'Ascensor', 'Entrada independiente']);
+  const all = detectAmenities('balcón, patio, garaje, terraza, piscina, cisterna, ascensor, tanque, split, puerta calle, amueblado, balcones, '
+    + 'gas de la calle, agua 24/7, teléfono fijo, inversor, portal, placa libre, parqueo');
+  assert.deepEqual(all, [...AMENITIES]);
+});
+
+test('area reads decimals and phrases, and prefers the home over its parts', () => {
+  assert.equal(detectArea('Casa con 60.30m2 de construcción'), 60.3);
+  assert.equal(detectArea('71 m²'), 71);
+  assert.equal(detectArea('más de 100 m2'), 100);
+  assert.equal(detectArea('portal de 16m2, sala, cocina. Tiene más de 100 m2'), 100);
+  assert.equal(detectArea('patio de 20 m2 y casa de 85 m2'), 85);
+  for (const text of ['terraza de 30m2', 'garaje de 18 m2', 'patio de 20 m2', 'cuarto de 5 m x 2 m', 'puerta de alto 1.35 m', 'lote de 5 mts x 20 mts']) {
+    assert.equal(detectArea(text), undefined, text);
+  }
+});
+
+test('price reads «30mil», cents after a decimal comma, and ignores litres, years, steps and watts', () => {
+  assert.equal(detectPrice('Precio 30mil USD').price, 30000);
+  assert.deepEqual(detectPrice('PRECIO DE VENTA: 90.000,00 USD o 85.000,00€'), { price: 90000, otherCurrency: true });
+  const euros = parseListingText('Vendo casa en Playa\nPRECIO DE VENTA: 90.000,00 USD o 85.000,00€');
+  assert.equal(euros.draft.price, '90000');
+  assert.deepEqual(euros.notes, []);
+  for (const text of ['cisterna de 13 mil litros', 'calentador de agua de 70 litros', 'construido 1946', 'construida en 1958', '54 escalones', '110W y 220W']) {
+    assert.equal(detectPrice(text).price, undefined, text);
+  }
+  assert.equal(detectPrice('Cisterna de 13 mil litros. Precio 30mil USD').price, 30000);
+});
+
+test('rooms read tight lists and add up qualified bathroom lines, never potential rooms', () => {
+  assert.equal(detectBedrooms('Sala,Comedor,cocina,baño,3 habitaciones'), 3);
+  assert.equal(detectBathrooms('Sala,Comedor,cocina,baño,3 habitaciones'), 1);
+  assert.equal(detectBedrooms('4 cuartos, 1 baño'), 4);
+  assert.equal(detectBathrooms('4 cuartos, 1 baño'), 1);
+  assert.equal(detectBathrooms('Sala\n1 Baño principal\n1 Baño de servicio\nPatio'), 2);
+  assert.equal(detectBathrooms('Baño\n2 baños'), 2);
+  assert.equal(detectBathrooms('Casa con 2 baños.\n2 baños'), 2);
+  assert.equal(detectBathrooms('2 baños en la primera planta\n1 baño en la segunda planta'), 3);
+  for (const text of ['Espacio para 3 cuartos', 'placa libre para 2 cuartos más', '3 Plantas', 'Agua 24/7']) assert.equal(detectBedrooms(text), undefined, text);
+  assert.equal(detectBedrooms('2 cuartos. Placa libre para 2 cuartos más'), 2);
+  for (const detect of [detectBathrooms, detectArea, detectFloor]) assert.equal(detect('Agua 24/7'), undefined);
+  assert.equal(detectPrice('Agua 24/7').price, undefined);
+});
+
+test('floor reads levels, «en alto» and «abajo», never where a room sits', () => {
+  assert.equal(detectFloor('Apto en 2do nivel'), 2);
+  assert.equal(detectFloor('Casa en altos de un biplanta'), 1);
+  assert.equal(detectFloor('Casa en alto'), 1);
+  assert.equal(detectFloor('Es la parte de abajo de un biplanta'), 0);
+  assert.equal(detectFloor('Sala\nBajos\nPatio'), 0);
+  assert.equal(detectFloor('ubicado en planta baja'), 0);
+  for (const text of ['2 baños en la primera planta', '3 cuartos en el segundo piso', 'baño en el 2do nivel', 'casa de 2 niveles', 'de un solo nivel', 'precios bajos']) {
+    assert.equal(detectFloor(text), undefined, text);
+  }
+  assert.equal(detectType('Apto en Habana Vieja'), 'Apartamento');
+  assert.equal(detectType('Casa en alto de un biplanta'), 'Casa');
+  assert.deepEqual(findPlace('Casa en el Náutico'), { location: 'Náutico', province: 'La Habana' });
+});
+
+test('contacts separated by slashes or misspelt are removed; bare contact phrases go uncounted', () => {
+  assert.deepEqual(stripContacts('Casa en Playa\n+53 55550101/+53 55550102'), { text: 'Casa en Playa', count: 2 });
+  assert.deepEqual(stripContacts('Casa en Playa. Info por whatsap al 55550103'), { text: 'Casa en Playa.', count: 1 });
+  assert.deepEqual(stripContacts('Casa en Playa\nContacto: +53 55550104'), { text: 'Casa en Playa', count: 1 });
+  assert.deepEqual(stripContacts('Casa en Playa\nEscribir directamente al whatsapp\nMás detalles al privado'), { text: 'Casa en Playa', count: 0 });
+  assert.deepEqual(stripContacts('Casa en Playa. Más detalles al privado.'), { text: 'Casa en Playa.', count: 0 });
+  assert.deepEqual(stripContacts('Patio privado con árboles'), { text: 'Patio privado con árboles', count: 0 });
+  assert.deepEqual(parseListingText('Vendo casa en Playa\nMás detalles al privado').notes, []);
+});
+
+test('the new amenities read their synonyms and skip negations', () => {
+  const cases: [string, string[]][] = [
+    ['gas de la calle', ['Gas de la calle']], ['Gas de balita', []], ['cocina de gas con balita', []],
+    ['Agua 24/7', ['Agua todos los días']], ['agua todos los días', ['Agua todos los días']], ['agua siempre', ['Agua todos los días']],
+    ['no falta el agua', ['Agua todos los días']], ['agua días alternos', []], ['el agua entra un día sí y otro no', []],
+    ['teléfono fijo', ['Teléfono fijo']], ['respaldo energético', ['Respaldo eléctrico']], ['planta eléctrica', ['Respaldo eléctrico']],
+    ['inversor con baterías', ['Respaldo eléctrico']], ['paneles solares', ['Respaldo eléctrico']],
+    ['portal amplio', ['Portal']], ['azotea libre', ['Azotea o placa libre']], ['placa libre', ['Azotea o placa libre']],
+    ['parqueo', ['Parqueo']], ['garaje', ['Garaje']], ['totalmente climatizada', ['Aire acondicionado']],
+    ['cocina equipada', ['Amueblado']], ['llave en mano', ['Amueblado']],
+    ['No barbacoa', []], ['sin garaje', []], ['no tiene patio', []], ['sin garaje, con patio', ['Patio']],
+  ];
+  for (const [text, amenities] of cases) assert.deepEqual(detectAmenities(text), amenities, text);
+});
+
+test('a fixed price is read as not negotiable; condition reads restorations and skips small details', () => {
+  assert.equal(detectNegotiable('NO INTERMEDIARIOS'), undefined);
+  assert.equal(detectNegotiable('Precio fijo'), false);
+  assert.equal(detectNegotiable('Precio 40mil USD, no negociable'), false);
+  assert.equal(detectNegotiable('Precio 40mil USD negociable'), true);
+  assert.equal(parseListingText('Vendo casa en Playa. Precio fijo 40mil USD').draft.priceNegotiable, false);
+  assert.equal(detectCondition('en perfecto estado'), 'good');
+  assert.equal(detectCondition('totalmente restaurada'), 'good');
+  assert.equal(detectCondition('recién remodelado'), 'good');
+  assert.equal(detectCondition('necesita de muy pequeños detalles'), undefined);
+  assert.equal(detectCondition('le quedan detalles por terminar'), undefined);
+});
+
+test('full sale written the way Havana ads read today', () => {
+  const ad = [
+    '🔥🔥SE VENDE APTO EN EL NÁUTICO🔥🔥', 'Apto en 2do nivel, totalmente restaurado',
+    'Sala,Comedor,cocina equipada,3 habitaciones', '1 Baño principal', '1 Baño de servicio',
+    'portal de 16m2, más de 100 m2 en total', 'Gas de la calle, agua 24/7, sin garaje', 'Espacio para 2 cuartos más en la placa libre',
+    'PRECIO DE VENTA: 90.000,00 USD o 85.000,00€ no negociable', 'NO INTERMEDIARIOS', 'Más detalles al privado',
+    'Contacto: +53 55550160/+53 55550161',
+  ].join('\n');
+  const result = parseListingText(ad);
+  assert.deepEqual({ ...result.draft, description: undefined }, {
+    operation: 'sale', title: 'Apartamento en Náutico', type: 'Apartamento', location: 'Náutico', province: 'La Habana',
+    price: '90000', bedrooms: '3', bathrooms: '2', area: '100', floor: '2', condition: 'good', priceNegotiable: false,
+    amenities: ['Gas de la calle', 'Agua todos los días', 'Portal', 'Azotea o placa libre', 'Amueblado'], description: undefined,
+  });
+  assert.doesNotMatch(result.draft.description ?? '', /5555|privado|Contacto/);
+  assert.deepEqual(result.notes, ['Quitamos 2 datos de contacto: en KarmaHouse se habla por el chat.']);
+  assert.equal(complete(result.draft).ok, true);
 });
 
 test('places match whole words without accents, earliest first, and fall back to the province', () => {
@@ -256,7 +368,7 @@ test('full sale listed line by line', () => {
   const result = parseListingText(ad);
   assert.deepEqual(result.draft, {
     operation: 'sale', title: 'Casa en Playa', type: 'Casa', location: 'Playa', province: 'La Habana', price: '10000',
-    bedrooms: '2', bathrooms: '1', amenities: ['Tanque de agua', 'Patio', 'Amueblado'],
+    bedrooms: '2', bathrooms: '1', amenities: ['Gas de la calle', 'Teléfono fijo', 'Tanque de agua', 'Patio', 'Azotea o placa libre', 'Amueblado'],
     description: [
       '~Casas de Yuli~', 'Venta de Casa en playa', 'Consta:', 'Sala', 'Cocina', 'Comedor', '2 cuartos', 'Baño',
       'Patio comun c/un vecino', 'CARACTERÍSTICAS:', 'GAS DE LA CALLE', 'TANQUE ELEVADO GRANDE', 'TELÉFONO FIJO',
@@ -297,7 +409,7 @@ test('full swap', () => {
   const result = parseListingText(ad);
   assert.deepEqual(result.draft, {
     operation: 'swap', title: 'Permuto casa en Cruces, Cienfuegos', type: 'Casa', location: 'Cruces', province: 'Cienfuegos',
-    bedrooms: '3', bathrooms: '2', area: '140', amenities: ['Terraza', 'Garaje'],
+    bedrooms: '3', bathrooms: '2', area: '140', amenities: ['Terraza', 'Azotea o placa libre', 'Garaje'],
     swapWants: 'apartamento en La Habana, preferiblemente en Centro Habana o Plaza',
     description: ad.split('\n').slice(0, 3).join('\n'),
   });

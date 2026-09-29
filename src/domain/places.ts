@@ -21,7 +21,7 @@ export const PLACES: readonly Place[] = [
     'Santos Suárez', 'La Víbora', 'Lawton', 'Luyanó', 'Sevillano', 'Alamar', 'Guanabo', 'Cojímar', 'Bacuranao', 'Campo Florido',
     'Tarará', 'Santa María del Mar', 'Casablanca', 'La Ciruela', 'Mantilla', 'Párraga', 'La Güinera', 'Altahabana', 'Fontanar',
     'Santiago de las Vegas', 'Wajay', 'Calabazar', 'Capdevila', 'Casino Deportivo', 'Cayo Hueso', 'Los Sitios', 'Pogolotti',
-    'Ayestarán', 'La Coronela', 'Juanelo',
+    'Ayestarán', 'La Coronela', 'Juanelo', 'Náutico',
   ]),
   ...inProvince('Pinar del Río', ['Viñales', 'Consolación del Sur', 'San Juan y Martínez', 'Los Palacios']),
   ...inProvince('Artemisa', ['San Antonio de los Baños', 'Bauta', 'Mariel', 'Guanajay', 'Bahía Honda']),
