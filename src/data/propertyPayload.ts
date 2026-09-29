@@ -19,7 +19,7 @@ export function propertyPayload(draft: ListingDraft, ownerId: string, photoPaths
     ...(!wanted && draft.condition !== undefined ? { condition: draft.condition || null } : {}),
     ...(!wanted && draft.floor !== undefined ? { floor: draft.floor.trim() ? Number(draft.floor) : null } : {}),
     ...(!wanted && draft.priceNegotiable !== undefined ? { priceNegotiable: draft.priceNegotiable } : {}),
-    price: parseDecimal(draft.price), area: wanted ? null : parseDecimal(draft.area), bedrooms: Number(draft.bedrooms), bathrooms: wanted ? null : Number(draft.bathrooms),
+    price: parseDecimal(draft.price), area: wanted || !draft.area.trim() ? null : parseDecimal(draft.area), bedrooms: Number(draft.bedrooms), bathrooms: wanted ? null : Number(draft.bathrooms),
     amenities: wanted ? [] : [...new Set(draft.amenities.map((item) => item.trim()).filter(Boolean))], photoPaths, moderation,
     // Explicit null removes a previously published point; legacy clients omit this field.
     mapLocation: !wanted && draft.mapLocation ? normalizeMapLocation(draft.mapLocation) : null,

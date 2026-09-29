@@ -148,7 +148,7 @@ export default function DetailScreen() {
           </> : <>
             <Feature icon="bed-outline" value={`${listing.bedrooms}`} label={listing.bedrooms === 1 ? 'Habitación' : 'Habitaciones'} />
             <Feature icon="water-outline" value={`${listing.bathrooms}`} label={listing.bathrooms === 1 ? 'Baño' : 'Baños'} />
-            <Feature icon="expand-outline" value={`${listing.area} m²`} label="Superficie" />
+            {listing.area !== undefined && <Feature icon="expand-outline" value={`${listing.area} m²`} label="Superficie" />}
           </>}
         </View>
         {wanted && <Text style={styles.wantedOperations}>Busca: {wantedOperationsText(listing)}</Text>}

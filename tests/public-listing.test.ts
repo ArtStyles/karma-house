@@ -181,3 +181,13 @@ test('the public page labels rentals and what a wanted ad is after', () => {
   assert.ok(renderListing({ ...wantedRow, wanted_operations: undefined }, [], site, self).includes('Busca: comprar o permutar'));
   assert.ok(!rentHtml.includes('Busca:'));
 });
+
+test('the public page leaves out a missing surface', () => {
+  const bare = { ...row, area: null };
+  assert.equal(describeListing(bare), '85,000 USD · Vedado, La Habana · 3 hab · 2 baños');
+  assert.equal(describeListing({ ...bare, operation: 'rent', rent_period: 'month' }), 'Alquiler 85,000 USD/mes · Vedado, La Habana · 3 hab · 2 baños');
+  const html = renderListing(bare, photos, site, self);
+  assert.ok(!html.includes('Superficie') && !html.includes('m²') && !html.includes('undefined') && !html.includes('NaN'));
+  assert.ok(html.includes('<dt>Baños</dt><dd>2</dd>'));
+  assert.ok(renderListing(row, photos, site, self).includes('<dt>Superficie</dt><dd>120.5 m²</dd>'));
+});

@@ -299,7 +299,7 @@ function readLocalListing(value: unknown): Listing | null {
     !isIntegerWithin(value.bedrooms, 1, 20) ||
     (value.operation !== undefined && !isListingOperation(value.operation)) ||
     (wanted ? value.bathrooms !== undefined || value.area !== undefined || (value.type !== undefined && value.type !== 'Casa' && value.type !== 'Apartamento')
-      : !isIntegerWithin(value.bathrooms, 1, 20) || !isFiniteWithin(value.area, 0, 10_000, true) || (value.type !== 'Casa' && value.type !== 'Apartamento')) ||
+      : !isIntegerWithin(value.bathrooms, 1, 20) || (value.area !== undefined && !isFiniteWithin(value.area, 0, 10_000, true)) || (value.type !== 'Casa' && value.type !== 'Apartamento')) ||
     (value.operation === 'swap' ? !swap || typeof swap.wants !== 'string' || !isSwapBalance(swap.balance) || !Array.isArray(swap.provinces) || !swap.provinces.every(isProvince) || (swap.amount !== undefined && !isFiniteWithin(swap.amount, 0, 100_000_000, true))
       : value.swap !== undefined) ||
     (value.operation === 'rent' ? !rent || !isRentPeriod(rent.period) || (rent.minStay !== undefined && !isRentMinStay(rent.minStay))
@@ -333,7 +333,7 @@ function readLocalListing(value: unknown): Listing | null {
     price: String(value.price),
     bedrooms: String(value.bedrooms),
     bathrooms: wanted ? '' : String(value.bathrooms),
-    area: wanted ? '' : String(value.area),
+    area: wanted || value.area === undefined ? '' : String(value.area),
     type: (value.type ?? '') as ListingDraft['type'],
     ...(isListingOperation(value.operation) ? { operation: value.operation } : {}),
     ...(swap ? {
@@ -364,7 +364,8 @@ function readLocalListing(value: unknown): Listing | null {
     ...(draft.mapLocation ? { mapLocation: draft.mapLocation } : {}),
     price: value.price,
     bedrooms: value.bedrooms,
-    ...(wanted ? {} : { bathrooms: value.bathrooms as number, area: value.area as number }),
+    ...(wanted ? {} : { bathrooms: value.bathrooms as number }),
+    ...(wanted || value.area === undefined ? {} : { area: value.area as number }),
     ...(value.type ? { type: value.type as ListingType } : {}),
     ...(isListingOperation(value.operation) ? { operation: value.operation } : {}),
     ...(swap ? {

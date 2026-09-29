@@ -12,7 +12,8 @@ const FILTER_KEYS = ['query', 'type', 'province', 'condition', 'min_price', 'max
 
 /** Same translation as the catalogue request, so an alert never matches differently from Explorar. */
 export function toSavedFilters(filters: ListingFilters): SavedSearchFilters {
-  const { sort: _sort, cursor: _cursor, with_total: _withTotal, limit: _limit, type, ...rest } = searchPayload(filters, null, false);
+  // optional_area only tells the catalogue what this client can read; normalize_search_filters rejects it.
+  const { sort: _sort, cursor: _cursor, with_total: _withTotal, limit: _limit, optional_area: _optionalArea, type, ...rest } = searchPayload(filters, null, false);
   return { ...rest, type: type === 'Casa' || type === 'Apartamento' ? type : null };
 }
 

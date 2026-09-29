@@ -38,3 +38,7 @@ test('saved searches decode strictly and the repository binds identity', async (
   assert.deepEqual(calls[1].args, { p_actor_id: context.userId, p_payload: { name: 'Casas', filters: saved.filters, enabled: true } });
   await repo.remove(saved.id, context); assert.deepEqual(calls[2].args, { p_actor_id: context.userId, p_id: saved.id });
 });
+test('a saved search never carries the catalogue-only optional_area flag', () => {
+  assert.equal('optional_area' in toSavedFilters(defaultFilters), false);
+  assert.equal('optional_area' in toSavedFilters({ ...defaultFilters, minArea: '50', sort: 'area-desc' }), false);
+});

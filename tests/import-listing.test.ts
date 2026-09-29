@@ -354,7 +354,7 @@ test('empty text returns an empty draft with what a sale needs', () => {
   for (const text of ['', '   \n  ', '🏡✨🏡']) {
     assert.deepEqual(parseListingText(text), {
       draft: {}, detected: [], notes: [],
-      missing: ['title', 'type', 'location', 'province', 'price', 'bedrooms', 'bathrooms', 'area', 'description'],
+      missing: ['title', 'type', 'location', 'province', 'price', 'bedrooms', 'bathrooms', 'description'],
     });
   }
 });
@@ -376,7 +376,7 @@ test('full sale listed line by line', () => {
     ].join('\n'),
   });
   assert.deepEqual(result.detected, ['operation', 'title', 'type', 'location', 'province', 'price', 'bedrooms', 'bathrooms', 'amenities', 'description']);
-  assert.deepEqual(result.missing, ['area']);
+  assert.deepEqual(result.missing, [], 'the surface is optional');
   assert.deepEqual(result.notes, [CONTACT_NOTE]);
 });
 

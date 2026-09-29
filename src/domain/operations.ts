@@ -46,7 +46,7 @@ export function typeLabel(listing: Pick<Listing, 'type'>): string {
 
 export function listingFacts(listing: Pick<Listing, 'operation' | 'bedrooms' | 'bathrooms' | 'area' | 'type'>): string {
   if (listingOperation(listing) === 'wanted') return `desde ${listing.bedrooms} hab · ${typeLabel(listing)}`;
-  return `${listing.bedrooms} hab · ${listing.bathrooms} ${listing.bathrooms === 1 ? 'baño' : 'baños'} · ${listing.area} m²`;
+  return `${listing.bedrooms} hab · ${listing.bathrooms} ${listing.bathrooms === 1 ? 'baño' : 'baños'}${listing.area === undefined ? '' : ` · ${listing.area} m²`}`;
 }
 
 export function swapBalanceText(swap: Pick<ListingSwap, 'balance' | 'amount'>): string {

@@ -54,7 +54,7 @@ export function describeListing(row: PublicListingRow): string {
   const place = `${row.location}, ${row.province}`;
   if (op === 'wanted') return `Hasta ${formatPrice(row.price)} USD · ${place} · desde ${row.bedrooms} hab · ${row.type ?? 'Casa o apartamento'}`;
   const price = op === 'swap' ? `Valor est. ${formatPrice(row.price)} USD` : op === 'rent' ? `Alquiler ${formatPrice(row.price)} USD/${perPeriod(row)}` : `${formatPrice(row.price)} USD`;
-  return `${price} · ${place} · ${row.bedrooms} hab · ${row.bathrooms} baños · ${Number(row.area)} m²`;
+  return `${price} · ${place} · ${row.bedrooms} hab · ${row.bathrooms} baños${row.area == null ? '' : ` · ${Number(row.area)} m²`}`;
 }
 
 function balanceText(row: PublicListingRow): string {
@@ -140,7 +140,7 @@ export function renderListing(row: PublicListingRow, photoUrls: string[], siteUr
     ['Zona', place],
     ['Habitaciones', String(row.bedrooms)],
     ['Baños', String(row.bathrooms)],
-    ['Superficie', `${Number(row.area)} m²`],
+    ...(row.area == null ? [] : [['Superficie', `${Number(row.area)} m²`] as [string, string]]),
     ...(op === 'rent' && row.rent_min_stay ? [['Estancia mínima', `${row.rent_min_stay} ${row.rent_period === 'day' ? (row.rent_min_stay === 1 ? 'noche' : 'noches') : (row.rent_min_stay === 1 ? 'mes' : 'meses')}`] as [string, string]] : []),
   ];
   const amenities = op !== 'wanted' && row.amenities?.length

@@ -58,6 +58,8 @@ export interface SearchPayload {
   cursor: string | null;
   with_total: boolean;
   limit: number;
+  /** This client reads offers without a surface; 0.1.8 and older never send it. */
+  optional_area: true;
 }
 
 export function searchPayload(filters: ListingFilters, cursor: string | null, withTotal: boolean): SearchPayload {
@@ -80,5 +82,6 @@ export function searchPayload(filters: ListingFilters, cursor: string | null, wi
     cursor: cursor === null ? null : encodeCursor(decodeCursor(cursor)),
     with_total: withTotal,
     limit: CATALOG_PAGE_SIZE,
+    optional_area: true,
   };
 }

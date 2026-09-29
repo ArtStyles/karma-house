@@ -6,6 +6,8 @@ export function restoreDraft(raw: string | null, fallback: ListingDraft): Listin
   if (!raw) return fallback;
   try {
     const value = JSON.parse(raw);
+    // The surface is optional: a draft saved without the key restores it empty.
+    if (value && typeof value === 'object' && value.area === undefined) value.area = '';
     const strings = ['title', 'location', 'province', 'price', 'bedrooms', 'bathrooms', 'area', 'description'];
     if (!value || !strings.every(key => typeof value[key] === 'string') || !['', 'Casa', 'Apartamento'].includes(value.type)
       || !Array.isArray(value.amenities) || !value.amenities.every((item: unknown) => typeof item === 'string')

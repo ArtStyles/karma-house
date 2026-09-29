@@ -53,7 +53,7 @@ export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap
     !Number.isInteger(row.bedrooms) || !Number.isInteger(row.version) || row.version < 1 ||
     (operation === 'wanted'
       ? (row.type != null && !['Casa', 'Apartamento'].includes(row.type)) || row.area != null || row.bathrooms != null
-      : !Number.isFinite(Number(row.area)) || Number(row.area) <= 0 || !Number.isInteger(row.bathrooms) || !['Casa', 'Apartamento'].includes(row.type as string)) ||
+      : (row.area != null && (!(typeof row.area === 'number' || (typeof row.area === 'string' && row.area.trim() !== '')) || !(Number(row.area) > 0))) || !Number.isInteger(row.bathrooms) || !['Casa', 'Apartamento'].includes(row.type as string)) ||
     (operation === 'swap'
       ? typeof row.swap_wants !== 'string' || !row.swap_wants.trim() || !isSwapBalance(row.swap_balance)
         || (row.swap_provinces != null && (!Array.isArray(row.swap_provinces) || !row.swap_provinces.every(isProvince)))
@@ -87,7 +87,8 @@ export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap
     ...(row.price_negotiable != null ? { priceNegotiable: row.price_negotiable } : {}),
     ...(mapLocation ? { mapLocation } : {}),
     bedrooms: row.bedrooms,
-    ...(operation === 'wanted' ? {} : { bathrooms: row.bathrooms as number, area: Number(row.area) }),
+    ...(operation === 'wanted' ? {} : { bathrooms: row.bathrooms as number }),
+    ...(operation === 'wanted' || row.area == null ? {} : { area: Number(row.area) }),
     ...(row.type ? { type: row.type } : {}),
     ...(operation !== 'sale' ? { operation } : {}),
     ...(operation === 'swap' ? { swap: { wants: row.swap_wants as string, provinces: [...(row.swap_provinces ?? [])], balance: row.swap_balance as SwapBalance, ...(row.swap_amount != null ? { amount: Number(row.swap_amount) } : {}) } } : {}),

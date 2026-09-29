@@ -486,8 +486,7 @@ export function ListingForm({
                   </View>
                   <View style={[styles.gridField, styles.previewGroup]}>
                     <Field
-                      label="Superficie (m²)"
-                      required
+                      label="Superficie (m², opcional)"
                       placeholder="120"
                       value={draft.area}
                       onChangeText={(value) => changeField('area', normalizeDecimalInput(value))}
@@ -595,7 +594,7 @@ export function ListingForm({
                 <View style={styles.reviewFacts}>
                   <Fact icon="bed-outline" value={`${draft.bedrooms.trim()} hab.`} />
                   <Fact icon="water-outline" value={`${draft.bathrooms.trim()} baños`} />
-                  <Fact icon="resize-outline" value={`${draft.area.trim()} m²`} />
+                  {draft.area.trim() ? <Fact icon="resize-outline" value={`${draft.area.trim()} m²`} /> : null}
                 </View>
                 <View style={styles.divider} />
                 <Text style={styles.reviewType}>{draft.type}</Text>

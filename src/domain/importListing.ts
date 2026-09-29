@@ -359,7 +359,7 @@ export function buildTitle(text: string, type: ListingType | undefined, place: {
 function requiredFields(operation: ListingOperation): ImportField[] {
   const wanted = operation === 'wanted';
   return FIELDS.filter((field) => ['title', 'location', 'province', 'price', 'bedrooms', 'description'].includes(field)
-    || (!wanted && ['type', 'bathrooms', 'area'].includes(field))
+    || (!wanted && ['type', 'bathrooms'].includes(field))
     || (operation === 'swap' && field === 'swapWants'));
 }
 

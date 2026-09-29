@@ -101,7 +101,7 @@ test('remote rows map the operation, allow nulls only for wanted ads and default
   assert.equal(s.operation, 'swap'); assert.deepEqual(s.swap, { wants: 'Apartamento en Playa con dos habitaciones.', provinces: ['La Habana'], balance: 'receive', amount: 2000 });
   const b = mapRemoteListing({ ...row, operation: 'wanted', type: null, area: null, bathrooms: null }, new Map());
   assert.equal(b.operation, 'wanted'); assert.equal(b.type, undefined); assert.equal(b.area, undefined); assert.equal(b.bathrooms, undefined);
-  assert.throws(() => mapRemoteListing({ ...row, area: null }, new Map()), /no válidos/);
+  assert.throws(() => mapRemoteListing({ ...row, area: 0 }, new Map()), /no válidos/);
   assert.throws(() => mapRemoteListing({ ...row, operation: 'rent' }, new Map()), /no válidos/);
   assert.throws(() => mapRemoteListing({ ...row, operation: 'swap' }, new Map()), /no válidos/, 'a swap without its fields is invalid');
 });
@@ -213,4 +213,45 @@ test('payloads, rows, drafts and the snapshot carry the rental and wanted fields
   const source = readFileSync(new URL('../src/data/supabaseMarketplace.ts', import.meta.url), 'utf8');
   const columns = /PROPERTY_COLUMNS = '([^']+)'/.exec(source)![1].split(',');
   for (const column of ['rent_period', 'rent_min_stay', 'wanted_operations']) assert.ok(columns.includes(column), column);
+});
+
+const bare = { ...sale, area: '', clientRequestId: 'ops-bare' };
+
+test('an offer may leave its surface out; when given it keeps the range', () => {
+  for (const draft of [bare, { ...swap, area: '' }, { ...rent, area: '  ' }]) assert.ok(validateDraft(draft).ok, draft.operation ?? 'sale');
+  assert.equal(validateDraft({ ...sale, area: '0' }).errors.area, 'El área no es válido.');
+  assert.ok(validateDraft({ ...sale, area: '20000' }).errors.area);
+  assert.ok(validateDraft({ ...sale, area: 'abc' }).errors.area);
+  const listing = createListing(bare, { id: 'n', ...at });
+  assert.equal('area' in listing, false);
+  assert.equal(createListing(sale, { id: 's', ...at }).area, 80);
+  assert.equal('area' in updateListing(createListing(sale, { id: 's', ...at }), bare), false, 'an edit can clear the surface');
+  const larger = createListing(sale, { id: 'big', ...at });
+  assert.deepEqual(filterListings([listing, larger], { ...defaultFilters, sort: 'area-desc' }).map((r) => r.id), ['big', 'n'], 'no area sorts last');
+  assert.deepEqual(filterListings([listing, larger], { ...defaultFilters, minArea: '10' }).map((r) => r.id), ['big']);
+  assert.deepEqual(filterListings([listing, larger], { ...defaultFilters, maxArea: '1000' }).map((r) => r.id), ['big']);
+});
+test('facts and share text leave out a missing surface', () => {
+  const listing = createListing(bare, { id: 'n', ...at });
+  assert.equal(listingFacts(listing), '2 hab · 1 baño');
+  assert.equal(shareText(listing, 'https://x/p/n'), 'Casa de prueba\n$ 50,000 USD · Vedado, La Habana\n2 hab · 1 baño\n\nhttps://x/p/n');
+});
+test('payload, remote rows, drafts and the snapshot carry a missing surface', () => {
+  assert.equal(propertyPayload(bare, 'seller', [], 'pending').area, null);
+  assert.equal(propertyPayload(sale, 'seller', [], 'pending').area, 80);
+  const mapped = mapRemoteListing({ ...row, area: null }, new Map());
+  assert.equal('area' in mapped, false);
+  assert.equal(mapRemoteListing({ ...row, area: '75.5' }, new Map()).area, 75.5);
+  for (const area of [0, -3, 'abc', '']) assert.throws(() => mapRemoteListing({ ...row, area }, new Map()), /no válidos/, String(area));
+  assert.equal('area' in mapRemoteListing({ ...row, operation: 'rent', rent_period: 'month', area: null }, new Map()), false);
+  assert.deepEqual(restoreDraft(JSON.stringify(bare), sale), bare);
+  const { area: _area, ...withoutArea } = bare;
+  assert.deepEqual(restoreDraft(JSON.stringify(withoutArea), sale), bare, 'a draft saved without the key restores an empty surface');
+  const listings = [createListing(bare, { id: 'n', ...at })];
+  const decoded = decodeMarketplaceSnapshot(JSON.stringify({ version: 1, localListings: listings, favoriteIds: [] }));
+  assert.equal(decoded.issue, null); assert.deepEqual(decoded.snapshot.localListings, listings);
+});
+test('catalogue and map requests say the client reads offers without surface', () => {
+  assert.equal(searchPayload(defaultFilters, null, true).optional_area, true);
+  assert.equal(searchPayload({ ...defaultFilters, sort: 'area-desc' }, null, false).optional_area, true);
 });

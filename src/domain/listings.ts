@@ -219,7 +219,7 @@ export function filterListings(listings: Listing[], filters: ListingFilters): Li
     .filter((listing) => !hasMaxPrice || listing.price <= parsedMaxPrice)
     .filter((listing) => minPrice === undefined || listing.price >= minPrice)
     .filter((listing) => minArea === undefined || (listing.area ?? -1) >= minArea)
-    .filter((listing) => maxArea === undefined || (listing.area ?? -1) <= maxArea)
+    .filter((listing) => maxArea === undefined || (listing.area !== undefined && listing.area <= maxArea))
     .filter((listing) => !province || normalizeSearch(listing.province) === province)
     .filter((listing) => !filters.condition || listing.condition === filters.condition)
     .filter((listing) => !filters.negotiableOnly || listing.priceNegotiable === true)
@@ -241,7 +241,7 @@ export function filterListings(listings: Listing[], filters: ListingFilters): Li
     .sort((left, right) => {
       if (filters.sort === 'price-asc') return left.price - right.price;
       if (filters.sort === 'price-desc') return right.price - left.price;
-      if (filters.sort === 'area-desc') return (right.area ?? 0) - (left.area ?? 0);
+      if (filters.sort === 'area-desc') return (right.area ?? -1) - (left.area ?? -1);
       return Date.parse(right.createdAt) - Date.parse(left.createdAt);
     });
 }
@@ -266,7 +266,7 @@ export function validateDraft(draft: ListingDraft): DraftValidation {
     if (draft.mapLocation !== undefined) errors.mapLocation = 'Un anuncio de búsqueda no lleva ubicación en el mapa.';
   } else {
     validateNumber(draft.bathrooms, 'bathrooms', errors, { label: 'Los baños', min: 1, max: 20, integer: true });
-    validateNumber(draft.area, 'area', errors, { label: 'El área', min: 0, max: 10_000, exclusiveMin: true });
+    if (draft.area.trim()) validateNumber(draft.area, 'area', errors, { label: 'El área', min: 0, max: 10_000, exclusiveMin: true });
     if (draft.type !== 'Casa' && draft.type !== 'Apartamento') errors.type = 'Selecciona un tipo de vivienda válido.';
     if (draft.mapLocation !== undefined && !isMapLocation(draft.mapLocation)) errors.mapLocation = 'Selecciona una ubicación válida en el mapa.';
   }
@@ -438,7 +438,8 @@ function validatedValues(
     ...(!wanted && draft.mapLocation ? { mapLocation: normalizeMapLocation(draft.mapLocation) } : {}),
     price: parseDecimal(draft.price),
     bedrooms: Number(draft.bedrooms.trim()),
-    ...(!wanted ? { bathrooms: Number(draft.bathrooms.trim()), area: parseDecimal(draft.area) } : {}),
+    ...(!wanted ? { bathrooms: Number(draft.bathrooms.trim()) } : {}),
+    ...(!wanted && draft.area.trim() ? { area: parseDecimal(draft.area) } : {}),
     ...(draft.type ? { type: draft.type } : {}),
     description: draft.description.trim(),
     amenities: wanted ? [] : normalizeAmenities(draft.amenities),
