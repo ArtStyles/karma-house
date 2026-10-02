@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Icon, IconButton, Notice, PageTitle, type IconName } from '../components/ui';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
@@ -13,16 +13,18 @@ import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { AccountMenu } from '../components/account/AccountMenu';
 import { useSavedSearches } from '../searches/useSavedSearches';
+import { setDataSaver, useDataSaver } from '../settings/useDataSaver';
 
 export default function ProfileScreen() {
   const { favoriteIds, ownListings: own, mode } = useMarketplace();
-  const { user, displayName, isAdmin, signOut, error: authError, refreshProfile } = useAuth();
+  const { user, displayName, isAdmin, isOwner, suspended, suspensionReason, signOut, error: authError, refreshProfile } = useAuth();
   const { unreadCount } = useMessaging();
   const { unreadCount: notificationUnreadCount } = useNotifications();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const { listings: favorites } = useFavoriteListings();
   const savedSearches = useSavedSearches();
+  const dataSaver = useDataSaver();
   // Tabs stay mounted: recount alerts saved or removed elsewhere when Mi espacio comes back into view.
   const refreshSearches = savedSearches.refresh;
   const seen = useRef(false);
@@ -43,6 +45,8 @@ export default function ProfileScreen() {
       </View>
 
       {mode === 'cloud' && !user ? <View style={styles.accountPrompt}><AccountPrompt returnTo="/profile" /></View> : null}
+      {suspended && <Notice error>Tu cuenta está suspendida. No puedes publicar ni enviar mensajes. {suspensionReason}</Notice>}
+      {isOwner && <Notice>Tu información de cuenta es privada. Los demás solo ven tu nombre y foto de perfil.</Notice>}
       <Text style={styles.sectionLabel}>Tu actividad</Text>
       <View style={styles.group}>
         <Pressable accessibilityRole="button" accessibilityLabel={`Notificaciones, ${notificationUnreadCount} sin leer`} onPress={() => router.push('/notifications')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
@@ -98,6 +102,18 @@ export default function ProfileScreen() {
         <Button label={mode === 'cloud' ? 'Publicar mi vivienda' : 'Crear anuncio de prueba'} onPress={() => router.push('/publish')} icon="add-outline" />
       </View>
 
+      {/* A device preference: it applies signed in or not, in the demo too. */}
+      <Text style={styles.sectionLabel}>Preferencias</Text>
+      <View style={styles.group}>
+        <View style={styles.row}>
+          <View style={styles.rowIcon}><Icon name="cellular-outline" size={21} color={colors.primary} /></View>
+          <View style={styles.rowBody}>
+            <View style={styles.rowCopy}><Text style={styles.rowTitle}>Ahorro de datos</Text><Text style={styles.rowDescription}>Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas.</Text></View>
+            <Switch accessibilityLabel="Ahorro de datos" accessibilityHint="Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas." value={dataSaver} onValueChange={setDataSaver} trackColor={{ false: '#DADCE2', true: colors.primary }} thumbColor={colors.white} ios_backgroundColor="#DADCE2" />
+          </View>
+        </View>
+      </View>
+
       {/* Explorar no longer carries the account menu, so the account lives here in plain sight. */}
       {user && <>
         <Text style={styles.sectionLabel}>Cuenta</Text>
@@ -116,9 +132,7 @@ export default function ProfileScreen() {
         </View>
       </>}
 
-      {isAdmin && <View style={{ marginTop: 18 }}><Button label="Revisar anuncios" secondary icon="shield-checkmark-outline" onPress={() => router.push('/admin')} /></View>}
-      {isAdmin && <View style={{ marginTop: 12 }}><Button label="Reportes de mensajes" secondary icon="flag-outline" onPress={() => router.push('/message-reports')} /></View>}
-      {isAdmin && <View style={{ marginTop: 12 }}><Button label="Reportes de anuncios" secondary icon="flag-outline" onPress={() => router.push('/property-reports')} /></View>}
+      {isAdmin && <View style={{ marginTop: 18 }}><Button label="Administración" secondary icon="shield-checkmark-outline" onPress={() => router.push('/administration')} /></View>}
       <Text style={styles.demoNote}>{mode === 'demo' ? 'Tus cambios se guardan en este dispositivo. Esta demo no incluye cuentas, mensajes ni publicaciones públicas.' : 'Conversa sobre cada vivienda sin publicar tu teléfono. Tus anuncios se revisan antes de aparecer en el catálogo.'}</Text>
       <View style={styles.legal}>
         <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.legalText}>Privacidad</Text></Pressable>

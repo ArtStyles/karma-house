@@ -2,13 +2,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createSignedUrlCache, SIGNED_URL_SECONDS } from '../src/data/signedUrlCache.ts';
-import { createOfflineSnapshot, snapshotAgeText } from '../src/catalog/offlineSnapshot.ts';
+import { createOfflineSnapshot, isDefaultCatalog, isNetworkFailure, nextOffline, snapshotAgeText } from '../src/catalog/offlineSnapshot.ts';
+import { remoteErrorMessage } from '../src/state/remoteMarketplaceStore.ts';
 import { createDataSaver } from '../src/settings/dataSaver.ts';
+import * as dataSaverModule from '../src/settings/dataSaver.ts';
 import { createRowSigner } from '../src/data/rowSigner.ts';
 import { mapRemoteListing } from '../src/data/remoteMapping.ts';
 import { propertyPayload } from '../src/data/propertyPayload.ts';
 import { uploadCoverThumb } from '../src/data/photoUpload.ts';
-import { validateDraft } from '../src/domain/listings.ts';
+import { defaultFilters, validateDraft } from '../src/domain/listings.ts';
 import { restoreDraft } from '../src/domain/draftPersistence.ts';
 
 const HOUR = 3600_000;
@@ -161,6 +163,10 @@ test('a corrupt snapshot or one with an invalid row is discarded', async () => {
     ...[{ id: 'x' }, { title: '' }, { title: 3 }, { price: 0 }, { price: -1 }, { price: '30000' }, { location: null }, { province: undefined }]
       .map(change => JSON.stringify({ savedAt: now(), rows: [valid, { ...valid, ...change }] })),
     JSON.stringify({ savedAt: now(), rows: [valid, null] }),
+    ...[{ amenities: undefined }, { amenities: [null] }, { description: {} }, { bedrooms: null },
+      { photos: 'bad' }, { photos: [null] }, { photos: [{ uri: 42 }] }, { coverThumb: { uri: {} } },
+      { mapLocation: { latitude: 'bad' } }, { swap: { provinces: null } }, { wantedOperations: {} }]
+      .map(change => JSON.stringify({ savedAt: now(), rows: [{ ...valid, ...change }] })),
     JSON.stringify({ savedAt: now(), rows: Array.from({ length: 25 }, (_, n) => listing(n + 1)) }),
   ];
   for (const raw of bad) {
@@ -182,6 +188,37 @@ test('the snapshot age reads naturally', () => {
   assert.equal(snapshotAgeText(t, t + DAY - 1), 'hace 23 horas');
   assert.equal(snapshotAgeText(t, t + DAY), 'hace 1 día');
   assert.equal(snapshotAgeText(t, t + 2 * DAY + 5 * HOUR), 'hace 2 días');
+});
+
+test('only the unfiltered, unsearched catalogue is kept as the snapshot', () => {
+  assert.equal(isDefaultCatalog({ ...defaultFilters }), true);
+  assert.equal(isDefaultCatalog({ query: '  ', type: 'Todas', maxPrice: ' ', minBedrooms: 0, sort: 'recent' }), true);
+  assert.equal(isDefaultCatalog({ ...defaultFilters, amenities: undefined, province: undefined }), true);
+  for (const change of [{ query: 'vedado' }, { sort: 'price-asc' }, { province: 'La Habana' }, { maxPrice: '30000' }, { minBedrooms: 3 }, { operation: 'rent' }, { amenities: ['Terraza'] }, { negotiableOnly: true }]) {
+    assert.equal(isDefaultCatalog({ ...defaultFilters, ...change }), false, JSON.stringify(change));
+  }
+});
+
+test('Explore stands on the snapshot only after a network failure with nothing on screen', () => {
+  const idle = { rows: [], loading: false, pageError: null };
+  const network = remoteErrorMessage(new TypeError('Network request failed'));
+  assert.equal(isNetworkFailure(network), true);
+  for (const error of [new TypeError('Failed to fetch'), Object.assign(new Error('La conexión tardó demasiado.'), { name: 'TimeoutError' }), Object.assign(new Error('cancelada'), { name: 'AbortError' })]) {
+    assert.equal(isNetworkFailure(remoteErrorMessage(error)), true, error.message);
+  }
+  assert.equal(isNetworkFailure(remoteErrorMessage({ message: 'permission denied for table properties' })), false);
+  assert.equal(isNetworkFailure(null), false);
+
+  assert.equal(nextOffline(false, idle), false, 'before the first load');
+  assert.equal(nextOffline(false, { ...idle, loading: true }), false, 'first load in flight');
+  assert.equal(nextOffline(false, { ...idle, pageError: network }), true, 'first load failed for the network');
+  assert.equal(nextOffline(false, { ...idle, pageError: 'KH_INVALID_CURSOR' }), false, 'a server error keeps the error state');
+  assert.equal(nextOffline(false, { rows: [listing(1)], loading: false, pageError: network }), false, 'rows already on screen stay');
+  assert.equal(nextOffline(true, { ...idle, loading: true }), true, 'a retry in flight keeps the snapshot');
+  assert.equal(nextOffline(true, { ...idle, pageError: network }), true, 'a failed retry keeps the snapshot');
+  assert.equal(nextOffline(true, { rows: [listing(1)], loading: false, pageError: null }), false, 'a successful retry returns to normal');
+  assert.equal(nextOffline(true, idle), false, 'an empty answer from the server is not offline');
+  assert.equal(nextOffline(true, { ...idle, pageError: 'Otro error' }), false);
 });
 
 test('the data saver is off by default and remembers the choice', async () => {
@@ -308,4 +345,40 @@ test('a signing failure or a missing path is an error and nothing is cached', as
   assert.deepEqual(cache.missing(['o/r/a.jpg']), ['o/r/a.jpg']);
   const partial = { createSignedUrls: async () => ({ data: [], error: null }) };
   await assert.rejects(createRowSigner(partial, cache, now)([propertyRow('p1', ['o/r/a.jpg'])], () => {}, 'all'), /Faltan/);
+});
+
+test('media waits for the saved preference before a cold start can download', async () => {
+  assert.equal(typeof dataSaverModule.createDataSaverStore, 'function');
+  let release;
+  const storage = memoryStorage();
+  storage.getItem = () => new Promise(resolve => { release = resolve; });
+  const store = dataSaverModule.createDataSaverStore({ storage });
+  assert.deepEqual(store.getState(), { enabled: false, ready: false });
+  const hydration = store.hydrate();
+  release('1');
+  await hydration;
+  assert.deepEqual(store.getState(), { enabled: true, ready: true });
+});
+
+test('a choice during hydration wins and rapid choices persist in order', async () => {
+  assert.equal(typeof dataSaverModule.createDataSaverStore, 'function');
+  let releaseRead, releaseWrite;
+  const storage = memoryStorage();
+  storage.getItem = () => new Promise(resolve => { releaseRead = resolve; });
+  const write = storage.setItem;
+  let writes = 0;
+  storage.setItem = async (key, value) => {
+    if (++writes === 1) await new Promise(resolve => { releaseWrite = resolve; });
+    await write(key, value);
+  };
+  const store = dataSaverModule.createDataSaverStore({ storage });
+  const hydration = store.hydrate();
+  const first = store.setEnabled(true);
+  const second = store.setEnabled(false);
+  releaseRead('1');
+  await hydration;
+  assert.deepEqual(store.getState(), { enabled: false, ready: true });
+  releaseWrite();
+  await Promise.all([first, second]);
+  assert.equal(await createDataSaver({ storage: { ...storage, getItem: async key => storage.items.get(key) } }).read(), false);
 });

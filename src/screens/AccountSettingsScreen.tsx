@@ -88,9 +88,9 @@ function AccountSettingsForm({ ownerId }: { ownerId: string }) {
         <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.link}>Política de privacidad</Text></Pressable>
         <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(TERMS_URL)}><Text style={styles.link}>Términos de uso</Text></Pressable>
       </View>
-      <Pressable accessibilityRole="button" disabled={!!busy} onPress={() => setDeleting(true)} style={({ pressed }) => [styles.danger, pressed && { opacity: .7 }]}>
+      {auth.isOwner ? <Notice>La cuenta propietaria está protegida. Para eliminarla, primero debe transferirse la propiedad de KarmaHouse.</Notice> : <Pressable accessibilityRole="button" disabled={!!busy} onPress={() => setDeleting(true)} style={({ pressed }) => [styles.danger, pressed && { opacity: .7 }]}>
         <Icon name="trash-outline" size={19} color={colors.danger} /><Text style={styles.dangerText}>Eliminar cuenta</Text>
-      </Pressable>
+      </Pressable>}
     </View>
     <DeleteAccountSheet visible={deleting} onClose={() => setDeleting(false)} />
   </View>;

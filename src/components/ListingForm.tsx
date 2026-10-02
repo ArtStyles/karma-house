@@ -42,6 +42,7 @@ export interface ListingFormProps {
   onCancel?: () => void;
   onReloadLatest?: () => Promise<void>;
   cloud?: boolean;
+  directPublication?: boolean;
   draftStorageKey?: string;
 }
 
@@ -88,6 +89,7 @@ export function ListingForm({
   onCancel,
   onReloadLatest,
   cloud = false,
+  directPublication = false,
   draftStorageKey,
 }: ListingFormProps) {
   const [draft, setDraft] = useState<ListingDraft>(() => ({ ...cloneDraft(initialDraft ?? emptyDraft), clientRequestId: initialDraft?.clientRequestId ?? draftToken() }));
@@ -239,7 +241,7 @@ export function ListingForm({
       }
       if (!initialDraft) completed.current = false;
       if (cleaned) onSaved?.();
-      else setSavedWarning('El anuncio se guardó y se envió a revisión. No pudimos limpiar el borrador de este dispositivo; no necesitas volver a enviarlo.');
+      else setSavedWarning(directPublication ? 'El anuncio se publicó. No pudimos limpiar el borrador de este dispositivo; no necesitas volver a enviarlo.' : 'El anuncio se guardó y se envió a revisión. No pudimos limpiar el borrador de este dispositivo; no necesitas volver a enviarlo.');
     } catch (error) {
       if (mounted.current) setSubmitError(readError(error, 'No pudimos guardar el anuncio. Tu borrador sigue disponible para reintentar.'));
     } finally {
@@ -677,7 +679,7 @@ export function ListingForm({
           </>}
 
           <Text style={styles.demoNote}>
-            {cloud ? 'Tu borrador se guarda en este dispositivo. Al enviarlo, revisaremos el anuncio antes de publicarlo. Los cambios posteriores también requieren revisión.' : 'Demostración: se guarda en este dispositivo, sin publicarse en internet.'}
+            {cloud && directPublication ? 'Tu anuncio se publicará directamente. El borrador permanece privado hasta que decidas publicarlo.' : cloud ? 'Tu borrador se guarda en este dispositivo. Al enviarlo, revisaremos el anuncio antes de publicarlo. Los cambios posteriores también requieren revisión.' : 'Demostración: se guarda en este dispositivo, sin publicarse en internet.'}
           </Text>
         </View>
       </ScrollView>

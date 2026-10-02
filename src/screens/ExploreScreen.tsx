@@ -4,6 +4,7 @@ import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Text
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activeFilterCount, defaultFilters, shortcutActive, toggleShortcut, type ListingFilters, type Shortcut } from '../domain/listings';
 import { useCatalogPage } from '../catalog/useCatalog';
+import { snapshotAgeText } from '../catalog/offlineSnapshot';
 import { CONDITIONS, PROVINCES } from '../domain/listingOptions';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors, layout } from '../theme';
@@ -11,7 +12,8 @@ import { PropertyCard } from '../components/PropertyCard';
 import { ExploreMap } from '../components/ExploreMap';
 import { SelectionField } from '../components/SelectionField';
 import { Brand, Button, EmptyState, Icon, IconButton, Notice, type IconName } from '../components/ui';
-import { CatalogFilters, SORT_OPTIONS } from '../components/CatalogFilters';
+import { CatalogFilters } from '../components/CatalogFilters';
+import { CatalogSortMenu } from '../components/CatalogSortMenu';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { NotificationBell } from '../components/notifications/NotificationBell';
@@ -40,24 +42,31 @@ export default function ExploreScreen() {
   const [saving, setSaving] = useState(false);
   const [saveNotice, setSaveNotice] = useState<'demo' | 'saved' | null>(null);
   function saveSearch() {
+    if (offline) return;
     if (mode === 'demo') return setSaveNotice('demo');
     if (!auth.ready) return;
     if (!auth.user) return router.push({ pathname: '/auth', params: { returnTo: '/' } });
     setSaveNotice(null); setSaving(true);
   }
-  const [view, setView] = useState<'list' | 'map'>('list');
+  const [chosenView, setView] = useState<'list' | 'map'>('list');
   // The floating toggle only appears once the results line has scrolled away: on a short list it
   // would sit over the seller invitation, and at the end of a long one the bottom padding clears it.
   const [headerHeight, setHeaderHeight] = useState(0);
   const [scrolled, setScrolled] = useState(false);
-  const toggleView = () => setView(view === 'list' ? 'map' : 'list');
+  const toggleView = () => { if (!offline) setView(view === 'list' ? 'map' : 'list'); };
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const columns = width >= 1060 ? 3 : width >= 700 ? 2 : 1;
-  const { rows: result, total, hasMore, ready, loading, pageError, loadMore, refresh: refreshCatalog } = useCatalogPage(filters);
+  const { rows: result, total, hasMore, ready, loading, pageError, offlineSince, loadMore, refresh: refreshCatalog } = useCatalogPage(filters);
+  // On the saved snapshot nothing can ask the server, so every control that would is held still.
+  const offline = offlineSince !== null;
+  const view = offline ? 'list' : chosenView;
+  const locked = offline ? { pointerEvents: 'none' as const, opacity: .45 } : undefined;
+  const openFilters = () => { if (!offline) setExpanded(true); };
+  const clearFilters = () => { if (!offline) setFilters({ ...defaultFilters }); };
   const hasFilters = activeFilterCount(filters) > 0;
   const filterCount = activeFilterCount({ ...filters, query: '' });
-  const change = (next: Partial<ListingFilters>) => setFilters(old => ({ ...old, ...next }));
+  const change = (next: Partial<ListingFilters>) => { if (!offline) setFilters(old => ({ ...old, ...next })); };
   // Short enough to share one line with the sort and map controls at 320 pt.
   const homes = filters.operation === 'wanted' ? `${total} ${total === 1 ? 'búsqueda' : 'búsquedas'}` : `${total} ${total === 1 ? 'vivienda' : 'viviendas'}`;
   const count = !ready ? 'Cargando…' : filters.province ? `${homes} en ${filters.province}` : hasFilters ? `${total} ${total === 1 ? 'encontrada' : 'encontradas'}` : mode === 'demo' ? `${homes} de prueba` : homes;
@@ -81,7 +90,7 @@ export default function ExploreScreen() {
         onScroll={event => setScrolled(headerHeight > 0 && event.nativeEvent.contentOffset.y > headerHeight)}
         scrollEventThrottle={100}
         columnWrapperStyle={columns > 1 ? styles.row : undefined}
-        renderItem={({ item }) => <View style={[styles.cell, { width: result.length === 1 ? '100%' : columns === 3 ? '31.9%' : columns === 2 ? '48.8%' : '100%' }]}><PropertyCard listing={item} horizontal={columns > 1 && result.length === 1} /></View>}
+        renderItem={({ item }) => <View style={[styles.cell, { width: result.length === 1 ? '100%' : columns === 3 ? '31.9%' : columns === 2 ? '48.8%' : '100%' }]}><PropertyCard listing={item} offline={offline} horizontal={columns > 1 && result.length === 1} /></View>}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={colors.primary} />}
@@ -98,32 +107,38 @@ export default function ExploreScreen() {
           </View>
           <View style={styles.discovery}>
             <Text accessibilityRole="header" style={[styles.title, width < 360 && styles.compactTitle]}>Encuentra tu casa en Cuba</Text>
-            <View style={styles.search}>
+            <View style={[styles.search, locked]}>
               <Icon name="search" size={20} color={colors.muted} />
-              <TextInput accessibilityLabel="Buscar por barrio, municipio o calle" placeholder="Barrio, municipio o calle" placeholderTextColor={colors.muted} style={styles.searchInput} value={filters.query} onChangeText={query => change({ query })} returnKeyType="search" />
+              <TextInput accessibilityLabel="Buscar por barrio, municipio o calle" placeholder="Barrio, municipio o calle" placeholderTextColor={colors.muted} style={styles.searchInput} editable={!offline} value={filters.query} onChangeText={query => change({ query })} returnKeyType="search" />
               {filters.query ? <IconButton name="close-circle" label="Borrar búsqueda" onPress={() => change({ query: '' })} style={styles.clearSearch} /> : null}
-              <Pressable accessibilityRole="button" accessibilityLabel={filterCount ? `Filtros, ${filterCount} ${filterCount === 1 ? 'activo' : 'activos'}` : 'Abrir filtros'} onPress={() => setExpanded(true)} style={({ pressed }) => [styles.filterButton, filterCount > 0 && styles.filterActive, pressed && { opacity: .7 }]}>
+              <Pressable accessibilityRole="button" accessibilityLabel={filterCount ? `Filtros, ${filterCount} ${filterCount === 1 ? 'activo' : 'activos'}` : 'Abrir filtros'} onPress={openFilters} style={({ pressed }) => [styles.filterButton, filterCount > 0 && styles.filterActive, pressed && { opacity: .7 }]}>
                 <Icon name="options-outline" size={21} color={filterCount > 0 ? colors.white : colors.primary} />
                 {filterCount > 0 && <View style={styles.filterCount}><Text style={styles.filterCountText}>{filterCount}</Text></View>}
               </Pressable>
             </View>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={styles.shortcutRow} contentContainerStyle={styles.shortcuts}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={[styles.shortcutRow, locked]} contentContainerStyle={styles.shortcuts}>
             <SelectionField label="Provincia" value={filters.province ?? ''} options={provinceOptions} onChange={province => change({ province })} renderTrigger={open =>
-              <ShortcutChip label={filters.province || 'Toda Cuba'} icon="location-outline" chevron active={!!filters.province} accessibilityLabel={`Provincia: ${filters.province || 'toda Cuba'}`} onPress={open} />} />
+              <ShortcutChip label={filters.province || 'Toda Cuba'} icon="location-outline" chevron active={!!filters.province} accessibilityLabel={`Provincia: ${filters.province || 'toda Cuba'}`} onPress={() => { if (!offline) open(); }} />} />
             {shortcuts.map(item => <ShortcutChip key={item.value} label={item.label} toggle active={shortcutActive(filters, item.value)} onPress={() => change(toggleShortcut(filters, item.value))} />)}
           </ScrollView>
-          <View style={styles.resultMeta}>
+          <View style={[styles.resultMeta, width < 400 && styles.compactMeta]}>
             <Text style={styles.resultCount}>{count}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Cambiar orden de viviendas" onPress={() => setExpanded(true)} style={styles.sort}><Text style={styles.sortText}>{SORT_OPTIONS.find(option => option.value === filters.sort)?.label}</Text><Icon name="chevron-down" size={13} color={colors.primary} /></Pressable>
-            <IconButton name="bookmark-outline" label="Guardar búsqueda" onPress={saveSearch} />
-            <Pressable accessibilityRole="button" accessibilityLabel={view === 'list' ? 'Ver en el mapa' : 'Ver en lista'} onPress={toggleView} hitSlop={{ top: 5, bottom: 5 }} style={({ pressed }) => [styles.inlineToggle, pressed && { opacity: .7 }]}>
-              <Icon name={view === 'list' ? 'map-outline' : 'list-outline'} size={16} color={colors.ink} /><Text style={styles.inlineToggleText}>{view === 'list' ? 'Mapa' : 'Lista'}</Text>
-            </Pressable>
+            <View style={[styles.metaControls, width < 400 && styles.compactMetaControls, locked]}>
+              <CatalogSortMenu value={filters.sort} onChange={sort => change({ sort })} disabled={offline} />
+              <IconButton name="bookmark-outline" label="Guardar búsqueda" onPress={saveSearch} />
+              <Pressable accessibilityRole="button" accessibilityLabel={view === 'list' ? 'Ver en el mapa' : 'Ver en lista'} accessibilityState={{ disabled: offline }} disabled={offline} onPress={toggleView} hitSlop={{ top: 5, bottom: 5 }} style={({ pressed }) => [styles.inlineToggle, pressed && { opacity: .7 }]}>
+                <Icon name={view === 'list' ? 'map-outline' : 'list-outline'} size={16} color={colors.ink} /><Text style={styles.inlineToggleText}>{view === 'list' ? 'Mapa' : 'Lista'}</Text>
+              </Pressable>
+            </View>
           </View>
+          {offlineSince !== null && <View style={styles.saveNotice}>
+            <Notice>{`Sin conexión. Viendo lo último que cargaste, ${snapshotAgeText(offlineSince, Date.now())}. Los filtros, la búsqueda y el mapa volverán cuando recuperes la conexión.`}</Notice>
+            <Button label="Reintentar" secondary icon="refresh-outline" loading={loading} onPress={() => void refreshCatalog().catch(() => {})} />
+          </View>}
           {saveNotice === 'demo' && <View style={styles.saveNotice}><Notice>Las alertas necesitan una cuenta de KarmaHouse.</Notice></View>}
           {saveNotice === 'saved' && <View style={styles.saveNotice}><Notice>Te avisaremos cuando aparezca una vivienda que encaje.</Notice><Button label="Ver mis alertas" secondary icon="bookmark-outline" onPress={() => router.push('/saved-searches')} /></View>}
-          {hasTags && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.activeFilters}>
+          {hasTags && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={locked} contentContainerStyle={styles.activeFilters}>
             {filters.operation === 'sale' && <FilterTag label="Solo venta" onRemove={() => change({ operation: 'offers' })} />}
             {priceTag && <FilterTag label={`${filters.minPrice || '0'} – ${filters.maxPrice || 'sin límite'} USD`} onRemove={() => change({ minPrice: '', maxPrice: '' })} />}
             {!!(filters.minArea || filters.maxArea) && <FilterTag label={`${filters.minArea || '0'} – ${filters.maxArea || 'sin límite'} m²`} onRemove={() => change({ minArea: '', maxArea: '' })} />}
@@ -133,13 +148,13 @@ export default function ExploreScreen() {
             {filters.negotiableOnly && <FilterTag label="Negociable" onRemove={() => change({ negotiableOnly: false })} />}
             {filters.amenities?.map(item => <FilterTag key={item} label={item} onRemove={() => change({ amenities: filters.amenities?.filter(value => value !== item) })} />)}
           </ScrollView>}
-          {hasFilters && <Pressable accessibilityRole="button" accessibilityLabel="Limpiar búsqueda y filtros" onPress={() => setFilters({ ...defaultFilters })} style={styles.clear}><Text style={styles.clearText}>Limpiar búsqueda y filtros</Text></Pressable>}
+          {hasFilters && <Pressable accessibilityRole="button" accessibilityLabel="Limpiar búsqueda y filtros" disabled={offline} onPress={clearFilters} style={[styles.clear, locked]}><Text style={styles.clearText}>Limpiar búsqueda y filtros</Text></Pressable>}
           {storageError && <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{storageError}</Notice><Button label="Volver a cargar" secondary loading={refreshing} onPress={reload} /></View>}
         </View>}
         ListFooterComponent={<View>
-          {view === 'list' && pageError && ready ? <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{pageError}</Notice><Button label="Cargar más viviendas" secondary loading={loading} onPress={loadMore} /></View>
+          {view === 'list' && pageError && ready ? <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{pageError}</Notice><Button label="Reintentar" secondary loading={loading} onPress={() => { if (hasMore) loadMore(); else void refreshCatalog().catch(() => {}); }} /></View>
             : view === 'list' && loading && ready ? <View style={styles.skeletons}><CardSkeleton /></View>
-            : view === 'list' && !hasMore && result.length > 0 ? <Text style={styles.listEnd}>{total === 1 ? 'Has visto la única vivienda que coincide.' : `Has visto las ${total} viviendas que coinciden.`}</Text> : null}
+            : view === 'list' && !hasMore && result.length > 0 && !offline ? <Text style={styles.listEnd}>{total === 1 ? 'Has visto la única vivienda que coincide.' : `Has visto las ${total} viviendas que coinciden.`}</Text> : null}
           {/* The seller invitation closes a real list; under an empty or failed one it reads as the answer. */}
           {(result.length > 0 || view === 'map') && !storageError && <Pressable accessibilityRole="button" accessibilityLabel="Publicar una vivienda" onPress={() => router.push('/publish')} style={({ pressed }) => [styles.sellerBanner, pressed && { opacity: .85 }]}>
             <View style={styles.sellerIcon}><Icon name="key-outline" size={25} color="#FFFFFF" /></View><View style={{ flex: 1 }}><Text style={styles.sellerTitle}>Tu vivienda, aquí.</Text><Text style={styles.sellerText}>Dale su próximo capítulo.</Text></View><Icon name="arrow-forward" size={21} color="#FFFFFF" />
@@ -147,7 +162,7 @@ export default function ExploreScreen() {
           {mode === 'demo' && <Notice>Viviendas e imágenes de demostración. Tus anuncios y favoritos se guardan solo en este dispositivo.</Notice>}
         </View>}
       />
-      {scrolled && view === 'list' && <Pressable accessibilityRole="button" accessibilityLabel="Ver en el mapa" onPress={toggleView} style={({ pressed }) => [styles.viewToggle, { bottom: toggleBottom }, pressed && { opacity: .85 }]}>
+      {scrolled && view === 'list' && !offline && <Pressable accessibilityRole="button" accessibilityLabel="Ver en el mapa" onPress={toggleView} style={({ pressed }) => [styles.viewToggle, { bottom: toggleBottom }, pressed && { opacity: .85 }]}>
         <Icon name="map-outline" size={18} color={colors.white} /><Text style={styles.viewToggleText}>Mapa</Text>
       </Pressable>}
       {expanded && <CatalogFilters filters={filters} total={total} onApply={setFilters} onClose={() => setExpanded(false)} />}
@@ -210,9 +225,10 @@ const styles = StyleSheet.create({
   shortcutRow: { marginHorizontal: -20, marginTop: 12 }, shortcuts: { paddingHorizontal: 20, paddingVertical: 4, gap: 8 },
   shortcut: { minHeight: 38, paddingHorizontal: 14, borderRadius: 19, borderWidth: 1, borderColor: '#D9DEE6', backgroundColor: colors.white, flexDirection: 'row', alignItems: 'center', gap: 5 },
   shortcutActive: { backgroundColor: colors.softBlue, borderColor: '#A9C8EC' }, shortcutText: { fontSize: 14, color: colors.ink, fontWeight: '500' }, shortcutTextActive: { color: colors.primary, fontWeight: '600' },
-  resultMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  resultMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }, metaControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  compactMeta: { flexDirection: 'column', alignItems: 'stretch', gap: 0, marginTop: 10 },
+  compactMetaControls: { justifyContent: 'space-between' },
   resultCount: { flex: 1, fontSize: 14, color: colors.muted },
-  sort: { flexDirection: 'row', minHeight: 44, gap: 4, alignItems: 'center' }, sortText: { fontSize: 14, color: colors.primary },
   inlineToggle: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 34, paddingHorizontal: 12, borderRadius: 17, borderWidth: 1, borderColor: '#D9DEE6', backgroundColor: colors.white }, inlineToggleText: { fontSize: 14, fontWeight: '500', color: colors.ink },
   saveNotice: { gap: 8, marginBottom: 10 },
   activeFilters: { gap: 7, paddingBottom: 10 }, filterTag: { minHeight: 36, paddingHorizontal: 11, paddingVertical: 8, gap: 6, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.softBlue, borderRadius: 14 }, filterTagText: { fontSize: 13, color: colors.primary },

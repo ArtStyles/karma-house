@@ -8,6 +8,8 @@ import { useMarketplace } from '../state/MarketplaceProvider';
 import { remoteErrorMessage } from '../state/remoteMarketplaceStore';
 import { createCatalogController, emptyCatalogState, type CatalogState } from './controller';
 import { createCatalogRepository } from './repository';
+import { createOfflineSnapshot, isDefaultCatalog, isNetworkFailure, nextOffline } from './offlineSnapshot';
+import { draftStorage } from '../data/draftStorage';
 import { COUNT_DEBOUNCE_MS, type BoundingBox, type CatalogRepository, type MapView } from './types';
 
 /** Null while Supabase is unconfigured; the screens never branch on mode themselves. */
@@ -24,8 +26,12 @@ const emptySnapshot = () => EMPTY_STATE;
 const noSubscribe = () => () => {};
 /** Reads outside the controller have no epoch of their own, so they pass a no-op checkpoint. */
 const passthrough = () => {};
+const catalogSnapshot = createOfflineSnapshot({ storage: draftStorage, now: Date.now });
+type Snapshot = Awaited<ReturnType<typeof catalogSnapshot.load>>;
 
 export interface CatalogPageResult extends CatalogState {
+  /** Set while Explore shows the saved first page because the network failed; `rows` are then the snapshot's. */
+  offlineSince: number | null;
   loadMore(): void;
   refresh(): Promise<void>;
 }
@@ -35,7 +41,12 @@ export function useCatalogPage(filters: ListingFilters): CatalogPageResult {
   const { user } = useAuth();
   const repository = useCatalogRepository();
   const controller = useMemo(
-    () => repository ? createCatalogController(repository) : null,
+    () => repository ? createCatalogController(repository, {
+      onFirstPage(rows, filters) {
+        // Empty results replace stale adverts; late responses never reach this callback.
+        if (isDefaultCatalog(filters)) void catalogSnapshot.save(rows);
+      },
+    }) : null,
     [repository],
   );
   const remote = useSyncExternalStore(
@@ -61,33 +72,61 @@ export function useCatalogPage(filters: ListingFilters): CatalogPageResult {
   const loadMore = useCallback(() => { void controller?.loadMore().catch(() => {}); }, [controller]);
   const refresh = useCallback(async () => { await controller?.refresh(); }, [controller]);
 
+  // A successful load earlier in this session may have replaced the snapshot.
+  const [snapshot, setSnapshot] = useState<Snapshot>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (mode === 'cloud') void catalogSnapshot.load().then(saved => { if (!cancelled) setSnapshot(saved); });
+    return () => { cancelled = true; };
+  }, [mode, remote.pageError, remote.loading]);
+  // Sticky across a retry's loading state; the transition is pure and idempotent, so a ref is enough.
+  const offline = useRef(false);
+  offline.current = nextOffline(offline.current, remote);
+
   if (mode === 'demo') {
-    return { rows: demoRows, total: demoRows.length, cursor: null, hasMore: false, ready: true, loading: false, pageError: null, searchMode: 'none', loadMore: () => {}, refresh: async () => {} };
+    return { rows: demoRows, total: demoRows.length, cursor: null, hasMore: false, ready: true, loading: false, pageError: null, searchMode: 'none', offlineSince: null, loadMore: () => {}, refresh: async () => {} };
   }
-  return { ...remote, loadMore, refresh };
+  if (offline.current && snapshot) {
+    return { ...remote, rows: snapshot.rows, total: snapshot.rows.length, cursor: null, hasMore: false, ready: true, pageError: null, offlineSince: snapshot.savedAt, loadMore: () => {}, refresh };
+  }
+  return { ...remote, offlineSince: null, loadMore, refresh };
 }
 
-export function useListing(id: string | undefined): { listing: Listing | undefined; ready: boolean; error: string | null } {
+interface ListingResult {
+  listing: Listing | undefined;
+  ready: boolean;
+  error: string | null;
+  /** The listing came from the offline snapshot; anything that writes needs the network first. */
+  offline: boolean;
+}
+
+export function useListing(id: string | undefined): ListingResult & { retry(): void } {
   const { mode, demoCatalog, ownListings } = useMarketplace();
   const repository = useCatalogRepository();
-  const [state, setState] = useState<{ listing: Listing | undefined; ready: boolean; error: string | null }>({ listing: undefined, ready: false, error: null });
+  const [state, setState] = useState<ListingResult>({ listing: undefined, ready: false, error: null, offline: false });
+  const [attempt, setAttempt] = useState(0);
+  const retry = useCallback(() => setAttempt(value => value + 1), []);
 
   useEffect(() => {
     if (mode === 'demo' || !repository || !id) return;
     let cancelled = false;
-    setState({ listing: undefined, ready: false, error: null });
+    setState({ listing: undefined, ready: false, error: null, offline: false });
     repository.byId(id, passthrough)
-      .then((listing) => { if (!cancelled) setState({ listing: listing ?? undefined, ready: true, error: null }); })
-      .catch((error) => { if (!cancelled) setState({ listing: undefined, ready: true, error: remoteErrorMessage(error) }); });
+      .then((listing) => { if (!cancelled) setState({ listing: listing ?? undefined, ready: true, error: null, offline: false }); })
+      .catch(async (failure) => {
+        const error = remoteErrorMessage(failure);
+        const saved = isNetworkFailure(error) ? (await catalogSnapshot.load())?.rows.find((row) => row.id === id) : undefined;
+        if (!cancelled) setState(saved ? { listing: saved, ready: true, error: null, offline: true } : { listing: undefined, ready: true, error, offline: false });
+      });
     return () => { cancelled = true; };
-  }, [mode, repository, id]);
+  }, [mode, repository, id, attempt]);
 
   if (mode === 'demo') {
-    return { listing: (demoCatalog ?? []).find((item) => item.id === id), ready: true, error: null };
+    return { listing: (demoCatalog ?? []).find((item) => item.id === id), ready: true, error: null, offline: false, retry };
   }
   // An owner editing their own paused listing reads it from the account snapshot without a round trip.
   const own = ownListings.find((item) => item.id === id);
-  return own ? { listing: own, ready: true, error: null } : state;
+  return own ? { listing: own, ready: true, error: null, offline: false, retry } : { ...state, retry };
 }
 
 export function useFavoriteListings(): { listings: Listing[]; ready: boolean; error: string | null } {

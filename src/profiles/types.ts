@@ -2,6 +2,7 @@ import type { MessagingRequestContext } from '../messaging/types.ts';
 
 export type KarmaLevel = 'new' | 'active' | 'trusted' | 'featured';
 export interface PublicProfile {
+  identityOnly?: boolean;
   id: string; displayName: string; memberSince: string; verified: boolean; level: KarmaLevel; levelReasons: string[];
   activeListings: string[]; activeListingCount: number; approvedListingCount: number;
   responseMinutes: number | null; responseRate: number | null; visitsAgreed: number; avatarUrlPath: string | null;

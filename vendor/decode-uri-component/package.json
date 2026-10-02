@@ -1,0 +1,10 @@
+{
+  "name": "decode-uri-component",
+  "version": "0.5.0-karmahouse.1",
+  "description": "CommonJS compatibility backport of upstream decode-uri-component 0.5.0",
+  "main": "index.cjs",
+  "type": "commonjs",
+  "license": "MIT",
+  "private": true,
+  "sideEffects": false
+}

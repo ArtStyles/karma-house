@@ -27,7 +27,7 @@ const boardTones: Record<ListingBoardState, { color: string; background: string 
 
 export default function MyListingsScreen() {
   const { ownListings: own, setStatus, mode, refresh, submitForReview } = useMarketplace();
-  const { user } = useAuth();
+  const { user, isOwner } = useAuth();
   const [pending, setPending] = useState('');
   const [error, setError] = useState('');
   const [confirm, setConfirm] = useState<{ listing: Listing; next: 'sold' | 'active' } | null>(null);
@@ -94,7 +94,7 @@ export default function MyListingsScreen() {
           </Pressable>
           {item.reviewNote && <Notice error>{item.reviewNote}</Notice>}
 
-          {(state === 'draft' || state === 'rejected') && <Button label="Enviar a revisión" icon="paper-plane-outline" loading={pending === item.id} disabled={!!pending} onPress={() => submit(item.id)} style={styles.reviewButton} />}
+          {(state === 'draft' || state === 'rejected') && <Button label={isOwner ? 'Publicar ahora' : 'Enviar a revisión'} icon="paper-plane-outline" loading={pending === item.id} disabled={!!pending} onPress={() => submit(item.id)} style={styles.reviewButton} />}
           <View style={styles.actions}>
             <Button label="Editar" secondary icon="create-outline" onPress={() => router.push(`/edit/${item.id}`)} style={styles.actionButton} disabled={!!pending} />
             {/* Pausing only means anything once the listing can actually reach the catalogue. */}

@@ -44,6 +44,13 @@ export function decodePublicProfile(value: unknown): PublicProfile {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw invalid;
   const item = value as Record<string, unknown>;
   const keys = Object.keys(item);
+  if (item.identityOnly === true) {
+    if (keys.length !== 4 || !['id','displayName','avatarUrlPath','identityOnly'].every(key => keys.includes(key))
+      || !isUuid(item.id) || !text(item.displayName,2,80) || !(item.avatarUrlPath === null || isOwnedAvatarPath(item.avatarUrlPath,item.id))) throw invalid;
+    return {id:item.id,displayName:item.displayName,avatarUrlPath:item.avatarUrlPath,identityOnly:true,
+      memberSince:'',verified:false,level:'new',levelReasons:[],activeListings:[],activeListingCount:0,
+      approvedListingCount:0,responseMinutes:null,responseRate:null,visitsAgreed:0};
+  }
   if (keys.length !== KEYS.length || !KEYS.every(key => keys.includes(key))
     || !isUuid(item.id) || !text(item.displayName, 2, 80)
     || typeof item.memberSince !== 'string' || item.memberSince.length > 40 || !Number.isFinite(Date.parse(item.memberSince))

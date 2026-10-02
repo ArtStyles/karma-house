@@ -5,6 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { NavigationMaterial } from '../components/NavigationMaterial';
 import { PropertyImage } from '../components/PropertyImage';
 import { KarmaMap } from '../components/maps/KarmaMap';
+import { MapOnDemand } from '../components/ExploreMap';
 import { Button, EmptyState, goBack, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors, formatMoney, typefaces } from '../theme';
@@ -21,12 +22,14 @@ import { usePublicProfile } from '../profiles/usePublicProfile';
 import { listingShareUrl } from '../lib/publicSite';
 import { listingOperation, minStayText, operationBadge, priceLabel, priceSuffix, shareText, swapBalanceText, typeLabel, wantedOperationsText } from '../domain/operations';
 
+const NEEDS_CONNECTION = 'Necesitas conexión para esto.';
+
 export default function DetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { favoriteIds, toggleFavorite, isOwnListing, mode, storageError, refresh } = useMarketplace();
   const auth = useAuth();
   const messaging = useMessaging();
-  const { listing, ready } = useListing(id);
+  const { listing, ready, offline, retry } = useListing(id);
   const [contact, setContact] = useState(false);
   const [contactBusy, setContactBusy] = useState(false);
   const [contactError, setContactError] = useState('');
@@ -45,7 +48,7 @@ export default function DetailScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   useEffect(() => { setPhotoIndex(0); setError(''); setContact(false); setReport(false); }, [id]);
-  const sellerId = mode === 'cloud' && listing?.ownerId && listing.ownerId !== auth.user?.id ? listing.ownerId : undefined;
+  const sellerId = !offline && mode === 'cloud' && listing?.ownerId && listing.ownerId !== auth.user?.id ? listing.ownerId : undefined;
   // Only owners of an approved, active listing (or someone already in a chat) have a public profile.
   const seller = usePublicProfile(sellerId);
   const sellerProfile = sellerId ? seller.profile : null;
@@ -55,11 +58,12 @@ export default function DetailScreen() {
   const own = isOwnListing(listing);
   const operation = listingOperation(listing);
   const wanted = operation === 'wanted';
-  const photoCount = Math.min(listing.photos?.length || (listing.photoUri ? 1 : 0), 6);
+  const photoCount = offline ? (listing.coverThumb?.uri || listing.photoUri ? 1 : 0) : Math.min(listing.photos?.length || (listing.photoUri ? 1 : 0), 6);
   const selectedPhoto = Math.min(photoIndex, Math.max(photoCount - 1, 0));
   const moderation = listing.moderationStatus === 'draft' ? 'Borrador' : listing.moderationStatus === 'pending' ? 'En revisión' : listing.moderationStatus === 'rejected' ? 'Necesita cambios' : '';
   async function toggle() {
     if (busy || !listing || !auth.ready) return;
+    if (offline) { setError(NEEDS_CONNECTION); return; }
     if (mode === 'cloud' && !auth.user) { router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } }); return; }
     setBusy(true); setError('');
     try { await toggleFavorite(listing.id); }
@@ -69,6 +73,7 @@ export default function DetailScreen() {
   async function contactSeller() {
     if (!listing || !auth.ready || contactInFlight.current) return;
     if (mode === 'demo') { setContact(true); return; }
+    if (offline) { setContactError(NEEDS_CONNECTION); return; }
     if (!auth.user) { router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } }); return; }
     contactInFlight.current = true; setContactBusy(true); setContactError('');
     const scope = contactScope;
@@ -88,6 +93,7 @@ export default function DetailScreen() {
   }
   function openReport() {
     if (!listing) return;
+    if (offline) { setError(NEEDS_CONNECTION); return; }
     if (!auth.user) { router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } }); return; }
     setReport(true);
   }
@@ -101,7 +107,7 @@ export default function DetailScreen() {
       <View style={styles.photoFrame}>
         {wanted && photoCount === 0
           ? <View style={styles.wantedHero}><Icon name="search-outline" size={40} color={colors.primary} /><Text style={styles.wantedHeroText}>Busco vivienda</Text></View>
-          : <PropertyImage listing={listing} photoIndex={selectedPhoto} style={[styles.photo, width >= 700 && styles.widePhoto]} />}
+          : <PropertyImage listing={listing} photoIndex={selectedPhoto} eager style={[styles.photo, width >= 700 && styles.widePhoto]} />}
         <View style={styles.navigation}>
           <IconButton name="chevron-back" label="Volver al catálogo" onPress={() => goBack()} style={styles.floatingButton} />
           <View style={styles.navigationTitle}><Text style={styles.navText}>{operationBadge(listing) || listing.type}</Text></View>
@@ -117,9 +123,10 @@ export default function DetailScreen() {
         </View>}
       </View>
       <View style={styles.body}>
+        {offline && <View style={{ gap: 8 }}><Notice>Sin conexión. Esta es una copia guardada; el precio y la disponibilidad pueden haber cambiado. Contactar y guardar favoritos requieren conexión.</Notice><Button label="Reintentar conexión" secondary onPress={retry} /></View>}
         {photoCount > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbnails}>
           {Array.from({ length: photoCount }, (_, index) => <Pressable key={index} accessibilityRole="button" accessibilityLabel={`Ver foto ${index + 1} de ${photoCount}`} accessibilityState={{ selected: index === selectedPhoto }} onPress={() => setPhotoIndex(index)} style={[styles.thumbnail, index === selectedPhoto && styles.thumbnailSelected]}>
-            <PropertyImage listing={listing} photoIndex={index} style={styles.thumbnailImage} />
+            <PropertyImage listing={listing} photoIndex={index} onReveal={() => setPhotoIndex(index)} style={styles.thumbnailImage} />
           </Pressable>)}
         </ScrollView>}
         <View style={styles.summary}>
@@ -170,22 +177,22 @@ export default function DetailScreen() {
           <Text accessibilityRole="header" style={styles.sectionTitle}>Comodidades</Text>
           <View style={styles.amenities}>{listing.amenities.map(value => <View key={value} style={styles.amenity}><Icon name="checkmark-circle" size={21} color={colors.primary} /><Text style={styles.amenityText}>{value}</Text></View>)}</View>
         </View>}
-        {listing.mapLocation && <View style={styles.section}>
+        {listing.mapLocation && !offline && <View style={styles.section}>
           <View style={styles.mapHeading}><Text accessibilityRole="header" style={styles.sectionTitle}>Ubicación</Text><Text style={styles.mapPrecision}>{listing.mapLocation.precision === 'approximate' ? 'Aproximada' : 'Exacta'}</Text></View>
           {/* A map inside a ScrollView must not eat the drag; the listing is read, not explored. */}
-          <View style={styles.mapFrame}><KarmaMap
+          <View style={styles.mapFrame}><MapOnDemand height={280}><KarmaMap
             interactive={false}
             style={{ height: 280 }} center={listing.mapLocation} zoom={listing.mapLocation.precision === 'approximate' ? 13 : 15}
             markers={[{ id: listing.id, coordinate: listing.mapLocation, precision: listing.mapLocation.precision }]}
             selectedMarkerId={listing.id} accessibilityLabel={`Ubicación ${listing.mapLocation.precision === 'approximate' ? 'aproximada' : 'exacta'} de ${listing.title}`}
-          /></View>
+          /></MapOnDemand></View>
           <Text style={styles.mapDescription}>{listing.mapLocation.precision === 'approximate' ? 'El área de 800 m muestra la zona de la vivienda. El punto exacto no se publica.' : 'Punto indicado por quien publica la vivienda.'}</Text>
         </View>}
         <Pressable accessibilityRole={sellerProfile ? 'button' : undefined} accessibilityLabel={sellerProfile ? `Ver el perfil de ${sellerProfile.displayName}` : undefined} disabled={!sellerProfile} onPress={() => sellerProfile && router.push(`/user/${sellerProfile.id}`)} style={({ pressed }) => [styles.seller, pressed && { opacity: .7 }]}>
           {sellerProfile ? <UserAvatar size={50} avatarUrl={seller.avatarUrl} name={sellerProfile.displayName} accessibilityLabel={`Foto de ${sellerProfile.displayName}`} /> : <View style={styles.sellerIcon}><Icon name="person" size={25} color={colors.muted} /></View>}
           <View style={styles.sellerCopy}>
             <Text style={styles.sellerTitle}>{mode === 'cloud' ? own ? 'Publicado por ti' : sellerProfile?.displayName || 'Información del anuncio' : own ? 'Tu anuncio de prueba' : 'Perfil de demostración'}</Text>
-            {sellerProfile && <View style={styles.sellerBadges}><Text style={styles.sellerLevel}>{levelLabel(sellerProfile.level)}</Text>{sellerProfile.verified && <><Icon name="shield-checkmark" size={14} color={colors.green} /><Text style={styles.sellerVerified}>Verificado por KarmaHouse</Text></>}</View>}
+            {sellerProfile && !sellerProfile.identityOnly && <View style={styles.sellerBadges}><Text style={styles.sellerLevel}>{levelLabel(sellerProfile.level)}</Text>{sellerProfile.verified && <><Icon name="shield-checkmark" size={14} color={colors.green} /><Text style={styles.sellerVerified}>Verificado por KarmaHouse</Text></>}</View>}
             <Text style={styles.sellerText}>{mode === 'cloud' ? `Publicado el ${new Date(listing.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}` : own ? 'Visible solo en este dispositivo' : 'Sin vendedor real asociado'}</Text>
           </View>
           {sellerProfile && <Icon name="chevron-forward" size={18} color={colors.muted} />}
@@ -203,7 +210,7 @@ export default function DetailScreen() {
       {contactError ? <View style={{ paddingHorizontal: 20 }}><Notice error>{contactError}</Notice></View> : null}
       <View style={styles.actionContent}>
         <View style={styles.barSummary}><Text style={styles.barLabel}>{wanted ? 'Presupuesto máximo · USD' : operation === 'swap' ? 'Valor estimado · USD' : operation === 'rent' ? `Alquiler · USD${priceSuffix(listing)}` : 'Precio de venta · USD'}</Text><Text style={styles.barPrice}>{formatMoney(listing.price)}</Text></View>
-        <Button label={own ? 'Editar anuncio' : wanted ? 'Tengo algo que encaja' : 'Contactar'} icon={own ? 'create-outline' : 'chatbubble-outline'} loading={contactBusy} disabled={!own && (!auth.ready || (Boolean(auth.user) && !messaging.ready))} onPress={() => own ? router.push(`/edit/${listing.id}`) : void contactSeller()} style={styles.contactButton} />
+        <Button label={own ? 'Editar anuncio' : wanted ? 'Tengo algo que encaja' : 'Contactar'} icon={own ? 'create-outline' : 'chatbubble-outline'} loading={contactBusy} disabled={!own && !offline && (!auth.ready || (Boolean(auth.user) && !messaging.ready))} onPress={() => own ? router.push(`/edit/${listing.id}`) : void contactSeller()} style={styles.contactButton} />
       </View>
     </SafeAreaView>
     <ReportConversationSheet visible={report} onClose={() => setReport(false)} onReport={sendReport} reasons={PROPERTY_REPORT_REASONS} title="Reportar anuncio"

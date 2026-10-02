@@ -34,6 +34,7 @@ export default function ConversationScreen() {
 }
 
 function ConversationBody({ id, userId }: { id: string; userId: string }) {
+  const auth = useAuth();
   const messaging = useMessaging();
   const { invalidateAfterBlockChange } = useNotifications();
   const active = useMessagingActivity();
@@ -233,8 +234,8 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
           <Pressable accessibilityRole="button" accessibilityLabel="Visitas y ofertas" onPress={() => { Keyboard.dismiss(); setSheet({}); }} style={({ pressed }) => [styles.plus, pressed && { opacity: 0.7 }]}>
             <Icon name="add" size={26} color={colors.primary} />
           </Pressable>
-          <TextInput accessibilityLabel="Escribe un mensaje" placeholder={composer.ready ? 'Escribe un mensaje…' : 'Recuperando borrador…'} placeholderTextColor={colors.muted} value={composer.text} onChangeText={composer.change} multiline maxLength={2000} editable={composer.ready && !busy} style={[styles.input, !conversation.canSend && styles.mutedInput]} textAlignVertical="top" />
-          <Pressable accessibilityRole="button" accessibilityLabel="Enviar mensaje" accessibilityState={{ disabled: !conversation.canSend || !composer.ready || !!busy || !composer.text.trim() }} disabled={!conversation.canSend || !composer.ready || !!busy || !composer.text.trim()} onPress={send} style={({ pressed }) => [styles.send, (!conversation.canSend || !composer.ready || !!busy || !composer.text.trim() || pressed) && styles.sendDisabled]}>
+          <TextInput accessibilityLabel="Escribe un mensaje" placeholder={auth.suspended ? 'Tu cuenta está suspendida' : composer.ready ? 'Escribe un mensaje…' : 'Recuperando borrador…'} placeholderTextColor={colors.muted} value={composer.text} onChangeText={composer.change} multiline maxLength={2000} editable={composer.ready && !busy && !auth.suspended} style={[styles.input, !conversation.canSend && styles.mutedInput]} textAlignVertical="top" />
+          <Pressable accessibilityRole="button" accessibilityLabel="Enviar mensaje" accessibilityState={{ disabled: auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim() }} disabled={auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim()} onPress={send} style={({ pressed }) => [styles.send, (auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim() || pressed) && styles.sendDisabled]}>
             {busy === 'send' ? <ActivityIndicator color={colors.white} /> : <Icon name="arrow-up" size={24} color={colors.white} />}
           </Pressable>
         </View>
