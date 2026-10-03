@@ -12,7 +12,8 @@ import { PropertyCard } from '../components/PropertyCard';
 import { ExploreMap } from '../components/ExploreMap';
 import { SelectionField } from '../components/SelectionField';
 import { Brand, Button, EmptyState, Icon, IconButton, Notice, type IconName } from '../components/ui';
-import { CatalogFilters, SORT_OPTIONS } from '../components/CatalogFilters';
+import { CatalogFilters } from '../components/CatalogFilters';
+import { CatalogSortMenu } from '../components/CatalogSortMenu';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { NotificationBell } from '../components/notifications/NotificationBell';
@@ -121,13 +122,15 @@ export default function ExploreScreen() {
               <ShortcutChip label={filters.province || 'Toda Cuba'} icon="location-outline" chevron active={!!filters.province} accessibilityLabel={`Provincia: ${filters.province || 'toda Cuba'}`} onPress={() => { if (!offline) open(); }} />} />
             {shortcuts.map(item => <ShortcutChip key={item.value} label={item.label} toggle active={shortcutActive(filters, item.value)} onPress={() => change(toggleShortcut(filters, item.value))} />)}
           </ScrollView>
-          <View style={styles.resultMeta}>
+          <View style={[styles.resultMeta, width < 400 && styles.compactMeta]}>
             <Text style={styles.resultCount}>{count}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Cambiar orden de viviendas" onPress={() => setExpanded(true)} style={styles.sort}><Text style={styles.sortText}>{SORT_OPTIONS.find(option => option.value === filters.sort)?.label}</Text><Icon name="chevron-down" size={13} color={colors.primary} /></Pressable>
-            <IconButton name="bookmark-outline" label="Guardar búsqueda" onPress={saveSearch} />
-            <Pressable accessibilityRole="button" accessibilityLabel={view === 'list' ? 'Ver en el mapa' : 'Ver en lista'} onPress={toggleView} hitSlop={{ top: 5, bottom: 5 }} style={({ pressed }) => [styles.inlineToggle, pressed && { opacity: .7 }]}>
-              <Icon name={view === 'list' ? 'map-outline' : 'list-outline'} size={16} color={colors.ink} /><Text style={styles.inlineToggleText}>{view === 'list' ? 'Mapa' : 'Lista'}</Text>
-            </Pressable>
+            <View style={[styles.metaControls, width < 400 && styles.compactMetaControls, locked]}>
+              <CatalogSortMenu value={filters.sort} onChange={sort => change({ sort })} disabled={offline} />
+              <IconButton name="bookmark-outline" label="Guardar búsqueda" onPress={saveSearch} />
+              <Pressable accessibilityRole="button" accessibilityLabel={view === 'list' ? 'Ver en el mapa' : 'Ver en lista'} accessibilityState={{ disabled: offline }} disabled={offline} onPress={toggleView} hitSlop={{ top: 5, bottom: 5 }} style={({ pressed }) => [styles.inlineToggle, pressed && { opacity: .7 }]}>
+                <Icon name={view === 'list' ? 'map-outline' : 'list-outline'} size={16} color={colors.ink} /><Text style={styles.inlineToggleText}>{view === 'list' ? 'Mapa' : 'Lista'}</Text>
+              </Pressable>
+            </View>
           </View>
           {offlineSince !== null && <View style={styles.saveNotice}>
             <Notice>{`Sin conexión. Viendo lo último que cargaste, ${snapshotAgeText(offlineSince, Date.now())}. Los filtros, la búsqueda y el mapa volverán cuando recuperes la conexión.`}</Notice>
@@ -222,9 +225,10 @@ const styles = StyleSheet.create({
   shortcutRow: { marginHorizontal: -20, marginTop: 12 }, shortcuts: { paddingHorizontal: 20, paddingVertical: 4, gap: 8 },
   shortcut: { minHeight: 38, paddingHorizontal: 14, borderRadius: 19, borderWidth: 1, borderColor: '#D9DEE6', backgroundColor: colors.white, flexDirection: 'row', alignItems: 'center', gap: 5 },
   shortcutActive: { backgroundColor: colors.softBlue, borderColor: '#A9C8EC' }, shortcutText: { fontSize: 14, color: colors.ink, fontWeight: '500' }, shortcutTextActive: { color: colors.primary, fontWeight: '600' },
-  resultMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  resultMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }, metaControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  compactMeta: { flexDirection: 'column', alignItems: 'stretch', gap: 0, marginTop: 10 },
+  compactMetaControls: { justifyContent: 'space-between' },
   resultCount: { flex: 1, fontSize: 14, color: colors.muted },
-  sort: { flexDirection: 'row', minHeight: 44, gap: 4, alignItems: 'center' }, sortText: { fontSize: 14, color: colors.primary },
   inlineToggle: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 34, paddingHorizontal: 12, borderRadius: 17, borderWidth: 1, borderColor: '#D9DEE6', backgroundColor: colors.white }, inlineToggleText: { fontSize: 14, fontWeight: '500', color: colors.ink },
   saveNotice: { gap: 8, marginBottom: 10 },
   activeFilters: { gap: 7, paddingBottom: 10 }, filterTag: { minHeight: 36, paddingHorizontal: 11, paddingVertical: 8, gap: 6, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.softBlue, borderRadius: 14 }, filterTagText: { fontSize: 13, color: colors.primary },

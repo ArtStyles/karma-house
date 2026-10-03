@@ -7,11 +7,7 @@ import { normalizeDecimalInput } from '../domain/numericInput';
 import { colors } from '../theme';
 import { Button, Icon, IconButton, Notice, Pill } from './ui';
 import { SelectionField } from './SelectionField';
-
-export const SORT_OPTIONS = [
-  { value: 'recent', label: 'Más recientes' }, { value: 'price-asc', label: 'Menor precio' },
-  { value: 'price-desc', label: 'Mayor precio' }, { value: 'area-desc', label: 'Mayor superficie' },
-] as const;
+import { SORT_OPTIONS } from '../catalog/sortOptions';
 
 /** Mounted only while open, so dismissing never mutates the applied catalogue. */
 export function CatalogFilters({ filters, total, onApply, onClose }: { filters: ListingFilters; total: number; onApply(next: ListingFilters): void; onClose(): void }) {
