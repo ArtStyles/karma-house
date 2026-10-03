@@ -1,0 +1,26 @@
+KarmaHouse para Android - instalación desde la web oficial
+
+1. Descarga KarmaHouse.apk desde https://karmahouse.vercel.app/.
+2. Abre el archivo. Si Android lo solicita, autoriza a ese navegador o a la
+   aplicación Archivos para instalar aplicaciones de esta fuente.
+3. Si Google Play Protect solicita analizar la app, acepta el análisis y espera
+   su resultado. Mantén Play Protect activado.
+4. Completa la instalación y abre KarmaHouse. Puedes revocar después el permiso
+   para instalar desde el navegador en los ajustes de Android.
+
+El aviso sobre una fuente externa indica que instalas fuera de Google Play.
+La firma del APK acredita su integridad y continuidad, no una aprobación de
+Google. Si Play Protect indica que la aplicación es dañina o bloquea su
+instalación, no fuerces la instalación: comunica el mensaje exacto y la versión
+de Android a hernandezfrankjames@gmail.com.
+
+Para actualizar, instala la nueva versión sobre la anterior. Las entregas
+oficiales conservan el mismo certificado. Si Android informa que las firmas no
+coinciden, contacta antes de desinstalar: podrías perder datos locales.
+
+Comprobación opcional en Windows PowerShell:
+Get-FileHash .\KarmaHouse.apk -Algorithm SHA256
+Compara el resultado con KarmaHouse.apk.sha256 de la misma entrega.
+
+Certificado oficial, SHA-256:
+1752d33a3fb6e45fada4e6adbbec99af851d9ae6716a73770c382c79d3356ac6
