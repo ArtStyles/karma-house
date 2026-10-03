@@ -7,6 +7,7 @@ import { createDatabaseClient } from './cloud-db.mjs';
 const root = new URL('../', import.meta.url);
 const migration = readFileSync(new URL('supabase/migrations/20261002000100_cover_thumb.sql', root), 'utf8');
 const suite = readFileSync(new URL('supabase/tests/cover_thumb.sql', root), 'utf8');
+const [beforeUpgrade, afterUpgrade] = readFileSync(new URL('supabase/tests/cover_thumb_upgrade.sql', root), 'utf8').split('-- AFTER MIGRATION');
 const commit = process.argv.includes('--commit');
 const skipMigration = process.argv.includes('--suite-only');
 const db = createDatabaseClient();
@@ -20,7 +21,13 @@ try {
   if (skipMigration) await db.query(suite);
   else if (commit) { await db.query('begin'); await db.query(migration); await db.query('commit'); console.log('migración aplicada'); await db.query(suite); }
   // The suite's own begin only warns inside this transaction; its rollback undoes the migration too.
-  else { await db.query('begin'); await db.query(migration); await db.query(suite); }
+  else {
+    await db.query('begin');
+    await db.query(beforeUpgrade);
+    await db.query(migration);
+    await db.query(afterUpgrade);
+    await db.query(suite);
+  }
   const after = await inventory();
   const unchanged = JSON.stringify(before) === JSON.stringify(after);
   console.log(JSON.stringify({ commit, before, after, inventoryUnchanged: unchanged }));

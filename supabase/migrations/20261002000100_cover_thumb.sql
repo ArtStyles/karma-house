@@ -7,6 +7,11 @@ alter table public.properties add constraint properties_cover_thumb_path check (
 ));
 create index properties_cover_thumb_path on public.properties(cover_thumb_path) where cover_thumb_path is not null;
 
+-- Preserve idempotent create/edit retries whose successful response was lost before this upgrade.
+update kh_private.property_save_requests
+set initial_payload = initial_payload || '{"coverThumbPath":null}'::jsonb,
+    last_payload = last_payload || '{"coverThumbPath":null}'::jsonb;
+
 create or replace function public.kh_save_property(p_payload jsonb) returns jsonb
 language plpgsql security definer set search_path = '' as $$
 declare
