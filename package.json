@@ -9,6 +9,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.116.0",
     "@types/geojson": "^7946.0.16",
+    "decode-uri-component": "file:./vendor/decode-uri-component",
     "expo": "~57.0.23",
     "expo-blur": "~57.0.3",
     "expo-constants": "~57.0.18",
@@ -52,5 +53,10 @@
     "export": "expo export --platform all",
     "check": "npm run typecheck && npm test"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "query-string": {
+      "decode-uri-component": "$decode-uri-component"
+    }
+  }
 }
