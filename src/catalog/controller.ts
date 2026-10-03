@@ -18,7 +18,9 @@ export function emptyCatalogState(): CatalogState {
   return { rows: [], total: 0, cursor: null, hasMore: false, ready: false, loading: false, pageError: null, searchMode: 'none' };
 }
 
-export function createCatalogController(repository: CatalogRepository) {
+export function createCatalogController(repository: CatalogRepository, options: {
+  onFirstPage?(rows: Listing[], filters: ListingFilters): void;
+} = {}) {
   let state = emptyCatalogState();
   let filters: ListingFilters | null = null;
   let generation = 0;
@@ -36,10 +38,12 @@ export function createCatalogController(repository: CatalogRepository) {
     const epoch = generation;
     const mine = ++sequence;
     const checkpoint = checkpointFor(epoch);
+    const requestedFilters = filters;
     publish({ ...state, loading: true, pageError: null });
     try {
       const page = await repository.search(filters, cursor, !append, checkpoint);
       if (epoch !== generation || mine !== sequence) return;
+      if (!append) options.onFirstPage?.(page.rows, requestedFilters);
       const rows = append
         ? [...state.rows, ...page.rows.filter((row) => !state.rows.some((seen) => seen.id === row.id))]
         : page.rows;

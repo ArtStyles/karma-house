@@ -128,3 +128,20 @@ test('subscribers are notified and can unsubscribe', async () => {
   controller.setSession();
   assert.equal(count, before, 'a stopped subscriber receives nothing further');
 });
+
+test('only an accepted first page updates the offline snapshot, including an empty result', async () => {
+  let release;
+  let call = 0;
+  const saved = [];
+  const controller = createCatalogController(stub({
+    async search() {
+      if (++call === 1) await new Promise(resolve => { release = resolve; });
+      return { rows: [], total: 0, nextCursor: null, searchMode: 'none' };
+    },
+  }), { onFirstPage: (rows, filters) => saved.push({ rows, query: filters.query }) });
+  const old = controller.setFilters({ ...defaultFilters, query: 'old' });
+  await controller.setFilters({ ...defaultFilters, query: 'new' });
+  release();
+  await old;
+  assert.deepEqual(saved, [{ rows: [], query: 'new' }]);
+});

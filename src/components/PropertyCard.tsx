@@ -10,7 +10,7 @@ import { PropertyImage } from './PropertyImage';
 import { Icon, IconButton } from './ui';
 
 /** Photo first: the image carries the card, and the text sits on the screen's own background. */
-export function PropertyCard({ listing, horizontal = false }: { listing: Listing; horizontal?: boolean }) {
+export function PropertyCard({ listing, horizontal = false, offline = false }: { listing: Listing; horizontal?: boolean; offline?: boolean }) {
   const { favoriteIds, toggleFavorite, mode } = useMarketplace();
   const { user, ready } = useAuth();
   const [error, setError] = useState('');
@@ -23,6 +23,7 @@ export function PropertyCard({ listing, horizontal = false }: { listing: Listing
   const place = `${listing.location}, ${listing.province}`;
   const facts = listingFacts(listing);
   async function toggle() {
+    if (offline) { setError('Necesitas conexión para guardar favoritos.'); return; }
     if (saving || !ready) return;
     if (mode === 'cloud' && !user) { router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } }); return; }
     setSaving(true); setError('');
