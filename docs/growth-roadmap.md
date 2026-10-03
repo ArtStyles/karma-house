@@ -1,5 +1,9 @@
 # Próximas etapas de KarmaHouse
 
+Modo ahorro de datos: implementación local verificada y migración aplicada en
+Supabase; APK 0.1.12 instalado en Pixel 7 Pro. Prueba en modo avión y medición física
+pendientes. [Estado y evidencia](data-saver-verification.md).
+
 Revisión local del 20 de septiembre de 2026. El usuario eligió visitas y ofertas dentro del chat como siguiente entrega. Este documento diferencia ese trabajo de las integraciones posteriores; no afirma que los proveedores estén configurados ni mide capacidad concurrente.
 
 La etapa 1 ya está implementada y aplicada en Supabase, con recorrido comprobado en navegador entre comprador y vendedor. Evidencia y límites: [visitas y ofertas](negotiations-verification.md). La instalación de esos controles en un teléfono sigue pendiente de un nuevo APK/build y prueba física.

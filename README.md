@@ -32,6 +32,12 @@ Con las variables públicas de Supabase configuradas, la app usa datos reales si
 
 ## Arranque
 
+El **modo ahorro de datos** ya está implementado localmente: miniaturas, catálogo
+guardado y fotos/mapas bajo demanda desde Mi espacio. La migración de miniaturas ya
+está aplicada y verificada en Supabase; el APK 0.1.12 está instalado en el Pixel 7 Pro.
+La prueba física en modo avión y la medición de consumo siguen pendientes.
+[Verificación y pasos pendientes](docs/data-saver-verification.md).
+
 Requiere Node.js 22.13 o superior (LTS recomendado).
 
 ```sh
