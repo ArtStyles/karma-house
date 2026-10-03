@@ -1,9 +1,49 @@
 # Distribución directa de KarmaHouse para Android
 
-Revisión y seguimiento del 2 de octubre de 2026. La distribución elegida es la descarga directa
+Revisión inicial del 2 de octubre y publicación del 3 de octubre de 2026. La distribución elegida es la descarga directa
 desde la página oficial, sin una cuenta de pago de Google Play.
 
-## Resultado del seguimiento
+## Publicación verificada el 3 de octubre de 2026
+
+- Release `v0.1.15`, ID `402039134`, pública y no marcada como prerelease:
+  [KarmaHouse 0.1.15 para Android](https://github.com/ArtStyles/karma-house/releases/tag/v0.1.15).
+- La carga de 83.627.967 bytes se completó mediante el cargador web de GitHub.
+  Los intentos por API habían dejado activos `starter` sin hash; se retiraron
+  únicamente esos activos incompletos después de cerrar sus transferencias.
+  El APK definitivo, ID `608530514`, tiene estado `uploaded` y digest
+  `sha256:99bbceb0bfdf1ed56d6a92ea3b29c67bb7d660414aff46af1a692288fb5db792`.
+- Se descargó el APK completo sin cabeceras de autenticación. Su tamaño y
+  SHA-256 coinciden con la entrega local. Las descargas anónimas de
+  `INSTALACION.txt` y `KarmaHouse.apk.sha256` también coinciden byte a byte.
+- Se volvió a verificar el paquete `com.karmahouse.karmahouse`, versión
+  `0.1.15` / código `16`, firma v2, Android mínimo 7 y ausencia de modo depurable.
+  La firma coincide con el certificado del APK anterior 0.1.14. El verificador
+  encontró la configuración pública real del backend dentro del bundle y no
+  encontró los valores privados ni los marcadores que cubre su comprobación.
+- El backend existente respondió HTTP 200 para salud de Auth y lectura de las
+  columnas del catálogo. `kh_search_properties` devolvió una página válida;
+  el registro por correo está habilitado. La inspección SQL con TLS, dentro de
+  una transacción de solo lectura, confirmó `cover_thumb_path`, las RPC
+  requeridas, RLS en las tablas revisadas y el bucket privado `property-photos`.
+  No se modificaron datos, cuentas ni políticas. Una ficha pública real `/p/<id>`
+  respondió HTTP 200 y conservó su enlace a la aplicación.
+- El commit web `172d579a0c9a43c5d9b75689c336275336ed561e` contiene solo
+  `web/public/index.html` y `web/README.md`; se publicó en `main`. Vercel informó
+  `success`, «Deployment has completed». La página oficial respondió HTTP 200
+  con el botón «Descargar APK» y los enlaces versionados correctos.
+- Se revisaron navegación, botones y enlaces en la web publicada en escritorio
+  (1440 px) y móvil (390 px), sin desbordamiento horizontal. La vista local
+  también pasó a 320 y 768 px. Las 19 pruebas existentes de fichas públicas
+  pasaron; `site.js` pasó la comprobación de sintaxis.
+
+Evidencia: `artifacts/distribution-audit/anonymous-download-20261003.json`,
+`upload-verified-20261003.json`, `release-public-20261003.json`,
+`backend-readonly-20261003.json`, `backend-http-20261003.json`,
+`vercel-download-20261003.json` y las capturas `download-public-*-20261003.png`.
+No se instaló de nuevo la app en un dispositivo ni se obtuvo una aprobación de
+Google Play Protect. La publicación no elimina los posibles avisos de Android.
+
+## Seguimiento del 2 de octubre de 2026
 
 Se corrigió el decodificador de enlaces, se compiló la versión **0.1.15 / 16**
 con el certificado existente y se preparó la entrega en
