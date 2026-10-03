@@ -17,7 +17,7 @@ import { setDataSaver, useDataSaver } from '../settings/useDataSaver';
 
 export default function ProfileScreen() {
   const { favoriteIds, ownListings: own, mode } = useMarketplace();
-  const { user, displayName, isAdmin, signOut, error: authError, refreshProfile } = useAuth();
+  const { user, displayName, isAdmin, isOwner, suspended, suspensionReason, signOut, error: authError, refreshProfile } = useAuth();
   const { unreadCount } = useMessaging();
   const { unreadCount: notificationUnreadCount } = useNotifications();
   const [busy, setBusy] = useState(false);
@@ -45,6 +45,8 @@ export default function ProfileScreen() {
       </View>
 
       {mode === 'cloud' && !user ? <View style={styles.accountPrompt}><AccountPrompt returnTo="/profile" /></View> : null}
+      {suspended && <Notice error>Tu cuenta está suspendida. No puedes publicar ni enviar mensajes. {suspensionReason}</Notice>}
+      {isOwner && <Notice>Tu información de cuenta es privada. Los demás solo ven tu nombre y foto de perfil.</Notice>}
       <Text style={styles.sectionLabel}>Tu actividad</Text>
       <View style={styles.group}>
         <Pressable accessibilityRole="button" accessibilityLabel={`Notificaciones, ${notificationUnreadCount} sin leer`} onPress={() => router.push('/notifications')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
@@ -130,9 +132,7 @@ export default function ProfileScreen() {
         </View>
       </>}
 
-      {isAdmin && <View style={{ marginTop: 18 }}><Button label="Revisar anuncios" secondary icon="shield-checkmark-outline" onPress={() => router.push('/admin')} /></View>}
-      {isAdmin && <View style={{ marginTop: 12 }}><Button label="Reportes de mensajes" secondary icon="flag-outline" onPress={() => router.push('/message-reports')} /></View>}
-      {isAdmin && <View style={{ marginTop: 12 }}><Button label="Reportes de anuncios" secondary icon="flag-outline" onPress={() => router.push('/property-reports')} /></View>}
+      {isAdmin && <View style={{ marginTop: 18 }}><Button label="Administración" secondary icon="shield-checkmark-outline" onPress={() => router.push('/administration')} /></View>}
       <Text style={styles.demoNote}>{mode === 'demo' ? 'Tus cambios se guardan en este dispositivo. Esta demo no incluye cuentas, mensajes ni publicaciones públicas.' : 'Conversa sobre cada vivienda sin publicar tu teléfono. Tus anuncios se revisan antes de aparecer en el catálogo.'}</Text>
       <View style={styles.legal}>
         <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.legalText}>Privacidad</Text></Pressable>

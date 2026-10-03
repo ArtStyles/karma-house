@@ -11,6 +11,7 @@ import { createAccountProfileRepository, saveAccountProfile } from './accountPro
 import { runBeforeSignOut } from '../push/signOutHooks';
 import { PushError, sessionFromAccessToken } from '../push/domain';
 import { deleteAccount } from './deleteAccount';
+import { decodeAccess, type AccountAccess } from '../admin/domain';
 
 export type AuthContextValue = {
   ready: boolean;
@@ -21,6 +22,9 @@ export type AuthContextValue = {
   hasAvatar: boolean;
   profileReady: boolean;
   isAdmin: boolean;
+  isOwner: boolean;
+  suspended: boolean;
+  suspensionReason: string | null;
   error: string | null;
   signIn(email: string, password: string): Promise<void>;
   signUp(name: string, email: string, password: string): Promise<{ needsConfirmation: boolean }>;
@@ -41,7 +45,7 @@ function client() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(!supabase);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<{ ownerId: string; displayName: string; avatarPath: string | null; avatarUrl: string | null; isAdmin: boolean } | null>(null);
+  const [profile, setProfile] = useState<{ ownerId: string; displayName: string; avatarPath: string | null; avatarUrl: string | null; isAdmin: boolean; access: AccountAccess } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const sessionRef = useRef<Session | null>(null);
   const profileRequest = useRef(0);
@@ -110,20 +114,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const [profileResult, adminResult] = await Promise.all([
         accountRepository.load(context),
-        supabase.rpc('kh_is_admin').setHeader('Authorization', `Bearer ${context.accessToken}`).abortSignal(context.signal),
+        supabase.rpc('kh_account_access').setHeader('Authorization', `Bearer ${context.accessToken}`).abortSignal(context.signal),
       ]);
       context.checkpoint();
       if (!mounted.current || request !== profileRequest.current || sessionRef.current?.user.id !== ownerId) return;
       if (adminResult.error) throw adminResult.error;
+      const access = decodeAccess(adminResult.data);
       let avatarUrl: string | null = null;
       let photoError = false;
       if (profileResult.avatarPath) { try { avatarUrl = await accountRepository.sign(profileResult.avatarPath, context); } catch { photoError = true; } }
       context.checkpoint();
       if (request !== profileRequest.current) return;
-      setProfile({ ownerId, displayName: profileResult.displayName, avatarPath: profileResult.avatarPath, avatarUrl, isAdmin: adminResult.data === true });
+      setProfile({ ownerId, displayName: profileResult.displayName, avatarPath: profileResult.avatarPath, avatarUrl, isAdmin: !access.suspended && access.role !== 'member', access });
       setError(photoError ? 'Tu perfil está disponible, pero no pudimos cargar la foto. Vuelve a actualizarlo.' : null);
     } catch {
       if (mounted.current && request === profileRequest.current && sessionRef.current?.user.id === ownerId) {
+        setProfile(null);
         setError('No se pudo cargar tu perfil. Comprueba tu conexión.');
       }
     } finally { context.release(); }
@@ -152,7 +158,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (updated.avatarPath) { try { avatarUrl = await accountRepository.sign(updated.avatarPath, context); } catch { photoError = true; } }
       context.checkpoint();
       profileRequest.current += 1;
-      setProfile(current => ({ ownerId, displayName: updated.displayName, avatarPath: updated.avatarPath, avatarUrl, isAdmin: current?.ownerId === ownerId ? current.isAdmin : false }));
+      setProfile(current => ({ ownerId, displayName: updated.displayName, avatarPath: updated.avatarPath, avatarUrl, isAdmin: current?.ownerId === ownerId ? current.isAdmin : false,
+        access: current?.ownerId === ownerId ? current.access : {role:'member',suspended:false,reason:null} }));
       setError(photoError ? 'Los cambios se guardaron. La foto se mostrará cuando puedas volver a cargar el perfil.' : null);
     } catch (cause) {
       const message = accountProfileError(cause);
@@ -250,7 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const matchingProfile = profile?.ownerId === user?.id ? profile : null;
   const metadataName = typeof user?.user_metadata?.display_name === 'string' ? user.user_metadata.display_name : '';
   const displayName = (matchingProfile?.displayName || metadataName || 'Mi cuenta').slice(0, 80);
-  const value = useMemo<AuthContextValue>(() => ({ ready, user, session, displayName, avatarUrl: matchingProfile?.avatarUrl ?? null, hasAvatar: !!matchingProfile?.avatarPath, profileReady: !!matchingProfile, isAdmin: matchingProfile?.isAdmin ?? false, error, signIn, signUp, signOut, deleteAccount: removeAccount, requestPasswordReset, updatePassword, refreshProfile, saveProfile }), [ready, user, session, displayName, matchingProfile, error, signIn, signUp, signOut, removeAccount, requestPasswordReset, updatePassword, refreshProfile, saveProfile]);
+  const value = useMemo<AuthContextValue>(() => ({ ready, user, session, displayName, avatarUrl: matchingProfile?.avatarUrl ?? null, hasAvatar: !!matchingProfile?.avatarPath, profileReady: !!matchingProfile, isAdmin: matchingProfile?.isAdmin ?? false, isOwner: matchingProfile?.access.role === 'owner', suspended: matchingProfile?.access.suspended ?? false, suspensionReason: matchingProfile?.access.reason ?? null, error, signIn, signUp, signOut, deleteAccount: removeAccount, requestPasswordReset, updatePassword, refreshProfile, saveProfile }), [ready, user, session, displayName, matchingProfile, error, signIn, signUp, signOut, removeAccount, requestPasswordReset, updatePassword, refreshProfile, saveProfile]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

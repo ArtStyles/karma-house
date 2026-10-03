@@ -192,7 +192,7 @@ export default function DetailScreen() {
           {sellerProfile ? <UserAvatar size={50} avatarUrl={seller.avatarUrl} name={sellerProfile.displayName} accessibilityLabel={`Foto de ${sellerProfile.displayName}`} /> : <View style={styles.sellerIcon}><Icon name="person" size={25} color={colors.muted} /></View>}
           <View style={styles.sellerCopy}>
             <Text style={styles.sellerTitle}>{mode === 'cloud' ? own ? 'Publicado por ti' : sellerProfile?.displayName || 'Información del anuncio' : own ? 'Tu anuncio de prueba' : 'Perfil de demostración'}</Text>
-            {sellerProfile && <View style={styles.sellerBadges}><Text style={styles.sellerLevel}>{levelLabel(sellerProfile.level)}</Text>{sellerProfile.verified && <><Icon name="shield-checkmark" size={14} color={colors.green} /><Text style={styles.sellerVerified}>Verificado por KarmaHouse</Text></>}</View>}
+            {sellerProfile && !sellerProfile.identityOnly && <View style={styles.sellerBadges}><Text style={styles.sellerLevel}>{levelLabel(sellerProfile.level)}</Text>{sellerProfile.verified && <><Icon name="shield-checkmark" size={14} color={colors.green} /><Text style={styles.sellerVerified}>Verificado por KarmaHouse</Text></>}</View>}
             <Text style={styles.sellerText}>{mode === 'cloud' ? `Publicado el ${new Date(listing.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}` : own ? 'Visible solo en este dispositivo' : 'Sin vendedor real asociado'}</Text>
           </View>
           {sellerProfile && <Icon name="chevron-forward" size={18} color={colors.muted} />}

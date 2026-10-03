@@ -15,7 +15,7 @@ export default function EditScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const { saveListing, storageError, isOwnListing, mode, refresh } = useMarketplace();
-  const { user } = useAuth();
+  const { user, isOwner } = useAuth();
   const { listing, ready } = useListing(id);
 
   const cancel = () => goBack('/my-listings');
@@ -47,7 +47,8 @@ export default function EditScreen() {
           initialDraft={toDraft(listing)}
           cloud={mode === 'cloud'}
           draftStorageKey={mode === 'cloud' && user ? `karmahouse:draft:${user.id}:${listing.id}` : undefined}
-          submitLabel={mode === 'cloud' ? 'Guardar y enviar a revisión' : 'Guardar cambios'}
+          submitLabel={mode === 'cloud' ? isOwner ? 'Guardar y publicar' : 'Guardar y enviar a revisión' : 'Guardar cambios'}
+          directPublication={isOwner}
           onCancel={cancel}
           onReloadLatest={refresh}
           onSubmit={async (draft) => {

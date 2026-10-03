@@ -35,22 +35,22 @@ export default function PublicProfileScreen() {
             <View style={styles.identityCopy}>
               <Text accessibilityRole="header" style={styles.name}>{profile.displayName}</Text>
               {profile.verified && <View style={styles.verified}><Icon name="shield-checkmark" size={16} color={colors.green} /><Text style={styles.verifiedText}>Verificado por KarmaHouse</Text></View>}
-              <Pressable accessibilityRole="button" accessibilityLabel={`Nivel ${levelLabel(profile.level)}. Ver qué significa`} onPress={() => setLevelSheet(true)} style={({ pressed }) => [styles.level, pressed && { opacity: .7 }]}>
+              {!profile.identityOnly && <Pressable accessibilityRole="button" accessibilityLabel={`Nivel ${levelLabel(profile.level)}. Ver qué significa`} onPress={() => setLevelSheet(true)} style={({ pressed }) => [styles.level, pressed && { opacity: .7 }]}>
                 <Icon name="sparkles-outline" size={15} color={colors.primary} /><Text style={styles.levelText}>{levelLabel(profile.level)}</Text><Icon name="information-circle-outline" size={15} color={colors.primary} />
-              </Pressable>
+              </Pressable>}
             </View>
           </View>
-          <View style={styles.facts}>
+          {!profile.identityOnly && <View style={styles.facts}>
             <Fact icon="calendar-outline" text={memberSinceText(profile.memberSince)} />
             {profile.responseMinutes !== null && <Fact icon="chatbubble-ellipses-outline" text={`${responseText(profile.responseMinutes)}${profile.responseRate !== null ? ` · responde al ${Math.round(profile.responseRate)} %` : ''}`} />}
             {profile.visitsAgreed > 0 && <Fact icon="walk-outline" text={profile.visitsAgreed === 1 ? '1 visita concertada' : `${profile.visitsAgreed} visitas concertadas`} />}
             <Fact icon="home-outline" text={profile.approvedListingCount === 1 ? '1 anuncio aprobado' : `${profile.approvedListingCount} anuncios aprobados`} />
-          </View>
-          {auth.isAdmin && auth.user?.id !== profile.id && <Button label={profile.verified ? 'Quitar verificación' : 'Verificar'} secondary icon="shield-checkmark-outline" onPress={() => setVerifySheet(true)} />}
-          <Text accessibilityRole="header" style={styles.section}>Sus anuncios{profile.activeListingCount ? ` · ${profile.activeListingCount}` : ''}</Text>
+          </View>}
+          {!profile.identityOnly && auth.isAdmin && auth.user?.id !== profile.id && <Button label={profile.verified ? 'Quitar verificación' : 'Verificar'} secondary icon="shield-checkmark-outline" onPress={() => setVerifySheet(true)} />}
+          {!profile.identityOnly && <><Text accessibilityRole="header" style={styles.section}>Sus anuncios{profile.activeListingCount ? ` · ${profile.activeListingCount}` : ''}</Text>
           {loading ? <ActivityIndicator color={colors.primary} style={styles.loading} />
             : listings.length ? <View style={styles.grid}>{listings.map(listing => <View key={listing.id} style={{ width: width >= 720 ? '48.8%' : '100%' }}><PropertyCard listing={listing} /></View>)}</View>
-            : <Text style={styles.muted}>Ahora no tiene anuncios activos.</Text>}
+            : <Text style={styles.muted}>Ahora no tiene anuncios activos.</Text>}</>}
         </>}
     </ScrollView>
     {profile && <Modal visible={levelSheet} transparent animationType="fade" onRequestClose={() => setLevelSheet(false)}>

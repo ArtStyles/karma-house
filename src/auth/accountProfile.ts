@@ -53,6 +53,7 @@ export function validateSignedAvatarUrl(value: string, origin: string, path: str
 export function accountProfileError(error: unknown): string {
   if (error instanceof AccountProfileError) return error.message;
   const value = error instanceof Error ? error.message : '';
+  if (/KH_ACCOUNT_SUSPENDED/.test(value)) return 'Tu cuenta está suspendida. No puedes modificar tu perfil.';
   if (/KH_ACCOUNT_CHANGED|AbortError/.test(value)) return 'La sesión cambió. Abre los ajustes con la cuenta actual.';
   if (/KH_PROFILE_NAME/.test(value)) return 'Escribe un nombre de entre 2 y 80 caracteres.';
   if (/KH_PROFILE_AVATAR/.test(value)) return 'No pudimos guardar esta foto. Elige otra y vuelve a intentarlo.';

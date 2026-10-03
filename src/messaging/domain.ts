@@ -66,6 +66,7 @@ export function acknowledgedPending(pending: PendingMessage, message: ChatMessag
 export function messagingErrorMessage(error: unknown): string {
   if (error instanceof MessagingError) return error.message;
   const message = error instanceof Error ? error.message : error && typeof error === 'object' && 'message' in error ? String(error.message) : '';
+  if (/KH_ACCOUNT_SUSPENDED/.test(message)) return 'Tu cuenta está suspendida. No puedes enviar mensajes hasta que se reactive.';
   if (/ACCOUNT_CHANGED|SESSION_CHANGED/.test(message)) return 'La sesión cambió. Abre tus mensajes con la cuenta actual.';
   if (/AUTH_REQUIRED|JWT|token.*expired|PGRST301/i.test(message)) return 'Vuelve a iniciar sesión para continuar con tus mensajes.';
   if (/REQUEST_CONFLICT|IDEMPOTENCY_CONFLICT|MESSAGE_CONFLICT|REPORT_CONFLICT/.test(message)) return 'Este envío ya existe con otro contenido. Actualiza la conversación antes de continuar.';

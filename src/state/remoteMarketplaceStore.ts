@@ -164,6 +164,7 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
 export function remoteErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message :
     error && typeof error === 'object' && 'message' in error ? String(error.message) : '';
+  if (/KH_ACCOUNT_SUSPENDED/.test(message)) return 'Tu cuenta está suspendida. No puedes publicar ni modificar anuncios.';
   if (/KH_VERSION_CONFLICT/.test(message)) return 'Este anuncio cambió en otra sesión. Actualiza el catálogo y vuelve a abrirlo antes de guardar.';
   if (/KH_REQUEST_CONFLICT/.test(message)) return 'Este borrador ya se envió con otros datos. Actualiza Mis anuncios y edita la propiedad guardada.';
   if (/KH_ACCOUNT_CHANGED/.test(message)) return 'La sesión cambió. Vuelve a abrir el formulario con tu cuenta actual.';

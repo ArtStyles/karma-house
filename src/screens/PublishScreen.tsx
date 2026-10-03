@@ -5,25 +5,26 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ListingForm from '../components/ListingForm';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { useAuth } from '../auth/AuthProvider';
-import { PageTitle } from '../components/ui';
+import { PageTitle, Notice } from '../components/ui';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors } from '../theme';
 
 export default function PublishScreen() {
   const { ready, saveListing, mode } = useMarketplace();
-  const { user } = useAuth();
+  const { user, isOwner, suspended } = useAuth();
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.header}>
         <PageTitle title="Publicar" />
       </View>
-      {mode === 'cloud' && !user ? <AccountPrompt returnTo="/publish" title="Dale un lugar a tu vivienda" description="Crea tu cuenta para publicar una vivienda y seguir su revisión." /> : ready ? (
+      {mode === 'cloud' && !user ? <AccountPrompt returnTo="/publish" title="Dale un lugar a tu vivienda" description="Crea tu cuenta para publicar una vivienda y seguir su revisión." /> : suspended ? <Notice error>Tu cuenta está suspendida. No puedes publicar anuncios hasta que se reactive.</Notice> : ready ? (
         <ListingForm
           key={user?.id ?? 'demo'}
           draftStorageKey={mode === 'cloud' && user ? `karmahouse:draft:${user.id}:new` : undefined}
           cloud={mode === 'cloud'}
-          submitLabel={mode === 'cloud' ? 'Enviar a revisión' : 'Guardar anuncio'}
+          submitLabel={mode === 'cloud' ? isOwner ? 'Publicar ahora' : 'Enviar a revisión' : 'Guardar anuncio'}
+          directPublication={isOwner}
           onSubmit={async (draft) => {
             await saveListing(draft);
           }}
