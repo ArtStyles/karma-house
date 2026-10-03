@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { BoundingBox } from '../domain/geo';
 import type { ListingFilters } from '../domain/listings';
@@ -9,6 +9,7 @@ import { KarmaMap } from './maps/KarmaMap';
 import { CUBA_BOUNDS, CUBA_CENTER, CUBA_ZOOM } from './maps/mapConfig';
 import { PropertyImage } from './PropertyImage';
 import { Button, Icon, Notice } from './ui';
+import { useDataSaverState } from '../settings/useDataSaver';
 
 /** One step past a cluster keeps its members in view instead of overshooting past them. */
 const CLUSTER_ZOOM_STEP = 2;
@@ -26,7 +27,11 @@ export function ExploreMap({ filters, withoutLocation, onShowList }: {
   // Null until the map reports its first viewport; the island box covers that first frame.
   const [region, setRegion] = useState<{ bounds: BoundingBox; zoom: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string>();
-  const { view, ready, error, retry } = useMapView(region?.bounds ?? CUBA_BOUNDS, region?.zoom ?? initialZoom, filters);
+  // Under «Ahorro de datos» nothing is read, neither tiles nor pins, until the map is asked for.
+  const [asked, setAsked] = useState(false);
+  const { enabled, ready: preferenceReady } = useDataSaverState();
+  const waiting = !preferenceReady || (enabled && !asked);
+  const { view, ready, error, retry } = useMapView(waiting ? null : region?.bounds ?? CUBA_BOUNDS, region?.zoom ?? initialZoom, filters);
   const points = view.mode === 'points' ? view.items : [];
   const selectedPoint = points.find(point => point.id === selectedId);
   // Only the tapped pin costs a round trip; the map itself never carries photos or text.
@@ -43,10 +48,12 @@ export function ExploreMap({ filters, withoutLocation, onShowList }: {
     setCamera(current => ({ center: cluster, zoom: Math.min(current.zoom + CLUSTER_ZOOM_STEP, MAX_ZOOM) }));
   }
 
+  const height = width >= 700 ? 480 : 410;
+  if (waiting) return <View style={styles.container}><View style={styles.mapFrame}><LoadMap height={height} onLoad={() => setAsked(true)} /></View></View>;
   return <View style={styles.container}>
     <View style={styles.mapFrame}>
       <KarmaMap
-        style={{ height: width >= 700 ? 480 : 410 }}
+        style={{ height }}
         center={camera.center} zoom={camera.zoom}
         markers={markers}
         selectedMarkerId={selectedPoint?.id} onMarkerPress={press}
@@ -76,8 +83,25 @@ export function ExploreMap({ filters, withoutLocation, onShowList }: {
   </View>;
 }
 
+/** Holds a map back under «Ahorro de datos» until it is asked for; otherwise renders it as is. */
+export function MapOnDemand({ height, children }: { height: number; children: ReactNode }) {
+  const [asked, setAsked] = useState(false);
+  const { enabled, ready } = useDataSaverState();
+  return !ready || (enabled && !asked) ? <LoadMap height={height} onLoad={() => setAsked(true)} /> : children;
+}
+
+function LoadMap({ height, onLoad }: { height: number; onLoad(): void }) {
+  return <View style={[styles.load, { height }]}>
+    <Icon name="map-outline" size={30} color={colors.muted} />
+    <Text style={styles.loadText}>El mapa descarga datos al moverlo.</Text>
+    <Button label="Cargar mapa" secondary icon="map-outline" onPress={onLoad} />
+  </View>;
+}
+
 const styles = StyleSheet.create({
   container: { gap: 12 }, failure: { gap: 8 },
+  load: { alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20, backgroundColor: colors.paper },
+  loadText: { fontSize: 13, lineHeight: 19, color: colors.muted, textAlign: 'center' },
   mapFrame: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: '#E1E5EB', backgroundColor: colors.white },
   card: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 20, backgroundColor: colors.white, borderWidth: 1, borderColor: '#E1E5EB' },
   photo: { width: 84, height: 84, borderRadius: 14 },

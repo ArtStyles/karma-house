@@ -4,6 +4,7 @@ import test from 'node:test';
 import { createSignedUrlCache, SIGNED_URL_SECONDS } from '../src/data/signedUrlCache.ts';
 import { createOfflineSnapshot, snapshotAgeText } from '../src/catalog/offlineSnapshot.ts';
 import { createDataSaver } from '../src/settings/dataSaver.ts';
+import * as dataSaverModule from '../src/settings/dataSaver.ts';
 import { createRowSigner } from '../src/data/rowSigner.ts';
 import { mapRemoteListing } from '../src/data/remoteMapping.ts';
 import { propertyPayload } from '../src/data/propertyPayload.ts';
@@ -308,4 +309,40 @@ test('a signing failure or a missing path is an error and nothing is cached', as
   assert.deepEqual(cache.missing(['o/r/a.jpg']), ['o/r/a.jpg']);
   const partial = { createSignedUrls: async () => ({ data: [], error: null }) };
   await assert.rejects(createRowSigner(partial, cache, now)([propertyRow('p1', ['o/r/a.jpg'])], () => {}, 'all'), /Faltan/);
+});
+
+test('media waits for the saved preference before a cold start can download', async () => {
+  assert.equal(typeof dataSaverModule.createDataSaverStore, 'function');
+  let release;
+  const storage = memoryStorage();
+  storage.getItem = () => new Promise(resolve => { release = resolve; });
+  const store = dataSaverModule.createDataSaverStore({ storage });
+  assert.deepEqual(store.getState(), { enabled: false, ready: false });
+  const hydration = store.hydrate();
+  release('1');
+  await hydration;
+  assert.deepEqual(store.getState(), { enabled: true, ready: true });
+});
+
+test('a choice during hydration wins and rapid choices persist in order', async () => {
+  assert.equal(typeof dataSaverModule.createDataSaverStore, 'function');
+  let releaseRead, releaseWrite;
+  const storage = memoryStorage();
+  storage.getItem = () => new Promise(resolve => { releaseRead = resolve; });
+  const write = storage.setItem;
+  let writes = 0;
+  storage.setItem = async (key, value) => {
+    if (++writes === 1) await new Promise(resolve => { releaseWrite = resolve; });
+    await write(key, value);
+  };
+  const store = dataSaverModule.createDataSaverStore({ storage });
+  const hydration = store.hydrate();
+  const first = store.setEnabled(true);
+  const second = store.setEnabled(false);
+  releaseRead('1');
+  await hydration;
+  assert.deepEqual(store.getState(), { enabled: false, ready: true });
+  releaseWrite();
+  await Promise.all([first, second]);
+  assert.equal(await createDataSaver({ storage: { ...storage, getItem: async key => storage.items.get(key) } }).read(), false);
 });

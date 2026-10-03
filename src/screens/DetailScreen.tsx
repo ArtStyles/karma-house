@@ -5,6 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { NavigationMaterial } from '../components/NavigationMaterial';
 import { PropertyImage } from '../components/PropertyImage';
 import { KarmaMap } from '../components/maps/KarmaMap';
+import { MapOnDemand } from '../components/ExploreMap';
 import { Button, EmptyState, goBack, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors, formatMoney, typefaces } from '../theme';
@@ -101,7 +102,7 @@ export default function DetailScreen() {
       <View style={styles.photoFrame}>
         {wanted && photoCount === 0
           ? <View style={styles.wantedHero}><Icon name="search-outline" size={40} color={colors.primary} /><Text style={styles.wantedHeroText}>Busco vivienda</Text></View>
-          : <PropertyImage listing={listing} photoIndex={selectedPhoto} style={[styles.photo, width >= 700 && styles.widePhoto]} />}
+          : <PropertyImage listing={listing} photoIndex={selectedPhoto} eager style={[styles.photo, width >= 700 && styles.widePhoto]} />}
         <View style={styles.navigation}>
           <IconButton name="chevron-back" label="Volver al catálogo" onPress={() => goBack()} style={styles.floatingButton} />
           <View style={styles.navigationTitle}><Text style={styles.navText}>{operationBadge(listing) || listing.type}</Text></View>
@@ -119,7 +120,7 @@ export default function DetailScreen() {
       <View style={styles.body}>
         {photoCount > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbnails}>
           {Array.from({ length: photoCount }, (_, index) => <Pressable key={index} accessibilityRole="button" accessibilityLabel={`Ver foto ${index + 1} de ${photoCount}`} accessibilityState={{ selected: index === selectedPhoto }} onPress={() => setPhotoIndex(index)} style={[styles.thumbnail, index === selectedPhoto && styles.thumbnailSelected]}>
-            <PropertyImage listing={listing} photoIndex={index} style={styles.thumbnailImage} />
+            <PropertyImage listing={listing} photoIndex={index} onReveal={() => setPhotoIndex(index)} style={styles.thumbnailImage} />
           </Pressable>)}
         </ScrollView>}
         <View style={styles.summary}>
@@ -173,12 +174,12 @@ export default function DetailScreen() {
         {listing.mapLocation && <View style={styles.section}>
           <View style={styles.mapHeading}><Text accessibilityRole="header" style={styles.sectionTitle}>Ubicación</Text><Text style={styles.mapPrecision}>{listing.mapLocation.precision === 'approximate' ? 'Aproximada' : 'Exacta'}</Text></View>
           {/* A map inside a ScrollView must not eat the drag; the listing is read, not explored. */}
-          <View style={styles.mapFrame}><KarmaMap
+          <View style={styles.mapFrame}><MapOnDemand height={280}><KarmaMap
             interactive={false}
             style={{ height: 280 }} center={listing.mapLocation} zoom={listing.mapLocation.precision === 'approximate' ? 13 : 15}
             markers={[{ id: listing.id, coordinate: listing.mapLocation, precision: listing.mapLocation.precision }]}
             selectedMarkerId={listing.id} accessibilityLabel={`Ubicación ${listing.mapLocation.precision === 'approximate' ? 'aproximada' : 'exacta'} de ${listing.title}`}
-          /></View>
+          /></MapOnDemand></View>
           <Text style={styles.mapDescription}>{listing.mapLocation.precision === 'approximate' ? 'El área de 800 m muestra la zona de la vivienda. El punto exacto no se publica.' : 'Punto indicado por quien publica la vivienda.'}</Text>
         </View>}
         <Pressable accessibilityRole={sellerProfile ? 'button' : undefined} accessibilityLabel={sellerProfile ? `Ver el perfil de ${sellerProfile.displayName}` : undefined} disabled={!sellerProfile} onPress={() => sellerProfile && router.push(`/user/${sellerProfile.id}`)} style={({ pressed }) => [styles.seller, pressed && { opacity: .7 }]}>

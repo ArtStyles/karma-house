@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Icon, IconButton, Notice, PageTitle, type IconName } from '../components/ui';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
@@ -13,6 +13,7 @@ import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { AccountMenu } from '../components/account/AccountMenu';
 import { useSavedSearches } from '../searches/useSavedSearches';
+import { setDataSaver, useDataSaver } from '../settings/useDataSaver';
 
 export default function ProfileScreen() {
   const { favoriteIds, ownListings: own, mode } = useMarketplace();
@@ -23,6 +24,7 @@ export default function ProfileScreen() {
   const [error, setError] = useState('');
   const { listings: favorites } = useFavoriteListings();
   const savedSearches = useSavedSearches();
+  const dataSaver = useDataSaver();
   // Tabs stay mounted: recount alerts saved or removed elsewhere when Mi espacio comes back into view.
   const refreshSearches = savedSearches.refresh;
   const seen = useRef(false);
@@ -96,6 +98,18 @@ export default function ProfileScreen() {
         <Text style={styles.publishTitle}>Dale un lugar a tu vivienda.</Text>
         <Text style={styles.publishText}>Añade los detalles, elige sus mejores fotos y prepara tu {own.length ? 'próximo' : 'primer'} anuncio.</Text>
         <Button label={mode === 'cloud' ? 'Publicar mi vivienda' : 'Crear anuncio de prueba'} onPress={() => router.push('/publish')} icon="add-outline" />
+      </View>
+
+      {/* A device preference: it applies signed in or not, in the demo too. */}
+      <Text style={styles.sectionLabel}>Preferencias</Text>
+      <View style={styles.group}>
+        <View style={styles.row}>
+          <View style={styles.rowIcon}><Icon name="cellular-outline" size={21} color={colors.primary} /></View>
+          <View style={styles.rowBody}>
+            <View style={styles.rowCopy}><Text style={styles.rowTitle}>Ahorro de datos</Text><Text style={styles.rowDescription}>Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas.</Text></View>
+            <Switch accessibilityLabel="Ahorro de datos" accessibilityHint="Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas." value={dataSaver} onValueChange={setDataSaver} trackColor={{ false: '#DADCE2', true: colors.primary }} thumbColor={colors.white} ios_backgroundColor="#DADCE2" />
+          </View>
+        </View>
       </View>
 
       {/* Explorar no longer carries the account menu, so the account lives here in plain sight. */}
