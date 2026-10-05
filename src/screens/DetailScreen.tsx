@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NavigationMaterial } from '../components/NavigationMaterial';
@@ -23,6 +23,7 @@ import { listingShareUrl } from '../lib/publicSite';
 import { listingOperation, minStayText, operationBadge, priceLabel, priceSuffix, shareText, swapBalanceText, typeLabel, wantedOperationsText } from '../domain/operations';
 import {useListingManagement} from '../transfers/useListingManagement';
 import { listingPresentation } from '../catalog/presentation';
+import { pendingIntentStore } from '../auth/pendingIntentStorage';
 
 const NEEDS_CONNECTION = 'Necesitas conexión para esto.';
 
@@ -45,6 +46,17 @@ export default function DetailScreen() {
   useEffect(() => { setContactBusy(false); setContactError(''); contactInFlight.current = false; }, [contactScope]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [intentNotice, setIntentNotice] = useState('');
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    setIntentNotice('');
+    if (auth.ready && auth.user) void pendingIntentStore.take(`/property/${id}`, () => active).then(intent => {
+      if (active && intent && intent.kind !== 'search') setIntentNotice(intent.kind === 'favorite'
+        ? 'Volviste a esta vivienda. Toca el corazón para confirmar el favorito.'
+        : 'Volviste a esta vivienda. Revisa su responsable y toca Contactar para iniciar la conversación.');
+    });
+    return () => { active = false; };
+  }, [id, auth.ready, auth.user?.id]));
   const [photoIndex, setPhotoIndex] = useState(0);
   const [report, setReport] = useState(false);
   const { width } = useWindowDimensions();
@@ -66,9 +78,13 @@ export default function DetailScreen() {
   async function toggle() {
     if (busy || !listing || !auth.ready) return;
     if (offline) { setError(NEEDS_CONNECTION); return; }
-    if (mode === 'cloud' && !auth.user) { router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } }); return; }
     setBusy(true); setError('');
-    try { await toggleFavorite(listing.id); }
+    try {
+      if (mode === 'cloud' && !auth.user) {
+        await pendingIntentStore.write({ kind: 'favorite', propertyId: listing.id });
+        router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } });
+      } else { setIntentNotice(''); await toggleFavorite(listing.id); }
+    }
     catch { setError('No pudimos guardar tu favorito. Inténtalo de nuevo.'); }
     finally { setBusy(false); }
   }
@@ -76,10 +92,15 @@ export default function DetailScreen() {
     if (!listing || !auth.ready || contactInFlight.current) return;
     if (mode === 'demo') { setContact(true); return; }
     if (offline) { setContactError(NEEDS_CONNECTION); return; }
-    if (!auth.user) { router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } }); return; }
     contactInFlight.current = true; setContactBusy(true); setContactError('');
     const scope = contactScope;
     try {
+      if (!auth.user) {
+        await pendingIntentStore.write({ kind: 'contact', propertyId: listing.id });
+        router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } });
+        return;
+      }
+      setIntentNotice('');
       const expected=management.value?.managerId??listing.ownerId;
       const current=await management.refresh();
       if(!current?.contactAvailable)throw Error('Este anuncio ya no está disponible para contacto.');
@@ -110,6 +131,7 @@ export default function DetailScreen() {
     await createPropertyReportRepository(supabase, { actorId: session.user.id, accessToken: session.access_token }).report(listing.id, reason, details, clientReportId);
   }
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    {!!intentNotice && <View style={{ padding: 16 }}><Notice>{intentNotice}</Notice></View>}
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <View style={styles.photoFrame}>
         {wanted && photoCount === 0

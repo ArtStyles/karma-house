@@ -1,9 +1,11 @@
-import { router, useLocalSearchParams, type Href } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { safeReturnTo } from '../auth/callback';
+import { pendingIntentDestination, pendingIntentReason, type PendingIntent } from '../auth/pendingIntent';
+import { pendingIntentStore } from '../auth/pendingIntentStorage';
 import { Brand, Button, goBack, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { colors, typefaces } from '../theme';
@@ -28,10 +30,32 @@ export default function AuthScreen() {
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmationRef = useRef<TextInput>(null);
+  const [intent, setIntent] = useState<PendingIntent | null>(null);
+  const keepContext = useRef(false);
+  const currentUser = useRef(auth.user);
+  currentUser.current = auth.user;
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    keepContext.current = false;
+    void pendingIntentStore.read().then(value => {
+      if (active) setIntent(value && pendingIntentDestination(value) === returnTo ? value : null);
+    });
+    return () => {
+      active = false;
+      if (!keepContext.current && !currentUser.current) void pendingIntentStore.clear().catch(() => undefined);
+    };
+  }, [returnTo]));
+
+  function continueToDestination() { keepContext.current = true; router.replace(returnTo); }
+  async function cancel(explore = false) {
+    if (submitting) return;
+    await pendingIntentStore.clear().catch(() => undefined);
+    if (explore) router.replace('/'); else goBack('/profile');
+  }
 
   useEffect(() => { setMode(initialMode(params.mode)); }, [params.mode]);
   useEffect(() => {
-    if (auth.ready && auth.user && mode !== 'recovery' && mode !== 'forgot' && !submitting && !notice) router.replace(returnTo);
+    if (auth.ready && auth.user && mode !== 'recovery' && mode !== 'forgot' && !submitting && !notice) continueToDestination();
   }, [auth.ready, auth.user, mode, returnTo, submitting, notice]);
 
   function changeMode(next: Mode) {
@@ -45,13 +69,13 @@ export default function AuthScreen() {
     try {
       if (mode === 'signup') {
         const { needsConfirmation } = await auth.signUp(name, email, password);
-        if (needsConfirmation) { setNotice('confirmation'); setPassword(''); } else router.replace(returnTo);
+        if (needsConfirmation) { setNotice('confirmation'); setPassword(''); } else continueToDestination();
       } else if (mode === 'forgot') {
         await auth.requestPasswordReset(email); setNotice('reset');
       } else if (mode === 'recovery') {
         if (password !== confirmation) throw new Error('Las contraseñas no coinciden.');
         await auth.updatePassword(password); setNotice('updated'); setPassword(''); setConfirmation('');
-      } else { await auth.signIn(email, password); router.replace(returnTo); }
+      } else { await auth.signIn(email, password); continueToDestination(); }
     } catch (error) {
       setIssue(error instanceof Error ? error.message : 'No se pudo completar la operación. Inténtalo de nuevo.');
     } finally { setSubmitting(false); }
@@ -66,7 +90,7 @@ export default function AuthScreen() {
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         <View style={styles.topBar}>
-          <IconButton name="chevron-back" label="Volver" onPress={() => mode === 'forgot' ? changeMode('signin') : goBack('/profile')} />
+          <IconButton name="chevron-back" label="Volver" onPress={() => mode === 'forgot' ? changeMode('signin') : void cancel()} />
           <Brand height={22} />
           <View style={styles.backSpace} />
         </View>
@@ -74,10 +98,11 @@ export default function AuthScreen() {
           <View style={styles.symbol}><Icon name={mode === 'forgot' || mode === 'recovery' ? 'key-outline' : 'person-outline'} size={29} color={colors.primary} /></View>
           <Text accessibilityRole="header" style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
+          {intent && (mode === 'signin' || mode === 'signup') && <View style={{ marginTop: 18 }}><Notice>{pendingIntentReason(intent)}</Notice></View>}
 
           {!isSupabaseConfigured ? <View style={styles.form}>
             <Notice>Estás en la demostración local. Las cuentas estarán disponibles cuando se conecte el servicio.</Notice>
-            <Button label="Seguir explorando" onPress={() => router.replace('/')} />
+            <Button label="Seguir explorando" onPress={() => void cancel(true)} />
           </View> : !auth.ready ? <ActivityIndicator style={{ marginTop: 36 }} size="large" color={colors.primary} /> : notice ? <View style={styles.successCard}>
             <View style={styles.successIcon}><Icon name={notice === 'updated' ? 'checkmark' : 'mail-outline'} color={colors.green} size={26} /></View>
             <Text style={styles.cardTitle}>{notice === 'updated' ? 'Contraseña actualizada' : 'Revisa tu correo'}</Text>
@@ -108,7 +133,7 @@ export default function AuthScreen() {
             {mode === 'signup' && <Text style={styles.helper}>Al crear tu cuenta aceptas los <Text accessibilityRole="link" style={styles.linkText} onPress={() => void Linking.openURL(TERMS_URL)}>Términos de uso</Text> y la <Text accessibilityRole="link" style={styles.linkText} onPress={() => void Linking.openURL(PRIVACY_URL)}>Política de privacidad</Text>.</Text>}
             {mode === 'forgot' && <Button label="Volver a entrar" secondary disabled={submitting} onPress={() => changeMode('signin')} />}
           </View>}
-          <Pressable accessibilityRole="button" onPress={() => router.replace('/')} disabled={submitting} style={styles.explore}><Text style={styles.exploreText}>Seguir explorando</Text><Icon name="arrow-forward" size={17} color={colors.muted} /></Pressable>
+          <Pressable accessibilityRole="button" onPress={() => void cancel(true)} disabled={submitting} style={styles.explore}><Text style={styles.exploreText}>Seguir explorando</Text><Icon name="arrow-forward" size={17} color={colors.muted} /></Pressable>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

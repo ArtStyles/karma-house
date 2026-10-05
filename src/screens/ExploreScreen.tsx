@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activeFilterCount, defaultFilters, shortcutActive, toggleShortcut, type ListingFilters, type Shortcut } from '../domain/listings';
@@ -19,7 +19,8 @@ import { useNotifications } from '../notifications/NotificationsProvider';
 import { NotificationBell } from '../components/notifications/NotificationBell';
 import { SaveSearchSheet } from '../components/SaveSearchSheet';
 import { useAuth } from '../auth/AuthProvider';
-import { fromSavedFilters } from '../searches/domain';
+import { fromSavedFilters, toSavedFilters } from '../searches/domain';
+import { pendingIntentStore } from '../auth/pendingIntentStorage';
 import { useSavedSearches } from '../searches/useSavedSearches';
 
 const shortcuts: { value: Shortcut; label: string }[] = [
@@ -44,11 +45,30 @@ export default function ExploreScreen() {
   const { search } = useLocalSearchParams<{ search?: string }>();
   const [saving, setSaving] = useState(false);
   const [saveNotice, setSaveNotice] = useState<'demo' | 'saved' | null>(null);
-  function saveSearch() {
+  const [intentError, setIntentError] = useState('');
+  const intentBusy = useRef(false);
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    if (auth.ready && auth.user) void pendingIntentStore.take('/', () => active).then(intent => {
+      if (!active || intent?.kind !== 'search') return;
+      setFilters({ ...fromSavedFilters(intent.filters), sort: intent.sort });
+      setSaveNotice(null); setSaving(true);
+    });
+    return () => { active = false; };
+  }, [auth.ready, auth.user?.id]));
+  async function saveSearch() {
     if (offline) return;
     if (mode === 'demo') return setSaveNotice('demo');
-    if (!auth.ready) return;
-    if (!auth.user) return router.push({ pathname: '/auth', params: { returnTo: '/' } });
+    if (!auth.ready || intentBusy.current) return;
+    if (!auth.user) {
+      intentBusy.current = true; setIntentError('');
+      try {
+        await pendingIntentStore.write({ kind: 'search', filters: toSavedFilters(filters), sort: filters.sort });
+        router.push({ pathname: '/auth', params: { returnTo: '/' } });
+      } catch { setIntentError('No pudimos conservar la búsqueda. Inténtalo de nuevo.'); }
+      finally { intentBusy.current = false; }
+      return;
+    }
     setSaveNotice(null); setSaving(true);
   }
   const [chosenView, setView] = useState<'list' | 'map'>('list');
@@ -173,6 +193,7 @@ export default function ExploreScreen() {
       {expanded && <CatalogFilters filters={filters} onApply={setFilters} onClose={() => setExpanded(false)} />}
       {saving && <SaveSearchSheet filters={filters} onClose={() => setSaving(false)} onSaved={() => { setSaving(false); setSaveNotice('saved'); }} />}
       {!!search && mode === 'cloud' && !!auth.user && <SavedSearchParam key={search} id={search} onApply={setFilters} />}
+      {!!intentError && <Notice error>{intentError}</Notice>}
     </SafeAreaView>
   );
 }

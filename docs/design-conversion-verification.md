@@ -33,3 +33,11 @@ Capturas en `C:/Users/ACER NITRO/.codex/visualizations/2026/10/05/01a10caa-337d-
 Continuar acceso contextual, tarjetas, Mi espacio, mapa y accesibilidad según el plan. El canal real de recepción de publicaciones asistidas y la activación remota siguen pendientes de la operación; no se inventará un destino de contacto. Los cambios locales de la portada Vite no se copiaron desde otro checkout.
 
 La evidencia de navegador no prueba Android, teclado nativo, botón Atrás, TalkBack, texto ampliado del sistema ni rendimiento. Tampoco prueba despliegue público, Supabase real ni apertura de enlaces con/sin app instalada. Estas verificaciones quedan explícitamente pendientes.
+
+## Acceso contextual
+
+La intención local conserva solo tipo, ID validado o filtros y orden durante treinta minutos. Lectura corrupta o vencida devuelve ningún contexto; destinos externos siguen rechazados por el contrato original de autenticación. La restauración consume el contexto una vez, solo para la pantalla activa y el destino coincidente. Salir o cambiar de cuenta limpia lo pendiente. No se almacenan credenciales ni mensajes.
+
+En el servidor sintético se comprobó el recorrido invitado con máximo de 1 USD y orden descendente: el motivo permanece al alternar acceso/registro, entrar recupera ambos valores y abre la hoja para confirmar. Contactar vuelve a la misma ficha mostrando la acción pendiente; no inicia una conversación. El motivo del favorito se muestra y «Seguir explorando» elimina el contexto. El acceso ordinario posterior vuelve a su explicación normal.
+
+Pruebas nuevas RED→GREEN de consumo único y cambio de foco; TypeScript y 401 pruebas completas pasan. La confirmación por correo y la expiración se verifican en funciones puras; no se solicitó un correo real ni se completó un registro remoto. Capturas: `phase2-auth-search-390.png`, `phase2-search-restored-390.png`, `phase2-auth-contact-390.png`, `phase2-contact-restored-390.png`, en la carpeta de evidencia indicada arriba.

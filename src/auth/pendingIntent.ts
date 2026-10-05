@@ -3,6 +3,7 @@ import type { ListingFilters } from '../domain/listings.ts';
 import { isUuid } from '../messaging/domain.ts';
 import { decodeFilters } from '../searches/domain.ts';
 import type { SavedSearchFilters } from '../searches/types.ts';
+import { safeReturnTo } from './callback.ts';
 
 export type PendingIntent = { kind: 'contact' | 'favorite'; propertyId: string }
   | { kind: 'search'; filters: SavedSearchFilters; sort: ListingFilters['sort'] };
@@ -23,6 +24,19 @@ function decodeIntent(value: unknown): PendingIntent {
 export function pendingIntentDestination(intent: PendingIntent): string {
   const value = decodeIntent(intent);
   return value.kind === 'search' ? '/' : `/property/${value.propertyId}`;
+}
+
+export function pendingIntentReturnTo(intent: PendingIntent | null, requested: unknown, emailConfirmation = false): string {
+  const destination = safeReturnTo(requested);
+  if (!intent) return destination;
+  const pending = pendingIntentDestination(intent);
+  return destination === pending || (emailConfirmation && destination === '/profile') ? pending : destination;
+}
+
+export function pendingIntentReason(intent: PendingIntent): string {
+  return intent.kind === 'search' ? 'Entra o crea una cuenta para guardar esta búsqueda. Conservaremos tus filtros y el orden para que los revises antes de guardarla.'
+    : intent.kind === 'favorite' ? 'Entra o crea una cuenta para guardar esta vivienda. Volverás a su ficha para confirmar el favorito.'
+      : 'Entra o crea una cuenta para contactar sobre esta vivienda. Volverás a su ficha para iniciar la conversación.';
 }
 
 /** Saves context only. Reading or restoring it never writes a favourite, search or message. */
@@ -58,6 +72,13 @@ export function createPendingIntentStore({ storage, now, key = '@karma-house/pen
       cleared = false;
     }); },
     read() { return serialize(read); },
+    take(destination: string, isCurrent: () => boolean = () => true) { return serialize(async () => {
+      const intent = await read();
+      if (!isCurrent() || !intent || pendingIntentDestination(intent) !== destination) return null;
+      cleared = true;
+      await storage.removeItem(key).catch(() => undefined);
+      return intent;
+    }); },
     clear() { return serialize(async () => { cleared = true; await storage.removeItem(key); }); },
   };
 }

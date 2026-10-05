@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { isNewListing, type Listing } from '../domain/listings';
 import { listingFacts, operationBadge, priceLabel, priceSuffix } from '../domain/operations';
 import { useAuth } from '../auth/AuthProvider';
+import { pendingIntentStore } from '../auth/pendingIntentStorage';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors, formatMoney } from '../theme';
 import { PropertyImage } from './PropertyImage';
@@ -25,9 +26,13 @@ export function PropertyCard({ listing, horizontal = false, offline = false }: {
   async function toggle() {
     if (offline) { setError('Necesitas conexión para guardar favoritos.'); return; }
     if (saving || !ready) return;
-    if (mode === 'cloud' && !user) { router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } }); return; }
     setSaving(true); setError('');
-    try { await toggleFavorite(listing.id); } catch { setError('No se pudo guardar el favorito. Inténtalo de nuevo.'); } finally { setSaving(false); }
+    try {
+      if (mode === 'cloud' && !user) {
+        await pendingIntentStore.write({ kind: 'favorite', propertyId: listing.id });
+        router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } });
+      } else await toggleFavorite(listing.id);
+    } catch { setError('No se pudo guardar el favorito. Inténtalo de nuevo.'); } finally { setSaving(false); }
   }
   return <View style={horizontal && styles.horizontalCard}>
     <Pressable accessibilityRole="button" accessibilityLabel={`Ver ${listing.title}, ${priceLabel(listing)} ${formatMoney(listing.price)} USD${priceSuffix(listing)}, ${place}`} onPress={() => router.push(`/property/${listing.id}`)} style={({ pressed }) => [horizontal && styles.horizontal, pressed && { opacity: .85 }]}>

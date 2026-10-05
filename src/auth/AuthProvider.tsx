@@ -12,6 +12,7 @@ import { runBeforeSignOut } from '../push/signOutHooks';
 import { PushError, sessionFromAccessToken } from '../push/domain';
 import { deleteAccount } from './deleteAccount';
 import { decodeAccess, type AccountAccess } from '../admin/domain';
+import { pendingIntentStore } from './pendingIntentStorage';
 
 export type AuthContextValue = {
   ready: boolean;
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const acceptSession = useCallback((next: Session | null) => {
     if (!mounted.current) return;
     if (sessionRef.current?.user.id !== next?.user.id) {
+      if (sessionRef.current) void pendingIntentStore.clear().catch(() => undefined);
       profileEpoch.current += 1;
       for (const controller of profileControllers.current) controller.abort();
       profileControllers.current.clear();

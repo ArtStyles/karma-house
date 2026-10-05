@@ -108,21 +108,23 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 
 ### Tarea 4: operaciones visibles y búsquedas sin coincidencias
 
-**Estado:** operación visible y vacío con guardado implementados y revisados a 320, 390 y 1280 px. El retorno del invitado depende de terminar la tarea 5.
+**Estado:** operación visible y vacío con guardado implementados y revisados a 320, 390 y 1280 px. El retorno invitado ya conserva criterios y orden; Android y despliegue siguen pendientes.
 
 **Archivos:** `src/screens/ExploreScreen.tsx`, `src/components/CatalogFilters.tsx`, `src/domain/listings.ts`, `src/domain/listingOptions.ts`, `src/components/SaveSearchSheet.tsx`; `tests/explore-shortcuts.test.ts`, `tests/operations.test.ts`, `tests/search-alerts.test.ts`.
 
 **Decisión:** separar la operación de provincia, tipo y presupuesto. Usar una selección visible que permita reconocer «Venta y permuta», «Venta», «Permuta», «Alquiler» y «Busco» sin depender del desplazamiento horizontal actual. Mantener los valores `offers`, `sale`, `swap`, `rent`, `wanted` y su semántica.
 
-- [ ] Verificar con pruebas que `offers` sigue incluyendo venta y permuta, y que alquiler y «Busco» aplican sus operaciones reales. No convertir «Busco» en una categoría genérica de compradores.
+- [x] Verificar con pruebas que `offers` sigue incluyendo venta y permuta, y que alquiler y «Busco» aplican sus operaciones reales. No convertir «Busco» en una categoría genérica de compradores.
 - [x] Reorganizar el encabezado móvil y los accesos a filtros. El control de operación debe mostrar su valor y abrir todas las opciones; los atajos de tipo/presupuesto deben mantener estados inequívocos.
 - [x] Añadir «Guardar esta búsqueda» al vacío con filtros, junto a la acción de ampliarlos. Reutilizar `SaveSearchSheet` y las alertas existentes; no crear otro servicio de avisos.
 - [ ] Verificar operaciones, combinaciones con provincia/tipo, limpieza de filtros, y guardado de criterios con cero coincidencias. El guardado invitado queda completo con la tarea 5.
-- [ ] Ejecutar `node --experimental-strip-types --test tests/explore-shortcuts.test.ts tests/operations.test.ts tests/search-alerts.test.ts`, después `npm run check`; revisar 320, 390 y 1280 px.
+- [x] Ejecutar `node --experimental-strip-types --test tests/explore-shortcuts.test.ts tests/operations.test.ts tests/search-alerts.test.ts`, después `npm run check`; revisar 320, 390 y 1280 px.
 
 **Aceptación:** alquiler y «Busco» son descubribles en móvil; una búsqueda vacía ofrece una vía útil de retorno sin inventar resultados.
 
 ### Tarea 5: acceso contextual y recuperación de la búsqueda
+
+**Estado:** implementación local y recorrido sintético comprobados; confirmación de correo real y validación nativa pendientes. TypeScript y 401 pruebas pasan.
 
 **Archivos:** `src/screens/AuthScreen.tsx`, `src/screens/DetailScreen.tsx`, `src/components/PropertyCard.tsx`, `src/screens/ExploreScreen.tsx`, `src/auth/AuthProvider.tsx`, `src/searches/domain.ts` si hace falta exponer su validador; nuevo `src/auth/pendingIntent.ts` y `tests/auth-intent.test.ts`; conservar `src/auth/callback.ts` y `tests/auth.test.ts`.
 
@@ -130,12 +132,12 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 
 **Contrato propuesto:** `createPendingIntentStore({ storage, now })` expone `write(intent)`, `read()` y `clear()`. `intent` contiene `kind`, el ID del anuncio o los filtros validados con el dominio de búsquedas, y caduca a los 30 minutos. Para la búsqueda, guardar `SavedSearchFilters` más `sort` validado contra las cuatro opciones existentes: `toSavedFilters` omite el orden y no basta por sí solo para restaurar la vista. Leer no ejecuta la acción. Limpiar tras restaurarla, cancelarla, salir de la cuenta o eliminarla. Datos corruptos o vencidos se descartan sin impedir el acceso normal.
 
-- [ ] Escribir primero pruebas de round-trip de los filtros y orden, vencimiento, contenido corrupto, tipos/IDs inválidos y limpieza. Mantener pruebas de rechazo de destinos externos y parámetros ambiguos en `tests/auth.test.ts`.
-- [ ] Capturar la intención antes de abrir acceso y mostrar un motivo concreto: «Entra para consultar esta vivienda», «Entra para guardar esta vivienda» o «Entra para guardar esta búsqueda». El resumen de una vivienda debe provenir del anuncio leído, no de texto confiado de la URL.
-- [ ] Tras acceder, restaurar la búsqueda y abrir su hoja de guardado, o volver al anuncio con la acción reconocible. Guardar búsqueda, favorito o enviar mensaje requiere la confirmación habitual; no hacerlo automáticamente por el mero acceso.
-- [ ] Mantener este contexto al alternar acceso/registro. Si la confirmación por correo vuelve después de vencer la intención, mostrar un destino interno válido sin repetir acciones ni aparentar haber conservado el borrador.
+- [x] Escribir primero pruebas de round-trip de los filtros y orden, vencimiento, contenido corrupto, tipos/IDs inválidos y limpieza. Mantener pruebas de rechazo de destinos externos y parámetros ambiguos en `tests/auth.test.ts`.
+- [x] Capturar la intención antes de abrir acceso y mostrar un motivo concreto: «Entra para consultar esta vivienda», «Entra para guardar esta vivienda» o «Entra para guardar esta búsqueda». El resumen de una vivienda debe provenir del anuncio leído, no de texto confiado de la URL.
+- [x] Tras acceder, restaurar la búsqueda y abrir su hoja de guardado, o volver al anuncio con la acción reconocible. Guardar búsqueda, favorito o enviar mensaje requiere la confirmación habitual; no hacerlo automáticamente por el mero acceso.
+- [x] Mantener este contexto al alternar acceso/registro. Si la confirmación por correo vuelve después de vencer la intención, mostrar un destino interno válido sin repetir acciones ni aparentar haber conservado el borrador.
 - [ ] Probar acceso correcto, error y reintento, registro con confirmación, cancelación y cambio de sesión. Revisar retorno con botón Atrás y teclado en Android.
-- [ ] Ejecutar `node --experimental-strip-types --test tests/auth-intent.test.ts tests/auth.test.ts tests/router-query-security.test.ts tests/search-alerts.test.ts`, después `npm run check`, y verificar el recorrido completo renderizado.
+- [x] Ejecutar `node --experimental-strip-types --test tests/auth-intent.test.ts tests/auth.test.ts tests/router-query-security.test.ts tests/search-alerts.test.ts`, después `npm run check`, y verificar el recorrido completo renderizado.
 
 **Aceptación:** guardar una búsqueda como invitado conserva exactamente sus criterios al acceder; contactar una vivienda explica el motivo del acceso y vuelve al mismo anuncio, sin acciones duplicadas.
 

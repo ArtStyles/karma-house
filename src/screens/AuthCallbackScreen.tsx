@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { completeAuthCallback } from '../auth/completeCallback';
+import { pendingIntentStore } from '../auth/pendingIntentStorage';
+import { pendingIntentReturnTo } from '../auth/pendingIntent';
 import { Button, Icon, Notice } from '../components/ui';
 import { colors } from '../theme';
 
@@ -15,10 +17,11 @@ export default function AuthCallbackScreen() {
     const url = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.href : linkingUrl;
     if (!url) return;
     setError(null);
-    void completeAuthCallback(url).then(result => {
+    void completeAuthCallback(url).then(async result => {
+      const intent = result.recovery ? null : await pendingIntentStore.read();
       if (!alive) return;
       // Replace removes email credentials from the browser URL and its current history entry.
-      router.replace(result.recovery ? { pathname: '/auth', params: { mode: 'recovery' } } : result.returnTo as Href);
+      router.replace(result.recovery ? { pathname: '/auth', params: { mode: 'recovery' } } : pendingIntentReturnTo(intent, result.returnTo, true) as Href);
     }).catch(cause => {
       if (!alive) return;
       if (Platform.OS === 'web' && typeof window !== 'undefined') window.history.replaceState(window.history.state, '', '/auth/callback');

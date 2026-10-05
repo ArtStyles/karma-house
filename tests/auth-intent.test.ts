@@ -1,7 +1,7 @@
 // @ts-nocheck -- injected local storage and clock; no Auth or native runtime.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createPendingIntentStore, pendingIntentDestination } from '../src/auth/pendingIntent.ts';
+import { createPendingIntentStore, pendingIntentDestination, pendingIntentReturnTo } from '../src/auth/pendingIntent.ts';
 import { defaultFilters } from '../src/domain/listings.ts';
 import { fromSavedFilters, toSavedFilters } from '../src/searches/domain.ts';
 
@@ -75,4 +75,29 @@ test('clear removes context and queued writes cannot reappear after cancellation
 test('an unreadable store does not prevent ordinary access', async () => {
   const store = createPendingIntentStore({ storage: { async getItem() { throw Error('disk'); }, async removeItem() {} }, now: Date.now });
   assert.equal(await store.read(), null);
+});
+
+test('restoration consumes matching context once and leaves another screen alone', async () => {
+  const { store } = setup();
+  const intent = { kind: 'contact', propertyId: id };
+  await store.write(intent);
+  assert.equal(await store.take('/'), null);
+  const results = await Promise.all([store.take(`/property/${id}`), store.take(`/property/${id}`)]);
+  assert.deepEqual(results, [intent, null]);
+  assert.equal(await store.read(), null);
+});
+
+test('leaving a screen during the storage read preserves context for the active destination', async () => {
+  const fixture = setup();
+  await fixture.store.write({ kind: 'contact', propertyId: id });
+  assert.equal(await fixture.store.take(`/property/${id}`, () => false), null);
+  assert.ok(await fixture.store.read());
+});
+
+test('email confirmation uses validated local context while recovery and explicit unrelated routes remain unchanged', () => {
+  const intent = { kind: 'favorite', propertyId: id };
+  assert.equal(pendingIntentReturnTo(intent, '/profile', true), `/property/${id}`);
+  assert.equal(pendingIntentReturnTo(intent, '/favorites', true), '/favorites');
+  assert.equal(pendingIntentReturnTo(intent, '/profile', false), '/profile');
+  assert.equal(pendingIntentReturnTo(null, '//outside.example', true), '/profile');
 });
