@@ -125,7 +125,7 @@ export function renderListing(row: PublicListingRow, photoUrls: string[], siteUr
   const title = escapeHtml(op === 'sale' ? row.title : `${BADGES[op]}: ${row.title}`);
   const place = `${row.location}, ${row.province}`;
   const description = escapeHtml(describeListing(row));
-  const site = escapeHtml(siteUrl);
+  const download = escapeHtml(new URL('#descargar', siteUrl).href);
   const self = escapeHtml(selfUrl);
   const deepLink = `karmahouse://property/${escapeHtml(row.id)}`;
   const head = [
@@ -179,22 +179,20 @@ ${about}
 ${swap}
 ${amenities}
 <p class="muted">${op === 'wanted' ? 'Para responder a esta búsqueda, ábrela en KarmaHouse.' : 'Para contactar con quien publica, guardar la vivienda o verla en el mapa, ábrela en KarmaHouse.'}</p>
-<nav class="bar"><a class="open" id="open" href="${deepLink}">${op === 'wanted' ? 'Tengo algo que encaja' : 'Abrir en KarmaHouse'}</a><a class="more" id="more" href="${site}">Ver más viviendas</a></nav>
-<script>
-document.getElementById('open').addEventListener('click',function(){setTimeout(function(){if(document.visibilityState==='visible')location.href=document.getElementById('more').href},1500)});
-</script>`;
+<p class="muted">¿No tienes la app? Descárgala y después vuelve a este enlace para abrir el anuncio.</p>
+<nav class="bar" aria-label="Abrir o descargar KarmaHouse"><a class="open" id="open" href="${deepLink}">${op === 'wanted' ? 'Tengo algo que encaja' : 'Abrir en KarmaHouse'}</a><a class="more" id="more" href="${download}" target="_blank" rel="noopener" aria-label="Descargar KarmaHouse (se abre en otra pestaña)">Descargar KarmaHouse</a></nav>`;
   return page(title, head, body);
 }
 
 export function renderUnavailable(siteUrl: string): string {
-  const site = escapeHtml(siteUrl);
+  const download = escapeHtml(new URL('#descargar', siteUrl).href);
   return page('Vivienda no disponible', '<meta name="robots" content="noindex">', `${header(siteUrl)}
 <h1>Ya no está disponible</h1>
 <p class="muted">Esta vivienda se vendió, está en pausa o el enlace no es válido.</p>
-<nav class="bar"><a class="more" href="${site}">Ver más viviendas</a></nav>`);
+<nav class="bar" aria-label="Descargar KarmaHouse"><a class="more" href="${download}" target="_blank" rel="noopener" aria-label="Descargar KarmaHouse (se abre en otra pestaña)">Descargar KarmaHouse</a></nav>`);
 }
 
-export const SITE_URL = 'https://artstyles.github.io/karma-house/';
+export const SITE_URL = 'https://karmahouse.vercel.app/';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const COLUMNS = 'id,title,location,province,type,description,price,area,bedrooms,bathrooms,amenities,photo_paths,condition,floor,price_negotiable,operation,swap_wants,swap_provinces,swap_balance,swap_amount,rent_period,rent_min_stay,wanted_operations,owner_id';
 const HTML = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' };

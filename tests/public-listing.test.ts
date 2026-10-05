@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { describeListing, escapeHtml, formatPrice, type PublicListingRow } from '../web/api/p.ts';
 import { renderListing, renderUnavailable } from '../web/api/p.ts';
-import { listingShareUrl, PUBLIC_PAGES_URL } from '../src/lib/publicSite.ts';
+import { listingShareUrl, PUBLIC_PAGES_URL, PRIVACY_URL, TERMS_URL, SITE_URL as APP_SITE_URL } from '../src/lib/publicSite.ts';
 import { handle, type Env } from '../web/api/p.ts';
 
 export const row: PublicListingRow = {
@@ -27,7 +27,7 @@ test('describeListing is the og:description line', () => {
   assert.equal(describeListing(row), '85,000 USD · Vedado, La Habana · 3 hab · 2 baños · 120.5 m²');
 });
 
-const site = 'https://artstyles.github.io/karma-house/';
+const site = 'https://karmahouse.vercel.app/';
 const self = `https://example.supabase.co/functions/v1/p/${row.id}`;
 const photos = ['https://example.supabase.co/storage/v1/object/sign/a.jpg?token=x&y=1', 'https://example.supabase.co/storage/v1/object/sign/b.jpg?token=z'];
 
@@ -57,8 +57,7 @@ test('renderListing shows every photo, the details and the description with line
   assert.ok(html.includes('<li>Balcón</li><li>Patio</li>'));
   assert.ok(html.includes(`href="karmahouse://property/${row.id}"`));
   assert.ok(html.includes(`href="${site}"`));
-  assert.ok(html.includes(`<a class="more" id="more" href="${site}">`));
-  assert.ok(html.includes("location.href=document.getElementById('more').href"));
+  assert.ok(html.includes(`href="${site}#descargar"`));
 });
 test('renderListing without photos or optional fields still renders', () => {
   const html = renderListing({ ...row, amenities: null, condition: null, floor: null, price_negotiable: null, description: '' }, [], site, self);
@@ -117,6 +116,36 @@ function fakeFetch(rest: { status: number; body?: unknown }, sign?: Reply, profi
 const profile = { id: ownerId, displayName: 'Ana <b>López</b>', level: 'trusted', verified: true, responseMinutes: 30 };
 const listed = { status: 200, body: [dbRow] };
 const get = (path: string) => new Request(`https://karmahouse.vercel.app${path}`);
+
+test('public journeys use the official landing while legal documents retain their existing locations', () => {
+  assert.equal(APP_SITE_URL, 'https://karmahouse.vercel.app/');
+  assert.equal(PUBLIC_PAGES_URL, APP_SITE_URL);
+  assert.equal(PRIVACY_URL, 'https://artstyles.github.io/karma-house/privacidad.html');
+  assert.equal(TERMS_URL, 'https://artstyles.github.io/karma-house/terminos.html');
+});
+
+test('valid and unavailable public pages offer the official download instead of a nonexistent catalogue', async () => {
+  const available = await handle(get(`/p/${row.id}`), env, fakeFetch(listed, { status: 200, body: [] }).fetch);
+  const missing = await handle(get('/p/not-a-uuid'), env, fakeFetch(listed).fetch);
+  assert.equal(available.status, 200);
+  assert.equal(missing.status, 404);
+  for (const response of [available, missing]) {
+    const html = await response.text();
+    assert.ok(html.includes('href="https://karmahouse.vercel.app/#descargar"'));
+    assert.ok(html.includes('Descargar KarmaHouse'));
+    assert.ok(!html.includes('Ver más viviendas'));
+    assert.ok(!html.includes('artstyles.github.io/karma-house/'));
+  }
+});
+
+test('opening a shared listing keeps an explicit download fallback without timed navigation away', () => {
+  const html = renderListing(row, [], site, `https://karmahouse.vercel.app/p/${row.id}`);
+  assert.ok(html.includes(`href="karmahouse://property/${row.id}"`));
+  assert.ok(html.includes(`<link rel="canonical" href="https://karmahouse.vercel.app/p/${row.id}">`));
+  assert.ok(html.includes('después vuelve a este enlace'));
+  assert.match(html, /href="https:\/\/karmahouse\.vercel\.app\/#descargar"[^>]*target="_blank"[^>]*rel="noopener"/);
+  assert.ok(!html.includes('setTimeout(') && !html.includes('location.href='));
+});
 
 test('handle renders an approved listing with signed photos and the canonical page url', async () => {
   const { fetch, calls } = fakeFetch({ status: 200, body: [dbRow] }, { status: 200, body: [{ signedURL: '/object/sign/property-photos/u/a/one.jpg?token=1' }, { signedURL: '/object/sign/property-photos/u/a/two.jpg?token=2' }] });
