@@ -22,15 +22,16 @@ import { usePublicProfile } from '../profiles/usePublicProfile';
 import { listingShareUrl } from '../lib/publicSite';
 import { listingOperation, minStayText, operationBadge, priceLabel, priceSuffix, shareText, swapBalanceText, typeLabel, wantedOperationsText } from '../domain/operations';
 import {useListingManagement} from '../transfers/useListingManagement';
+import { listingPresentation } from '../catalog/presentation';
 
 const NEEDS_CONNECTION = 'Necesitas conexión para esto.';
 
 export default function DetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { favoriteIds, toggleFavorite, isOwnListing, mode, storageError, refresh } = useMarketplace();
+  const { favoriteIds, toggleFavorite, isOwnListing, mode, storageError } = useMarketplace();
   const auth = useAuth();
   const messaging = useMessaging();
-  const { listing, ready, offline, retry } = useListing(id);
+  const { listing, ready, offline, error: listingError, retry } = useListing(id);
   const management=useListingManagement(id);
   const [contact, setContact] = useState(false);
   const [contactBusy, setContactBusy] = useState(false);
@@ -44,7 +45,6 @@ export default function DetailScreen() {
   useEffect(() => { setContactBusy(false); setContactError(''); contactInFlight.current = false; }, [contactScope]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [report, setReport] = useState(false);
   const { width } = useWindowDimensions();
@@ -54,8 +54,8 @@ export default function DetailScreen() {
   // Only owners of an approved, active listing (or someone already in a chat) have a public profile.
   const seller = usePublicProfile(sellerId);
   const sellerProfile = sellerId ? seller.profile : null;
-  async function reload() { setRefreshing(true); try { await refresh(); } catch { /* Provider exposes the remote error. */ } finally { setRefreshing(false); } }
-  if (!listing) return <SafeAreaView style={styles.safe}>{!ready ? <View style={styles.loading}><ActivityIndicator color={colors.primary} size="large" /><Text style={styles.sellerText}>Cargando vivienda…</Text></View> : storageError ? <View style={styles.body}><Notice error>{storageError}</Notice><Button label="Volver a cargar" loading={refreshing} onPress={reload} /><Button label="Volver a explorar" secondary onPress={() => router.replace('/')} /></View> : <EmptyState title="Esta vivienda no está disponible" description="Vuelve al catálogo para explorar otras viviendas." action={<Button label="Volver a explorar" onPress={() => router.replace('/')} />} />}</SafeAreaView>;
+  const presentation = listingPresentation({ ready, hasData: !!listing, error: listingError, offline });
+  if (!listing) return <SafeAreaView style={styles.safe}>{presentation === 'loading' ? <View style={styles.loading}><ActivityIndicator color={colors.primary} size="large" /><Text style={styles.sellerText}>Cargando vivienda…</Text></View> : presentation === 'error' ? <View style={styles.body}><Notice error>{`No pudimos cargar esta vivienda. ${listingError}`}</Notice><Button label="Reintentar" onPress={retry} /><Button label="Volver a explorar" secondary onPress={() => router.replace('/')} /></View> : <EmptyState title="Esta vivienda no está disponible" description="Vuelve al catálogo para explorar otras viviendas." action={<Button label="Volver a explorar" onPress={() => router.replace('/')} />} />}</SafeAreaView>;
   const favorite = favoriteIds.includes(listing.id);
   const own = mode==='demo'?isOwnListing(listing):Boolean(!offline&&auth.user&&management.value&&management.value.managerId===auth.user.id);
   const operation = listingOperation(listing);
@@ -132,6 +132,7 @@ export default function DetailScreen() {
       <View style={styles.body}>
         {management.value?.assistedByKarmaHouse&&<Notice>Publicado con asistencia de KarmaHouse. {sellerProfile?.displayName?`La gestión actual corresponde a ${sellerProfile.displayName}.`:'Las consultas nuevas se dirigen al responsable vigente.'}</Notice>}
         {management.error&&!offline&&<Notice error>{management.error}</Notice>}
+        {listingError && !offline && <View style={{ gap: 8 }}><Notice error>{`No pudimos actualizar la ficha. ${listingError}`}</Notice><Button label="Reintentar ficha" secondary onPress={retry} /></View>}
         {offline && <View style={{ gap: 8 }}><Notice>Sin conexión. Esta es una copia guardada; el precio y la disponibilidad pueden haber cambiado. Contactar y guardar favoritos requieren conexión.</Notice><Button label="Reintentar conexión" secondary onPress={retry} /></View>}
         {photoCount > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbnails}>
           {Array.from({ length: photoCount }, (_, index) => <Pressable key={index} accessibilityRole="button" accessibilityLabel={`Ver foto ${index + 1} de ${photoCount}`} accessibilityState={{ selected: index === selectedPhoto }} onPress={() => setPhotoIndex(index)} style={[styles.thumbnail, index === selectedPhoto && styles.thumbnailSelected]}>

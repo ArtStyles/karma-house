@@ -1,6 +1,7 @@
 import type { Listing, ListingFilters } from '../domain/listings.ts';
 import type { CatalogRepository, SearchMode } from './types.ts';
 import { remoteErrorMessage } from '../state/remoteMarketplaceStore.ts';
+import { catalogFiltersKey } from './presentation.ts';
 
 export interface CatalogState {
   rows: Listing[];
@@ -9,13 +10,15 @@ export interface CatalogState {
   hasMore: boolean;
   ready: boolean;
   loading: boolean;
+  requestKey: string | null;
+  resultKey: string | null;
   /** A failed page keeps the rows already visible; the screen shows a retry instead of blanking. */
   pageError: string | null;
   searchMode: SearchMode;
 }
 
 export function emptyCatalogState(): CatalogState {
-  return { rows: [], total: 0, cursor: null, hasMore: false, ready: false, loading: false, pageError: null, searchMode: 'none' };
+  return { rows: [], total: 0, cursor: null, hasMore: false, ready: false, loading: false, requestKey: null, resultKey: null, pageError: null, searchMode: 'none' };
 }
 
 export function createCatalogController(repository: CatalogRepository, options: {
@@ -39,7 +42,8 @@ export function createCatalogController(repository: CatalogRepository, options: 
     const mine = ++sequence;
     const checkpoint = checkpointFor(epoch);
     const requestedFilters = filters;
-    publish({ ...state, loading: true, pageError: null });
+    const requestKey = catalogFiltersKey(requestedFilters);
+    publish({ ...state, loading: true, pageError: null, requestKey });
     try {
       const page = await repository.search(filters, cursor, !append, checkpoint);
       if (epoch !== generation || mine !== sequence) return;
@@ -54,6 +58,8 @@ export function createCatalogController(repository: CatalogRepository, options: 
         hasMore: page.nextCursor !== null,
         ready: true,
         loading: false,
+        requestKey,
+        resultKey: requestKey,
         pageError: null,
         searchMode: page.searchMode,
       });

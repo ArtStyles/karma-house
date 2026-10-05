@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createCatalogController } from '../src/catalog/controller.ts';
 import { defaultFilters } from '../src/domain/listings.ts';
+import { catalogFiltersKey } from '../src/catalog/presentation.ts';
 
 const listing = (id) => ({ id, title: id, price: 1, area: 1, createdAt: '2026-01-01T00:00:00Z' });
 const stub = (overrides) => ({
@@ -63,11 +64,13 @@ test('a page that arrives after the filters changed never replaces the newer res
   }));
   const first = controller.setFilters({ ...defaultFilters, query: 'old' });
   const second = controller.setFilters({ ...defaultFilters, query: 'new' });
+  assert.equal(controller.getState().requestKey, catalogFiltersKey({ ...defaultFilters, query: 'new' }));
   await second;
   release();
   await first.catch(() => {});
   assert.deepEqual(controller.getState().rows.map((row) => row.id), ['fresh']);
   assert.equal(controller.getState().total, 1);
+  assert.equal(controller.getState().resultKey, catalogFiltersKey({ ...defaultFilters, query: 'new' }));
 });
 
 test('a failed page keeps the rows already visible instead of blanking the list', async () => {

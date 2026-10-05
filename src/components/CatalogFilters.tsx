@@ -10,16 +10,13 @@ import { SelectionField } from './SelectionField';
 import { SORT_OPTIONS } from '../catalog/sortOptions';
 
 /** Mounted only while open, so dismissing never mutates the applied catalogue. */
-export function CatalogFilters({ filters, total, onApply, onClose }: { filters: ListingFilters; total: number; onApply(next: ListingFilters): void; onClose(): void }) {
+export function CatalogFilters({ filters, onApply, onClose }: { filters: ListingFilters; onApply(next: ListingFilters): void; onClose(): void }) {
   const [draft, setDraft] = useState<ListingFilters>(() => ({ ...filters, amenities: [...(filters.amenities ?? [])] }));
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const change = (next: Partial<ListingFilters>) => setDraft(old => ({ ...old, ...next }));
   const error = filterRangeError(draft);
-  // The count is the server total for the applied filters; an invalid range still shows none.
-  const count = error ? 0 : total;
   const selectedCount = activeFilterCount({ ...draft, query: '' });
-  const [one, many] = (draft.operation ?? 'offers') === 'wanted' ? ['búsqueda', 'búsquedas'] : ['vivienda', 'viviendas'];
   return <Modal transparent visible animationType="fade" onRequestClose={onClose}>
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <View style={[styles.overlay, width >= 700 && { justifyContent: 'center' }, { paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 12) }]}>
@@ -53,8 +50,8 @@ export function CatalogFilters({ filters, total, onApply, onClose }: { filters: 
             <View style={styles.section}><SelectionField inline label="Ordenar por" value={draft.sort} options={SORT_OPTIONS} onChange={sort => change({ sort: sort as ListingFilters['sort'] })} /></View>
           </ScrollView>
           <View style={styles.footer}>
-            {error ? <Notice error>{error}</Notice> : <Text accessibilityLiveRegion="polite" style={styles.resultText}>{count === 1 ? `1 ${one} coincide con tu búsqueda` : `${count} ${many} coinciden con tu búsqueda`}</Text>}
-            <View style={styles.actions}><Button secondary label="Limpiar" onPress={() => setDraft({ ...defaultFilters, query: filters.query, amenities: [] })} style={styles.clear} /><Button disabled={!!error} label={`Ver ${count} ${count === 1 ? one : many}`} onPress={() => { if (!error) { onApply(draft); onClose(); } }} style={styles.apply} /></View>
+            {error ? <Notice error>{error}</Notice> : <Text style={styles.resultText}>Actualizaremos los resultados al aplicar los filtros.</Text>}
+            <View style={styles.actions}><Button secondary label="Limpiar" onPress={() => setDraft({ ...defaultFilters, query: filters.query, amenities: [] })} style={styles.clear} /><Button disabled={!!error} label="Aplicar filtros" onPress={() => { if (!error) { onApply(draft); onClose(); } }} style={styles.apply} /></View>
           </View>
         </View>
       </View>

@@ -24,10 +24,13 @@ import { useSavedSearches } from '../searches/useSavedSearches';
 
 const shortcuts: { value: Shortcut; label: string }[] = [
   { value: 'Casa', label: 'Casas' }, { value: 'Apartamento', label: 'Apartamentos' },
-  { value: 'swap', label: 'Permutas' }, { value: 'rent', label: 'Alquileres' }, { value: 'wanted', label: 'Busco' },
   { value: 'price', label: 'Hasta $30.000' }, { value: 'bedrooms', label: '3+ hab.' },
 ];
 const provinceOptions = [{ value: '', label: 'Toda Cuba' }, ...PROVINCES.map(value => ({ value, label: value }))];
+const operationOptions = [
+  { value: 'offers', label: 'Venta y permuta' }, { value: 'sale', label: 'Venta' },
+  { value: 'swap', label: 'Permuta' }, { value: 'rent', label: 'Alquiler' }, { value: 'wanted', label: 'Busco' },
+];
 
 export default function ExploreScreen() {
   const { mode, storageError, refresh } = useMarketplace();
@@ -57,7 +60,7 @@ export default function ExploreScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const columns = width >= 1060 ? 3 : width >= 700 ? 2 : 1;
-  const { rows: result, total, hasMore, ready, loading, pageError, offlineSince, loadMore, refresh: refreshCatalog } = useCatalogPage(filters);
+  const { rows: result, total, hasMore, ready, loading, updating, current, pageError, offlineSince, loadMore, refresh: refreshCatalog } = useCatalogPage(filters);
   // On the saved snapshot nothing can ask the server, so every control that would is held still.
   const offline = offlineSince !== null;
   const view = offline ? 'list' : chosenView;
@@ -69,7 +72,7 @@ export default function ExploreScreen() {
   const change = (next: Partial<ListingFilters>) => { if (!offline) setFilters(old => ({ ...old, ...next })); };
   // Short enough to share one line with the sort and map controls at 320 pt.
   const homes = filters.operation === 'wanted' ? `${total} ${total === 1 ? 'búsqueda' : 'búsquedas'}` : `${total} ${total === 1 ? 'vivienda' : 'viviendas'}`;
-  const count = !ready ? 'Cargando…' : filters.province ? `${homes} en ${filters.province}` : hasFilters ? `${total} ${total === 1 ? 'encontrada' : 'encontradas'}` : mode === 'demo' ? `${homes} de prueba` : homes;
+  const count = offline ? 'Últimos resultados guardados' : updating ? 'Actualizando…' : !current ? 'Resultados sin actualizar' : filters.province ? `${homes} en ${filters.province}` : hasFilters ? `${total} ${total === 1 ? 'encontrada' : 'encontradas'}` : mode === 'demo' ? `${homes} de prueba` : homes;
   // Tags list only what no shortcut already shows, so a filter never appears twice.
   const priceTag = !!(filters.minPrice || filters.maxPrice) && !shortcutActive(filters, 'price');
   const bedroomTag = filters.minBedrooms > 0 && !shortcutActive(filters, 'bedrooms');
@@ -94,7 +97,7 @@ export default function ExploreScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={colors.primary} />}
-        ListEmptyComponent={!ready ? <View style={styles.skeletons}>{Array.from({ length: columns === 1 ? 2 : columns }, (_, index) => <CardSkeleton key={index} />)}</View> : view === 'map' ? <ExploreMap filters={filters} withoutLocation={result.filter(item => !item.mapLocation).length} onShowList={() => setView('list')} /> : !storageError ? <EmptyState title={hasFilters ? 'Sin coincidencias' : 'Aquí empieza tu próximo hogar'} description={hasFilters ? 'Prueba otra zona o amplía los filtros para encontrar más viviendas.' : 'Aún no hay viviendas publicadas. Si tienes una en venta, puedes preparar el primer anuncio.'} icon={hasFilters ? 'search-outline' : 'home-outline'} action={<Button label={hasFilters ? 'Ver todas las viviendas' : 'Publicar una vivienda'} onPress={() => hasFilters ? setFilters({ ...defaultFilters }) : router.push('/publish')} />} /> : null}
+        ListEmptyComponent={!ready || (updating && view === 'list') ? <View style={styles.skeletons}>{Array.from({ length: columns === 1 ? 2 : columns }, (_, index) => <CardSkeleton key={index} />)}</View> : view === 'map' ? <ExploreMap filters={filters} withoutLocation={result.filter(item => !item.mapLocation).length} onShowList={() => setView('list')} /> : !pageError && !storageError ? <EmptyState title={hasFilters ? 'Sin coincidencias' : 'Aquí empieza tu próximo hogar'} description={hasFilters ? 'Prueba otra zona o amplía los filtros. También puedes guardar la búsqueda para volver cuando aparezca una coincidencia.' : 'Aún no hay viviendas publicadas. Si tienes una en venta, puedes preparar el primer anuncio.'} icon={hasFilters ? 'search-outline' : 'home-outline'} action={<View style={{ gap: 10 }}><Button label={hasFilters ? 'Ampliar búsqueda' : 'Publicar una vivienda'} onPress={() => hasFilters ? setFilters({ ...defaultFilters }) : router.push('/publish')} />{hasFilters && !offline && <Button label="Guardar esta búsqueda" secondary icon="bookmark-outline" onPress={saveSearch} />}</View>} /> : null}
         ListHeaderComponent={<View onLayout={event => setHeaderHeight(event.nativeEvent.layout.height)}>
           <View style={styles.topbar}>
             <View style={styles.brand}><Brand height={width < 360 ? 22 : 26} />{mode === 'demo' && <Text style={styles.demo}>Demo</Text>}</View>
@@ -117,13 +120,15 @@ export default function ExploreScreen() {
               </Pressable>
             </View>
           </View>
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 14 }}>
+            <View style={{ flex: 1, minWidth: 0 }}><SelectionField label="Operación" value={filters.operation ?? 'offers'} options={operationOptions} disabled={offline} onChange={operation => change({ operation: operation as ListingFilters['operation'] })} /></View>
+            <View style={{ flex: 1, minWidth: 0 }}><SelectionField label="Provincia" value={filters.province ?? ''} options={provinceOptions} disabled={offline} onChange={province => change({ province })} /></View>
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={[styles.shortcutRow, locked]} contentContainerStyle={styles.shortcuts}>
-            <SelectionField label="Provincia" value={filters.province ?? ''} options={provinceOptions} onChange={province => change({ province })} renderTrigger={open =>
-              <ShortcutChip label={filters.province || 'Toda Cuba'} icon="location-outline" chevron active={!!filters.province} accessibilityLabel={`Provincia: ${filters.province || 'toda Cuba'}`} onPress={() => { if (!offline) open(); }} />} />
             {shortcuts.map(item => <ShortcutChip key={item.value} label={item.label} toggle active={shortcutActive(filters, item.value)} onPress={() => change(toggleShortcut(filters, item.value))} />)}
           </ScrollView>
           <View style={[styles.resultMeta, width < 400 && styles.compactMeta]}>
-            <Text style={styles.resultCount}>{count}</Text>
+            <Text accessibilityLiveRegion="polite" style={styles.resultCount}>{count}</Text>
             <View style={[styles.metaControls, width < 400 && styles.compactMetaControls, locked]}>
               <CatalogSortMenu value={filters.sort} onChange={sort => change({ sort })} disabled={offline} />
               <IconButton name="bookmark-outline" label="Guardar búsqueda" onPress={saveSearch} />
@@ -154,7 +159,7 @@ export default function ExploreScreen() {
         ListFooterComponent={<View>
           {view === 'list' && pageError && ready ? <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{pageError}</Notice><Button label="Reintentar" secondary loading={loading} onPress={() => { if (hasMore) loadMore(); else void refreshCatalog().catch(() => {}); }} /></View>
             : view === 'list' && loading && ready ? <View style={styles.skeletons}><CardSkeleton /></View>
-            : view === 'list' && !hasMore && result.length > 0 && !offline ? <Text style={styles.listEnd}>{total === 1 ? 'Has visto la única vivienda que coincide.' : `Has visto las ${total} viviendas que coinciden.`}</Text> : null}
+            : view === 'list' && current && !updating && !hasMore && result.length > 0 && !offline ? <Text style={styles.listEnd}>{total === 1 ? 'Has visto la única vivienda que coincide.' : `Has visto las ${total} viviendas que coinciden.`}</Text> : null}
           {/* The seller invitation closes a real list; under an empty or failed one it reads as the answer. */}
           {(result.length > 0 || view === 'map') && !storageError && <Pressable accessibilityRole="button" accessibilityLabel="Publicar una vivienda" onPress={() => router.push('/publish')} style={({ pressed }) => [styles.sellerBanner, pressed && { opacity: .85 }]}>
             <View style={styles.sellerIcon}><Icon name="key-outline" size={25} color="#FFFFFF" /></View><View style={{ flex: 1 }}><Text style={styles.sellerTitle}>Tu vivienda, aquí.</Text><Text style={styles.sellerText}>Dale su próximo capítulo.</Text></View><Icon name="arrow-forward" size={21} color="#FFFFFF" />
@@ -165,7 +170,7 @@ export default function ExploreScreen() {
       {scrolled && view === 'list' && !offline && <Pressable accessibilityRole="button" accessibilityLabel="Ver en el mapa" onPress={toggleView} style={({ pressed }) => [styles.viewToggle, { bottom: toggleBottom }, pressed && { opacity: .85 }]}>
         <Icon name="map-outline" size={18} color={colors.white} /><Text style={styles.viewToggleText}>Mapa</Text>
       </Pressable>}
-      {expanded && <CatalogFilters filters={filters} total={total} onApply={setFilters} onClose={() => setExpanded(false)} />}
+      {expanded && <CatalogFilters filters={filters} onApply={setFilters} onClose={() => setExpanded(false)} />}
       {saving && <SaveSearchSheet filters={filters} onClose={() => setSaving(false)} onSaved={() => { setSaving(false); setSaveNotice('saved'); }} />}
       {!!search && mode === 'cloud' && !!auth.user && <SavedSearchParam key={search} id={search} onApply={setFilters} />}
     </SafeAreaView>

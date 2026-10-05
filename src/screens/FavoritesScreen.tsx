@@ -10,6 +10,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import type { Listing } from '../domain/listings';
 import { colors, layout } from '../theme';
+import { listingPresentation, unavailableFavoriteCount } from '../catalog/presentation';
 
 export default function FavoritesScreen() {
   const { favoriteIds, toggleFavorite, mode, storageError, refresh } = useMarketplace();
@@ -17,18 +18,22 @@ export default function FavoritesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [undoError, setUndoError] = useState('');
   const [undoing, setUndoing] = useState(false);
-  const { listings: favorites, ready } = useFavoriteListings();
-  async function reload() { setRefreshing(true); try { await refresh(); } catch { /* Provider exposes the remote error. */ } finally { setRefreshing(false); } }
+  const { listings: favorites, ready, error, loading, retry } = useFavoriteListings();
+  async function reload() { setRefreshing(true); try { await refresh(); await retry(); } catch { /* Each reader exposes its own error. */ } finally { setRefreshing(false); } }
   const { width } = useWindowDimensions();
 
   // A tap on the heart used to erase the card in the same frame. Keeping every listing seen this
   // visit, in the order it arrived, leaves the removed ones in place so the tap can be taken back.
   const seen = useRef(new Map<string, Listing>());
+  const seenSession = useRef('');
+  const sessionKey = `${mode}:${auth.user?.id ?? ''}`;
+  if (seenSession.current !== sessionKey) { seen.current.clear(); seenSession.current = sessionKey; }
   favorites.forEach(listing => seen.current.set(listing.id, listing));
   const visible = new Set(favorites.map(listing => listing.id));
   const cards = [...seen.current.values()].filter(listing => visible.has(listing.id) || !favoriteIds.includes(listing.id));
   const removed = cards.filter(listing => !favoriteIds.includes(listing.id));
-  const missing = favoriteIds.length - favorites.length;
+  const missing = unavailableFavoriteCount(favoriteIds.length, favorites.length, { ready, error });
+  const presentation = listingPresentation({ ready, error, hasData: cards.length > 0 });
 
   async function undo() {
     // Without the lock a second tap runs the same closure and toggles the restored listings straight back off.
@@ -42,6 +47,7 @@ export default function FavoritesScreen() {
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}><ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={colors.primary} />}><PageTitle title="Favoritos" subtitle="Los lugares que quieres tener cerca." />
     {mode === 'cloud' && auth.ready && !auth.user ? <AccountPrompt returnTo="/favorites" title="Lleva tus favoritos contigo" description="Entra en tu cuenta para guardar viviendas y volver a ellas desde cualquier dispositivo." /> : <>
       {storageError && <><Notice error>{storageError}</Notice><Button label="Volver a cargar" secondary loading={refreshing} onPress={reload} /></>}
+      {error && <View style={{ gap: 8, marginBottom: 16 }}><Notice error>{`No pudimos actualizar tus favoritos. ${error}`}</Notice><Button label="Reintentar favoritos" secondary loading={loading} onPress={() => void retry()} /></View>}
       {ready && missing > 0 && <Notice>{missing === 1 ? 'Una vivienda guardada ya no está disponible en el catálogo.' : `${missing} viviendas guardadas ya no están disponibles en el catálogo.`}</Notice>}
       {/* Not a Notice: the undo has to be a real 44 pt target, and Notice renders its children as text. */}
       {removed.length > 0 && <View style={styles.undoRow}>
@@ -50,7 +56,7 @@ export default function FavoritesScreen() {
         <Pressable accessibilityRole="button" accessibilityLabel="Deshacer y devolver a favoritos" accessibilityState={{ disabled: undoing }} disabled={undoing} onPress={() => void undo()} style={({ pressed }) => [styles.undoButton, (pressed || undoing) && { opacity: .5 }]}><Text style={styles.undo}>Deshacer</Text></Pressable>
       </View>}
       {undoError ? <Notice error>{undoError}</Notice> : null}
-      {!ready ? <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 50 }} /> : cards.length ? <View style={styles.grid}>{cards.map(listing => <View key={listing.id} style={[{ width: width >= 720 ? '48.8%' : '100%' }, !favoriteIds.includes(listing.id) && styles.faded]}><PropertyCard listing={listing} /></View>)}</View> : !storageError ? <EmptyState icon="heart-outline" title="Algunos lugares se quedan contigo" description="Toca el corazón de una vivienda y encuéntrala aquí cuando quieras volver a verla." action={<Button label="Descubrir viviendas" onPress={() => router.push('/')} />} /> : null}
+      {presentation === 'loading' ? <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 50 }} /> : cards.length ? <View style={styles.grid}>{cards.map(listing => <View key={listing.id} style={[{ width: width >= 720 ? '48.8%' : '100%' }, !favoriteIds.includes(listing.id) && styles.faded]}><PropertyCard listing={listing} offline={!!error} /></View>)}</View> : presentation === 'empty' && !storageError ? <EmptyState icon="heart-outline" title="Algunos lugares se quedan contigo" description="Toca el corazón de una vivienda y encuéntrala aquí cuando quieras volver a verla." action={<Button label="Descubrir viviendas" onPress={() => router.push('/')} />} /> : null}
     </>}
   </ScrollView></SafeAreaView>;
 }

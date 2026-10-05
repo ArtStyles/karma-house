@@ -74,29 +74,33 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 
 ### Tarea 2: filtros y conteos honestos
 
+**Estado:** implementación y pruebas locales terminadas; ver [evidencia de segunda fase](../../design-conversion-verification.md). La revisión física y publicación siguen pendientes.
+
 **Archivos:** `src/components/CatalogFilters.tsx`, `src/screens/ExploreScreen.tsx`, `src/catalog/useCatalog.ts`, `src/catalog/controller.ts`; `tests/catalog-controller.test.ts`, `tests/catalog-query.test.ts`.
 
 **Decisión:** usar «Aplicar filtros» en el panel. No calcular un conteo remoto por cada cambio del borrador en esta entrega. En Explorar, los datos anteriores pueden mantenerse visibles durante una recarga, pero su conteo no debe presentarse como el resultado de los nuevos filtros.
 
-- [ ] Añadir una regresión de respuesta tardía y cambio rápido de filtros en el controlador; conservar las pruebas existentes de paginación y cambio de cuenta. Documentar una comprobación visual para el intervalo anterior al debounce, que la prueba del controlador no cubre por sí sola.
-- [ ] Quitar del panel la cifra basada en filtros aplicados. Mantener el borrador aislado: cerrar o cancelar no modifica la búsqueda; aplicar sí; rangos inválidos impiden aplicar.
-- [ ] Hacer explícito en el hook/presentación cuándo los filtros solicitados todavía no corresponden al resultado mostrado, incluyendo el intervalo de debounce. Mostrar «Actualizando…» y reservar el vacío definitivo para una respuesta vigente y correcta.
-- [ ] Verificar búsquedas consecutivas, borrado de filtros, máximo 1 USD, rangos inválidos y error al cargar una página adicional. No contar una respuesta antigua como nueva ni borrar filas por un fallo de paginación.
-- [ ] Ejecutar `node --experimental-strip-types --test tests/catalog-controller.test.ts tests/catalog-query.test.ts` y `npm run check`; revisar el panel y la lista a 390 y 1280 px.
+- [x] Añadir una regresión de respuesta tardía y cambio rápido de filtros en el controlador; conservar las pruebas existentes de paginación y cambio de cuenta. Documentar una comprobación visual para el intervalo anterior al debounce, que la prueba del controlador no cubre por sí sola.
+- [x] Quitar del panel la cifra basada en filtros aplicados. Mantener el borrador aislado: cerrar o cancelar no modifica la búsqueda; aplicar sí; rangos inválidos impiden aplicar.
+- [x] Hacer explícito en el hook/presentación cuándo los filtros solicitados todavía no corresponden al resultado mostrado, incluyendo el intervalo de debounce. Mostrar «Actualizando…» y reservar el vacío definitivo para una respuesta vigente y correcta.
+- [x] Verificar búsquedas consecutivas, borrado de filtros, máximo 1 USD, rangos inválidos y error al cargar una página adicional. No contar una respuesta antigua como nueva ni borrar filas por un fallo de paginación.
+- [x] Ejecutar `node --experimental-strip-types --test tests/catalog-controller.test.ts tests/catalog-query.test.ts` y `npm run check`; revisar el panel y la lista a 390 y 1280 px.
 
 **Aceptación:** modificar el presupuesto ya no muestra «Ver 3 viviendas» con una cifra ajena al borrador; los resultados nuevos aparecen sin estados vacíos o conteos engañosos durante la transición.
 
 ### Tarea 3: distinguir error, vacío y anuncio retirado
 
+**Estado:** implementación y pruebas locales terminadas, incluida recuperación por reintento y copia sin conexión. Android y despliegue pendientes.
+
 **Archivos:** `src/catalog/useCatalog.ts`, `src/screens/DetailScreen.tsx`, `src/screens/FavoritesScreen.tsx`; nuevo `src/catalog/presentation.ts` y `tests/catalog-presentation.test.ts` para las decisiones de estado compartidas.
 
 **Contrato:** conservar `useListing(...).error` y `retry()`. Ampliar `useFavoriteListings()` con `retry()` y consumir su `error`. La presentación debe distinguir carga, error, vacío confirmado, contenido vigente y contenido sin conexión; «no disponible» exige una respuesta exitosa sin anuncio.
 
-- [ ] Escribir pruebas de estados: carga inicial; error sin datos; respuesta exitosa vacía; datos anteriores con fallo de recarga; detalle de instantánea sin conexión. Una lectura fallida de favoritos no cuenta sus anuncios como retirados.
-- [ ] Conectar el error propio de cada consulta y un botón de reintento en detalle y favoritos. No depender solo de `storageError` del proveedor general.
-- [ ] Conservar datos anteriores de la misma sesión cuando resulte útil durante un fallo de recarga. Limpiar al cambiar de cuenta y descartar respuestas tardías para evitar mostrar favoritos ajenos.
-- [ ] Verificar con fallos controlados del repositorio, sin borrar anuncios reales: red caída, recuperación, anuncio realmente ausente y favorito retirado tras respuesta correcta. Mantener bloqueadas las acciones que requieren red cuando se usa la instantánea.
-- [ ] Ejecutar `node --experimental-strip-types --test tests/catalog-presentation.test.ts tests/catalog-controller.test.ts tests/data-saver.test.ts`, después `npm run check`, y revisar los estados renderizados.
+- [x] Escribir pruebas de estados: carga inicial; error sin datos; respuesta exitosa vacía; datos anteriores con fallo de recarga; detalle de instantánea sin conexión. Una lectura fallida de favoritos no cuenta sus anuncios como retirados.
+- [x] Conectar el error propio de cada consulta y un botón de reintento en detalle y favoritos. No depender solo de `storageError` del proveedor general.
+- [x] Conservar datos anteriores de la misma sesión cuando resulte útil durante un fallo de recarga. Limpiar al cambiar de cuenta y descartar respuestas tardías para evitar mostrar favoritos ajenos.
+- [x] Verificar con fallos controlados del repositorio, sin borrar anuncios reales: red caída, recuperación, anuncio realmente ausente y favorito retirado tras respuesta correcta. Mantener bloqueadas las acciones que requieren red cuando se usa la instantánea.
+- [x] Ejecutar `node --experimental-strip-types --test tests/catalog-presentation.test.ts tests/catalog-controller.test.ts tests/data-saver.test.ts`, después `npm run check`, y revisar los estados renderizados.
 
 **Aceptación:** una conexión fallida ofrece recuperación; no afirma que el anuncio desapareció ni que todos los favoritos dejaron de estar disponibles.
 
@@ -104,13 +108,15 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 
 ### Tarea 4: operaciones visibles y búsquedas sin coincidencias
 
+**Estado:** operación visible y vacío con guardado implementados y revisados a 320, 390 y 1280 px. El retorno del invitado depende de terminar la tarea 5.
+
 **Archivos:** `src/screens/ExploreScreen.tsx`, `src/components/CatalogFilters.tsx`, `src/domain/listings.ts`, `src/domain/listingOptions.ts`, `src/components/SaveSearchSheet.tsx`; `tests/explore-shortcuts.test.ts`, `tests/operations.test.ts`, `tests/search-alerts.test.ts`.
 
 **Decisión:** separar la operación de provincia, tipo y presupuesto. Usar una selección visible que permita reconocer «Venta y permuta», «Venta», «Permuta», «Alquiler» y «Busco» sin depender del desplazamiento horizontal actual. Mantener los valores `offers`, `sale`, `swap`, `rent`, `wanted` y su semántica.
 
 - [ ] Verificar con pruebas que `offers` sigue incluyendo venta y permuta, y que alquiler y «Busco» aplican sus operaciones reales. No convertir «Busco» en una categoría genérica de compradores.
-- [ ] Reorganizar el encabezado móvil y los accesos a filtros. El control de operación debe mostrar su valor y abrir todas las opciones; los atajos de tipo/presupuesto deben mantener estados inequívocos.
-- [ ] Añadir «Guardar esta búsqueda» al vacío con filtros, junto a la acción de ampliarlos. Reutilizar `SaveSearchSheet` y las alertas existentes; no crear otro servicio de avisos.
+- [x] Reorganizar el encabezado móvil y los accesos a filtros. El control de operación debe mostrar su valor y abrir todas las opciones; los atajos de tipo/presupuesto deben mantener estados inequívocos.
+- [x] Añadir «Guardar esta búsqueda» al vacío con filtros, junto a la acción de ampliarlos. Reutilizar `SaveSearchSheet` y las alertas existentes; no crear otro servicio de avisos.
 - [ ] Verificar operaciones, combinaciones con provincia/tipo, limpieza de filtros, y guardado de criterios con cero coincidencias. El guardado invitado queda completo con la tarea 5.
 - [ ] Ejecutar `node --experimental-strip-types --test tests/explore-shortcuts.test.ts tests/operations.test.ts tests/search-alerts.test.ts`, después `npm run check`; revisar 320, 390 y 1280 px.
 

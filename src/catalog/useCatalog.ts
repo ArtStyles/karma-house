@@ -12,6 +12,8 @@ import { createOfflineSnapshot, isDefaultCatalog, isNetworkFailure, nextOffline 
 import { draftStorage } from '../data/draftStorage';
 import { COUNT_DEBOUNCE_MS, type BoundingBox, type CatalogRepository, type MapView } from './types';
 import {listingManagementEvents} from '../state/listingManagementEvents';
+import { catalogFiltersKey, catalogQueryStatus } from './presentation';
+import { createFavoriteListingsController, emptyFavoriteListingsState } from './favoritesController';
 
 /** Null while Supabase is unconfigured; the screens never branch on mode themselves. */
 function useCatalogRepository(): CatalogRepository | null {
@@ -33,6 +35,8 @@ type Snapshot = Awaited<ReturnType<typeof catalogSnapshot.load>>;
 export interface CatalogPageResult extends CatalogState {
   /** Set while Explore shows the saved first page because the network failed; `rows` are then the snapshot's. */
   offlineSince: number | null;
+  updating: boolean;
+  current: boolean;
   loadMore(): void;
   refresh(): Promise<void>;
 }
@@ -72,8 +76,9 @@ export function useCatalogPage(filters: ListingFilters): CatalogPageResult {
     [mode, demoCatalog, filters],
   );
 
-  const loadMore = useCallback(() => { void controller?.loadMore().catch(() => {}); }, [controller]);
-  const refresh = useCallback(async () => { await controller?.refresh(); }, [controller]);
+  const queryStatus = catalogQueryStatus(remote, filters);
+  const loadMore = useCallback(() => { if (!queryStatus.updating && queryStatus.current) void controller?.loadMore().catch(() => {}); }, [controller, queryStatus.updating, queryStatus.current]);
+  const refresh = useCallback(async () => { await controller?.setFilters(filters); }, [controller, filters]);
 
   // A successful load earlier in this session may have replaced the snapshot.
   const [snapshot, setSnapshot] = useState<Snapshot>(null);
@@ -87,12 +92,13 @@ export function useCatalogPage(filters: ListingFilters): CatalogPageResult {
   offline.current = nextOffline(offline.current, remote);
 
   if (mode === 'demo') {
-    return { rows: demoRows, total: demoRows.length, cursor: null, hasMore: false, ready: true, loading: false, pageError: null, searchMode: 'none', offlineSince: null, loadMore: () => {}, refresh: async () => {} };
+    const key = catalogFiltersKey(filters);
+    return { rows: demoRows, total: demoRows.length, cursor: null, hasMore: false, ready: true, loading: false, requestKey: key, resultKey: key, pageError: null, searchMode: 'none', offlineSince: null, updating: false, current: true, loadMore: () => {}, refresh: async () => {} };
   }
   if (offline.current && snapshot) {
-    return { ...remote, rows: snapshot.rows, total: snapshot.rows.length, cursor: null, hasMore: false, ready: true, pageError: null, offlineSince: snapshot.savedAt, loadMore: () => {}, refresh };
+    return { ...remote, rows: snapshot.rows, total: snapshot.rows.length, cursor: null, hasMore: false, ready: true, pageError: null, offlineSince: snapshot.savedAt, updating: false, current: false, loadMore: () => {}, refresh };
   }
-  return { ...remote, offlineSince: null, loadMore, refresh };
+  return { ...remote, ...queryStatus, offlineSince: null, loadMore, refresh };
 }
 
 interface ListingResult {
@@ -118,16 +124,21 @@ export function useListing(id: string | undefined): ListingResult & { retry(): v
   useEffect(() => {
     if (mode === 'demo' || !repository || !id) return;
     let cancelled = false;
-    const capturedScope=scope;loadedScope.current=scope;
+    const capturedScope=scope;
+    const keepPrevious = loadedScope.current === scope;
+    loadedScope.current=scope;
     const managementCheckpoint=listingManagementEvents.checkpoint();
     const checkpoint=()=>{managementCheckpoint();if(cancelled||latestScope.current!==capturedScope)throw Error('KH_ACCOUNT_CHANGED');};
-    setState({ listing: undefined, ready: false, error: null, offline: false });
+    setState(current => ({ listing: keepPrevious ? current.listing : undefined, ready: false, error: null, offline: false }));
     repository.byId(id, checkpoint)
-      .then((listing) => { if (!cancelled) setState({ listing: listing ?? undefined, ready: true, error: null, offline: false }); })
+      .then((listing) => { checkpoint(); setState({ listing: listing ?? undefined, ready: true, error: null, offline: false }); })
       .catch(async (failure) => {
         const error = remoteErrorMessage(failure);
         const saved = isNetworkFailure(error) ? (await catalogSnapshot.load())?.rows.find((row) => row.id === id) : undefined;
-        if (!cancelled) setState(saved ? { listing: saved, ready: true, error: null, offline: true } : { listing: undefined, ready: true, error, offline: false });
+        if (!cancelled && latestScope.current === capturedScope) setState(current => {
+          const listing = current.listing ?? saved;
+          return { listing, ready: true, error, offline: !!listing && isNetworkFailure(error) };
+        });
       });
     return () => { cancelled = true; };
   }, [mode, repository, id, attempt,scope]);
@@ -140,27 +151,27 @@ export function useListing(id: string | undefined): ListingResult & { retry(): v
   return own ? { listing: own, ready: true, error: null, offline: false, retry } : loadedScope.current===scope ? { ...state, retry } : {listing:undefined,ready:false,error:null,offline:false,retry};
 }
 
-export function useFavoriteListings(): { listings: Listing[]; ready: boolean; error: string | null } {
+const EMPTY_FAVORITES = Object.freeze(emptyFavoriteListingsState());
+const emptyFavorites = () => EMPTY_FAVORITES;
+export function useFavoriteListings(): { listings: Listing[]; ready: boolean; loading: boolean; error: string | null; retry(): Promise<void> } {
   const managementGeneration=useSyncExternalStore(listingManagementEvents.subscribe,listingManagementEvents.getSnapshot,listingManagementEvents.getSnapshot);
-  const { mode, demoCatalog, favoriteIds } = useMarketplace();
+  const { mode, demoCatalog, favoriteIds, ready: marketplaceReady } = useMarketplace();
+  const { user } = useAuth();
+  const sessionId = user?.id ?? null;
   const repository = useCatalogRepository();
-  const [state, setState] = useState<{ listings: Listing[]; ready: boolean; error: string | null }>({ listings: [], ready: false, error: null });
+  const controller = useMemo(() => repository ? createFavoriteListingsController(repository) : null, [repository]);
+  const remote = useSyncExternalStore(controller ? controller.subscribe : noSubscribe, controller ? controller.getState : emptyFavorites, controller ? controller.getState : emptyFavorites);
+  const state = remote.sessionId === sessionId ? remote : EMPTY_FAVORITES;
   const key = favoriteIds.join(',');
-
+  useEffect(() => { controller?.setSession(sessionId); }, [controller, sessionId]);
   useEffect(() => {
-    if (mode === 'demo' || !repository) return;
-    let cancelled = false;
-    setState((current) => ({ ...current, ready: favoriteIds.length === 0, error: null }));
-    repository.byIds(favoriteIds, passthrough)
-      .then((listings) => { if (!cancelled) setState({ listings, ready: true, error: null }); })
-      .catch((error) => { if (!cancelled) setState({ listings: [], ready: true, error: remoteErrorMessage(error) }); });
-    return () => { cancelled = true; };
-    // favoriteIds is rebuilt on every toggle, so the joined key is the stable dependency.
-  }, [mode, repository, key,managementGeneration]);
+    if (mode !== 'demo' && marketplaceReady) void controller?.setIds(favoriteIds);
+  }, [mode, controller, key, sessionId, managementGeneration, marketplaceReady]);
+  const retry = useCallback(async () => { await controller?.retry(); }, [controller]);
 
   const visible = (mode === 'demo' ? (demoCatalog ?? []) : state.listings)
     .filter((item) => favoriteIds.includes(item.id) && item.status === 'active' && (!item.moderationStatus || item.moderationStatus === 'approved'));
-  return { listings: visible, ready: mode === 'demo' ? true : state.ready, error: mode === 'demo' ? null : state.error };
+  return { listings: visible, ready: mode === 'demo' ? true : marketplaceReady && state.ready, loading: mode !== 'demo' && (!marketplaceReady || state.loading), error: mode === 'demo' ? null : state.error, retry };
 }
 
 export function useMapView(bbox: BoundingBox | null, zoom: number, filters: ListingFilters): { view: MapView; ready: boolean; error: string | null; retry(): void } {
