@@ -77,7 +77,7 @@ const amount = (value: unknown) => value === null || typeof value === 'number' &
 const count = (value: unknown, min: number) => Number.isSafeInteger(value) && (value as number) >= min && (value as number) <= 20;
 const nullableText = (value: unknown) => value === null || typeof value === 'string' && value.length > 0 && value.length <= 80;
 
-function decodeFilters(value: unknown): SavedSearchFilters {
+export function decodeFilters(value: unknown): SavedSearchFilters {
   const item = record(value);
   const keys = Object.keys(item);
   if (keys.length !== FILTER_KEYS.length || !FILTER_KEYS.every(key => keys.includes(key))
