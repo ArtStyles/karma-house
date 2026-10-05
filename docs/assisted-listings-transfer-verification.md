@@ -44,6 +44,19 @@ Capturas locales: `artifacts/assisted-transfer-qa/phone-review-confirmed.png`, `
 
 La fixture usa **SQL/RLS reales** y bytes seleccionados/transformados en el teléfono, pero **Auth y entrega de Storage simulados**. No acredita cuentas reales ni Supabase desplegado. Las pruebas físicas no incluyen recepción/tap push ni un ensayo de caducidad de cinco minutos.
 
+## Artefactos Android preparados
+
+La compilación nativa terminó `BUILD SUCCESSFUL`, con APK y AAB 0.1.16/17 para `arm64-v8a` y `armeabi-v7a`. `apksigner verify` y `jarsigner -verify` validaron sus firmas; ambos certificados coinciden y el APK coincide con el certificado de la release habitual 0.1.15. El paquete es `com.karmahouse.karmahouse`. El bundle incorpora la URL pública esperada y no incorpora la URL/clave del gateway QA. Se comprobó nuevamente en el teléfono la app habitual 0.1.15/16 y la QA separada 0.1.16/17.
+
+| Artefacto local | SHA-256 |
+|---|---|
+| [APK firmado](../artifacts/releases/KarmaHouse-0.1.16.apk) | `a93c06b8c8bcdcdc2eb56b1fd5be173bb7e3fc64a8004f44fe5513f98df444fc` |
+| [AAB firmado](../artifacts/releases/KarmaHouse-0.1.16.aab) | `2f9eb4abf41a48f68208c631dd40f6650d4d7e4134d06daf47f332aefbb01990` |
+
+[Metadatos de verificación](../artifacts/releases/KarmaHouse-0.1.16-verification.json). La compilación procede del commit `ea3b97f`; estos archivos y las credenciales de firma están ignorados por Git. El APK normal **no se instaló ni distribuyó**: necesita primero la preparación y comprobación del backend descritas en [el runbook](assisted-listings-activation.md). El APK `.qa` usa firma de prueba y solo sirve con la fixture local, no como actualización pública.
+
+Se conservan la rama y el worktree aislados. Se cerraron el gateway y PostgreSQL de prueba, se retiraron el reverse de adb y el alias temporal `K:` y se conservaron la BD sintética y las capturas para reproducir el ensayo. La app QA quedó cerrada e instalada por separado; necesita reiniciar la fixture para utilizarla. No se fusionó ni publicó la rama.
+
 ## Pendiente antes de activar
 
 Verificar Supabase REST/Auth/Storage y función desplegada en un entorno de prueba expresamente autorizado, completar el protocolo operativo y realizar el piloto antes de activar. La preparación de publicación no equivale a autorización de despliegue o distribución.
