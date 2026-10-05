@@ -165,7 +165,7 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
   </View></View></SafeAreaView>;
 
   const lastOwnKey = [...rows].reverse().find(row => !row.message?.negotiation && (row.message ?? row.pending).senderId === userId)?.key;
-  const disabledReason = conversation.blockedByMe ? 'Has bloqueado a esta persona. Puedes leer el historial y desbloquearla desde las opciones.' : conversation.blockedByOther ? 'No puedes enviar mensajes a esta persona. El historial sigue disponible.' : !conversation.propertyAvailable ? 'Esta vivienda ya no está disponible para nuevas conversaciones. Puedes consultar el historial.' : !conversation.canSend ? 'No se pueden enviar mensajes en esta conversación.' : '';
+  const disabledReason = conversation.blockedByMe ? 'Has bloqueado a esta persona. Puedes leer el historial y desbloquearla desde las opciones.' : conversation.blockedByOther ? 'No puedes enviar mensajes a esta persona. El historial sigue disponible.' : conversation.managementChanged ? 'La gestión del anuncio cambió. Esta conversación conserva su historial y sus acuerdos con los participantes anteriores.' : !conversation.propertyAvailable ? 'Esta vivienda ya no está disponible para nuevas conversaciones. Puedes consultar el historial.' : !conversation.canSend ? 'No se pueden enviar mensajes en esta conversación.' : '';
   const syncError = syncIssue || history?.error || messaging.error;
 
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
@@ -219,7 +219,7 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
             const time = new Date((item.message ?? item.pending).createdAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
             return <View>{date !== previousDate && <Text style={styles.day}>{date}</Text>}{proposal && item.message
               ? proposal.action === 'created'
-                ? <ProposalCard proposal={proposal} live={liveProposals.get(proposal.id)} userId={userId} time={time} busy={negotiations.mutating}
+                ? <ProposalCard proposal={proposal} live={liveProposals.get(proposal.id)} userId={userId} time={time} busy={negotiations.mutating} managementChanged={conversation.managementChanged}
                     onRespond={(target, action) => void negotiationMutations.respond(target, action)} onCounter={target => setSheet({ compose: { kind: target.kind, previous: target } })} onCancelAgreement={setCancelTarget} />
                 : <NegotiationNotice answer={proposal} actorId={item.message.senderId} userId={userId} otherName={conversation.otherName} time={time} />
               : <MessageBubble row={item} own={(item.message ?? item.pending).senderId === userId} showStatus={item.key === lastOwnKey} canRetry={conversation.canSend} busy={!!busy} onRetry={() => item.pending && void perform(item.pending.clientMessageId, () => latest.current.retryMessage(item.pending!.clientMessageId))} onDiscard={() => item.pending && setDiscard(item.pending.clientMessageId)} />}</View>;
@@ -229,12 +229,13 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
         {!atBottom && rows.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Ir al final de la conversación" onPress={() => { follow.current = true; list.current?.scrollToEnd({ animated: true }); }} style={styles.toBottom}><Icon name="arrow-down" size={17} color={colors.primary} /><Text style={styles.link}>Ir al final</Text></Pressable>}
         </View>
         {!!disabledReason && <Text style={styles.disabledReason}>{disabledReason}</Text>}
+        {conversation.managementChanged&&conversation.currentContactAvailable&&<View style={styles.padding}><Button secondary label={`Consultar al gestor actual${conversation.currentManagerName?`: ${conversation.currentManagerName}`:''}`} onPress={()=>router.push(`/property/${conversation.propertyId}`)}/><Text style={styles.disabledReason}>Abrirás otra conversación desde la ficha actual. Este historial y sus borradores permanecen aquí.</Text></View>}
         {!!composer.error && <View style={styles.sync}><Text accessibilityRole="alert" style={styles.syncText}>{composer.error}</Text><Pressable accessibilityRole="button" onPress={() => { void composer.retry().catch(() => undefined); }} style={styles.retryLink}><Text style={styles.link}>Reintentar</Text></Pressable></View>}
         <View style={styles.composer}>
           <Pressable accessibilityRole="button" accessibilityLabel="Visitas y ofertas" onPress={() => { Keyboard.dismiss(); setSheet({}); }} style={({ pressed }) => [styles.plus, pressed && { opacity: 0.7 }]}>
             <Icon name="add" size={26} color={colors.primary} />
           </Pressable>
-          <TextInput accessibilityLabel="Escribe un mensaje" placeholder={auth.suspended ? 'Tu cuenta está suspendida' : composer.ready ? 'Escribe un mensaje…' : 'Recuperando borrador…'} placeholderTextColor={colors.muted} value={composer.text} onChangeText={composer.change} multiline maxLength={2000} editable={composer.ready && !busy && !auth.suspended} style={[styles.input, !conversation.canSend && styles.mutedInput]} textAlignVertical="top" />
+          <TextInput accessibilityLabel="Escribe un mensaje" placeholder={auth.suspended ? 'Tu cuenta está suspendida' : composer.ready ? 'Escribe un mensaje…' : 'Recuperando borrador…'} placeholderTextColor={colors.muted} value={composer.text} onChangeText={composer.change} multiline maxLength={2000} editable={composer.ready && !busy && !auth.suspended && !conversation.managementChanged} style={[styles.input, !conversation.canSend && styles.mutedInput]} textAlignVertical="top" />
           <Pressable accessibilityRole="button" accessibilityLabel="Enviar mensaje" accessibilityState={{ disabled: auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim() }} disabled={auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim()} onPress={send} style={({ pressed }) => [styles.send, (auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim() || pressed) && styles.sendDisabled]}>
             {busy === 'send' ? <ActivityIndicator color={colors.white} /> : <Icon name="arrow-up" size={24} color={colors.white} />}
           </Pressable>

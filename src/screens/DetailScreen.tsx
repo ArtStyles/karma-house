@@ -21,6 +21,7 @@ import { levelLabel } from '../profiles/domain';
 import { usePublicProfile } from '../profiles/usePublicProfile';
 import { listingShareUrl } from '../lib/publicSite';
 import { listingOperation, minStayText, operationBadge, priceLabel, priceSuffix, shareText, swapBalanceText, typeLabel, wantedOperationsText } from '../domain/operations';
+import {useListingManagement} from '../transfers/useListingManagement';
 
 const NEEDS_CONNECTION = 'Necesitas conexión para esto.';
 
@@ -30,10 +31,11 @@ export default function DetailScreen() {
   const auth = useAuth();
   const messaging = useMessaging();
   const { listing, ready, offline, retry } = useListing(id);
+  const management=useListingManagement(id);
   const [contact, setContact] = useState(false);
   const [contactBusy, setContactBusy] = useState(false);
   const [contactError, setContactError] = useState('');
-  const contactScope = `${id}:${auth.user?.id ?? ''}`;
+  const contactScope = `${id}:${auth.user?.id ?? ''}:${auth.session?.access_token??''}`;
   const currentScope = useRef(contactScope);
   currentScope.current = contactScope;
   const contactInFlight = useRef(false);
@@ -48,14 +50,14 @@ export default function DetailScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   useEffect(() => { setPhotoIndex(0); setError(''); setContact(false); setReport(false); }, [id]);
-  const sellerId = !offline && mode === 'cloud' && listing?.ownerId && listing.ownerId !== auth.user?.id ? listing.ownerId : undefined;
+  const sellerId = !offline && mode === 'cloud' && management.value?.contactAvailable && management.value.managerId!==auth.user?.id ? management.value.managerId : undefined;
   // Only owners of an approved, active listing (or someone already in a chat) have a public profile.
   const seller = usePublicProfile(sellerId);
   const sellerProfile = sellerId ? seller.profile : null;
   async function reload() { setRefreshing(true); try { await refresh(); } catch { /* Provider exposes the remote error. */ } finally { setRefreshing(false); } }
   if (!listing) return <SafeAreaView style={styles.safe}>{!ready ? <View style={styles.loading}><ActivityIndicator color={colors.primary} size="large" /><Text style={styles.sellerText}>Cargando vivienda…</Text></View> : storageError ? <View style={styles.body}><Notice error>{storageError}</Notice><Button label="Volver a cargar" loading={refreshing} onPress={reload} /><Button label="Volver a explorar" secondary onPress={() => router.replace('/')} /></View> : <EmptyState title="Esta vivienda no está disponible" description="Vuelve al catálogo para explorar otras viviendas." action={<Button label="Volver a explorar" onPress={() => router.replace('/')} />} />}</SafeAreaView>;
   const favorite = favoriteIds.includes(listing.id);
-  const own = isOwnListing(listing);
+  const own = mode==='demo'?isOwnListing(listing):Boolean(!offline&&auth.user&&management.value&&management.value.managerId===auth.user.id);
   const operation = listingOperation(listing);
   const wanted = operation === 'wanted';
   const photoCount = offline ? (listing.coverThumb?.uri || listing.photoUri ? 1 : 0) : Math.min(listing.photos?.length || (listing.photoUri ? 1 : 0), 6);
@@ -78,9 +80,14 @@ export default function DetailScreen() {
     contactInFlight.current = true; setContactBusy(true); setContactError('');
     const scope = contactScope;
     try {
-      const conversationId = await messaging.startConversation(listing.id);
+      const expected=management.value?.managerId??listing.ownerId;
+      const current=await management.refresh();
+      if(!current?.contactAvailable)throw Error('Este anuncio ya no está disponible para contacto.');
+      if(current.managerId!==expected){retry();throw Error('El responsable del anuncio cambió. Revisa la ficha actualizada y vuelve a tocar Contactar.');}
+      const conversationId = await messaging.startConversation(listing.id,current.managerId);
       if (mounted.current && currentScope.current === scope) router.push(`/messages/${conversationId}`);
     } catch (failure) {
+      if(/responsable.*cambió|KH_CHAT_MANAGER_CHANGED/i.test(failure instanceof Error?failure.message:'')){retry();void management.refresh().catch(()=>{});}
       if (mounted.current && currentScope.current === scope) setContactError(failure instanceof Error ? failure.message : 'No pudimos abrir la conversación. Inténtalo de nuevo.');
     } finally {
       if (mounted.current && currentScope.current === scope) { contactInFlight.current = false; setContactBusy(false); }
@@ -123,6 +130,8 @@ export default function DetailScreen() {
         </View>}
       </View>
       <View style={styles.body}>
+        {management.value?.assistedByKarmaHouse&&<Notice>Publicado con asistencia de KarmaHouse. {sellerProfile?.displayName?`La gestión actual corresponde a ${sellerProfile.displayName}.`:'Las consultas nuevas se dirigen al responsable vigente.'}</Notice>}
+        {management.error&&!offline&&<Notice error>{management.error}</Notice>}
         {offline && <View style={{ gap: 8 }}><Notice>Sin conexión. Esta es una copia guardada; el precio y la disponibilidad pueden haber cambiado. Contactar y guardar favoritos requieren conexión.</Notice><Button label="Reintentar conexión" secondary onPress={retry} /></View>}
         {photoCount > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbnails}>
           {Array.from({ length: photoCount }, (_, index) => <Pressable key={index} accessibilityRole="button" accessibilityLabel={`Ver foto ${index + 1} de ${photoCount}`} accessibilityState={{ selected: index === selectedPhoto }} onPress={() => setPhotoIndex(index)} style={[styles.thumbnail, index === selectedPhoto && styles.thumbnailSelected]}>

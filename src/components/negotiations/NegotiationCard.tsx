@@ -5,8 +5,8 @@ import { colors } from '../../theme';
 import { Button, Icon } from '../ui';
 
 const statusLabels:Record<Negotiation['status'],string>={pending:'Pendiente',accepted:'Aceptada',declined:'Rechazada',cancelled:'Cancelada',superseded:'Con alternativa',expired:'Vencida'};
-export function NegotiationCard({ item, userId, busy = false, onRespond, onCounter, onOpenConversation }: {
-  item:Negotiation; userId:string; busy?:boolean;
+export function NegotiationCard({ item, userId, busy = false, managementChanged=false, onRespond, onCounter, onOpenConversation }: {
+  item:Negotiation; userId:string; busy?:boolean;managementChanged?:boolean;
   onRespond(item:Negotiation,action:NegotiationAction):void; onCounter(item:Negotiation):void; onOpenConversation?:()=>void;
 }) {
   const actions=availableNegotiationActions(item,userId);
@@ -17,6 +17,7 @@ export function NegotiationCard({ item, userId, busy = false, onRespond, onCount
     <Text style={styles.value}>{formatNegotiationValue(item)}</Text>
     {onOpenConversation&&<Text style={styles.property}>{item.propertyTitle} · {item.propertyLocation}</Text>}
     {!!item.note&&<Text style={styles.note}>{item.note}</Text>}
+    {managementChanged&&<Text style={styles.unavailable}>Este acuerdo pertenece a la conversación anterior. El gestor nuevo no recibe su historial ni participa en él.</Text>}
     {item.status==='pending'&&<Text style={styles.meta}>{own?'Esperando la respuesta de la otra persona.':'Puedes responder a esta propuesta.'}{item.kind==='offer'?' Caduca a los siete días.':''}</Text>}
     {!item.canAct&&active&&<Text style={styles.unavailable}>Las nuevas propuestas y respuestas están pausadas. Puedes retirar o cancelar tus compromisos.</Text>}
     <View style={styles.actions}>

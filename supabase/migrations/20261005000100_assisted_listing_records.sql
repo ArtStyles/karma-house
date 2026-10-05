@@ -12,8 +12,8 @@ create table kh_private.assisted_collaborators(
 create table kh_private.assisted_listing_records(
  property_id uuid primary key references public.properties(id) on delete cascade,collaborator_id uuid not null references kh_private.assisted_collaborators(id),version integer not null default 1,
  collaborator_reference text not null check(char_length(collaborator_reference) between 1 and 100),source_channel text not null,source_reference text,
- received_at timestamptz not null,consent_text text not null,consent_version text not null,consent_at timestamptz not null,evidence_reference text not null,
- recorded_by uuid,recorded_at timestamptz not null default clock_timestamp(),consent_revoked_at timestamptz,last_confirmed_at timestamptz not null,confirmed_price numeric,confirmed_availability text,
+ received_at timestamptz,consent_text text,consent_version text,consent_at timestamptz,evidence_reference text,
+ recorded_by uuid,recorded_at timestamptz not null default clock_timestamp(),consent_revoked_at timestamptz,last_confirmed_at timestamptz,confirmed_price numeric,confirmed_availability text,
  unique(collaborator_id,collaborator_reference)
 );
 create table kh_private.assisted_write_receipts(actor_id uuid not null,request_id text not null,kind text not null,payload jsonb not null,result jsonb not null,primary key(actor_id,request_id,kind));
@@ -127,10 +127,6 @@ begin
  perform pg_advisory_xact_lock(hashtextextended('kh:photo:'||p_name,0));
  return not exists(select 1 from kh_private.property_media_assets where path=p_name) and not exists(select 1 from public.properties where p_name=any(photo_paths) or cover_thumb_path=p_name);
 end $$;
-drop policy kh_photo_read on storage.objects;
-create policy kh_photo_read on storage.objects for select to anon,authenticated using(bucket_id='property-photos' and (
- (select public.kh_is_admin()) or exists(select 1 from public.properties p where (p.moderation='approved' and p.availability='active' or p.owner_id=(select auth.uid())) and (objects.name=any(p.photo_paths) or objects.name=p.cover_thumb_path))
- or (split_part(name,'/',1)=(select auth.uid())::text and not exists(select 1 from kh_private.property_media_assets a where a.path=objects.name))));
 -- Policies must not require exposing the private registry itself.
 create function kh_private.media_unassigned(p_path text) returns boolean language sql stable security definer set search_path='' as $$ select not exists(select 1 from kh_private.property_media_assets where path=p_path) $$;
 drop policy kh_photo_read on storage.objects;
@@ -138,12 +134,27 @@ create policy kh_photo_read on storage.objects for select to anon,authenticated 
  (select public.kh_is_admin()) or exists(select 1 from public.properties p where (p.moderation='approved' and p.availability='active' or p.owner_id=(select auth.uid())) and (objects.name=any(p.photo_paths) or objects.name=p.cover_thumb_path))
  or (split_part(name,'/',1)=(select auth.uid())::text and kh_private.media_unassigned(name))));
 create policy kh_not_deleting_upload on storage.objects as restrictive for insert to authenticated with check(bucket_id not in('property-photos','account-avatars') or not kh_private.is_deleting((select auth.uid())));
+-- INSERT checks alone can observe a pre-deletion snapshot. Serialize before the
+-- policy check so an in-flight upload completes before the deletion manifest.
+create function kh_private.guard_media_account_write() returns trigger language plpgsql security definer set search_path='' as $$
+begin
+ if auth.uid() is not null and new.bucket_id in('property-photos','account-avatars') then
+  perform kh_private.require_active();
+  if kh_private.is_deleting(auth.uid()) then raise exception 'KH_ACCOUNT_DELETING';end if;
+ end if;return new;
+end $$;
+create trigger kh_media_account_write before insert on storage.objects for each row execute function kh_private.guard_media_account_write();
+revoke all on function kh_private.guard_media_account_write() from public,anon,authenticated;
 
 -- Consent cannot be bypassed by an older APK submitting an assisted draft directly.
+create function kh_private.assisted_record_complete(r kh_private.assisted_listing_records) returns boolean language sql immutable set search_path='' as $$
+ select coalesce(char_length(btrim(r.source_channel)) between 1 and 40 and char_length(btrim(r.consent_text)) between 20 and 2000 and char_length(btrim(r.consent_version)) between 1 and 100 and char_length(btrim(r.evidence_reference)) between 1 and 500 and r.received_at is not null and r.consent_at is not null and r.last_confirmed_at is not null,false);
+$$;
+revoke all on function kh_private.assisted_record_complete(kh_private.assisted_listing_records) from public,anon,authenticated;
 create function kh_private.guard_assisted_consent() returns trigger language plpgsql security definer set search_path='' as $$
 begin
  if auth.uid() is not null and kh_private.is_deleting(auth.uid()) then raise exception 'KH_ACCOUNT_DELETING';end if;
- if new.moderation<>'draft' and new.availability='active' and exists(select 1 from kh_private.assisted_listing_records r join kh_private.assisted_collaborators c on c.id=r.collaborator_id where r.property_id=new.id and (r.consent_revoked_at is not null or c.state<>'active')) then raise exception 'KH_ASSISTED_CONSENT_REQUIRED';end if;
+ if new.moderation<>'draft' and exists(select 1 from kh_private.assisted_listing_records r join kh_private.assisted_collaborators c on c.id=r.collaborator_id where r.property_id=new.id and (not kh_private.assisted_record_complete(r) or new.availability='active' and (r.consent_revoked_at is not null or c.state<>'active'))) then raise exception 'KH_ASSISTED_CONSENT_REQUIRED';end if;
  return new;
 end $$;
 create trigger kh_assisted_consent_write before insert or update on public.properties for each row execute function kh_private.guard_assisted_consent();
@@ -158,10 +169,17 @@ create trigger kh_collaborator_withdrawal before update on kh_private.assisted_c
 revoke all on function kh_private.withdraw_assisted_collaborator() from public,anon,authenticated;
 
 create function public.kh_save_assisted_property(p_actor_id uuid,p_listing_payload jsonb,p_provenance_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
-declare a uuid:=kh_private.assisted_actor(p_actor_id,true);c uuid:=(p_provenance_payload->>'collaboratorId')::uuid;r text:=p_listing_payload->>'clientRequestId';k text:=case when nullif(p_listing_payload->>'id','') is null then 'publication' else 'publication:'||(p_listing_payload->>'id')||':'||coalesce(p_listing_payload->>'expectedVersion','0') end;saved jsonb;receipt kh_private.assisted_write_receipts%rowtype;old kh_private.assisted_listing_records%rowtype;existing_id uuid;
+declare a uuid:=kh_private.assisted_actor(p_actor_id,true);c uuid:=(p_provenance_payload->>'collaboratorId')::uuid;r text:=p_listing_payload->>'clientRequestId';k text:=case when nullif(p_listing_payload->>'id','') is null then 'publication' else 'publication:'||(p_listing_payload->>'id')||':'||coalesce(p_listing_payload->>'expectedVersion','0') end;saved jsonb;receipt kh_private.assisted_write_receipts%rowtype;old kh_private.assisted_listing_records%rowtype;existing_id uuid;is_draft boolean:=p_listing_payload->>'moderation'='draft';field_name text;field_limit integer;full_proof boolean;
 begin
- if coalesce(char_length(btrim(p_provenance_payload->>'collaboratorReference')),0) not between 1 and 100 or coalesce(char_length(btrim(p_provenance_payload->>'consentText')),0) not between 20 and 2000 or coalesce(char_length(btrim(p_provenance_payload->>'consentVersion')),0) not between 1 and 100 or coalesce(char_length(btrim(p_provenance_payload->>'evidenceReference')),0) not between 1 and 500 or coalesce(char_length(btrim(p_provenance_payload->>'sourceChannel')),0) not between 1 and 40 then raise exception 'KH_ASSISTED_CONSENT_REQUIRED';end if;
- if nullif(p_provenance_payload->>'receivedAt','') is null or nullif(p_provenance_payload->>'consentAt','') is null or nullif(p_provenance_payload->>'lastConfirmedAt','') is null or greatest((p_provenance_payload->>'receivedAt')::timestamptz,(p_provenance_payload->>'consentAt')::timestamptz,(p_provenance_payload->>'lastConfirmedAt')::timestamptz)>clock_timestamp() then raise exception 'KH_ASSISTED_INVALID';end if;
+ if coalesce(char_length(btrim(p_provenance_payload->>'collaboratorReference')),0) not between 1 and 100 then raise exception 'KH_ASSISTED_INVALID';end if;
+ for field_name,field_limit in select * from (values('sourceChannel',40),('sourceReference',500),('consentText',2000),('consentVersion',100),('evidenceReference',500)) t loop
+  if char_length(p_provenance_payload->>field_name)>field_limit then raise exception 'KH_ASSISTED_INVALID';end if;
+ end loop;
+ foreach field_name in array array['receivedAt','consentAt','lastConfirmedAt'] loop
+  if nullif(p_provenance_payload->>field_name,'') is not null and (p_provenance_payload->>field_name)::timestamptz>clock_timestamp() then raise exception 'KH_ASSISTED_INVALID';end if;
+ end loop;
+ full_proof:=coalesce(char_length(btrim(p_provenance_payload->>'consentText')) between 20 and 2000 and char_length(btrim(p_provenance_payload->>'consentVersion')) between 1 and 100 and char_length(btrim(p_provenance_payload->>'evidenceReference')) between 1 and 500 and char_length(btrim(p_provenance_payload->>'sourceChannel')) between 1 and 40 and nullif(p_provenance_payload->>'receivedAt','') is not null and nullif(p_provenance_payload->>'consentAt','') is not null and nullif(p_provenance_payload->>'lastConfirmedAt','') is not null,false);
+ if not is_draft and not full_proof then raise exception 'KH_ASSISTED_CONSENT_REQUIRED';end if;
  perform pg_advisory_xact_lock(hashtextextended('kh:assisted:'||a::text||':'||r,0));
   select * into receipt from kh_private.assisted_write_receipts where actor_id=a and request_id=r and kind=k;
   if found then
@@ -176,20 +194,24 @@ begin
   perform 1 from public.properties where id=(p_listing_payload->>'id')::uuid and owner_id=a for update;if not found then raise exception 'KH_PROPERTY_MANAGEMENT_CHANGED';end if;
   select * into old from kh_private.assisted_listing_records where property_id=(p_listing_payload->>'id')::uuid for update;
   if found and (p_provenance_payload->>'expectedVersion')::integer is distinct from old.version then raise exception 'KH_VERSION_CONFLICT';end if;
+  if old.consent_revoked_at is not null and not is_draft and (p_provenance_payload->>'consentAt')::timestamptz<=old.consent_revoked_at then raise exception 'KH_ASSISTED_CONSENT_REQUIRED';end if;
+  -- Stage the new evidence under the property/provenance locks so its write guard sees
+  -- the same authorization. Any property failure rolls back this private update.
+  update kh_private.assisted_listing_records set source_channel=coalesce(p_provenance_payload->>'sourceChannel',''),received_at=nullif(p_provenance_payload->>'receivedAt','')::timestamptz,consent_text=p_provenance_payload->>'consentText',consent_version=p_provenance_payload->>'consentVersion',consent_at=nullif(p_provenance_payload->>'consentAt','')::timestamptz,evidence_reference=p_provenance_payload->>'evidenceReference',last_confirmed_at=nullif(p_provenance_payload->>'lastConfirmedAt','')::timestamptz,consent_revoked_at=case when full_proof and nullif(p_provenance_payload->>'consentAt','')::timestamptz>consent_revoked_at then null else consent_revoked_at end where property_id=old.property_id;
  end if;
  saved:=public.kh_save_property(p_listing_payload);
  insert into kh_private.assisted_listing_records(property_id,collaborator_id,collaborator_reference,source_channel,source_reference,received_at,consent_text,consent_version,consent_at,evidence_reference,recorded_by,last_confirmed_at,confirmed_price,confirmed_availability)
- values((saved->>'id')::uuid,c,btrim(p_provenance_payload->>'collaboratorReference'),p_provenance_payload->>'sourceChannel',left(p_provenance_payload->>'sourceReference',500),(p_provenance_payload->>'receivedAt')::timestamptz,p_provenance_payload->>'consentText',p_provenance_payload->>'consentVersion',(p_provenance_payload->>'consentAt')::timestamptz,p_provenance_payload->>'evidenceReference',a,(p_provenance_payload->>'lastConfirmedAt')::timestamptz,(saved->>'price')::numeric,saved->>'availability')
+ values((saved->>'id')::uuid,c,btrim(p_provenance_payload->>'collaboratorReference'),coalesce(p_provenance_payload->>'sourceChannel',''),p_provenance_payload->>'sourceReference',nullif(p_provenance_payload->>'receivedAt','')::timestamptz,p_provenance_payload->>'consentText',p_provenance_payload->>'consentVersion',nullif(p_provenance_payload->>'consentAt','')::timestamptz,p_provenance_payload->>'evidenceReference',a,nullif(p_provenance_payload->>'lastConfirmedAt','')::timestamptz,(saved->>'price')::numeric,saved->>'availability')
  on conflict(property_id) do update set collaborator_id=excluded.collaborator_id,collaborator_reference=excluded.collaborator_reference,source_channel=excluded.source_channel,source_reference=excluded.source_reference,received_at=excluded.received_at,consent_text=excluded.consent_text,consent_version=excluded.consent_version,consent_at=excluded.consent_at,evidence_reference=excluded.evidence_reference,recorded_by=a,recorded_at=clock_timestamp(),last_confirmed_at=excluded.last_confirmed_at,confirmed_price=excluded.confirmed_price,confirmed_availability=excluded.confirmed_availability,version=kh_private.assisted_listing_records.version+1;
  insert into kh_private.assisted_write_receipts values(a,r,k,jsonb_build_object('listing',p_listing_payload,'provenance',p_provenance_payload),saved);
  return saved;
 end $$;
 create function public.kh_admin_list_assisted_listings(p_actor_id uuid,p_collaborator_id uuid,p_offset integer default 0) returns jsonb language plpgsql security definer set search_path='' as $$
 begin perform kh_private.assisted_actor(p_actor_id,true);if p_offset<0 then raise exception 'KH_ASSISTED_INVALID';end if;
- return(select jsonb_build_object('items',coalesce(jsonb_agg(to_jsonb(x)-'n') filter(where n<=p_offset+50),'[]'),'hasMore',count(*)>50) from (select p.id,p.title,p.owner_id as "ownerId",p.version,r.version as "provenanceVersion",p.moderation,p.availability,r.collaborator_id as "collaboratorId",r.collaborator_reference as "collaboratorReference",r.last_confirmed_at as "lastConfirmedAt",(p.owner_id=p_actor_id and p.moderation='approved' and p.availability in('active','paused') and r.consent_revoked_at is null) eligible,row_number() over(order by p.created_at desc,p.id) n from public.properties p join kh_private.assisted_listing_records r on r.property_id=p.id where r.collaborator_id=p_collaborator_id order by p.created_at desc,p.id offset p_offset limit 51) x);
+ return(select jsonb_build_object('items',coalesce(jsonb_agg(to_jsonb(x)-'n') filter(where n<=p_offset+50),'[]'),'hasMore',count(*)>50) from (select p.id,p.title,p.owner_id as "ownerId",p.version,r.version as "provenanceVersion",p.moderation,p.availability,r.collaborator_id as "collaboratorId",r.collaborator_reference as "collaboratorReference",r.last_confirmed_at as "lastConfirmedAt",(p.owner_id=p_actor_id and p.moderation='approved' and p.availability in('active','paused') and r.consent_revoked_at is null and kh_private.assisted_record_complete(r) and exists(select 1 from kh_private.assisted_collaborators c join auth.users u on u.id=c.account_id join public.profiles pr on pr.id=u.id where c.id=r.collaborator_id and c.state='active' and c.link_confirmed_at is not null and u.email_confirmed_at is not null and not kh_private.is_suspended(u.id) and not kh_private.is_deleting(u.id))) eligible,row_number() over(order by p.created_at desc,p.id) n from public.properties p join kh_private.assisted_listing_records r on r.property_id=p.id where r.collaborator_id=p_collaborator_id order by p.created_at desc,p.id offset p_offset limit 51) x);
 end $$;
 create function public.kh_get_listing_management(p_property_id uuid) returns jsonb language sql stable security definer set search_path='' as $$
- select jsonb_build_object('propertyId',p.id,'managerId',p.owner_id,'assistedByKarmaHouse',exists(select 1 from kh_private.assisted_listing_records r where r.property_id=p.id)) from public.properties p where p.id=p_property_id and (p.moderation='approved' and p.availability='active' or p.owner_id=auth.uid() or public.kh_is_admin());
+ select jsonb_build_object('propertyId',p.id,'managerId',p.owner_id,'assistedByKarmaHouse',exists(select 1 from kh_private.assisted_listing_records r where r.property_id=p.id),'contactAvailable',p.moderation='approved' and p.availability='active') from public.properties p where p.id=p_property_id and (p.moderation='approved' and p.availability='active' or p.owner_id=auth.uid() or public.kh_is_admin());
 $$;
 create function public.kh_get_assisted_record(p_actor_id uuid,p_property_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$
 begin

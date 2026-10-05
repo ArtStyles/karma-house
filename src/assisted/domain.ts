@@ -15,6 +15,14 @@ export function validateProvenance(input:AssistedProvenance,now=Date.now()):Assi
   for(const key of ['receivedAt','consentAt','lastConfirmedAt'] as const) if(!Number.isFinite(Date.parse(input[key]))||Date.parse(input[key])>now) throw new Error('Revisa la fecha de recepción, autorización y confirmación.');
   return {...input,collaboratorReference:field(input.collaboratorReference,1,100,'la referencia del anuncio'),sourceChannel:field(input.sourceChannel,1,40,'el canal del material'),consentText:field(input.consentText,20,2000,'la autorización'),consentVersion:field(input.consentVersion,1,100,'la versión de autorización'),evidenceReference:field(input.evidenceReference,1,500,'la referencia privada del permiso')};
 }
+/** Empty evidence is retained only for a private draft; supplied values still have limits. */
+export function validateDraftProvenance(input:Partial<AssistedProvenance>,now=Date.now()):AssistedProvenance {
+ if(!isUuid(input.collaboratorId))throw new Error('Selecciona el colaborador.');
+ const result={...input,collaboratorId:input.collaboratorId,collaboratorReference:field(input.collaboratorReference,1,100,'la referencia del anuncio')} as AssistedProvenance;
+ for(const [key,max] of [['sourceChannel',40],['sourceReference',500],['consentText',2000],['consentVersion',100],['evidenceReference',500]] as const)result[key]=field(input[key]??'',0,max,'el permiso privado');
+ for(const key of ['receivedAt','consentAt','lastConfirmedAt'] as const){const value=input[key]??'';if(value&&(!Number.isFinite(Date.parse(value))||Date.parse(value)>now))throw new Error('Revisa la fecha del permiso privado.');result[key]=value;}
+ return result;
+}
 export function assistedError(error:unknown):string {
   const message=error instanceof Error?error.message:String((error as {message?:string})?.message??'');
   if(/KH_OFFICIAL_ACCOUNT_REQUIRED/.test(message)) return 'Solo la cuenta principal oficial de KarmaHouse puede preparar y ofrecer estos traspasos.';

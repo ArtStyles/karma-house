@@ -38,6 +38,7 @@ export interface ListingFormProps {
   initialDraft?: ListingDraft;
   submitLabel?: string;
   onSubmit(draft: ListingDraft): Promise<void>;
+  onSaveDraft?: (draft: ListingDraft) => Promise<void>;
   onSaved?: () => void;
   onCancel?: () => void;
   onReloadLatest?: () => Promise<void>;
@@ -85,6 +86,7 @@ export function ListingForm({
   initialDraft,
   submitLabel = 'Guardar anuncio',
   onSubmit,
+  onSaveDraft,
   onSaved,
   onCancel,
   onReloadLatest,
@@ -207,11 +209,11 @@ export function ListingForm({
     setStep((current) => Math.min(current + 1, 2));
   }
 
-  async function submit() {
+  async function submit(asDraft = false) {
     if (submitLock.current || !hydrated || photoBusy || versionConflict || savedWarning) return;
 
     const result = validateDraft(draft);
-    if (cloud && !wanted && !(draft.photos?.length)) result.errors.photos = 'Añade al menos una foto real de tu vivienda.';
+    if (cloud && !asDraft && !wanted && !(draft.photos?.length)) result.errors.photos = 'Añade al menos una foto real de tu vivienda.';
     if (Object.keys(result.errors).length) {
       setErrors(result.errors);
       const firstInvalidStep = stepFields.findIndex((fields) =>
@@ -227,7 +229,7 @@ export function ListingForm({
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     try {
       if (persistence) await persistence.write(draft);
-      await onSubmit(cloneDraft(draft));
+      await (asDraft && onSaveDraft ? onSaveDraft : onSubmit)(cloneDraft(draft));
       completed.current = true;
       const cleaned = persistence ? await persistence.complete() : true;
       if (!mounted.current) return;
@@ -241,7 +243,7 @@ export function ListingForm({
       }
       if (!initialDraft) completed.current = false;
       if (cleaned) onSaved?.();
-      else setSavedWarning(directPublication ? 'El anuncio se publicó. No pudimos limpiar el borrador de este dispositivo; no necesitas volver a enviarlo.' : 'El anuncio se guardó y se envió a revisión. No pudimos limpiar el borrador de este dispositivo; no necesitas volver a enviarlo.');
+      else setSavedWarning(asDraft ? 'El borrador privado se guardó en tu cuenta. No pudimos limpiar su copia en este dispositivo; no necesitas volver a enviarlo.' : directPublication ? 'El anuncio se publicó. No pudimos limpiar el borrador de este dispositivo; no necesitas volver a enviarlo.' : 'El anuncio se guardó y se envió a revisión. No pudimos limpiar el borrador de este dispositivo; no necesitas volver a enviarlo.');
     } catch (error) {
       if (mounted.current) setSubmitError(readError(error, 'No pudimos guardar el anuncio. Tu borrador sigue disponible para reintentar.'));
     } finally {
@@ -668,6 +670,7 @@ export function ListingForm({
             )}
           </View>
 
+          {onSaveDraft ? <Button label="Guardar borrador privado en mi cuenta" secondary disabled={submitting || photoBusy} onPress={() => void submit(true)} /> : null}
           {step > 0 && onCancel ? (
             <Button
               label="Cancelar edición"

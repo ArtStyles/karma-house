@@ -20,7 +20,7 @@ begin
  select * into c from kh_private.assisted_collaborators where id=r.collaborator_id;
  if c.account_id is distinct from r.recipient_id or c.version<>r.collaborator_version then return 'KH_TRANSFER_RECIPIENT_CHANGED';end if;
  if c.state<>'active' or not kh_private.is_official(r.source_owner_id) or kh_private.is_suspended(r.recipient_id) or kh_private.is_deleting(r.recipient_id) or not exists(select 1 from auth.users where id=r.recipient_id and email_confirmed_at is not null) then return 'KH_TRANSFER_STALE';end if;
- if exists(select 1 from kh_private.listing_transfer_items i left join public.properties p on p.id=i.property_id left join kh_private.assisted_listing_records a on a.property_id=i.property_id where i.request_id=p_id and (p.id is null or p.owner_id<>r.source_owner_id or p.version<>i.property_version or p.moderation<>'approved' or p.availability not in('active','paused') or a.property_id is null or a.collaborator_id<>r.collaborator_id or a.version<>i.provenance_version or a.consent_revoked_at is not null)) then return 'KH_TRANSFER_STALE';end if;
+ if exists(select 1 from kh_private.listing_transfer_items i left join public.properties p on p.id=i.property_id left join kh_private.assisted_listing_records a on a.property_id=i.property_id where i.request_id=p_id and (p.id is null or p.owner_id<>r.source_owner_id or p.version<>i.property_version or p.moderation<>'approved' or p.availability not in('active','paused') or a.property_id is null or a.collaborator_id<>r.collaborator_id or a.version<>i.provenance_version or a.consent_revoked_at is not null or not kh_private.assisted_record_complete(a))) then return 'KH_TRANSFER_STALE';end if;
  return null;
 end $$;
 create function kh_private.transfer_result(p_id uuid) returns jsonb language sql stable security definer set search_path='' as $$
@@ -79,7 +79,7 @@ begin
  end loop;
  for item in select x from jsonb_array_elements(p_payload->'items') x order by x->>'propertyId' loop
   select * into record from kh_private.assisted_listing_records where property_id=(item->>'propertyId')::uuid for update;
-  if not found or record.collaborator_id<>c or record.consent_revoked_at is not null or record.version is distinct from (item->>'expectedProvenanceVersion')::integer then raise exception 'KH_TRANSFER_INELIGIBLE';end if;
+  if not found or record.collaborator_id<>c or record.consent_revoked_at is not null or not kh_private.assisted_record_complete(record) or record.version is distinct from (item->>'expectedProvenanceVersion')::integer then raise exception 'KH_TRANSFER_INELIGIBLE';end if;
  end loop;
  insert into kh_private.listing_transfer_requests(source_owner_id,recipient_id,collaborator_id,collaborator_version,client_request_id,payload) values(a,target,c,collab.version,token,p_payload) returning id into new_id;
  insert into kh_private.listing_transfer_items(request_id,property_id,property_version,provenance_version,snapshot) select new_id,p.id,p.version,provenance.version,to_jsonb(p) from public.properties p join kh_private.assisted_listing_records provenance on provenance.property_id=p.id join jsonb_array_elements(p_payload->'items') x on p.id=(x->>'propertyId')::uuid;
@@ -148,4 +148,8 @@ end $$;
 revoke all on function kh_private.transfer_reason(uuid),kh_private.transfer_result(uuid),kh_private.finish_transfer(uuid,text,text,jsonb),kh_private.transfer_json(uuid,uuid),kh_private.guard_listing_manager() from public,anon,authenticated;
 revoke all on function public.kh_get_listing_transfer(uuid,uuid),public.kh_list_listing_transfers(uuid,text,integer),public.kh_offer_listing_transfer(uuid,jsonb),public.kh_decide_listing_transfer(uuid,jsonb) from public,anon,authenticated;
 grant execute on function public.kh_get_listing_transfer(uuid,uuid),public.kh_list_listing_transfers(uuid,text,integer),public.kh_offer_listing_transfer(uuid,jsonb),public.kh_decide_listing_transfer(uuid,jsonb) to authenticated;
+create function public.kh_listing_transfer_count(p_actor_id uuid) returns integer language plpgsql security definer set search_path='' as $$
+begin perform kh_private.assisted_actor(p_actor_id);return(select count(*)::integer from kh_private.listing_transfer_requests where recipient_id=p_actor_id and state='pending' and kh_private.transfer_reason(id) is null);end $$;
+revoke all on function public.kh_listing_transfer_count(uuid) from public,anon,authenticated;
+grant execute on function public.kh_listing_transfer_count(uuid) to authenticated;
 notify pgrst,'reload schema';

@@ -1,7 +1,7 @@
 // @ts-nocheck -- Node runs domain behavior without the app.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { validateCollaborator, validateProvenance, assistedError } from '../src/assisted/domain.ts';
+import { validateCollaborator, validateProvenance, validateDraftProvenance, assistedError } from '../src/assisted/domain.ts';
 test('linking requires evidence rather than a public display name or phone', () => {
   assert.throws(()=>validateCollaborator({kind:'agency',privateName:'Agencia ejemplo',privateContact:'contacto privado',contactChannel:'manual',accountId:'43000000-0000-4000-8000-000000000002',linkEvidenceReference:''}),/confirmación/);
   assert.equal(validateCollaborator({kind:'agency',privateName:' Agencia ejemplo ',privateContact:' contacto privado ',contactChannel:'manual',accountId:null}).privateName,'Agencia ejemplo');
@@ -15,4 +15,11 @@ test('publication requires actual authorization and a nonfuture confirmation', (
 test('official-only and stale management errors explain the action without exposing contacts',()=>{
   assert.match(assistedError(new Error('KH_OFFICIAL_ACCOUNT_REQUIRED')),/principal/);
   assert.match(assistedError(new Error('KH_PROPERTY_MANAGEMENT_CHANGED')),/gestión/);
+});
+test('partial permission can be prepared privately but cannot authorize publication',()=>{
+ const partial={collaboratorId:'43000000-0000-4000-8000-000000000021',collaboratorReference:'draft-1'};
+ const draft=validateDraftProvenance(partial);
+ assert.equal(draft.consentAt,'');
+ assert.throws(()=>validateProvenance(draft),/fecha|autorización/);
+ assert.throws(()=>validateDraftProvenance({...partial,consentAt:'2999-01-01T00:00:00Z'}),/fecha/);
 });

@@ -1,0 +1,6 @@
+import {useCallback,useRef,useState,useSyncExternalStore} from 'react';import {useFocusEffect} from 'expo-router';import {AppState} from 'react-native';import {supabase} from '../lib/supabase';import {usePrivateSession} from '../assisted/usePrivateSession';import {createScopedRpc} from './repository';import {listingManagementEvents} from '../state/listingManagementEvents';
+export function useIncomingTransferCount(){const session=usePrivateSession(),key=session.key,latest=useRef(key);latest.current=key;const [state,setState]=useState<{key:string;count:number}>({key:'',count:0});const generation=useSyncExternalStore(listingManagementEvents.subscribe,listingManagementEvents.getSnapshot,listingManagementEvents.getSnapshot);
+ const refresh=useCallback(async()=>{if(!supabase||!session.auth.user)return;const captured=key;try{const n=await session.run(c=>createScopedRpc(supabase!)('kh_listing_transfer_count',{},c));if(Number.isSafeInteger(n)&&(n as number)>=0&&latest.current===captured)setState({key:captured,count:n as number});}catch{/* Unconfirmed count is not authority for an action. */}},[key,generation]);
+ useFocusEffect(useCallback(()=>{void refresh();const sub=AppState.addEventListener('change',state=>{if(state==='active')void refresh();});return()=>sub.remove();},[refresh]));
+ return {count:state.key===key?state.count:null,refresh};
+}

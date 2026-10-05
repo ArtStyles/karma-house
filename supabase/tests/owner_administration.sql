@@ -65,7 +65,7 @@ select pg_temp.owner_error($q$select public.kh_save_property(pg_temp.wanted_payl
 select pg_temp.owner_error(format('select public.kh_set_property_status(%L,''active'')',member_ad),'KH_ACCOUNT_SUSPENDED') from owner_context;
 select pg_temp.owner_error(format('select public.kh_start_conversation(%L,''42000000-0000-4000-8000-000000000003'')',owner_ad),'KH_ACCOUNT_SUSPENDED') from owner_context;
 select pg_temp.owner_error($q$select public.kh_update_account_profile('42000000-0000-4000-8000-000000000003','Cambio bloqueado',null,false)$q$,'KH_ACCOUNT_SUSPENDED');
-select pg_temp.owner_error($q$insert into storage.objects(bucket_id,name) values('account-avatars','42000000-0000-4000-8000-000000000003/11111111-1111-4111-8111-111111111111.jpg')$q$,'row-level security');
+select pg_temp.owner_error($q$insert into storage.objects(bucket_id,name) values('account-avatars','42000000-0000-4000-8000-000000000003/11111111-1111-4111-8111-111111111111.jpg')$q$,'KH_ACCOUNT_SUSPENDED');
 select pg_temp.owner_as('42000000-0000-4000-8000-000000000001');
 select public.kh_admin_account_action('42000000-0000-4000-8000-000000000001','42000000-0000-4000-8000-000000000003','reactivate','Reactivación de prueba','admin',true);
 select pg_temp.owner_assert((select availability='active' from public.properties where id=member_ad),'reactivation restores unchanged ad') from owner_context;

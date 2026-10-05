@@ -11,6 +11,7 @@ import { listingOperation, operationBadge, priceSuffix } from '../domain/operati
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { remoteErrorMessage } from '../state/remoteMarketplaceStore';
 import { colors, formatMoney } from '../theme';
+import {useIncomingTransferCount} from '../transfers/useIncomingTransferCount';
 
 const boardLabels: Record<ListingBoardState, string> = {
   sold: 'Vendido', rejected: 'Necesita cambios', draft: 'Borrador',
@@ -28,6 +29,7 @@ const boardTones: Record<ListingBoardState, { color: string; background: string 
 export default function MyListingsScreen() {
   const { ownListings: own, setStatus, mode, refresh, submitForReview } = useMarketplace();
   const { user, isOwner } = useAuth();
+  const transfers=useIncomingTransferCount();
   const [pending, setPending] = useState('');
   const [error, setError] = useState('');
   const [confirm, setConfirm] = useState<{ listing: Listing; next: 'sold' | 'active' } | null>(null);
@@ -65,6 +67,7 @@ export default function MyListingsScreen() {
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
     <ScrollView contentContainerStyle={styles.content}>
       <PageTitle title="Mis anuncios" subtitle="Administra tus viviendas." back fallback="/profile" />
+      {user&&!isOwner&&<Button secondary label={`Anuncios por aceptar${transfers.count===null?'':` · ${transfers.count}`}`} onPress={()=>router.push('/listing-transfers')}/>}
       {mode === 'cloud' && !user ? <AccountPrompt returnTo="/my-listings" /> : <>
       <Notice>{mode === 'cloud' ? 'Tus anuncios aparecen en el catálogo cuando están aprobados y activos. Los cambios de contenido se revisan antes de publicarse.' : 'Los anuncios de prueba se guardan en este dispositivo. Los activos aparecen en tu catálogo local.'}</Notice>
       {error ? <Notice error>{error}</Notice> : null}

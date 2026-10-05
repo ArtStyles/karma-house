@@ -111,6 +111,12 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
       publish(emptyRemoteState(userId));
     },
     refresh,
+    invalidateListingManagement(ids:readonly string[]) {
+      generation += 1; refreshSequence += 1; reviewSequence += 1;
+      mutationQueue = Promise.resolve();
+      publish({...state,ownListings:state.ownListings.filter(row=>!ids.includes(row.id)),moderationQueue:state.moderationQueue.filter(row=>!ids.includes(row.id))});
+      return refresh();
+    },
     isOwnListing: (listing: Listing) => !!userId && listing.owner === 'remote' && listing.ownerId === userId,
     toggleFavorite(id: string) {
       return enqueue(async (ownerId, checkpoint) => {

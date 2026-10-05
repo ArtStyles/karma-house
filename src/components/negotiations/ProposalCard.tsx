@@ -15,8 +15,8 @@ const tones: Record<StatusTone, { background: string; color: string }> = {
  * A proposal inside the thread. The message snapshot says what was proposed; `live` (the current row, when
  * loaded) decides the status and which answers this person may give, using the same rules as the server.
  */
-export function ProposalCard({ proposal, live, userId, time, busy, onRespond, onCounter, onCancelAgreement }: {
-  proposal: MessageNegotiation; live?: Negotiation; userId: string; time: string; busy: boolean;
+export function ProposalCard({ proposal, live, userId, time, busy, managementChanged=false, onRespond, onCounter, onCancelAgreement }: {
+  proposal: MessageNegotiation; live?: Negotiation; userId: string; time: string; busy: boolean;managementChanged?:boolean;
   onRespond(item: Negotiation, action: NegotiationAction): void; onCounter(item: Negotiation): void; onCancelAgreement(item: Negotiation): void;
 }) {
   const own = proposal.createdBy === userId;
@@ -39,6 +39,7 @@ export function ProposalCard({ proposal, live, userId, time, busy, onRespond, on
       {live?.status === 'pending' && own && <Text style={styles.meta}>Esperando respuesta{hint ? ` · ${hint}` : ''}</Text>}
       {live?.status === 'pending' && !own && hint && <Text style={styles.meta}>{hint}</Text>}
       {paused && <Text style={styles.paused}>Las respuestas están pausadas: el anuncio no está disponible o hay un bloqueo. Puedes cancelar.</Text>}
+      {managementChanged&&<Text style={styles.paused}>Este acuerdo pertenece a la conversación anterior. Sus participantes y condiciones se conservan.</Text>}
       {actions && (actions.accept || actions.decline) && <View style={styles.answers}>
         {actions.decline && <Button label="Rechazar" secondary disabled={busy} onPress={() => onRespond(live!, 'decline')} style={styles.answer} />}
         {actions.accept && <Button label="Aceptar" disabled={busy} onPress={() => onRespond(live!, 'accept')} style={styles.answer} />}
