@@ -99,7 +99,8 @@ export function createSupabaseMarketplaceRepository(client: SupabaseClient, stor
       const photos: PhotoDraft[] = draft.photos ?? (draft.photoUri ? [{ uri: draft.photoUri }] : []);
       if (moderation === 'pending' && photos.length === 0) throw new Error('Añade al menos una fotografía para enviar el anuncio a revisión.');
       const photoPaths = await uploadDraftPhotos(photos, ownerId, requestId, photoPort, checkpoint, current ? { propertyId: current.id, reusablePaths: current.photos?.flatMap(photo => photo.storagePath ? [photo.storagePath] : []) ?? [] } : undefined);
-      const coverThumbPath = photoPaths[0]?.startsWith(`${ownerId}/${requestId}/`) ? await uploadCoverThumb(photos[0], photoPaths, photoPort, checkpoint) : undefined;
+      const coverThumbPath = await uploadCoverThumb(photos[0], photoPaths, photoPort, checkpoint, { ownerId, requestId });
+      if (current && photos[0]?.thumbUri && photos[0].storagePath !== current.photos?.[0]?.storagePath && !coverThumbPath) throw new Error('No pudimos guardar la miniatura de la nueva portada. Vuelve a prepararla antes de guardar.');
       checkpoint();
       const payload = propertyPayload(draft, ownerId, photoPaths, moderation, current, coverThumbPath);
       const { data, error } = await client.rpc('kh_save_property', { p_payload: payload });

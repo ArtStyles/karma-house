@@ -6,7 +6,7 @@ import { colors } from '../../theme';
 import type { KarmaMapProps } from './KarmaMap.types';
 import { CUBA_CENTER, CUBA_ZOOM } from './mapConfig';
 import { approximateAreas, coordinatesFromMapPress } from './mapGeometry';
-import { viewportBounds } from '../../domain/geo';
+import { observeMapViewport } from './viewportReporter';
 import { MapAttribution, MapBrand, MapStatus } from './MapChrome';
 import { useMapStyle } from './useMapStyle';
 
@@ -32,6 +32,7 @@ export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM,
     let cancelled = false;
     let instance: WebMap | undefined;
     let observer: ResizeObserver | undefined;
+    let stopViewport: (() => void) | undefined;
     const timeout = setTimeout(() => {
       if (__DEV__) console.warn('[KarmaHouse map] Loading timed out', { styleLoaded: instance?.isStyleLoaded(), tilesLoaded: instance?.areTilesLoaded() });
       setStatus(current => current === 'loading' ? 'error' : current);
@@ -54,12 +55,7 @@ export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM,
         const coordinate = coordinatesFromMapPress(event.lngLat.lat, event.lngLat.lng);
         if (coordinate) callbacks.current.onMapPress?.(coordinate);
       });
-      instance.on('moveend', () => {
-        if (!instance || !callbacks.current.onRegionChange) return;
-        const box = instance.getBounds();
-        const bounds = viewportBounds(box.getWest(), box.getSouth(), box.getEast(), box.getNorth());
-        if (bounds) callbacks.current.onRegionChange(bounds, instance.getZoom());
-      });
+      stopViewport = observeMapViewport(instance, (bounds, zoom) => callbacks.current.onRegionChange?.(bounds, zoom));
       instance.on('error', event => {
         if (__DEV__) console.warn('[KarmaHouse map]', event.error?.message ?? 'Map resource failed');
         if (!cancelled) setStatus('error');
@@ -80,6 +76,7 @@ export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM,
       cancelled = true;
       clearTimeout(timeout);
       observer?.disconnect();
+      stopViewport?.();
       buttons.current.forEach(marker => marker.remove());
       buttons.current = [];
       instance?.remove();

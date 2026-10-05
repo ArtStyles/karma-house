@@ -30,7 +30,7 @@ Capturas en `C:/Users/ACER NITRO/.codex/visualizations/2026/10/05/01a10caa-337d-
 
 ## Pendientes
 
-Continuar acceso contextual, tarjetas, Mi espacio, mapa y accesibilidad según el plan. El canal real de recepción de publicaciones asistidas y la activación remota siguen pendientes de la operación; no se inventará un destino de contacto. Los cambios locales de la portada Vite no se copiaron desde otro checkout.
+El trabajo implementable del acceso contextual, tarjetas, Mi espacio, mapa y accesibilidad queda guardado localmente. El canal real de recepción de publicaciones asistidas y la activación remota siguen pendientes de la operación; no se inventó un destino de contacto. Los cambios locales de la portada Vite no se copiaron desde otro checkout.
 
 La evidencia de navegador no prueba Android, teclado nativo, botón Atrás, TalkBack, texto ampliado del sistema ni rendimiento. Tampoco prueba despliegue público, Supabase real ni apertura de enlaces con/sin app instalada. Estas verificaciones quedan explícitamente pendientes.
 
@@ -65,3 +65,22 @@ Capturas adicionales: `phase2-profile-guest-320.png`, `phase2-profile-guest-390.
 ## Alcance implementable y acciones pendientes
 
 Quedan el destino operativo de asistencia y su entrada en la portada, la revisión editorial por el responsable, el correo real, Android físico (texto ampliado, teclado, Atrás, TalkBack y reducción de movimiento), publicación y apertura de enlaces instalada/no instalada. No se activó asistencia remota, no se publicaron APK, no se desplegó ni se modificaron anuncios reales. El build Vite no aplica: la portada rastreada no tiene script build; sus cambios sin confirmar en el checkout principal siguen preservados.
+
+## Revisión independiente y cierre
+
+Un revisor independiente inspeccionó la entrega y ejecutó TypeScript y 408 pruebas en el código anterior a sus correcciones. Identificó cuatro problemas P2, sin P0/P1. Se verificaron contra las fuentes y se corrigieron en una sola pasada:
+
+1. Reintentar un cambio de filtros fallido inicia su primera página, aunque el resultado anterior tuviera más páginas. Solo se reintenta la paginación si los resultados pertenecen a los filtros actuales. Se reprodujo y recuperó el fallo en el navegador con paginación y respuesta 503 sintéticas.
+2. La navegación global distingue `/auth/callback` de abandonar el acceso. El salto al callback conserva la intención mientras se verifica la sesión; volver como invitado a otra pantalla la elimina. La prueba recorre almacenamiento, ambas transiciones y consumo único. No se envió un correo ni se probó el deep link en Android.
+3. Elegir o quitar la portada prepara su miniatura antes de modificar el orden, también en fotos almacenadas/heredadas. Si falla, se mantiene el orden anterior y se informa. La miniatura nueva pertenece al prefijo del propietario y solicitud actuales; utiliza un token nuevo para no reutilizar un archivo inmutable que el servidor ya marcó huérfano. Reintentar la misma preparación conserva el token. Las pruebas cubren preparación, carga, payload y lectura posterior con solo la URL de miniatura; no prueban Storage/RLS desplegado.
+4. El mapa espera los límites reales de su cámara antes de consultar. Web informa al cargar, mover y redimensionar; deja de consultar el rectángulo de los puntos disponibles como si fuera todo el viewport. Una prueba de eventos verifica los bordes visibles antes de cualquier gesto. La carga real de mapas y Android siguen pendientes.
+
+También se incluyó en la cancelación de la tarea 5 el acceso tardío preexistente: una respuesta de otra visita no puede redirigir ni mostrar estado en la pantalla abandonada. En navegador, una entrada sintética retrasada cinco segundos permitió volver y abrir Mi espacio; la respuesta final conservó ese destino, sin abrir la hoja de guardado. La sesión de prueba se cerró y no se confirmó ninguna búsqueda ni mensaje.
+
+Las nuevas pruebas fallaron al faltar los contratos; la regresión adicional de la portada almacenada falló mostrando la ruta antigua `a_t.jpg` antes de corregirse. Resultado final después de todos los cambios: `npm run check`, TypeScript y **415/415 pruebas**, y exportación estándar Expo web exit 0. No se realizó una segunda revisión independiente; el ejecutor verificó la única pasada de correcciones. `git diff --check` de los cambios propios pasa; el rango completo conserva el detalle menor heredado de abajo.
+
+Capturas nuevas de cierre en la carpeta de evidencia: `phase2-review-filter-error-390.png`, `phase2-review-filter-recovered-390.png`, `phase2-review-search-restored-390.png`, `phase2-review-auth-back-390.png` y `phase2-final-profile-390.png`. La última captura se verificó a 390 × 843 con el encabezado de 331,2 px, evitando capturar una transición de viewport. Son datos sintéticos; las capturas del correo y del mapa real no se inventan.
+
+Menor diferido: línea vacía adicional al final de `scripts/local-sql/bootstrap.sql:29`, incorporada con el trabajo asistido. No cambia SQL; no se modificó ese archivo solo por formato.
+
+La entrega queda en `codex/public-journey`, con el worktree conservado y los [pendientes y decisiones](design-conversion-decisions.md) disponibles para revisión. El registro solicitado se mantiene en `.superpowers/sdd/2026-10-05-design-and-conversion/progress.md`; las copias voluminosas de QA se pueden eliminar después de guardar las fuentes, resultados y capturas. La continuación automática se desactiva al terminar este cierre, porque lo restante requiere destino operativo, autorización de publicación o dispositivo.

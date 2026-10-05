@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { safeReturnTo } from '../auth/callback';
 import { pendingIntentDestination, pendingIntentReason, type PendingIntent } from '../auth/pendingIntent';
 import { pendingIntentStore } from '../auth/pendingIntentStorage';
+import { createAuthFocusScope } from '../auth/intentLifecycle';
 import { Brand, Button, goBack, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { colors, typefaces } from '../theme';
@@ -31,32 +32,33 @@ export default function AuthScreen() {
   const passwordRef = useRef<TextInput>(null);
   const confirmationRef = useRef<TextInput>(null);
   const [intent, setIntent] = useState<PendingIntent | null>(null);
-  const keepContext = useRef(false);
-  const currentUser = useRef(auth.user);
-  currentUser.current = auth.user;
+  const focus = useRef(createAuthFocusScope()).current;
+  const [focused, setFocused] = useState(false);
   useFocusEffect(useCallback(() => {
     let active = true;
-    keepContext.current = false;
+    focus.enter(); setFocused(true); setSubmitting(false);
     void pendingIntentStore.read().then(value => {
       if (active) setIntent(value && pendingIntentDestination(value) === returnTo ? value : null);
     });
     return () => {
       active = false;
-      if (!keepContext.current && !currentUser.current) void pendingIntentStore.clear().catch(() => undefined);
+      focus.leave(); setFocused(false);
     };
-  }, [returnTo]));
+  }, [returnTo, focus]));
 
-  function continueToDestination() { keepContext.current = true; router.replace(returnTo); }
+  function continueToDestination() { router.replace(returnTo); }
   async function cancel(explore = false) {
     if (submitting) return;
+    const isCurrent = focus.checkpoint();
     await pendingIntentStore.clear().catch(() => undefined);
+    if (!isCurrent()) return;
     if (explore) router.replace('/'); else goBack('/profile');
   }
 
   useEffect(() => { setMode(initialMode(params.mode)); }, [params.mode]);
   useEffect(() => {
-    if (auth.ready && auth.user && mode !== 'recovery' && mode !== 'forgot' && !submitting && !notice) continueToDestination();
-  }, [auth.ready, auth.user, mode, returnTo, submitting, notice]);
+    if (focused && auth.ready && auth.user && mode !== 'recovery' && mode !== 'forgot' && !submitting && !notice) continueToDestination();
+  }, [focused, auth.ready, auth.user, mode, returnTo, submitting, notice]);
 
   function changeMode(next: Mode) {
     if (submitting) return;
@@ -65,20 +67,23 @@ export default function AuthScreen() {
 
   async function submit() {
     if (submitting || !auth.ready) return;
+    const isCurrent = focus.checkpoint();
     setIssue(null); setSubmitting(true);
     try {
       if (mode === 'signup') {
         const { needsConfirmation } = await auth.signUp(name, email, password);
+        if (!isCurrent()) return;
         if (needsConfirmation) { setNotice('confirmation'); setPassword(''); } else continueToDestination();
       } else if (mode === 'forgot') {
-        await auth.requestPasswordReset(email); setNotice('reset');
+        await auth.requestPasswordReset(email); if (!isCurrent()) return; setNotice('reset');
       } else if (mode === 'recovery') {
         if (password !== confirmation) throw new Error('Las contraseñas no coinciden.');
-        await auth.updatePassword(password); setNotice('updated'); setPassword(''); setConfirmation('');
-      } else { await auth.signIn(email, password); continueToDestination(); }
+        await auth.updatePassword(password); if (!isCurrent()) return; setNotice('updated'); setPassword(''); setConfirmation('');
+      } else { await auth.signIn(email, password); if (!isCurrent()) return; continueToDestination(); }
     } catch (error) {
+      if (!isCurrent()) return;
       setIssue(error instanceof Error ? error.message : 'No se pudo completar la operación. Inténtalo de nuevo.');
-    } finally { setSubmitting(false); }
+    } finally { if (isCurrent()) setSubmitting(false); }
   }
 
   const title = mode === 'signup' ? 'Tu próximo hogar\nempieza aquí.' : mode === 'forgot' ? 'Volvamos a\ntu cuenta.' : mode === 'recovery' ? 'Una nueva\ncontraseña.' : 'Qué bueno\nverte de nuevo.';

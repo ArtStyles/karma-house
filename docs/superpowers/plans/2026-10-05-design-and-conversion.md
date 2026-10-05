@@ -45,10 +45,10 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 ## Etapa 0 — preparar la siguiente sesión
 
 - [ ] Leer este plan, `docs/growth-roadmap.md` y los planes/specs existentes de catálogo, búsquedas guardadas, importación, confianza y ahorro de datos.
-- [ ] Revisar `git status --short`, commits recientes y artefactos del chat. Registrar la base elegida y conservar los cambios previos. Si hace falta aislamiento, reutilizar un worktree adecuado antes de crear otro.
-- [ ] Revisar el resultado del chat «Plan de publicación asistida y traspaso» (`01a10c8e-153d-7513-9def-494f01039927`) cuando esté integrado. Identificar sus rutas, permisos, estados y pruebas; no editar su checkout desde esta tarea.
-- [ ] Ejecutar `npm run check` para obtener una línea base. Para una entrega que toque `web/`, ejecutar también `npm --prefix web run build`.
-- [ ] Reproducir en la base actual los problemas de la etapa elegida. Usar anuncios reales solo para lectura y fixtures claramente identificados para errores o escenarios ausentes.
+- [x] Revisar `git status --short`, commits recientes y artefactos del chat. Registrar la base elegida y conservar los cambios previos. Si hace falta aislamiento, reutilizar un worktree adecuado antes de crear otro.
+- [x] Revisar el resultado del chat «Plan de publicación asistida y traspaso» (`01a10c8e-153d-7513-9def-494f01039927`) cuando esté integrado. Identificar sus rutas, permisos, estados y pruebas; no editar su checkout desde esta tarea.
+- [x] Ejecutar `npm run check` para obtener una línea base. Para una entrega que toque `web/`, ejecutar también `npm --prefix web run build`.
+- [x] Reproducir en la base actual los problemas de la etapa elegida. Usar anuncios reales solo para lectura y fixtures claramente identificados para errores o escenarios ausentes.
 
 **Salida:** base documentada, fallos reproducidos y una entrega concreta seleccionada. Si un problema ya fue corregido por otro trabajo, verificarlo y marcarlo resuelto en lugar de repetirlo.
 
@@ -124,7 +124,7 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 
 ### Tarea 5: acceso contextual y recuperación de la búsqueda
 
-**Estado:** implementación local y recorrido sintético comprobados; confirmación de correo real y validación nativa pendientes. TypeScript y 401 pruebas pasan.
+**Estado:** implementación local y recorrido sintético comprobados; confirmación de correo real y validación nativa pendientes. Verificación de cierre: TypeScript y 415 pruebas pasan; véase el informe.
 
 **Archivos:** `src/screens/AuthScreen.tsx`, `src/screens/DetailScreen.tsx`, `src/components/PropertyCard.tsx`, `src/screens/ExploreScreen.tsx`, `src/auth/AuthProvider.tsx`, `src/searches/domain.ts` si hace falta exponer su validador; nuevo `src/auth/pendingIntent.ts` y `tests/auth-intent.test.ts`; conservar `src/auth/callback.ts` y `tests/auth.test.ts`.
 
@@ -153,10 +153,10 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 
 **Límite de negocio:** la cuenta oficial publica inicialmente con autorización. Solo la cuenta oficial principal inicia el traspaso de sus anuncios; el destinatario acepta o rechaza y no puede retransmitirlos a terceros. ID, enlaces, fotos y favoritos se conservan. Otras colaboraciones quedan fuera.
 
-- [ ] Leer el contrato final integrado y usar sus estados reales. Verificar la ruta de ayuda/contacto ya acordada; si no existe una operativa, dejar esa acción pendiente de un destino real y no inventar número, formulario o canal de recepción.
+- [x] Leer el contrato final integrado y usar sus estados reales. Verificar la ruta de ayuda/contacto ya acordada; si no existe una operativa, dejar esa acción pendiente de un destino real y no inventar número, formulario o canal de recepción.
 - [ ] Mostrar «Publicar por mi cuenta» y «Publicar con ayuda de KarmaHouse» en la entrada de publicación. Explicar los datos/fotos necesarios y el consentimiento; hacer descubrible «Pegar anuncio» dentro del flujo propio.
 - [ ] Añadir a la portada una llamada a aportar una vivienda y una explicación breve del proceso asistido, conectadas al destino operativo existente.
-- [ ] Distinguir quién ayudó a publicar y quién gestiona actualmente el anuncio. Revisar etiquetas de perfil/anuncio verificado para que no prometan titularidad comprobada.
+- [x] Distinguir quién ayudó a publicar y quién gestiona actualmente el anuncio. Revisar etiquetas de perfil/anuncio verificado para que no prometan titularidad comprobada.
 - [ ] Verificar antes/después de aceptar o rechazar traspaso, cuenta oficial, destinatario y tercero, conservando referencias del mismo anuncio. Reutilizar las pruebas de permisos y persistencia del trabajo integrado.
 - [ ] Ejecutar `node --experimental-strip-types --test tests/import-listing.test.ts tests/trust-profile.test.ts`, las pruebas de publicación asistida incorporadas a la suite, `npm run check` y `npm --prefix web run build`. Revisar los recorridos autenticados con cuentas de prueba autorizadas y limpiar fixtures.
 
@@ -174,7 +174,7 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 - [x] Dar dos líneas al título de tarjeta y jerarquizar precio, ubicación y datos esenciales. Revisar títulos largos, foto ausente, alquiler, permuta y anuncios «Busco» sin inventar datos faltantes.
 - [x] Reforzar la elección explícita de portada en el editor. Mostrar una recomendación breve para elegir una foto individual, nítida y representativa. No agregar un detector de collages ni generar imágenes que alteren la vivienda.
 - [ ] Si se limpia texto importado, probar primero ejemplos con marcadores de WhatsApp y caracteres legítimos. Presentar el resultado para revisión antes de guardar; no modificar silenciosamente el texto de anuncios existentes.
-- [ ] Ejecutar `npm run check` y las pruebas de importación/borrador cuando haya cambios de comportamiento. Revisar tarjeta y detalle a 390 y 1280 px; confirmar que la tarjeta sigue usando `PropertyImage` con `variant="thumb"`.
+- [x] Ejecutar `npm run check` y las pruebas de importación/borrador cuando haya cambios de comportamiento. Revisar tarjeta y detalle a 390 y 1280 px; confirmar que la tarjeta sigue usando `PropertyImage` con `variant="thumb"`.
 
 **Aceptación:** títulos y portadas comunican mejor la vivienda sin perder hechos ni aumentar las descargas. Las correcciones de anuncios reales quedan registradas por separado de los cambios del componente.
 
@@ -200,7 +200,7 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 
 - [x] Encajar el mapa a la provincia seleccionada o al contexto ya disponible al cargarlo por primera vez. Mantener consulta por viewport; no descargar todo el catálogo para calcular el encuadre ni recentrar después de cada movimiento del usuario.
 - [ ] Revisar puntos cercanos/agrupaciones y la acción de volver a lista. Mantener explícita la existencia de anuncios sin ubicación publicada; no inventar coordenadas.
-- [ ] Probar encuadre válido, ningún punto y puntos superpuestos. Ejecutar `node --experimental-strip-types --test tests/map-rendering.test.ts tests/map-data.test.ts tests/data-saver.test.ts`, después `npm run check`; verificar que activar ahorro evita consultas y mapas hasta «Cargar mapa».
+- [x] Probar encuadre válido, ningún punto y puntos superpuestos. Ejecutar `node --experimental-strip-types --test tests/map-rendering.test.ts tests/map-data.test.ts tests/data-saver.test.ts`, después `npm run check`; verificar que activar ahorro evita consultas y mapas hasta «Cargar mapa».
 - [x] Después de integrar la etapa 3, evaluar la extracción de los pasos de `ListingForm` que esa entrega ya necesite tocar. Mantener un único dueño del borrador y las validaciones existentes. Si la extracción no reduce una dificultad concreta, diferirla; no convertir esta tarea en un refactor completo.
 - [ ] Si se extraen pasos, verificar importación, navegación atrás/adelante, datos incompletos, orden de fotos, recuperación de borrador y envío único con `tests/listing-draft.test.ts`, `tests/import-listing.test.ts` y revisión autenticada.
 
@@ -217,19 +217,19 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 - [x] Consultar [Reanimated en Expo v57](https://docs.expo.dev/versions/v57.0.0/sdk/reanimated/) y su [guía de accesibilidad](https://docs.swmansion.com/react-native-reanimated/docs/guides/accessibility/) antes de implementar. Usar Reanimated instalado solo donde aporte una interacción concreta.
 - [x] Aplicar feedback de pulsación de 80–120 ms, confirmación discreta de favorito conservando «Deshacer», apertura de filtros de 150–220 ms y transición de pasos alrededor de 140 ms. Ajustar con evidencia renderizada; los tiempos son propuestas, no resultados medidos.
 - [x] Para una foto ya cargada, considerar un fundido de hasta 150 ms que no dispare descargas ni oculte contenido útil. Evitar animar cada tarjeta al hacer scroll o introducir esperas artificiales.
-- [ ] Respetar reducción de movimiento: omitir desplazamientos/escala y conservar el significado del estado. Verificar foco al abrir/cerrar modal, etiquetas y áreas táctiles de al menos 44 pt, sin depender solo del color.
+- [x] Respetar reducción de movimiento: omitir desplazamientos/escala y conservar el significado del estado. Verificar foco al abrir/cerrar modal, etiquetas y áreas táctiles de al menos 44 pt, sin depender solo del color.
 - [ ] Revisar reducción de movimiento en navegador y Android, botón Atrás, teclado y TalkBack. Medir fluidez en Android si se va a afirmar un resultado de rendimiento; no deducir 60 fps de que la animación existe.
 
 **Aceptación:** las interacciones ayudan a reconocer acciones y estados; la aplicación sigue siendo completa y comprensible con animaciones reducidas y ahorro de datos activo.
 
 ## Verificación y entrega de cada etapa
 
-- [ ] Ejecutar las pruebas específicas descritas y `npm run check`. Ejecutar `npm --prefix web run build` cuando cambie la portada. Registrar comandos y resultado real; no reutilizar resultados anteriores como prueba de la entrega nueva.
+- [x] Ejecutar las pruebas específicas descritas y `npm run check`. Ejecutar `npm --prefix web run build` cuando cambie la portada. Registrar comandos y resultado real; no reutilizar resultados anteriores como prueba de la entrega nueva.
 - [ ] Revisar en navegador 390 × 843 y 1280 × 900; incluir 320 px y texto aumentado donde se modifican controles. Guardar capturas nuevas de antes/después y anotar qué escenario utiliza fixtures.
 - [ ] Revisar Android físico para los cambios nativos relevantes: navegación, acceso, modales, teclado, botón Atrás, reducción de movimiento y ahorro. Si no hay dispositivo, dejar esa validación pendiente explícita.
-- [ ] Verificar cuenta invitada y autenticada donde corresponda, limpieza de fixtures, respuestas tardías, cambio de cuenta y carga sin red. No tocar datos reales para simular errores.
-- [ ] Ejecutar `git diff --check` y revisar el diff de la entrega; actualizar las casillas y un registro breve con base, archivos, evidencia y pendientes.
-- [ ] Preparar la entrega para revisión. Despliegue, nueva APK y comprobación pública son pasos posteriores dentro del alcance autorizado al retomar; no se ejecutan por guardar este plan. Cuando se publiquen cambios, volver a verificar los recorridos en sus URLs reales.
+- [x] Verificar cuenta invitada y autenticada donde corresponda, limpieza de fixtures, respuestas tardías, cambio de cuenta y carga sin red. No tocar datos reales para simular errores.
+- [x] Ejecutar `git diff --check` y revisar el diff de la entrega; actualizar las casillas y un registro breve con base, archivos, evidencia y pendientes.
+- [x] Preparar la entrega para revisión. Despliegue, nueva APK y comprobación pública son pasos posteriores dentro del alcance autorizado al retomar; no se ejecutan por guardar este plan. Cuando se publiquen cambios, volver a verificar los recorridos en sus URLs reales.
 
 ## Evidencia de partida y límites
 
@@ -250,3 +250,7 @@ La auditoría no verificó flujos autenticados completos, Android físico, tecla
 - Cambio de identidad visual completo, animaciones de lista en cascada, confeti, mapas 3D o transiciones compartidas de imágenes.
 
 Estos puntos requieren una necesidad comprobada y un plan separado; no bloquean las correcciones prioritarias.
+
+## Cierre local del 5 de octubre
+
+La segunda fase se integró y completó en lo implementable, con revisión independiente y una pasada de correcciones. TypeScript y 415/415 pruebas pasan; exportación estándar Expo web exit 0. Véanse docs/design-conversion-verification.md y docs/design-conversion-decisions.md (rutas desde la raíz del repo). Las casillas compuestas de correo real, Android, texto aumentado, mapa real, destino asistido y despliegue permanecen abiertas. Los pasos condicionados de limpieza del importador y extracción no se ejecutan porque no se introdujeron esos cambios. El aviso de inicio ya se emitió una vez y la continuación se desactiva tras este cierre.

@@ -65,12 +65,16 @@ export async function uploadDraftPhotos(photos: PhotoDraft[], ownerId: string, r
 }
 
 /**
- * Uploads the cover's thumbnail as `<cover name>_t.jpg` beside the uploaded photos. Best effort:
- * an unreadable or unusable thumbnail returns nothing and the catalogue falls back to the cover.
+ * New local covers use `<cover name>_t.jpg`; stored covers use a fresh token in the current
+ * owner's request. Unreadable thumbnails return nothing; a changed-cover save rejects that
+ * result so it cannot silently increase card downloads.
  */
-export async function uploadCoverThumb(cover: PhotoDraft | undefined, photoPaths: string[], port: Pick<PhotoUploadPort, 'upload' | 'exists' | 'readLocal'>, checkpoint: () => void): Promise<string | undefined> {
+export async function uploadCoverThumb(cover: PhotoDraft | undefined, photoPaths: string[], port: Pick<PhotoUploadPort, 'upload' | 'exists' | 'readLocal'>, checkpoint: () => void, scope?: { ownerId: string; requestId: string }): Promise<string | undefined> {
   if (!cover?.thumbUri || !photoPaths[0]) return undefined;
-  const path = photoPaths[0].replace(/\.[A-Za-z]+$/, '_t.jpg');
+  // Stored media stays immutable. A fresh thumbnail belongs to the current owner's request.
+  const stored = scope && !!cover.storagePath;
+  if (stored && (!/^[0-9a-f-]{36}$/i.test(scope.ownerId) || !/^[A-Za-z0-9_-]{1,100}$/.test(scope.requestId) || !cover.uploadId || !/^[A-Za-z0-9_-]{1,98}$/.test(cover.uploadId))) return undefined;
+  const path = stored ? `${scope.ownerId}/${scope.requestId}/${cover.uploadId}_t.jpg` : photoPaths[0].replace(/\.[A-Za-z]+$/, '_t.jpg');
   if (!/^[^/]+\/[^/]+\/[A-Za-z0-9_-]{1,100}\.jpg$/.test(path) || photoPaths.includes(path)) return undefined;
   let data: { bytes: ArrayBuffer; contentType: string };
   try {

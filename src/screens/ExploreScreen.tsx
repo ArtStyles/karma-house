@@ -4,6 +4,7 @@ import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Text
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activeFilterCount, defaultFilters, shortcutActive, toggleShortcut, type ListingFilters, type Shortcut } from '../domain/listings';
 import { useCatalogPage } from '../catalog/useCatalog';
+import { catalogRetryAction } from '../catalog/presentation';
 import { snapshotAgeText } from '../catalog/offlineSnapshot';
 import { CONDITIONS, PROVINCES } from '../domain/listingOptions';
 import { useMarketplace } from '../state/MarketplaceProvider';
@@ -177,7 +178,7 @@ export default function ExploreScreen() {
           {storageError && <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{storageError}</Notice><Button label="Volver a cargar" secondary loading={refreshing} onPress={reload} /></View>}
         </View>}
         ListFooterComponent={<View>
-          {view === 'list' && pageError && ready ? <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{pageError}</Notice><Button label="Reintentar" secondary loading={loading} onPress={() => { if (hasMore) loadMore(); else void refreshCatalog().catch(() => {}); }} /></View>
+          {view === 'list' && pageError && ready ? <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{pageError}</Notice><Button label="Reintentar" secondary loading={loading} onPress={() => { if (catalogRetryAction({ current, hasMore }) === 'page') loadMore(); else void refreshCatalog().catch(() => {}); }} /></View>
             : view === 'list' && loading && ready ? <View style={styles.skeletons}><CardSkeleton /></View>
             : view === 'list' && current && !updating && !hasMore && result.length > 0 && !offline ? <Text style={styles.listEnd}>{total === 1 ? 'Has visto la única vivienda que coincide.' : `Has visto las ${total} viviendas que coinciden.`}</Text> : null}
           {/* The seller invitation closes a real list; under an empty or failed one it reads as the answer. */}

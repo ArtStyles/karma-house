@@ -3,7 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { PhotoDraft } from '../domain/listings';
 import { draftToken } from '../domain/draftPersistence';
-import { choosePhotoCover } from '../domain/photoCover';
+import { choosePhotoCover, prepareCoverPhoto } from '../domain/photoCover';
 import { colors } from '../theme';
 import { Button, IconButton } from './ui';
 
@@ -64,28 +64,26 @@ export function ListingPhotos({ photos, busy, disabled, required = false, onBusy
     } catch (error) { onError(error instanceof Error ? error.message : 'No pudimos preparar las fotos. Inténtalo otra vez.'); }
     finally { onBusy(false); }
   }
-  async function remove(index: number) {
-    const next = photos.filter((_, i) => i !== index);
-    const cover = next[0];
-    // A stored photo has no local file to shrink: without a thumbnail the server clears it and cards use the cover.
-    if (index !== 0 || !cover || cover.thumbUri || cover.storagePath) { onChange(next); return; }
+  async function setPreparedCover(next: PhotoDraft[]) {
     onBusy(true);
     try {
-      const thumbUri = await coverThumb(cover.uri, cover.uploadId ?? draftToken());
-      onChange([thumbUri ? { ...cover, thumbUri } : cover, ...next.slice(1)]);
-    } finally { onBusy(false); }
+      const prepared = await prepareCoverPhoto(next[0], coverThumb, draftToken);
+      onChange([prepared, ...next.slice(1)]);
+    } catch (error) { onError(error instanceof Error ? error.message : 'No pudimos preparar la portada.'); }
+    finally { onBusy(false); }
+  }
+  async function remove(index: number) {
+    if (busy || disabled) return;
+    const next = photos.filter((_, i) => i !== index);
+    if (index !== 0 || !next[0] || next[0].thumbUri) { onChange(next); return; }
+    await setPreparedCover(next);
   }
   async function chooseCover(index: number) {
     if (busy || disabled) return;
     const next = choosePhotoCover(photos, index);
     if (next === photos) return;
-    const cover = next[0];
-    if (cover.thumbUri || cover.storagePath) { onChange(next); return; }
-    onBusy(true);
-    try {
-      const thumbUri = await coverThumb(cover.uri, cover.uploadId ?? draftToken());
-      onChange([thumbUri ? { ...cover, thumbUri } : cover, ...next.slice(1)]);
-    } finally { onBusy(false); }
+    if (next[0].thumbUri) { onChange(next); return; }
+    await setPreparedCover(next);
   }
   return <View style={styles.container}>
     <Text accessibilityRole="header" style={styles.title}>Fotos de tu vivienda{required ? <Text style={styles.caption}> *</Text> : null}</Text>

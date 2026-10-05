@@ -25,14 +25,14 @@ export function ExploreMap({ filters, context = [], withoutLocation, onShowList 
   const { width } = useWindowDimensions();
   const [initialFrame] = useState(() => initialExploreFrame(filters.province, context, width));
   const [camera, setCamera] = useState({ center: initialFrame.center, zoom: initialFrame.zoom });
-  // Null until the map reports its first viewport; the island box covers that first frame.
+  // Wait for the actual visible viewport; loaded-point bounds describe framing only.
   const [region, setRegion] = useState<{ bounds: BoundingBox; zoom: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string>();
   // Under «Ahorro de datos» nothing is read, neither tiles nor pins, until the map is asked for.
   const [asked, setAsked] = useState(false);
   const { enabled, ready: preferenceReady } = useDataSaverState();
   const waiting = !preferenceReady || (enabled && !asked);
-  const { view, ready, error, retry } = useMapView(waiting ? null : region?.bounds ?? initialFrame.bounds, region?.zoom ?? initialFrame.zoom, filters);
+  const { view, ready, error, retry } = useMapView(waiting ? null : region?.bounds ?? null, region?.zoom ?? initialFrame.zoom, filters);
   const points = view.mode === 'points' ? view.items : [];
   const selectedPoint = points.find(point => point.id === selectedId);
   // Only the tapped pin costs a round trip; the map itself never carries photos or text.
