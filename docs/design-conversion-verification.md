@@ -41,3 +41,27 @@ La intención local conserva solo tipo, ID validado o filtros y orden durante tr
 En el servidor sintético se comprobó el recorrido invitado con máximo de 1 USD y orden descendente: el motivo permanece al alternar acceso/registro, entrar recupera ambos valores y abre la hoja para confirmar. Contactar vuelve a la misma ficha mostrando la acción pendiente; no inicia una conversación. El motivo del favorito se muestra y «Seguir explorando» elimina el contexto. El acceso ordinario posterior vuelve a su explicación normal.
 
 Pruebas nuevas RED→GREEN de consumo único y cambio de foco; TypeScript y 401 pruebas completas pasan. La confirmación por correo y la expiración se verifican en funciones puras; no se solicitó un correo real ni se completó un registro remoto. Capturas: `phase2-auth-search-390.png`, `phase2-search-restored-390.png`, `phase2-auth-contact-390.png`, `phase2-contact-restored-390.png`, en la carpeta de evidencia indicada arriba.
+
+## Tarjetas, editor y Mi espacio
+
+Tarjetas con título de dos líneas, precio y datos existentes; se mantienen miniaturas. Se comprobaron títulos largos, foto ausente, alquiler mensual, permuta como valor estimado y «Busco» sin inventar superficie o baños. El editor permite «Usar como portada» para cualquier foto: con dos imágenes de demostración se verificó cambiar y revertir el orden sin perderlas, y retroceder sin perder título, zona o provincia. El importador permanece sin limpieza silenciosa nueva. La [lista editorial](listing-editorial-review.md) contiene propuestas para los tres anuncios públicos leídos anónimamente; ninguna se aplicó.
+
+Mi espacio invitado muestra la preferencia antes de la invitación a entrar y publicar; actividad y gestión aparecen con sesión o en demo. Las invitaciones comparten estructura y anchos. Ahorro persiste tras recargar y deja el mapa esperando «Cargar mapa». Invitado y cuenta sintética se revisaron a 320, 390 y 1280 px. No se afirma haber probado texto ampliado del sistema.
+
+El encuadre inicial aprovecha puntos publicados ya presentes en el resultado de una provincia, sin otra consulta de catálogo; sin contexto válido conserva Cuba. Se fija una vez por apertura, luego manda el viewport. Tres pruebas nuevas cubren puntos válidos, ausentes/incorrectos y superpuestos. No se extrajeron pasos del editor: los cambios concretos de portada quedan en su componente, manteniendo un solo borrador y sus validaciones.
+
+## Movimiento y accesibilidad
+
+Se consultaron [Reanimated en Expo v57](https://docs.expo.dev/versions/v57.0.0/sdk/reanimated/) y la [guía oficial de accesibilidad](https://docs.swmansion.com/react-native-reanimated/docs/guides/accessibility/). Se usan las dependencias instaladas: feedback de pulsación de 100 ms, opacidad del panel de filtros de 180 ms y de pasos de 140 ms. Son tiempos configurados, no latencia medida. No se anima el scroll ni se añaden descargas o esperas; se conserva Deshacer de favoritos.
+
+La preferencia de movimiento inicia reducida hasta conocerse y responde a cambios posteriores; una lectura tardía no pisa el evento nuevo. Las animaciones nuevas omiten escala/transiciones cuando se reduce. La preferencia real del navegador de prueba era false; Android y su ajuste real siguen pendientes. Escape cierra filtros y devuelve foco al control original. Corazón, quitar foto y elegir portada conservan al menos 44 puntos; enlaces legales de Mi espacio también.
+
+La QA detectó que Reanimated convertía un callback de estilos en un arreglo, perdiendo el posicionamiento y área de botones. Se resolvió el callback antes de pasarlo al componente animado; la geometría final fue absoluta de 44 × 44 tanto en corazón como quitar foto. Las capturas afectadas se reemplazaron después de la corrección.
+
+Pruebas nuevas de portadas, encuadre y preferencia fallaron antes de implementar. Verificación final: TypeScript y 408/408 pruebas, exportación estándar Expo web de la copia local y revisión de cambios. No se incorporaron dependencias, credenciales ni archivos de otro trabajo sin confirmar.
+
+Capturas adicionales: `phase2-profile-guest-320.png`, `phase2-profile-guest-390.png`, `phase2-profile-guest-1280.png`, sus tres equivalentes `phase2-profile-account-*`, `phase2-cover-before-390.png`, `phase2-cover-after-390.png`, `phase2-card-long-390.png`, `phase2-card-long-1280.png` y `phase2-map-data-saver-320.png`. Las imágenes muestran fixtures locales. Los recorridos de alquiler/Busco/permuta se verificaron; sus capturas anteriores al arreglo de estilos no se usan como prueba del resultado final.
+
+## Alcance implementable y acciones pendientes
+
+Quedan el destino operativo de asistencia y su entrada en la portada, la revisión editorial por el responsable, el correo real, Android físico (texto ampliado, teclado, Atrás, TalkBack y reducción de movimiento), publicación y apertura de enlaces instalada/no instalada. No se activó asistencia remota, no se publicaron APK, no se desplegó ni se modificaron anuncios reales. El build Vite no aplica: la portada rastreada no tiene script build; sus cambios sin confirmar en el checkout principal siguen preservados.

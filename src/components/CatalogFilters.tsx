@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
+import { useReducedMotion } from '../settings/useReducedMotion';
 import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { activeFilterCount, defaultFilters, filterRangeError, type ListingFilters } from '../domain/listings';
@@ -12,16 +14,17 @@ import { SORT_OPTIONS } from '../catalog/sortOptions';
 /** Mounted only while open, so dismissing never mutates the applied catalogue. */
 export function CatalogFilters({ filters, onApply, onClose }: { filters: ListingFilters; onApply(next: ListingFilters): void; onClose(): void }) {
   const [draft, setDraft] = useState<ListingFilters>(() => ({ ...filters, amenities: [...(filters.amenities ?? [])] }));
+  const reducedMotion = useReducedMotion();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const change = (next: Partial<ListingFilters>) => setDraft(old => ({ ...old, ...next }));
   const error = filterRangeError(draft);
   const selectedCount = activeFilterCount({ ...draft, query: '' });
-  return <Modal transparent visible animationType="fade" onRequestClose={onClose}>
+  return <Modal transparent visible animationType="none" onRequestClose={onClose}>
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <View style={[styles.overlay, width >= 700 && { justifyContent: 'center' }, { paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 12) }]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cancelar filtros" onPress={onClose} style={StyleSheet.absoluteFill} />
-        <View accessibilityViewIsModal style={styles.sheet}>
+        <Animated.View accessibilityViewIsModal style={styles.sheet} entering={FadeIn.duration(180).reduceMotion(reducedMotion ? ReduceMotion.Always : ReduceMotion.System)}>
           <View style={styles.header}><View style={styles.headerIcon}><Icon name="options-outline" color={colors.primary} size={23} /></View><View style={styles.heading}><Text accessibilityRole="header" style={styles.title}>Tu búsqueda, a medida</Text><Text style={styles.subtitle}>{selectedCount ? `${selectedCount} ${selectedCount === 1 ? 'filtro seleccionado' : 'filtros seleccionados'}` : 'Elige lo que importa para tu hogar'}</Text></View><IconButton name="close" label="Cerrar filtros sin aplicar" onPress={onClose} style={{ backgroundColor: colors.paper }} /></View>
           <ScrollView keyboardShouldPersistTaps="handled" style={styles.scroll} contentContainerStyle={styles.content}>
             {!!draft.query && <View style={styles.query}><Icon name="search-outline" size={17} color={colors.primary} /><Text style={styles.queryText}>Buscando «{draft.query}»</Text></View>}
@@ -53,7 +56,7 @@ export function CatalogFilters({ filters, onApply, onClose }: { filters: Listing
             {error ? <Notice error>{error}</Notice> : <Text style={styles.resultText}>Actualizaremos los resultados al aplicar los filtros.</Text>}
             <View style={styles.actions}><Button secondary label="Limpiar" onPress={() => setDraft({ ...defaultFilters, query: filters.query, amenities: [] })} style={styles.clear} /><Button disabled={!!error} label="Aplicar filtros" onPress={() => { if (!error) { onApply(draft); onClose(); } }} style={styles.apply} /></View>
           </View>
-        </View>
+        </Animated.View>
       </View>
     </KeyboardAvoidingView>
   </Modal>;

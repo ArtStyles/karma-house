@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import type { BoundingBox } from '../domain/geo';
+import type { BoundingBox, MapLocation } from '../domain/geo';
+import { initialExploreFrame } from '../domain/mapFrame';
 import type { ListingFilters } from '../domain/listings';
 import { useListing, useMapView } from '../catalog/useCatalog';
 import { colors, formatMoney } from '../theme';
 import { KarmaMap } from './maps/KarmaMap';
-import { CUBA_BOUNDS, CUBA_CENTER, CUBA_ZOOM } from './maps/mapConfig';
 import { PropertyImage } from './PropertyImage';
 import { Button, Icon, Notice } from './ui';
 import { useDataSaverState } from '../settings/useDataSaver';
@@ -15,15 +15,16 @@ import { useDataSaverState } from '../settings/useDataSaver';
 const CLUSTER_ZOOM_STEP = 2;
 const MAX_ZOOM = 16;
 
-export function ExploreMap({ filters, withoutLocation, onShowList }: {
+export function ExploreMap({ filters, context = [], withoutLocation, onShowList }: {
   filters: ListingFilters;
+  context?: readonly MapLocation[];
   /** Loaded listings with no published point, so the hint can send them to the list. */
   withoutLocation: number;
   onShowList: () => void;
 }) {
   const { width } = useWindowDimensions();
-  const initialZoom = width >= 700 ? 5.6 : CUBA_ZOOM;
-  const [camera, setCamera] = useState({ center: CUBA_CENTER, zoom: initialZoom });
+  const [initialFrame] = useState(() => initialExploreFrame(filters.province, context, width));
+  const [camera, setCamera] = useState({ center: initialFrame.center, zoom: initialFrame.zoom });
   // Null until the map reports its first viewport; the island box covers that first frame.
   const [region, setRegion] = useState<{ bounds: BoundingBox; zoom: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string>();
@@ -31,7 +32,7 @@ export function ExploreMap({ filters, withoutLocation, onShowList }: {
   const [asked, setAsked] = useState(false);
   const { enabled, ready: preferenceReady } = useDataSaverState();
   const waiting = !preferenceReady || (enabled && !asked);
-  const { view, ready, error, retry } = useMapView(waiting ? null : region?.bounds ?? CUBA_BOUNDS, region?.zoom ?? initialZoom, filters);
+  const { view, ready, error, retry } = useMapView(waiting ? null : region?.bounds ?? initialFrame.bounds, region?.zoom ?? initialFrame.zoom, filters);
   const points = view.mode === 'points' ? view.items : [];
   const selectedPoint = points.find(point => point.id === selectedId);
   // Only the tapped pin costs a round trip; the map itself never carries photos or text.
@@ -59,7 +60,7 @@ export function ExploreMap({ filters, withoutLocation, onShowList }: {
         selectedMarkerId={selectedPoint?.id} onMarkerPress={press}
         onMapPress={() => setSelectedId(undefined)}
         onRegionChange={(bounds, zoom) => setRegion({ bounds, zoom })}
-        accessibilityLabel="Mapa de viviendas en venta en Cuba"
+        accessibilityLabel={`Mapa de anuncios${filters.province ? ` en ${filters.province}` : ' en Cuba'}`}
       />
     </View>
     {error ? <View style={styles.failure}><Notice error>{error}</Notice><Button label="Reintentar" secondary onPress={retry} /></View>

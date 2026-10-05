@@ -52,7 +52,7 @@ export default function FavoritesScreen() {
       {/* Not a Notice: the undo has to be a real 44 pt target, and Notice renders its children as text. */}
       {removed.length > 0 && <View style={styles.undoRow}>
         <Icon name="information-circle-outline" size={19} color={colors.muted} />
-        <Text style={styles.undoText}>{removed.length === 1 ? 'Quitado de favoritos' : `${removed.length} quitados de favoritos`}</Text>
+        <Text accessibilityLiveRegion="polite" style={styles.undoText}>{removed.length === 1 ? 'Quitado de favoritos' : `${removed.length} quitados de favoritos`}</Text>
         <Pressable accessibilityRole="button" accessibilityLabel="Deshacer y devolver a favoritos" accessibilityState={{ disabled: undoing }} disabled={undoing} onPress={() => void undo()} style={({ pressed }) => [styles.undoButton, (pressed || undoing) && { opacity: .5 }]}><Text style={styles.undo}>Deshacer</Text></Pressable>
       </View>}
       {undoError ? <Notice error>{undoError}</Notice> : null}

@@ -40,6 +40,7 @@ export default function PublicProfileScreen() {
               </Pressable>}
             </View>
           </View>
+          {profile.verified && <Notice>La insignia corresponde al perfil revisado por KarmaHouse. No acredita la titularidad ni la situación legal de una vivienda.</Notice>}
           {!profile.identityOnly && <View style={styles.facts}>
             <Fact icon="calendar-outline" text={memberSinceText(profile.memberSince)} />
             {profile.responseMinutes !== null && <Fact icon="chatbubble-ellipses-outline" text={`${responseText(profile.responseMinutes)}${profile.responseRate !== null ? ` · responde al ${Math.round(profile.responseRate)} %` : ''}`} />}

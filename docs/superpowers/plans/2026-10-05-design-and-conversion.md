@@ -117,7 +117,7 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 - [x] Verificar con pruebas que `offers` sigue incluyendo venta y permuta, y que alquiler y «Busco» aplican sus operaciones reales. No convertir «Busco» en una categoría genérica de compradores.
 - [x] Reorganizar el encabezado móvil y los accesos a filtros. El control de operación debe mostrar su valor y abrir todas las opciones; los atajos de tipo/presupuesto deben mantener estados inequívocos.
 - [x] Añadir «Guardar esta búsqueda» al vacío con filtros, junto a la acción de ampliarlos. Reutilizar `SaveSearchSheet` y las alertas existentes; no crear otro servicio de avisos.
-- [ ] Verificar operaciones, combinaciones con provincia/tipo, limpieza de filtros, y guardado de criterios con cero coincidencias. El guardado invitado queda completo con la tarea 5.
+- [ ] Verificar operaciones, combinaciones con provincia/tipo, limpieza de filtros, y guardado de criterios con cero coincidencias. El retorno invitado conserva criterios y orden; guardado remoto real pendiente.
 - [x] Ejecutar `node --experimental-strip-types --test tests/explore-shortcuts.test.ts tests/operations.test.ts tests/search-alerts.test.ts`, después `npm run check`; revisar 320, 390 y 1280 px.
 
 **Aceptación:** alquiler y «Busco» son descubribles en móvil; una búsqueda vacía ofrece una vía útil de retorno sin inventar resultados.
@@ -145,6 +145,8 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 
 ### Tarea 6: publicación propia o asistida
 
+**Estado:** contrato integrado y confianza revisados; entrada asistida y portada pendientes de un destino real. No activar ni inventar canal.
+
 **Dependencia obligatoria:** publicación asistida y traspaso integrados y verificados. Si todavía no están listos, continuar con tareas independientes de la etapa 4; no reconstruir servidor, permisos ni traspaso dentro de esta entrega.
 
 **Archivos:** `src/screens/PublishScreen.tsx`, `src/components/AccountPrompt.tsx`, `src/components/ListingForm.tsx`, `src/screens/DetailScreen.tsx`, `web/src/App.tsx`, `web/api/p.ts`; componentes y pruebas de publicación asistida que entregue su implementación. `tests/import-listing.test.ts`, `tests/trust-profile.test.ts`.
@@ -164,11 +166,13 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 
 ### Tarea 7: calidad editorial, portadas y tarjetas
 
+**Estado:** implementación local y verificación sintética terminadas; pruebas de dispositivo y publicación pendientes. Véase `docs/design-conversion-verification.md`.
+
 **Archivos:** `src/components/PropertyCard.tsx`, `src/components/ListingPhotos.tsx`, `src/components/ListingForm.tsx`, `src/domain/importListing.ts`, `web/api/p.ts`; `tests/import-listing.test.ts`, `tests/listing-draft.test.ts` si se modifica la importación.
 
-- [ ] Preparar una lista de correcciones de los anuncios iniciales para revisión de su responsable: portada individual nítida, título legible y descripción sin residuos de formato de WhatsApp. No aplicar cambios masivos al catálogo real desde una regla de presentación.
-- [ ] Dar dos líneas al título de tarjeta y jerarquizar precio, ubicación y datos esenciales. Revisar títulos largos, foto ausente, alquiler, permuta y anuncios «Busco» sin inventar datos faltantes.
-- [ ] Reforzar la elección explícita de portada en el editor. Mostrar una recomendación breve para elegir una foto individual, nítida y representativa. No agregar un detector de collages ni generar imágenes que alteren la vivienda.
+- [x] Preparar una lista de correcciones de los anuncios iniciales para revisión de su responsable: portada individual nítida, título legible y descripción sin residuos de formato de WhatsApp. No aplicar cambios masivos al catálogo real desde una regla de presentación.
+- [x] Dar dos líneas al título de tarjeta y jerarquizar precio, ubicación y datos esenciales. Revisar títulos largos, foto ausente, alquiler, permuta y anuncios «Busco» sin inventar datos faltantes.
+- [x] Reforzar la elección explícita de portada en el editor. Mostrar una recomendación breve para elegir una foto individual, nítida y representativa. No agregar un detector de collages ni generar imágenes que alteren la vivienda.
 - [ ] Si se limpia texto importado, probar primero ejemplos con marcadores de WhatsApp y caracteres legítimos. Presentar el resultado para revisión antes de guardar; no modificar silenciosamente el texto de anuncios existentes.
 - [ ] Ejecutar `npm run check` y las pruebas de importación/borrador cuando haya cambios de comportamiento. Revisar tarjeta y detalle a 390 y 1280 px; confirmar que la tarjeta sigue usando `PropertyImage` con `variant="thumb"`.
 
@@ -176,24 +180,28 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 
 ### Tarea 8: Mi espacio invitado y coherencia de componentes
 
+**Estado:** implementación local y verificación sintética terminadas; pruebas de dispositivo y publicación pendientes. Véase `docs/design-conversion-verification.md`.
+
 **Archivos:** `src/screens/ProfileScreen.tsx`, `src/components/AccountPrompt.tsx`, `src/components/ui.tsx`, `src/theme.ts`, `src/screens/PublishScreen.tsx`, `src/screens/FavoritesScreen.tsx`; `tests/data-saver.test.ts`.
 
-- [ ] Reducir Mi espacio invitado a acceso/registro, una invitación útil a publicar y preferencias relevantes. Agrupar actividad y gestión de anuncios para usuarios con sesión, respetando permisos de administrador/propietario.
-- [ ] Colocar «Ahorro de datos» en el primer grupo visible de preferencias, accesible sin entrar en una cuenta. Verificar que sigue persistiendo y que espera su hidratación antes de cargar medios.
-- [ ] Unificar anchos, márgenes, botones y estados de las invitaciones de acceso. Añadir a `src/theme.ts` únicamente los valores de espaciado, radio, tipografía y superficies compartidos por estos componentes; evitar una migración global de estilos.
-- [ ] Mantener el azul de marca y la legibilidad del catálogo. Reservar los acentos cálidos de la portada para bienvenida/estados vacíos; no repetir la ilustración de captación en cada tarjeta.
+- [x] Reducir Mi espacio invitado a acceso/registro, una invitación útil a publicar y preferencias relevantes. Agrupar actividad y gestión de anuncios para usuarios con sesión, respetando permisos de administrador/propietario.
+- [x] Colocar «Ahorro de datos» en el primer grupo visible de preferencias, accesible sin entrar en una cuenta. Verificar que sigue persistiendo y que espera su hidratación antes de cargar medios.
+- [x] Unificar anchos, márgenes, botones y estados de las invitaciones de acceso. Añadir a `src/theme.ts` únicamente los valores de espaciado, radio, tipografía y superficies compartidos por estos componentes; evitar una migración global de estilos.
+- [x] Mantener el azul de marca y la legibilidad del catálogo. Reservar los acentos cálidos de la portada para bienvenida/estados vacíos; no repetir la ilustración de captación en cada tarjeta.
 - [ ] Ejecutar `node --experimental-strip-types --test tests/data-saver.test.ts` y `npm run check`; revisar invitado y usuario con sesión a 320, 390 y 1280 px, incluido tamaño de texto aumentado.
 
 **Aceptación:** Mi espacio deja de exigir un recorrido largo para encontrar el ahorro de datos; las invitaciones de acceso presentan una estructura consistente y sin contenido fuera de pantalla.
 
 ### Tarea 9: mapa inicial y mantenimiento del editor
 
+**Estado:** implementación local y verificación sintética terminadas; pruebas de dispositivo y publicación pendientes. Véase `docs/design-conversion-verification.md`.
+
 **Archivos:** `src/components/ExploreMap.tsx`, `src/catalog/useCatalog.ts`, `src/domain/geo.ts` si se requiere una función pura de encuadre; `tests/map-rendering.test.ts`, `tests/map-data.test.ts`. Para el editor: `src/components/ListingForm.tsx` y subcomponentes que correspondan a sus pasos actuales.
 
-- [ ] Encajar el mapa a la provincia seleccionada o al contexto ya disponible al cargarlo por primera vez. Mantener consulta por viewport; no descargar todo el catálogo para calcular el encuadre ni recentrar después de cada movimiento del usuario.
+- [x] Encajar el mapa a la provincia seleccionada o al contexto ya disponible al cargarlo por primera vez. Mantener consulta por viewport; no descargar todo el catálogo para calcular el encuadre ni recentrar después de cada movimiento del usuario.
 - [ ] Revisar puntos cercanos/agrupaciones y la acción de volver a lista. Mantener explícita la existencia de anuncios sin ubicación publicada; no inventar coordenadas.
 - [ ] Probar encuadre válido, ningún punto y puntos superpuestos. Ejecutar `node --experimental-strip-types --test tests/map-rendering.test.ts tests/map-data.test.ts tests/data-saver.test.ts`, después `npm run check`; verificar que activar ahorro evita consultas y mapas hasta «Cargar mapa».
-- [ ] Después de integrar la etapa 3, evaluar la extracción de los pasos de `ListingForm` que esa entrega ya necesite tocar. Mantener un único dueño del borrador y las validaciones existentes. Si la extracción no reduce una dificultad concreta, diferirla; no convertir esta tarea en un refactor completo.
+- [x] Después de integrar la etapa 3, evaluar la extracción de los pasos de `ListingForm` que esa entrega ya necesite tocar. Mantener un único dueño del borrador y las validaciones existentes. Si la extracción no reduce una dificultad concreta, diferirla; no convertir esta tarea en un refactor completo.
 - [ ] Si se extraen pasos, verificar importación, navegación atrás/adelante, datos incompletos, orden de fotos, recuperación de borrador y envío único con `tests/listing-draft.test.ts`, `tests/import-listing.test.ts` y revisión autenticada.
 
 **Aceptación:** el mapa resulta útil sin consumir más datos ni luchar contra el usuario. Cualquier extracción del editor conserva el mismo borrador y comportamiento.
@@ -202,11 +210,13 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 
 ### Tarea 10: microinteracciones y accesibilidad
 
+**Estado:** implementación local y verificación sintética terminadas; pruebas de dispositivo y publicación pendientes. Véase `docs/design-conversion-verification.md`.
+
 **Archivos:** componentes tocados de botones, favorito, filtros, fotos y pasos del editor; la abstracción mínima compartida de movimiento que resulte necesaria. No agregar una librería nueva.
 
-- [ ] Consultar [Reanimated en Expo v57](https://docs.expo.dev/versions/v57.0.0/sdk/reanimated/) y su [guía de accesibilidad](https://docs.swmansion.com/react-native-reanimated/docs/guides/accessibility/) antes de implementar. Usar Reanimated instalado solo donde aporte una interacción concreta.
-- [ ] Aplicar feedback de pulsación de 80–120 ms, confirmación discreta de favorito conservando «Deshacer», apertura de filtros de 150–220 ms y transición de pasos alrededor de 140 ms. Ajustar con evidencia renderizada; los tiempos son propuestas, no resultados medidos.
-- [ ] Para una foto ya cargada, considerar un fundido de hasta 150 ms que no dispare descargas ni oculte contenido útil. Evitar animar cada tarjeta al hacer scroll o introducir esperas artificiales.
+- [x] Consultar [Reanimated en Expo v57](https://docs.expo.dev/versions/v57.0.0/sdk/reanimated/) y su [guía de accesibilidad](https://docs.swmansion.com/react-native-reanimated/docs/guides/accessibility/) antes de implementar. Usar Reanimated instalado solo donde aporte una interacción concreta.
+- [x] Aplicar feedback de pulsación de 80–120 ms, confirmación discreta de favorito conservando «Deshacer», apertura de filtros de 150–220 ms y transición de pasos alrededor de 140 ms. Ajustar con evidencia renderizada; los tiempos son propuestas, no resultados medidos.
+- [x] Para una foto ya cargada, considerar un fundido de hasta 150 ms que no dispare descargas ni oculte contenido útil. Evitar animar cada tarjeta al hacer scroll o introducir esperas artificiales.
 - [ ] Respetar reducción de movimiento: omitir desplazamientos/escala y conservar el significado del estado. Verificar foco al abrir/cerrar modal, etiquetas y áreas táctiles de al menos 44 pt, sin depender solo del color.
 - [ ] Revisar reducción de movimiento en navegador y Android, botón Atrás, teclado y TalkBack. Medir fluidez en Android si se va a afirmar un resultado de rendimiento; no deducir 60 fps de que la animación existe.
 

@@ -5,7 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Icon, IconButton, Notice, PageTitle, type IconName } from '../components/ui';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 import { AccountPrompt } from '../components/AccountPrompt';
-import { useFavoriteListings } from '../catalog/useCatalog';
 import { useAuth } from '../auth/AuthProvider';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors, layout } from '../theme';
@@ -23,7 +22,6 @@ export default function ProfileScreen() {
   const { unreadCount: notificationUnreadCount } = useNotifications();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const { listings: favorites } = useFavoriteListings();
   const savedSearches = useSavedSearches();
   const dataSaver = useDataSaver();
   const transfers=useIncomingTransferCount();
@@ -46,10 +44,22 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* Device preference remains accessible before any account or activity actions. */}
+      <Text style={styles.sectionLabel}>Preferencias</Text>
+      <View style={styles.group}>
+        <View style={styles.row}>
+          <View style={styles.rowIcon}><Icon name="cellular-outline" size={21} color={colors.primary} /></View>
+          <View style={styles.rowBody}>
+            <View style={styles.rowCopy}><Text style={styles.rowTitle}>Ahorro de datos</Text><Text style={styles.rowDescription}>Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas.</Text></View>
+            <Switch accessibilityLabel="Ahorro de datos" accessibilityHint="Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas." value={dataSaver} onValueChange={setDataSaver} trackColor={{ false: '#DADCE2', true: colors.primary }} thumbColor={colors.white} ios_backgroundColor="#DADCE2" />
+          </View>
+        </View>
+      </View>
+
       {mode === 'cloud' && !user ? <View style={styles.accountPrompt}><AccountPrompt returnTo="/profile" /></View> : null}
       {suspended && <Notice error>Tu cuenta está suspendida. No puedes publicar ni enviar mensajes. {suspensionReason}</Notice>}
       {isOwner && <Notice>Tu información de cuenta es privada. Los demás solo ven tu nombre y foto de perfil.</Notice>}
-      <Text style={styles.sectionLabel}>Tu actividad</Text>
+      {(user || mode === 'demo') && <><Text style={styles.sectionLabel}>Tu actividad</Text>
       {user&&!isOwner&&<Button secondary icon="swap-horizontal-outline" label={`Anuncios por aceptar${transfers.count===null?'':` · ${transfers.count}`}`} onPress={()=>router.push('/listing-transfers')}/>}
       <View style={styles.group}>
         <Pressable accessibilityRole="button" accessibilityLabel={`Notificaciones, ${notificationUnreadCount} sin leer`} onPress={() => router.push('/notifications')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
@@ -75,11 +85,11 @@ export default function ProfileScreen() {
           </View>
         </Pressable>
         <View style={styles.separator} />
-        <Pressable accessibilityRole="button" accessibilityLabel={`Favoritos, ${favorites.length}`} onPress={() => router.push('/favorites')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Favoritos, ${favoriteIds.length}`} onPress={() => router.push('/favorites')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
           <View style={[styles.rowIcon, styles.favoritesIcon]}><Icon name="heart-outline" size={21} color="#A85D70" /></View>
           <View style={styles.rowBody}>
             <View style={styles.rowCopy}><Text style={styles.rowTitle}>Favoritos</Text><Text style={styles.rowDescription}>Lugares que quieres recordar</Text></View>
-            <View style={styles.accessory}><Text style={styles.count}>{favorites.length}</Text><Icon name="chevron-forward" size={17} color={colors.muted} /></View>
+            <View style={styles.accessory}><Text style={styles.count}>{favoriteIds.length}</Text><Icon name="chevron-forward" size={17} color={colors.muted} /></View>
           </View>
         </Pressable>
         {mode === 'cloud' && <>
@@ -96,25 +106,13 @@ export default function ProfileScreen() {
             <AccountRow icon="person-circle-outline" title="Ver mi perfil público" description="Lo que ven quienes visitan tus anuncios" onPress={() => router.push(`/user/${user.id}`)} />
           </>}
         </>}
-      </View>
+      </View></>}
 
       <View style={styles.publish}>
         <View style={styles.publishHeading}><View style={styles.publishIcon}><Icon name="key-outline" color={colors.primary} size={25} /></View><Text style={styles.publishEyebrow}>PARA PROPIETARIOS</Text></View>
         <Text style={styles.publishTitle}>Dale un lugar a tu vivienda.</Text>
         <Text style={styles.publishText}>Añade los detalles, elige sus mejores fotos y prepara tu {own.length ? 'próximo' : 'primer'} anuncio.</Text>
         <Button label={mode === 'cloud' ? 'Publicar mi vivienda' : 'Crear anuncio de prueba'} onPress={() => router.push('/publish')} icon="add-outline" />
-      </View>
-
-      {/* A device preference: it applies signed in or not, in the demo too. */}
-      <Text style={styles.sectionLabel}>Preferencias</Text>
-      <View style={styles.group}>
-        <View style={styles.row}>
-          <View style={styles.rowIcon}><Icon name="cellular-outline" size={21} color={colors.primary} /></View>
-          <View style={styles.rowBody}>
-            <View style={styles.rowCopy}><Text style={styles.rowTitle}>Ahorro de datos</Text><Text style={styles.rowDescription}>Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas.</Text></View>
-            <Switch accessibilityLabel="Ahorro de datos" accessibilityHint="Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas." value={dataSaver} onValueChange={setDataSaver} trackColor={{ false: '#DADCE2', true: colors.primary }} thumbColor={colors.white} ios_backgroundColor="#DADCE2" />
-          </View>
-        </View>
       </View>
 
       {/* Explorar no longer carries the account menu, so the account lives here in plain sight. */}
@@ -138,9 +136,9 @@ export default function ProfileScreen() {
       {isAdmin && <View style={{ marginTop: 18 }}><Button label="Administración" secondary icon="shield-checkmark-outline" onPress={() => router.push('/administration')} /></View>}
       <Text style={styles.demoNote}>{mode === 'demo' ? 'Tus cambios se guardan en este dispositivo. Esta demo no incluye cuentas, mensajes ni publicaciones públicas.' : 'Conversa sobre cada vivienda sin publicar tu teléfono. Tus anuncios se revisan antes de aparecer en el catálogo.'}</Text>
       <View style={styles.legal}>
-        <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.legalText}>Privacidad</Text></Pressable>
+        <Pressable accessibilityRole="link" style={styles.legalLink} onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.legalText}>Privacidad</Text></Pressable>
         <Text style={styles.legalText}>·</Text>
-        <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(TERMS_URL)}><Text style={styles.legalText}>Términos de uso</Text></Pressable>
+        <Pressable accessibilityRole="link" style={styles.legalLink} onPress={() => void Linking.openURL(TERMS_URL)}><Text style={styles.legalText}>Términos de uso</Text></Pressable>
       </View>
       {error || authError ? <Notice error>{error || authError}</Notice> : null}
       {authError && user && <Button label="Volver a cargar perfil" secondary onPress={() => void refreshProfile()} />}
@@ -189,5 +187,6 @@ const styles = StyleSheet.create({
   publishTitle: { fontSize: 22, lineHeight: 28, fontWeight: '600', letterSpacing: -.5, color: colors.ink },
   publishText: { fontSize: 15, color: colors.muted, lineHeight: 22, marginBottom: 6 },
   legal: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 14, minHeight: 44 }, legalText: { color: colors.muted, fontSize: 13, textDecorationLine: 'none' },
+  legalLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
   demoNote: { color: colors.muted, fontSize: 13, lineHeight: 20, paddingHorizontal: 16, marginTop: 18 },
 });

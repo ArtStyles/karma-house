@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useReducedMotion } from '../settings/useReducedMotion';
 import {
   Image,
   KeyboardAvoidingView,
@@ -118,6 +120,14 @@ export function ListingForm({
   const stepFields = stepFieldsFor(operation);
   // A restored draft that already names its operation skips the chooser.
   const choosing = hydrated && !initialDraft && draft.operation === undefined && !chosen;
+  const reducedMotion = useReducedMotion();
+  const stepOpacity = useSharedValue(1);
+  const stepMotion = useAnimatedStyle(() => ({ opacity: reducedMotion ? 1 : stepOpacity.value }));
+  useEffect(() => {
+    if (reducedMotion) { stepOpacity.value = 1; return; }
+    stepOpacity.value = .85;
+    stepOpacity.value = withTiming(1, { duration: 140, reduceMotion: ReduceMotion.System });
+  }, [step, choosing, reducedMotion, stepOpacity]);
   const completed = useRef(false);
   const submitLock = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -296,7 +306,7 @@ export function ListingForm({
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.formShell}>
+        <Animated.View style={[styles.formShell, stepMotion]}>
           {choosing ? (
             <View style={styles.section}>
               <SectionHeading title="¿Qué quieres publicar?" description="Elige una opción. Después no se puede cambiar sin crear otro anuncio." />
@@ -684,7 +694,7 @@ export function ListingForm({
           <Text style={styles.demoNote}>
             {cloud && directPublication ? 'Tu anuncio se publicará directamente. El borrador permanece privado hasta que decidas publicarlo.' : cloud ? 'Tu borrador se guarda en este dispositivo. Al enviarlo, revisaremos el anuncio antes de publicarlo. Los cambios posteriores también requieren revisión.' : 'Demostración: se guarda en este dispositivo, sin publicarse en internet.'}
           </Text>
-        </View>
+        </Animated.View>
       </ScrollView>
       {importOpen ? <ImportListingSheet onClose={() => setImportOpen(false)} onImport={applyImport} /> : null}
     </KeyboardAvoidingView>

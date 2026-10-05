@@ -50,7 +50,7 @@ export function PropertyCard({ listing, horizontal = false, offline = false }: {
             : <Text style={styles.price}>{formatMoney(listing.price)} <Text style={styles.currency}>{listing.operation === 'swap' ? 'USD · valor est.' : `USD${priceSuffix(listing)}`}</Text></Text>}
           {listing.priceNegotiable && <Text style={styles.negotiable}>Negociable</Text>}
         </View>
-        <Text numberOfLines={1} style={styles.title}>{listing.title}</Text>
+        <Text numberOfLines={2} style={styles.title}>{listing.title}</Text>
         <Text numberOfLines={1} style={styles.meta}>{place}</Text>
         <Text numberOfLines={1} style={styles.meta}>{facts}</Text>
         {horizontal && <View style={styles.detailsLink}><Text style={styles.detailsText}>{listing.operation === 'wanted' ? 'Ver esta búsqueda' : 'Conoce esta vivienda'}</Text><Icon name="arrow-forward" size={17} color={colors.primary} /></View>}

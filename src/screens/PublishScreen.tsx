@@ -16,7 +16,7 @@ export default function PublishScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.header}>
-        <PageTitle title="Publicar" />
+        <PageTitle title="Publicar" subtitle="Publicar por mi cuenta · prepara tu anuncio paso a paso." />
       </View>
       {mode === 'cloud' && !user ? <AccountPrompt returnTo="/publish" title="Dale un lugar a tu vivienda" description="Crea tu cuenta para publicar una vivienda y seguir su revisión." /> : suspended ? <Notice error>Tu cuenta está suspendida. No puedes publicar anuncios hasta que se reactive.</Notice> : ready ? (
         <ListingForm

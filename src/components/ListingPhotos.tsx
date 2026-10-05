@@ -1,8 +1,9 @@
 import { ImageManipulator, SaveFormat, type ImageRef } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { Image, Platform, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { PhotoDraft } from '../domain/listings';
 import { draftToken } from '../domain/draftPersistence';
+import { choosePhotoCover } from '../domain/photoCover';
 import { colors } from '../theme';
 import { Button, IconButton } from './ui';
 
@@ -74,13 +75,28 @@ export function ListingPhotos({ photos, busy, disabled, required = false, onBusy
       onChange([thumbUri ? { ...cover, thumbUri } : cover, ...next.slice(1)]);
     } finally { onBusy(false); }
   }
+  async function chooseCover(index: number) {
+    if (busy || disabled) return;
+    const next = choosePhotoCover(photos, index);
+    if (next === photos) return;
+    const cover = next[0];
+    if (cover.thumbUri || cover.storagePath) { onChange(next); return; }
+    onBusy(true);
+    try {
+      const thumbUri = await coverThumb(cover.uri, cover.uploadId ?? draftToken());
+      onChange([thumbUri ? { ...cover, thumbUri } : cover, ...next.slice(1)]);
+    } finally { onBusy(false); }
+  }
   return <View style={styles.container}>
     <Text accessibilityRole="header" style={styles.title}>Fotos de tu vivienda{required ? <Text style={styles.caption}> *</Text> : null}</Text>
-    <Text style={styles.caption}>Hasta 6 fotos. La primera será la portada.</Text>
+    <Text style={styles.caption}>Hasta 6 fotos. Elige como portada una foto individual, nítida y representativa de la vivienda.</Text>
     <View style={styles.grid}>{photos.map((photo, index) => <View key={photo.uploadId ?? photo.storagePath ?? index} style={styles.tile}>
-      <Image source={{ uri: photo.uri }} style={styles.image} accessibilityLabel={`Foto ${index + 1}`} />
-      {!disabled && !busy && <IconButton name="close" label={`Quitar foto ${index + 1}`} onPress={() => void remove(index)} style={styles.remove} />}
-      <Text style={styles.number}>{index === 0 ? 'Portada' : `${index + 1}`}</Text>
+      <View style={styles.frame}>
+        <Image source={{ uri: photo.uri }} style={styles.image} accessibilityLabel={`Foto ${index + 1}${index === 0 ? ', portada' : ''}`} />
+        {!disabled && !busy && <IconButton name="close" label={`Quitar foto ${index + 1}`} onPress={() => void remove(index)} style={styles.remove} />}
+        <Text style={styles.number}>{index === 0 ? 'Portada' : `${index + 1}`}</Text>
+      </View>
+      {index > 0 && <Pressable accessibilityRole="button" accessibilityLabel={`Usar foto ${index + 1} como portada`} accessibilityState={{ disabled: disabled || busy }} disabled={disabled || busy} onPress={() => void chooseCover(index)} style={({ pressed }) => [styles.coverChoice, pressed && { opacity: .7 }, (disabled || busy) && { opacity: .5 }]}><Text style={styles.coverChoiceText}>Usar como portada</Text></Pressable>}
     </View>)}</View>
     {photos.length < 6 && <Button label={photos.length ? 'Añadir fotos' : 'Elegir fotos'} secondary icon="images-outline" onPress={() => void pick()} loading={busy} disabled={disabled} />}
     <Text style={styles.caption}>Las fotos se optimizan para consumir menos datos.</Text>
@@ -88,7 +104,8 @@ export function ListingPhotos({ photos, busy, disabled, required = false, onBusy
 }
 const styles = StyleSheet.create({
   container: { gap: 12 }, title: { fontSize: 17, fontWeight: '600', color: colors.ink }, caption: { fontSize: 13, color: colors.muted, lineHeight: 19 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: '2%', rowGap: 10 }, tile: { width: '49%', aspectRatio: 1.35, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.paper },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: '2%', rowGap: 10 }, tile: { width: '49%', borderRadius: 14, overflow: 'hidden', backgroundColor: colors.paper }, frame: { aspectRatio: 1.35 },
+  coverChoice: { minHeight: 44, justifyContent: 'center', alignItems: 'center', padding: 8, backgroundColor: colors.softBlue }, coverChoiceText: { fontSize: 12, color: colors.primary, fontWeight: '600', textAlign: 'center' },
   image: { width: '100%', height: '100%' }, remove: { position: 'absolute', right: 4, top: 4, backgroundColor: colors.white },
   number: { position: 'absolute', left: 8, bottom: 8, backgroundColor: '#FFFFFFEE', paddingHorizontal: 9, paddingVertical: 5, borderRadius: 8, fontSize: 12, color: colors.ink },
 });

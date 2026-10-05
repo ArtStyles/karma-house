@@ -3,6 +3,7 @@ import { router, type Href } from 'expo-router';
 import type { ComponentProps, ReactNode } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle, type ColorValue } from 'react-native';
 import { colors, typefaces } from '../theme';
+import { MotionPressable } from './MotionPressable';
 
 /** Back that never dead-ends: history first, then the screen's own parent. */
 export function goBack(fallback: Href = '/') {
@@ -23,23 +24,23 @@ export function Brand({ height = 28, color = colors.primary, style }: { height?:
 export function Button({ label, onPress, secondary = false, loading = false, disabled = false, icon, style }: {
   label: string; onPress: () => void; secondary?: boolean; loading?: boolean; disabled?: boolean; icon?: IconName; style?: StyleProp<ViewStyle>;
 }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: disabled || loading }}
+  return <MotionPressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: disabled || loading }}
     disabled={disabled || loading} onPress={onPress} style={({ pressed }) => [styles.button, secondary && styles.secondary, (disabled || loading) && { opacity: .5 }, pressed && { opacity: .8 }, style]}>
     {loading ? <ActivityIndicator color={secondary ? colors.ink : 'white'} /> : icon ? <Icon name={icon} size={19} color={secondary ? colors.ink : 'white'} /> : null}
     <Text style={[styles.buttonText, secondary && { color: colors.primary }]}>{label}</Text>
-  </Pressable>;
+  </MotionPressable>;
 }
 /** `active` left undefined marks a plain action; only a real toggle reports a pressed state. */
 export function IconButton({ name, label, onPress, active, style }: { name: IconName; label: string; onPress: () => void; active?: boolean; style?: StyleProp<ViewStyle> }) {
-  return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: active }} aria-pressed={active} style={({ pressed }) => [styles.iconButton, pressed && { opacity: .7 }, style]}>
+  return <MotionPressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: active }} aria-pressed={active} style={({ pressed }) => [styles.iconButton, pressed && { opacity: .7 }, style]}>
     <Icon name={name} size={22} color={active ? colors.primary : colors.ink} />
-  </Pressable>;
+  </MotionPressable>;
 }
 export function Pill({ label, active = false, onPress, icon, accessibilityLabel }: { label: string; active?: boolean; onPress: () => void; icon?: IconName; accessibilityLabel?: string }) {
-  return <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} accessibilityState={{ selected: active }} aria-pressed={active} style={({ pressed }) => [styles.pill, active && styles.pillActive, pressed && { opacity: .7 }]}>
+  return <MotionPressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} accessibilityState={{ selected: active }} aria-pressed={active} style={({ pressed }) => [styles.pill, active && styles.pillActive, pressed && { opacity: .7 }]}>
     {icon && <Icon name={icon} size={17} color={active ? colors.primary : colors.muted} />}
     <Text style={[styles.pillText, active && { color: colors.primary }]}>{label}</Text>
-  </Pressable>;
+  </MotionPressable>;
 }
 export function PageTitle({ title, subtitle, back = false, fallback, right }: { title: string; subtitle?: string; back?: boolean; fallback?: Href; right?: ReactNode }) {
   return <View style={styles.pageTitle}>

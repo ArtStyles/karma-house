@@ -152,7 +152,7 @@ export default function DetailScreen() {
         </View>}
       </View>
       <View style={styles.body}>
-        {management.value?.assistedByKarmaHouse&&<Notice>Publicado con asistencia de KarmaHouse. {sellerProfile?.displayName?`La gestión actual corresponde a ${sellerProfile.displayName}.`:'Las consultas nuevas se dirigen al responsable vigente.'}</Notice>}
+        {management.value?.assistedByKarmaHouse&&<Notice>Publicado con asistencia de KarmaHouse. {own ? 'Ahora tú gestionas este anuncio.' : sellerProfile?.displayName?`La gestión actual corresponde a ${sellerProfile.displayName}.`:'Las consultas nuevas se dirigen al responsable vigente.'}</Notice>}
         {management.error&&!offline&&<Notice error>{management.error}</Notice>}
         {listingError && !offline && <View style={{ gap: 8 }}><Notice error>{`No pudimos actualizar la ficha. ${listingError}`}</Notice><Button label="Reintentar ficha" secondary onPress={retry} /></View>}
         {offline && <View style={{ gap: 8 }}><Notice>Sin conexión. Esta es una copia guardada; el precio y la disponibilidad pueden haber cambiado. Contactar y guardar favoritos requieren conexión.</Notice><Button label="Reintentar conexión" secondary onPress={retry} /></View>}
