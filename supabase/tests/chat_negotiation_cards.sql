@@ -11,7 +11,7 @@ insert into auth.users(id,email,raw_user_meta_data) values
  ('69000000-0000-4000-8000-000000000001','card-seller@example.invalid','{"display_name":"Vendedor temporal"}'),
  ('69000000-0000-4000-8000-000000000002','card-buyer@example.invalid','{"display_name":"Comprador temporal"}');
 insert into public.properties(id,owner_id,client_request_id,title,location,province,type,description,price,area,bedrooms,bathrooms,photo_paths,moderation) values
- ('69000000-0000-4000-8000-000000000011','69000000-0000-4000-8000-000000000001','card-a','Casa de prueba de tarjetas','Vedado','La Habana','Casa','Vivienda temporal usada en pruebas aisladas.',90000,90,2,1,array['synthetic/photo.jpg'],'approved');
+ ('69000000-0000-4000-8000-000000000011','69000000-0000-4000-8000-000000000001','card-a','Casa de prueba de tarjetas','Vedado','La Habana','Casa','Vivienda temporal usada en pruebas aisladas.',90000,90,2,1,array['69000000-0000-4000-8000-000000000001/card-a/photo.jpg'],'approved');
 create temporary table card_context(conversation_id uuid, offer jsonb);
 insert into card_context default values;
 grant select,update on card_context to authenticated;

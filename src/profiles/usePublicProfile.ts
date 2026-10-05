@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState,useSyncExternalStore } from 'react';
+import {listingManagementEvents} from '../state/listingManagementEvents';
 import { useAuth } from '../auth/AuthProvider';
 import { createCatalogRepository } from '../catalog/repository';
 import { createRowSigner } from '../data/supabaseMarketplace';
@@ -19,6 +20,9 @@ const passthrough = () => {};
 export function usePublicProfile(userId: string | undefined, { withListings = false } = {}) {
   const auth = useAuth();
   const viewer = auth.ready ? auth.user?.id ?? null : null;
+  const managementGeneration=useSyncExternalStore(listingManagementEvents.subscribe,listingManagementEvents.getSnapshot,listingManagementEvents.getSnapshot);
+  const scope=`${userId??''}:${viewer??''}:${managementGeneration}:${auth.session?.access_token??''}`;
+  const latestScope=useRef(scope);latestScope.current=scope;const loadedScope=useRef('');
   const token = useRef<string | null>(null);
   token.current = viewer ? auth.session?.access_token ?? null : null;
   const repositories = useMemo(() => supabase ? {
@@ -32,11 +36,12 @@ export function usePublicProfile(userId: string | undefined, { withListings = fa
 
   useEffect(() => {
     const mine = ++epoch.current;
+    const captured=scope;loadedScope.current=scope;
     if (!userId) { setState(idle); return; }
     if (!repositories) { setState({ ...idle, notFound: true }); return; }
     if (!auth.ready) { setState({ ...idle, loading: true }); return; }
     const request = new AbortController();
-    const live = () => epoch.current === mine && !request.signal.aborted;
+    const live = () => epoch.current === mine && !request.signal.aborted && latestScope.current===captured;
     setState({ ...idle, loading: true });
     void (async () => {
       try {
@@ -58,7 +63,7 @@ export function usePublicProfile(userId: string | undefined, { withListings = fa
       }
     })();
     return () => request.abort();
-  }, [repositories, userId, viewer, auth.ready, withListings, attempt]);
+  }, [repositories, userId, viewer, auth.ready, withListings, attempt,scope]);
 
   const retry = useCallback(() => setAttempt(value => value + 1), []);
 
@@ -80,5 +85,5 @@ export function usePublicProfile(userId: string | undefined, { withListings = fa
     }
   }, [repositories, userId, viewer]);
 
-  return { ...state, retry, setVerified };
+  return { ...(loadedScope.current===scope?state:{...idle,loading:!!userId}), retry, setVerified };
 }

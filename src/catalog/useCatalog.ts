@@ -11,6 +11,7 @@ import { createCatalogRepository } from './repository';
 import { createOfflineSnapshot, isDefaultCatalog, isNetworkFailure, nextOffline } from './offlineSnapshot';
 import { draftStorage } from '../data/draftStorage';
 import { COUNT_DEBOUNCE_MS, type BoundingBox, type CatalogRepository, type MapView } from './types';
+import {listingManagementEvents} from '../state/listingManagementEvents';
 
 /** Null while Supabase is unconfigured; the screens never branch on mode themselves. */
 function useCatalogRepository(): CatalogRepository | null {
@@ -37,6 +38,7 @@ export interface CatalogPageResult extends CatalogState {
 }
 
 export function useCatalogPage(filters: ListingFilters): CatalogPageResult {
+  const managementGeneration=useSyncExternalStore(listingManagementEvents.subscribe,listingManagementEvents.getSnapshot,listingManagementEvents.getSnapshot);
   const { mode, demoCatalog } = useMarketplace();
   const { user } = useAuth();
   const repository = useCatalogRepository();
@@ -57,6 +59,7 @@ export function useCatalogPage(filters: ListingFilters): CatalogPageResult {
 
   // A new account must not keep the previous account's pages on screen.
   useEffect(() => { controller?.setSession(); }, [controller, user?.id]);
+  useEffect(()=>listingManagementEvents.subscribe(()=>{void controller?.invalidateListingManagement().catch(()=>{});}),[controller]);
 
   useEffect(() => {
     if (!controller) return;
@@ -101,6 +104,11 @@ interface ListingResult {
 }
 
 export function useListing(id: string | undefined): ListingResult & { retry(): void } {
+  const {user}=useAuth();
+  const managementGeneration=useSyncExternalStore(listingManagementEvents.subscribe,listingManagementEvents.getSnapshot,listingManagementEvents.getSnapshot);
+  const scope=`${id}:${user?.id??''}:${managementGeneration}`;
+  const latestScope=useRef(scope);latestScope.current=scope;
+  const loadedScope=useRef('');
   const { mode, demoCatalog, ownListings } = useMarketplace();
   const repository = useCatalogRepository();
   const [state, setState] = useState<ListingResult>({ listing: undefined, ready: false, error: null, offline: false });
@@ -110,8 +118,11 @@ export function useListing(id: string | undefined): ListingResult & { retry(): v
   useEffect(() => {
     if (mode === 'demo' || !repository || !id) return;
     let cancelled = false;
+    const capturedScope=scope;loadedScope.current=scope;
+    const managementCheckpoint=listingManagementEvents.checkpoint();
+    const checkpoint=()=>{managementCheckpoint();if(cancelled||latestScope.current!==capturedScope)throw Error('KH_ACCOUNT_CHANGED');};
     setState({ listing: undefined, ready: false, error: null, offline: false });
-    repository.byId(id, passthrough)
+    repository.byId(id, checkpoint)
       .then((listing) => { if (!cancelled) setState({ listing: listing ?? undefined, ready: true, error: null, offline: false }); })
       .catch(async (failure) => {
         const error = remoteErrorMessage(failure);
@@ -119,17 +130,18 @@ export function useListing(id: string | undefined): ListingResult & { retry(): v
         if (!cancelled) setState(saved ? { listing: saved, ready: true, error: null, offline: true } : { listing: undefined, ready: true, error, offline: false });
       });
     return () => { cancelled = true; };
-  }, [mode, repository, id, attempt]);
+  }, [mode, repository, id, attempt,scope]);
 
   if (mode === 'demo') {
     return { listing: (demoCatalog ?? []).find((item) => item.id === id), ready: true, error: null, offline: false, retry };
   }
   // An owner editing their own paused listing reads it from the account snapshot without a round trip.
   const own = ownListings.find((item) => item.id === id);
-  return own ? { listing: own, ready: true, error: null, offline: false, retry } : { ...state, retry };
+  return own ? { listing: own, ready: true, error: null, offline: false, retry } : loadedScope.current===scope ? { ...state, retry } : {listing:undefined,ready:false,error:null,offline:false,retry};
 }
 
 export function useFavoriteListings(): { listings: Listing[]; ready: boolean; error: string | null } {
+  const managementGeneration=useSyncExternalStore(listingManagementEvents.subscribe,listingManagementEvents.getSnapshot,listingManagementEvents.getSnapshot);
   const { mode, demoCatalog, favoriteIds } = useMarketplace();
   const repository = useCatalogRepository();
   const [state, setState] = useState<{ listings: Listing[]; ready: boolean; error: string | null }>({ listings: [], ready: false, error: null });
@@ -144,7 +156,7 @@ export function useFavoriteListings(): { listings: Listing[]; ready: boolean; er
       .catch((error) => { if (!cancelled) setState({ listings: [], ready: true, error: remoteErrorMessage(error) }); });
     return () => { cancelled = true; };
     // favoriteIds is rebuilt on every toggle, so the joined key is the stable dependency.
-  }, [mode, repository, key]);
+  }, [mode, repository, key,managementGeneration]);
 
   const visible = (mode === 'demo' ? (demoCatalog ?? []) : state.listings)
     .filter((item) => favoriteIds.includes(item.id) && item.status === 'active' && (!item.moderationStatus || item.moderationStatus === 'approved'));

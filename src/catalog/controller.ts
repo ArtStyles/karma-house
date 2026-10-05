@@ -82,6 +82,11 @@ export function createCatalogController(repository: CatalogRepository, options: 
       filters = null;
       publish(emptyCatalogState());
     },
+    invalidateListingManagement() {
+      generation += 1; sequence += 1;
+      publish({...emptyCatalogState()});
+      return filters ? fetchPage(null,false) : Promise.resolve();
+    },
     setFilters(next: ListingFilters) { filters = next; return fetchPage(null, false); },
     loadMore() { return state.hasMore && !state.loading ? fetchPage(state.cursor, true) : Promise.resolve(); },
     refresh() { return fetchPage(null, false); },

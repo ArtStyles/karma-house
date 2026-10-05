@@ -1,0 +1,33 @@
+begin;
+-- Fixture helper is prepended by the loopback-only runner.
+select pg_temp.kh_assert(to_regprocedure('public.kh_start_conversation_for_manager(uuid,uuid,uuid)') is not null,'safe chat RPC exists');
+create temp table context_fixture(property_id uuid,conversation_id uuid);
+grant select on context_fixture to authenticated;
+select pg_temp.kh_as('43000000-0000-4000-8000-000000000001');
+do $$ declare c uuid;p uuid;oldchat jsonb;newchat jsonb;r jsonb;sent jsonb;msg uuid:=gen_random_uuid();begin
+ c:=pg_temp.kh_collaborator();p:=pg_temp.kh_listing(c,'chat-transfer');
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000004');oldchat:=public.kh_start_conversation_for_manager(p,auth.uid(),'43000000-0000-4000-8000-000000000001');
+ sent:=public.kh_send_message((oldchat->>'id')::uuid,msg,'Fixture message',auth.uid());
+ insert into context_fixture values(p,(oldchat->>'id')::uuid);
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000001');r:=pg_temp.kh_offer(c,array[p]);
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000002');
+ perform public.kh_decide_listing_transfer(auth.uid(),jsonb_build_object('requestId',r->>'id','expectedRequestVersion',1,'clientRequestId',gen_random_uuid(),'decision','accept'));
+ perform pg_temp.kh_error(format('select public.kh_get_conversation(%L,auth.uid())',oldchat->>'id'),'KH_CHAT_NOT_FOUND');
+ perform pg_temp.kh_assert((public.kh_public_profile(auth.uid())->>'approvedListingCount')::integer=0,'inherited listing gives no publication score');
+ perform pg_temp.kh_assert((public.kh_public_profile(auth.uid())->>'activeListingCount')::integer=1,'inherited listing is visible as currently managed');
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000004');
+ oldchat:=public.kh_get_conversation((oldchat->>'id')::uuid,auth.uid());
+ perform pg_temp.kh_assert((oldchat->>'managementChanged')::boolean and not(oldchat->>'canSend')::boolean and oldchat->>'currentManagerId'='43000000-0000-4000-8000-000000000002','old conversation frozen with visible current manager');
+ perform pg_temp.kh_assert(public.kh_send_message((oldchat->>'id')::uuid,msg,'Fixture message',auth.uid())=sent,'ACK replay remains valid after transfer');
+ perform pg_temp.kh_error(format('select public.kh_start_conversation_for_manager(%L,auth.uid(),%L)',p,'43000000-0000-4000-8000-000000000001'),'KH_CHAT_MANAGER_CHANGED');
+ newchat:=public.kh_start_conversation_for_manager(p,auth.uid(),'43000000-0000-4000-8000-000000000002');
+ perform pg_temp.kh_assert(newchat->>'id'<>oldchat->>'id' and (newchat->>'canSend')::boolean,'new manager uses a separate conversation');
+ perform pg_temp.kh_as(null);update public.properties set availability='paused' where id=p;
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000004');oldchat:=public.kh_get_conversation((oldchat->>'id')::uuid,auth.uid());
+ perform pg_temp.kh_assert(oldchat->'currentManagerId'='null'::jsonb and not(oldchat->>'currentContactAvailable')::boolean,'paused property reveals no contact destination');
+end $$;
+set local role authenticated;
+select pg_temp.kh_as('43000000-0000-4000-8000-000000000002');
+select pg_temp.kh_assert((select count(*)=0 from public.kh_messages where conversation_id=(select conversation_id from context_fixture)),'recipient has no old message SELECT');
+reset role;
+rollback;

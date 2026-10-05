@@ -10,6 +10,7 @@ import type { Listing, ListingDraft } from '../domain/listings';
 import { normalizeMapLocation } from '../domain/geo';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { colors } from '../theme';
+import {useListingManagement} from '../transfers/useListingManagement';
 
 export default function EditScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -17,6 +18,7 @@ export default function EditScreen() {
   const { saveListing, storageError, isOwnListing, mode, refresh } = useMarketplace();
   const { user, isOwner } = useAuth();
   const { listing, ready } = useListing(id);
+  const management=useListingManagement(id);
 
   const cancel = () => goBack('/my-listings');
 
@@ -27,7 +29,7 @@ export default function EditScreen() {
         {storageError ? <Notice error>{storageError}</Notice> : null}
       </View>
 
-      {!ready ? (
+      {!ready||mode==='cloud'&&!management.ready ? (
         <View style={styles.loading} accessibilityLabel="Cargando anuncio local">
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -36,9 +38,9 @@ export default function EditScreen() {
           message="No encontramos este anuncio en tu cuenta. Vuelve a Mis anuncios para actualizar la lista."
           onBack={() => router.replace('/my-listings')}
         />
-      ) : !isOwnListing(listing) ? (
+      ) : !isOwnListing(listing)||mode==='cloud'&&management.value?.managerId!==user?.id ? (
         <Unavailable
-          message="Solo puedes editar tus propios anuncios."
+          message={management.error??'La gestión de este anuncio ya no está disponible para tu cuenta. Actualiza Mis anuncios.'}
           onBack={() => router.replace('/my-listings')}
         />
       ) : (
@@ -52,6 +54,7 @@ export default function EditScreen() {
           onCancel={cancel}
           onReloadLatest={refresh}
           onSubmit={async (draft) => {
+            if(mode==='cloud'){const current=await management.refresh();if(current?.managerId!==user?.id)throw Error('La gestión de este anuncio cambió. Actualiza Mis anuncios.');}
             await saveListing(draft, listing.id);
           }}
           onSaved={() => router.dismissTo('/my-listings')}
@@ -70,7 +73,7 @@ function Unavailable({ message, onBack }: { message: string; onBack: () => void 
   );
 }
 
-function toDraft(listing: Listing): ListingDraft {
+export function toDraft(listing: Listing): ListingDraft {
   return {
     title: listing.title,
     location: listing.location,

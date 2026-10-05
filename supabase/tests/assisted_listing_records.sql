@@ -1,0 +1,43 @@
+begin;
+create function pg_temp.assisted_assert(ok boolean, label text) returns void language plpgsql as $$ begin if ok is not true then raise exception 'ASSISTED ASSERTION: %',label; end if; end $$;
+select pg_temp.assisted_assert(to_regprocedure('public.kh_save_assisted_property(uuid,jsonb,jsonb)') is not null,'assisted publication RPC exists');
+select pg_temp.assisted_assert(to_regclass('kh_private.property_publication_keys') is not null,'immutable creation identity exists');
+select pg_temp.assisted_assert(to_regclass('kh_private.property_media_assets') is not null,'inherited assets registry exists');
+-- Fixture helper is prepended by the loopback-only runner inside this transaction.
+select pg_temp.kh_as('43000000-0000-4000-8000-000000000003');
+select pg_temp.kh_error($s$select public.kh_admin_save_assisted_collaborator(auth.uid(),'{"kind":"agency"}')$s$,'KH_OFFICIAL_ACCOUNT_REQUIRED');
+select pg_temp.kh_as('43000000-0000-4000-8000-000000000001');
+do $$ declare c uuid;p uuid;payload jsonb;begin
+ c:=pg_temp.kh_collaborator();p:=pg_temp.kh_listing(c,'identity-retry');
+ perform pg_temp.kh_assert((select moderation='approved' from public.properties where id=p),'principal publication is approved');
+ perform pg_temp.kh_assert((select count(*)=1 from kh_private.property_publication_keys where property_id=p),'immutable identity reserved');
+ select initial_payload||jsonb_build_object('ownerId',auth.uid()) into payload from kh_private.property_save_requests where property_id=p;
+ perform pg_temp.kh_assert((public.kh_save_property(payload)->>'id')::uuid=p,'creation replay preserves UUID');
+ perform pg_temp.kh_as(null);
+ update public.properties set owner_id='43000000-0000-4000-8000-000000000002',version=version+1 where id=p;
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000001');
+ perform pg_temp.kh_error(format('select public.kh_save_property(%L::jsonb)',payload),'KH_PROPERTY_MANAGEMENT_CHANGED');
+ perform pg_temp.kh_assert((select count(*)=1 from public.properties where client_request_id='identity-retry'),'replay after reassignment does not recreate');
+end $$;
+select pg_temp.kh_assert(not has_table_privilege('authenticated','kh_private.assisted_listing_records','SELECT'),'provenance inaccessible directly');
+select pg_temp.kh_assert(not has_function_privilege('authenticated','public.kh_claim_media_cleanup(integer)','EXECUTE'),'cleanup is server-only');
+do $$ declare c uuid;p uuid;d uuid;l jsonb;proof jsonb;saved jsonb;begin
+ c:=pg_temp.kh_collaborator();p:=pg_temp.kh_listing(c,'permission-renewal');
+ select payload->'listing',payload->'provenance' into l,proof from kh_private.assisted_write_receipts where request_id='permission-renewal' and kind='publication';
+ insert into storage.objects(bucket_id,name,owner_id) values('property-photos',auth.uid()::text||'/incomplete-draft/photo.jpg',auth.uid()::text);
+ saved:=public.kh_save_assisted_property(auth.uid(),(l-'id')||jsonb_build_object('clientRequestId','incomplete-draft','photoPaths',jsonb_build_array(auth.uid()::text||'/incomplete-draft/photo.jpg'),'moderation','draft'),jsonb_build_object('collaboratorId',c,'collaboratorReference','incomplete-draft'));
+ d:=(saved->>'id')::uuid;
+ perform pg_temp.kh_assert((select moderation='draft' from public.properties where id=d),'incomplete private draft stays invisible');
+ perform pg_temp.kh_error(format('select public.kh_submit_property(%L::uuid)',d),'KH_ASSISTED_CONSENT_REQUIRED');
+ perform pg_temp.kh_error(format('select public.kh_save_assisted_property(auth.uid(),%L::jsonb,%L::jsonb)',l||jsonb_build_object('clientRequestId','future-draft','moderation','draft','photoPaths','[]'::jsonb),jsonb_build_object('collaboratorId',c,'collaboratorReference','future-draft','consentAt',clock_timestamp()+interval '1 hour')),'KH_ASSISTED_INVALID');
+ perform public.kh_revoke_assisted_permission(auth.uid(),p,1);
+ l:=l||jsonb_build_object('id',p,'expectedVersion',(select version from public.properties where id=p),'availability','active');
+ proof:=proof||jsonb_build_object('expectedVersion',2);
+ perform pg_temp.kh_error(format('select public.kh_save_assisted_property(auth.uid(),%L::jsonb,%L::jsonb)',l,proof),'KH_ASSISTED_CONSENT_REQUIRED');
+ proof:=proof||jsonb_build_object('consentAt',clock_timestamp(),'lastConfirmedAt',clock_timestamp(),'evidenceReference','new synthetic authorization');
+ saved:=public.kh_save_assisted_property(auth.uid(),l,proof);
+ perform pg_temp.kh_assert((select consent_revoked_at is null and version=3 from kh_private.assisted_listing_records where property_id=p),'new permission restores the record once');
+ perform pg_temp.kh_assert((select availability='paused' and moderation='approved' from public.properties where id=p),'renewed permission preserves pause and moderation');
+ perform pg_temp.kh_assert((public.kh_save_assisted_property(auth.uid(),l,proof)->>'id')::uuid=p,'permission renewal retries preserve identity');
+end $$;
+rollback;

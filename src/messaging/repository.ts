@@ -31,7 +31,7 @@ export function createSupabaseMessagingRepository(client: SupabaseClient): Messa
       }
       return [...rows.values()];
     },
-    async startConversation(propertyId, context) { return conversation(await rpc('kh_start_conversation', { p_property_id: propertyId }, context), context.userId); },
+    async startConversation(propertyId, context, expectedManagerId) { return conversation(await rpc(expectedManagerId ? 'kh_start_conversation_for_manager' : 'kh_start_conversation', { p_property_id: propertyId, ...(expectedManagerId ? { p_expected_manager_id: expectedManagerId } : {}) }, context), context.userId); },
     async getConversation(id, context) {
       const item = conversation(await rpc('kh_get_conversation', { p_conversation_id: id }, context), context.userId);
       if (item.id !== id) throw invalidResponse();
@@ -102,5 +102,9 @@ export function decodeConversation(value: unknown): Conversation {
     lastMessage: item.lastMessage === null ? null : text(item.lastMessage, 2000), lastMessageAt: item.lastMessageAt === null ? null : date(item.lastMessageAt),
     lastSeq: integer(item.lastSeq), unreadCount: integer(item.unreadCount), blockedByMe: boolean(item.blockedByMe), blockedByOther: boolean(item.blockedByOther),
     canSend: boolean(item.canSend), propertyAvailable: boolean(item.propertyAvailable), createdAt: date(item.createdAt),
+    managementChanged: item.managementChanged === undefined ? false : boolean(item.managementChanged),
+    currentManagerId: item.currentManagerId == null ? null : uuid(item.currentManagerId),
+    currentManagerName: item.currentManagerName == null ? null : text(item.currentManagerName,80),
+    currentContactAvailable: item.currentContactAvailable === undefined ? false : boolean(item.currentContactAvailable),
   };
 }

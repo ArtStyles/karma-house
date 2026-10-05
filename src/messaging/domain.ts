@@ -72,6 +72,7 @@ export function messagingErrorMessage(error: unknown): string {
   if (/REQUEST_CONFLICT|IDEMPOTENCY_CONFLICT|MESSAGE_CONFLICT|REPORT_CONFLICT/.test(message)) return 'Este envío ya existe con otro contenido. Actualiza la conversación antes de continuar.';
   if (/BLOCKED|USER_BLOCK/.test(message)) return 'No se pueden enviar mensajes mientras exista un bloqueo entre estas cuentas.';
   if (/PROPERTY_UNAVAILABLE|LISTING_UNAVAILABLE|NOT_AVAILABLE/.test(message)) return 'Este anuncio ya no está disponible para nuevas conversaciones o mensajes.';
+  if (/KH_CHAT_MANAGER_CHANGED/.test(message)) return 'El responsable del anuncio cambió. Actualiza la ficha y vuelve a tocar Contactar.';
   if (/RATE_LIMIT|TOO_MANY|CONVERSATION_LIMIT|REPORT_LIMIT/.test(message)) return 'Has realizado muchos envíos. Espera un momento antes de volver a intentarlo.';
   if (/ADMIN_REQUIRED|CANNOT_REVIEW_OWN_REPORT/.test(message)) return 'Tu cuenta no puede revisar este reporte.';
   if (/REPORT_ALREADY_REVIEWED/.test(message)) return 'Este reporte ya fue revisado. Actualiza la lista.';

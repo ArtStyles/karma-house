@@ -53,6 +53,8 @@ export function adminError(error: unknown): string {
   return 'No se pudo completar la gestión. Comprueba la conexión y actualiza la lista.';
 }
 export function eventLabel(action: string): string {
+  const transfers:Record<string,string>={transfer_offered:'Gestión ofrecida',transfer_accepted:'Gestión aceptada',transfer_rejected:'Gestión rechazada',transfer_cancelled:'Solicitud de gestión cancelada',transfer_expired:'Solicitud de gestión vencida',transfer_invalidated:'Solicitud de gestión invalidada'};
+  if(action in transfers)return transfers[action];
   if(action in actionLabel) return actionLabel[action as AccountAction];
   if(action.startsWith('property_approved_')) return action.endsWith('_paused')?'Anuncio pausado':'Anuncio publicado';
   if(action.startsWith('property_rejected_')) return 'Anuncio retirado o devuelto';

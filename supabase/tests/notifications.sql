@@ -20,7 +20,7 @@ insert into auth.users(id,email,raw_user_meta_data) values
 ('77000000-0000-4000-8000-000000000003','kh-notice-outsider@example.invalid','{}');
 insert into public.kh_admins(user_id) values('77000000-0000-4000-8000-000000000003');
 insert into public.properties(id,owner_id,client_request_id,title,location,province,type,description,price,area,bedrooms,bathrooms,photo_paths,moderation)
-values('77000000-0000-4000-8000-000000000004','77000000-0000-4000-8000-000000000002','notice-sql','Casa de avisos','Vedado','La Habana','Casa','Vivienda ficticia de pruebas de notificaciones.',50000,100,2,1,ARRAY['synthetic/notice.jpg'],'approved');
+values('77000000-0000-4000-8000-000000000004','77000000-0000-4000-8000-000000000002','notice-sql','Casa de avisos','Vedado','La Habana','Casa','Vivienda ficticia de pruebas de notificaciones.',50000,100,2,1,ARRAY['77000000-0000-4000-8000-000000000002/notice-sql/notice.jpg'],'approved');
 create temporary table notice_context(conversation_id uuid, message jsonb, offer jsonb, alternate jsonb, visit jsonb, payload jsonb, page jsonb, cutoff text, total integer);
 insert into notice_context default values;
 grant all on notice_context to authenticated;

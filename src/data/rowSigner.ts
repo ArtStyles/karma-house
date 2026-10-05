@@ -27,21 +27,25 @@ export function createRowSigner(bucket: SigningBucket, cache: SignedUrlCache, no
     checkpoint();
     await (hydrated ??= cache.hydrate());
     checkpoint();
-    const paths = [...new Set(rows.flatMap((row) => rowPaths(row, photos)))];
-    const missing = cache.missing(paths);
-    const signedUrls = new Map(paths.flatMap((path) => { const url = cache.get(path); return url ? [[path, url] as const] : []; }));
+    const publicPaths = [...new Set(rows.filter(row => row.moderation === 'approved' && row.availability === 'active').flatMap(row => rowPaths(row, photos)))];
+    const privatePaths = [...new Set(rows.filter(row => row.moderation !== 'approved' || row.availability !== 'active').flatMap(row => rowPaths(row, photos)))];
+    const paths = [...new Set([...publicPaths, ...privatePaths])];
+    // A paused/private row never consumes or persists the shared public URL cache.
+    const signedUrls = new Map(publicPaths.flatMap((path) => { const url = cache.get(path); return url ? [[path, url] as const] : []; }));
     const fresh: SignedUrlEntry[] = [];
-    for (let start = 0; start < missing.length; start += 100) {
+    for (const group of [{ paths: cache.missing(publicPaths), seconds: SIGNED_URL_SECONDS, persist: true }, { paths: privatePaths, seconds: 300, persist: false }]) {
+    for (let start = 0; start < group.paths.length; start += 100) {
       checkpoint();
-      const expiresAt = now() + SIGNED_URL_SECONDS * 1000;
-      const { data, error } = await bucket.createSignedUrls(missing.slice(start, start + 100), SIGNED_URL_SECONDS);
+      const expiresAt = now() + group.seconds * 1000;
+      const { data, error } = await bucket.createSignedUrls(group.paths.slice(start, start + 100), group.seconds);
       checkpoint();
       if (error) throw error;
       for (const item of data ?? []) {
         if (item.error || !item.path || !item.signedUrl) throw new Error('No se pudieron cargar las fotos autorizadas del anuncio. Inténtalo de nuevo.');
         signedUrls.set(item.path, item.signedUrl);
-        fresh.push({ path: item.path, url: item.signedUrl, expiresAt });
+        if (group.persist) fresh.push({ path: item.path, url: item.signedUrl, expiresAt });
       }
+    }
     }
     if (paths.some((path) => !signedUrls.has(path))) throw new Error('Faltan fotos del anuncio en la respuesta del servidor.');
     // Persisting is best effort and must not hold up the page.

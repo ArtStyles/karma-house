@@ -22,7 +22,7 @@ insert into auth.users(id,email,raw_user_meta_data) values
  ('33000000-0000-4000-8000-000000000004','chat-admin@example.invalid','{"display_name":"Revisor temporal"}');
 insert into public.kh_admins(user_id) values('33000000-0000-4000-8000-000000000004');
 insert into public.properties(id,owner_id,client_request_id,title,location,province,type,description,price,area,bedrooms,bathrooms,photo_paths,moderation) values
- ('33000000-0000-4000-8000-000000000011','33000000-0000-4000-8000-000000000001','chat-test-property','Casa de prueba de chat','Vedado','La Habana','Casa','Vivienda temporal usada en pruebas aisladas.',50000,80,2,1,array['synthetic/photo.jpg'],'approved');
+ ('33000000-0000-4000-8000-000000000011','33000000-0000-4000-8000-000000000001','chat-test-property','Casa de prueba de chat','Vedado','La Habana','Casa','Vivienda temporal usada en pruebas aisladas.',50000,80,2,1,array['33000000-0000-4000-8000-000000000001/chat-test-property/photo.jpg'],'approved');
 create temporary table chat_context(conversation_id uuid, second_id uuid, report_id uuid);
 insert into chat_context default values;
 grant select,update on chat_context to authenticated,anon;
@@ -132,7 +132,7 @@ select pg_temp.chat_as('33000000-0000-4000-8000-000000000002');
 select pg_temp.chat_error($s$select public.kh_send_message(conversation_id,gen_random_uuid(),'Hourly limit',auth.uid()) from chat_context$s$,'KH_CHAT_RATE_LIMIT');
 reset role;
 insert into public.properties(id,owner_id,client_request_id,title,location,province,type,description,price,area,bedrooms,bathrooms,photo_paths,moderation)
-select ('33000000-0000-4000-9000-'||lpad(n::text,12,'0'))::uuid,'33000000-0000-4000-8000-000000000001','chat-limit-'||n,'Casa de límite '||n,'Vedado','La Habana','Casa','Vivienda temporal para límites diarios.',50000,80,2,1,array['synthetic/photo.jpg'],'approved' from generate_series(1,20)n;
+select ('33000000-0000-4000-9000-'||lpad(n::text,12,'0'))::uuid,'33000000-0000-4000-8000-000000000001','chat-limit-'||n,'Casa de límite '||n,'Vedado','La Habana','Casa','Vivienda temporal para límites diarios.',50000,80,2,1,array['33000000-0000-4000-8000-000000000001/chat-limit-'||n||'/photo.jpg'],'approved' from generate_series(1,20)n;
 set local role authenticated;
 select pg_temp.chat_as('33000000-0000-4000-8000-000000000002');
 do $$ begin for n in 1..19 loop perform public.kh_start_conversation(('33000000-0000-4000-9000-'||lpad(n::text,12,'0'))::uuid,auth.uid()); end loop; end $$;

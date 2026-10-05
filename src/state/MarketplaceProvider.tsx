@@ -9,6 +9,7 @@ import {
   useSyncExternalStore,
 } from 'react';
 import { AppState } from 'react-native';
+import {listingManagementEvents} from './listingManagementEvents';
 
 import { useAuth } from '../auth/AuthProvider';
 import { createSupabaseMarketplaceRepository } from '../data/supabaseMarketplace';
@@ -34,6 +35,7 @@ export interface MarketplaceContextValue {
   ownListings: Listing[];
   moderationQueue: Listing[];
   refresh(): Promise<void>;
+  invalidateListingManagement(ids:readonly string[]):Promise<void>;
   isOwnListing(listing: Listing): boolean;
   toggleFavorite(id: string): Promise<void>;
   saveListing(draft: ListingDraft, existingId?: string, moderation?: SaveModeration): Promise<string>;
@@ -73,6 +75,7 @@ function DemoMarketplaceProvider({ children }: PropsWithChildren) {
       ownListings: state.listings.filter((listing) => listing.owner === 'local'),
       moderationQueue: [],
       refresh: controller.hydrate,
+      invalidateListingManagement:async(ids)=>{listingManagementEvents.invalidate(ids);await controller.hydrate();},
       isOwnListing: (listing) => listing.owner === 'local',
       toggleFavorite: controller.toggleFavorite,
       saveListing: controller.saveListing,
@@ -118,6 +121,7 @@ function CloudMarketplaceProvider({ children }: PropsWithChildren) {
       moderationQueue: auth.isAdmin ? visible.moderationQueue : [],
       isOwnListing: (listing) => !!userId && listing.owner === 'remote' && listing.ownerId === userId,
       refresh: controller.refresh,
+      invalidateListingManagement:async(ids)=>{listingManagementEvents.invalidate(ids);await controller.invalidateListingManagement(ids);},
       toggleFavorite: controller.toggleFavorite,
       saveListing: controller.saveListing,
       setStatus: controller.setStatus,

@@ -2,6 +2,8 @@ param(
   [string]$JdkPath = '',
   [string]$SdkPath = '',
   [string]$Architectures = 'arm64-v8a,armeabi-v7a',
+  # Use when the public backend configuration changed since a previous build.
+  [switch]$RefreshBundleCache,
   # Signs with the private upload key and also builds the .aab that Google Play requires.
   [switch]$Release
 )
@@ -56,8 +58,16 @@ $outputPath = Join-Path $projectPath 'artifacts\releases'
 New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
 Push-Location (Join-Path $projectPath 'android')
 try {
-  $tasks = if ($Release) { @(':app:assembleRelease', ':app:bundleRelease') } else { @(':app:assembleRelease') }
-  & .\gradlew.bat @tasks "-PreactNativeArchitectures=$Architectures" '-Pandroid.builder.sdkDownload=false' @signing --no-daemon --console=plain --max-workers=4
+  if ($RefreshBundleCache) {
+    # Expo 57 skips --reset-cache under CI. Rebuild JS once with cache reset enabled;
+    # Gradle does not consider public environment variables part of this task's inputs.
+    $env:CI = 'false'
+    & .\gradlew.bat ':app:createBundleReleaseJsAndAssets' '--rerun-tasks' "-PreactNativeArchitectures=$Architectures" '-Pandroid.builder.sdkDownload=false' --no-daemon --console=plain --max-workers=4
+    if ($LASTEXITCODE -ne 0) { throw "La regeneración del contenido Android terminó con código $LASTEXITCODE" }
+    $env:CI = '1'
+  }
+  $gradleTasks = @(if ($Release) { ':app:assembleRelease'; ':app:bundleRelease' } else { ':app:assembleRelease' })
+  & .\gradlew.bat @gradleTasks "-PreactNativeArchitectures=$Architectures" '-Pandroid.builder.sdkDownload=false' @signing --no-daemon --console=plain --max-workers=4
   if ($LASTEXITCODE -ne 0) { throw "Gradle terminó con código $LASTEXITCODE" }
   $version = (Get-Content -LiteralPath (Join-Path $projectPath 'app.json') -Raw | ConvertFrom-Json).expo.version
   $suffix = if ($Release) { '' } else { '-preview' }

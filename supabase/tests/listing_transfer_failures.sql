@@ -1,0 +1,40 @@
+begin;
+-- Fixture helper is prepended by the loopback-only runner.
+select pg_temp.kh_as('43000000-0000-4000-8000-000000000001');
+do $$ declare c uuid;p uuid;q uuid;r jsonb;decision jsonb;v_path text;begin
+ c:=pg_temp.kh_collaborator();p:=pg_temp.kh_listing(c,'stale-1');q:=pg_temp.kh_listing(c,'stale-2');r:=pg_temp.kh_offer(c,array[p,q]);
+ perform pg_temp.kh_error(format('select pg_temp.kh_offer(%L,array[%L::uuid])',c,p),'KH_TRANSFER_ALREADY_PENDING');
+ update public.properties set title='Edited fixture',version=version+1 where id=q;
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000002');
+ decision:=jsonb_build_object('requestId',r->>'id','expectedRequestVersion',1,'clientRequestId',gen_random_uuid(),'decision','accept');
+ r:=public.kh_decide_listing_transfer(auth.uid(),decision);
+ perform pg_temp.kh_assert(r->>'state'='invalidated' and r->'propertyVersions'='[]'::jsonb,'stale batch terminalizes without partial acceptance');
+ perform pg_temp.kh_assert((select count(*)=2 from public.properties where id in(p,q) and owner_id='43000000-0000-4000-8000-000000000001'),'no owner changed');
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000001');r:=pg_temp.kh_offer(c,array[p]);
+ update kh_private.listing_transfer_requests set expires_at=clock_timestamp()-interval '1 second' where id=(r->>'id')::uuid;
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000002');
+ decision:=jsonb_build_object('requestId',r->>'id','expectedRequestVersion',1,'clientRequestId',gen_random_uuid(),'decision','accept');
+ perform pg_temp.kh_assert(public.kh_decide_listing_transfer(auth.uid(),decision)->>'state'='expired','expiry commits rather than rolling back');
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000001');r:=pg_temp.kh_offer(c,array[p,q]);
+ select photo_paths[1] into v_path from public.properties where id=q;
+ delete from storage.objects where name=v_path;
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000002');
+ decision:=jsonb_build_object('requestId',r->>'id','expectedRequestVersion',1,'clientRequestId',gen_random_uuid(),'decision','accept');
+ perform pg_temp.kh_error(format('select public.kh_decide_listing_transfer(auth.uid(),%L::jsonb)',decision),'KH_TRANSFER_MEDIA_MISSING');
+ perform pg_temp.kh_assert((select count(*)=2 from public.properties where id in(p,q) and owner_id='43000000-0000-4000-8000-000000000001'),'missing media moves nothing');
+ insert into storage.objects(bucket_id,name) values('property-photos',v_path);
+ perform pg_temp.kh_assert(public.kh_decide_listing_transfer(auth.uid(),decision)->>'state'='accepted','same action recovers after object restored');
+ perform pg_temp.kh_error(format('select public.kh_decide_listing_transfer(auth.uid(),%L::jsonb)',decision||jsonb_build_object('decision','reject')),'KH_TRANSFER_DECISION_CONFLICT');
+end $$;
+select pg_temp.kh_as('43000000-0000-4000-8000-000000000001');
+do $$ declare c uuid;p uuid;r jsonb;decision jsonb;begin
+ c:=pg_temp.kh_collaborator();p:=pg_temp.kh_listing(c,'revoked');r:=pg_temp.kh_offer(c,array[p]);
+ perform public.kh_revoke_assisted_permission(auth.uid(),p,1);
+ perform pg_temp.kh_assert((select availability='paused' from public.properties where id=p),'permission withdrawal pauses property');
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000002');
+ decision:=jsonb_build_object('requestId',r->>'id','expectedRequestVersion',1,'clientRequestId',gen_random_uuid(),'decision','accept');
+ perform pg_temp.kh_assert(public.kh_decide_listing_transfer(auth.uid(),decision)->>'state'='invalidated','withdrawn permission blocks transfer');
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000001');
+ perform pg_temp.kh_error(format('select public.kh_set_property_status(%L,%L)',p,'active'),'KH_ASSISTED_CONSENT_REQUIRED');
+end $$;
+rollback;

@@ -14,6 +14,7 @@ import { useNotifications } from '../notifications/NotificationsProvider';
 import { AccountMenu } from '../components/account/AccountMenu';
 import { useSavedSearches } from '../searches/useSavedSearches';
 import { setDataSaver, useDataSaver } from '../settings/useDataSaver';
+import {useIncomingTransferCount} from '../transfers/useIncomingTransferCount';
 
 export default function ProfileScreen() {
   const { favoriteIds, ownListings: own, mode } = useMarketplace();
@@ -25,6 +26,7 @@ export default function ProfileScreen() {
   const { listings: favorites } = useFavoriteListings();
   const savedSearches = useSavedSearches();
   const dataSaver = useDataSaver();
+  const transfers=useIncomingTransferCount();
   // Tabs stay mounted: recount alerts saved or removed elsewhere when Mi espacio comes back into view.
   const refreshSearches = savedSearches.refresh;
   const seen = useRef(false);
@@ -48,6 +50,7 @@ export default function ProfileScreen() {
       {suspended && <Notice error>Tu cuenta está suspendida. No puedes publicar ni enviar mensajes. {suspensionReason}</Notice>}
       {isOwner && <Notice>Tu información de cuenta es privada. Los demás solo ven tu nombre y foto de perfil.</Notice>}
       <Text style={styles.sectionLabel}>Tu actividad</Text>
+      {user&&!isOwner&&<Button secondary icon="swap-horizontal-outline" label={`Anuncios por aceptar${transfers.count===null?'':` · ${transfers.count}`}`} onPress={()=>router.push('/listing-transfers')}/>}
       <View style={styles.group}>
         <Pressable accessibilityRole="button" accessibilityLabel={`Notificaciones, ${notificationUnreadCount} sin leer`} onPress={() => router.push('/notifications')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
           <View style={styles.rowIcon}><Icon name="notifications-outline" size={21} color={colors.primary} /></View>

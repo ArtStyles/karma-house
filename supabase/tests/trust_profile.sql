@@ -114,7 +114,7 @@ select pg_temp.ops_assert((select pg_temp.tp_keys(r)=array['activeListingCount',
   and r->>'id'='31000000-0000-4000-8000-000000000001' and r->>'displayName'='Vendedora S' and r->'verified'='false'
   and r->'activeListings'=jsonb_build_array(c.property_id) and r->'activeListingCount'='1' and r->'approvedListingCount'='1'
   and r->'responseMinutes'='60' and r->'responseRate'='75' and r->'visitsAgreed'='2' and r->>'level'='active'
-  and r->'levelReasons'='["1 anuncio aprobado","Responde a 8 de cada 10 mensajes","2 visitas concertadas"]'
+  and r->'levelReasons'='["1 anuncio propio publicado y aprobado","Responde a 8 de cada 10 mensajes","2 visitas concertadas"]'
   and r->>'avatarUrlPath'='31000000-0000-4000-8000-000000000001/11111111-1111-4111-8111-111111111111.jpg'
   and position('@' in r::text)=0 and position('3100000' in replace(r::text,'31000000-0000-4000-8000-000000000001',''))=0
   from tp_context c, (select public.kh_public_profile('31000000-0000-4000-8000-000000000001') r) x),'the public profile of a seller');
@@ -174,7 +174,7 @@ reset role;
 update public.profiles set created_at=now()-interval '8 months' where id='31000000-0000-4000-8000-000000000001';
 set local role authenticated;
 select pg_temp.ops_as('31000000-0000-4000-8000-000000000003');
-select pg_temp.ops_assert((select r->'verified'='true' and r->>'level'='trusted' and r->'levelReasons'='["Verificado por KarmaHouse","1 anuncio aprobado",
+select pg_temp.ops_assert((select r->'verified'='true' and r->>'level'='trusted' and r->'levelReasons'='["Verificado por KarmaHouse","1 anuncio propio publicado y aprobado",
   "Responde a 8 de cada 10 mensajes","2 visitas concertadas","En KarmaHouse desde hace 8 meses"]'
   from (select public.kh_set_user_verified('31000000-0000-4000-8000-000000000003','31000000-0000-4000-8000-000000000001',true,'  Documento revisado  ') r) x),
   'verification returns the profile: 8+3+3+4+10 points is trusted');

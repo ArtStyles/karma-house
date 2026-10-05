@@ -105,10 +105,10 @@ select pg_temp.ops_assert((select cover_thumb_path='32000000-0000-4000-8000-0000
 select pg_temp.thumb_edit(3,'{"coverThumbPath":null,
   "photoPaths":["32000000-0000-4000-8000-000000000001/thumb-a/second.jpg","32000000-0000-4000-8000-000000000001/thumb-a/photo.jpg"]}');
 select pg_temp.ops_assert((select cover_thumb_path is null and version=4 from public.properties where id=(select approved from thumb_context)),'a new cover without thumbnail stores null');
-select pg_temp.ops_assert(kh_private.photo_delete_allowed('32000000-0000-4000-8000-000000000001/thumb-a/photo_t.jpg'),'the old thumbnail can be deleted');
+select pg_temp.ops_assert(not kh_private.photo_delete_allowed('32000000-0000-4000-8000-000000000001/thumb-a/photo_t.jpg'),'the retired thumbnail is reserved for server cleanup');
 
 -- 6. The column refuses a path outside the row's owner and request.
 reset role;
-select pg_temp.ops_error($q$update public.properties set cover_thumb_path='32000000-0000-4000-8000-000000000002/thumb-a/photo_t.jpg' where id=(select approved from thumb_context)$q$,'properties_cover_thumb_path');
-select pg_temp.ops_error($q$update public.properties set cover_thumb_path='32000000-0000-4000-8000-000000000001/thumb-b/photo_t.jpg' where id=(select approved from thumb_context)$q$,'properties_cover_thumb_path');
+select pg_temp.ops_error($q$update public.properties set cover_thumb_path='32000000-0000-4000-8000-000000000002/thumb-a/photo_t.jpg' where id=(select approved from thumb_context)$q$,'KH_INVALID_PHOTO_PATH');
+select pg_temp.ops_error($q$update public.properties set cover_thumb_path='32000000-0000-4000-8000-000000000001/thumb-b/photo_t.jpg' where id=(select approved from thumb_context)$q$,'KH_INVALID_PHOTO_PATH');
 rollback;
