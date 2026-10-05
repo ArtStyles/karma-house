@@ -23,6 +23,7 @@
 | Ficha no disponible y sitio antiguo | Revisión móvil; sitio antiguo también en escritorio |
 | Toque de descarga en la ficha local directa | Abre la portada oficial en otra pestaña; la URL original permanece |
 | Privacidad, términos y eliminación de cuenta | Sus tres URLs actuales responden HTTP 200 |
+| Revisión independiente de la primera entrega | Sin hallazgos accionables; el revisor reejecutó las 22 pruebas públicas con éxito |
 
 El render usa un anuncio ficticio explícitamente identificado. Las vistas se alojaron en iframes con dimensiones fijas para evitar cambiar el tamaño del navegador compartido con el otro trabajo. El toque de descarga se verificó en la ficha directa, fuera del iframe.
 
@@ -35,3 +36,5 @@ Los cambios no están publicados. No se instaló una APK ni se probó la apertur
 El checkout aislado contiene el paquete web estático de la base, sin script de build. No se cambió el frontend Vite que está en el checkout principal; TypeScript y la suite de la API verifican los archivos de esta entrega. La publicación posterior debe preservar esa portada actual y comprobar Vercel y GitHub Pages por separado.
 
 Antes de continuar con filtros, errores, autenticación, Mi espacio o editor, revisar el cierre del trabajo «Plan de publicación asistida y traspaso», integrar su resultado revisado en una base compatible y ejecutar una línea base nueva. No reutilizar las 365 pruebas como validación de la combinación futura.
+
+La continuación «Continuar mejoras de KarmaHouse» quedó activa en este chat, con revisión cada quince minutos de esa dependencia y ejecución de las tareas pendientes cuando sea viable. Necesita el equipo encendido y la app abierta, como las [tareas locales programadas](https://learn.chatgpt.com/docs/automations?surface=app). La comprobación sin cambios no debe emitir avisos repetidos.
