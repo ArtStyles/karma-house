@@ -87,7 +87,8 @@ end $$;
 create function kh_private.validate_property_media(p_id uuid,p_owner uuid,p_request text,p_paths text[],p_thumb text,p_mode text,p_operation text) returns void language plpgsql security definer set search_path='' as $$
 declare v_path text; asset kh_private.property_media_assets%rowtype;
 begin
- if cardinality(p_paths)>6 or (p_mode<>'draft' and p_operation<>'wanted' and cardinality(p_paths)<1) or cardinality(p_paths)<>(select count(distinct x) from unnest(p_paths) x) or p_thumb=any(p_paths) then raise exception 'KH_INVALID_PHOTOS';end if;
+ if cardinality(p_paths)>6 or (p_mode<>'draft' and p_operation<>'wanted' and cardinality(p_paths)<1) or cardinality(p_paths)<>(select count(distinct x) from unnest(p_paths) x) then raise exception 'KH_INVALID_PHOTOS';end if;
+ if p_thumb=any(p_paths) then raise exception 'KH_INVALID_PHOTO_PATH';end if;
  for v_path in select x from unnest(p_paths||case when p_thumb is null then '{}'::text[] else array[p_thumb] end) x order by x loop
   if v_path is null or v_path !~ '^[0-9a-f-]{36}/[A-Za-z0-9_-]{1,100}/[A-Za-z0-9_-]{1,100}\.(jpg|jpeg|png|webp)$' or (v_path=p_thumb and v_path !~ '\.jpg$') then raise exception 'KH_INVALID_PHOTO_PATH';end if;
   perform pg_advisory_xact_lock(hashtextextended('kh:photo:'||v_path,0));
@@ -113,6 +114,7 @@ begin
   for v_path in select x from unnest(active_paths) x order by x loop
    perform pg_advisory_xact_lock(hashtextextended('kh:photo:'||v_path,0));
    if exists(select 1 from kh_private.property_media_assets a where a.path=v_path and (a.property_id<>prop or a.state<>'attached')) then raise exception 'KH_INVALID_PHOTO_PATH';end if;
+   if not exists(select 1 from kh_private.property_media_assets a where a.path=v_path) and not starts_with(v_path,new.owner_id::text||'/'||new.client_request_id||'/') then raise exception 'KH_INVALID_PHOTO_PATH';end if;
    insert into kh_private.property_media_assets(path,property_id,kind,uploader_id) values(v_path,prop,case when v_path=new.cover_thumb_path then 'cover_thumb' else 'photo' end,split_part(v_path,'/',1)::uuid) on conflict(path) do update set kind=excluded.kind;
   end loop;
  end if;
@@ -189,6 +191,13 @@ end $$;
 create function public.kh_get_listing_management(p_property_id uuid) returns jsonb language sql stable security definer set search_path='' as $$
  select jsonb_build_object('propertyId',p.id,'managerId',p.owner_id,'assistedByKarmaHouse',exists(select 1 from kh_private.assisted_listing_records r where r.property_id=p.id)) from public.properties p where p.id=p_property_id and (p.moderation='approved' and p.availability='active' or p.owner_id=auth.uid() or public.kh_is_admin());
 $$;
+create function public.kh_get_assisted_record(p_actor_id uuid,p_property_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$
+begin
+ perform kh_private.assisted_actor(p_actor_id,true);
+ return(select jsonb_build_object('collaboratorId',collaborator_id,'collaboratorReference',collaborator_reference,'sourceChannel',source_channel,'sourceReference',source_reference,'receivedAt',received_at,'consentText',consent_text,'consentVersion',consent_version,'consentAt',consent_at,'evidenceReference',evidence_reference,'lastConfirmedAt',last_confirmed_at,'confirmedPrice',confirmed_price,'confirmedAvailability',confirmed_availability,'expectedVersion',version,'revoked',consent_revoked_at is not null) from kh_private.assisted_listing_records where property_id=p_property_id);
+end $$;
+revoke all on function public.kh_get_assisted_record(uuid,uuid) from public,anon,authenticated;
+grant execute on function public.kh_get_assisted_record(uuid,uuid) to authenticated;
 
 -- Auth deletion is blocked before any destructive work for the protected principal.
 create or replace function public.kh_begin_account_deletion(p_actor_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$
@@ -292,6 +301,7 @@ declare
   v_receipt kh_private.property_save_requests%rowtype;
 begin
   if v_user is null then raise exception 'KH_AUTH_REQUIRED' using errcode='42501'; end if;
+  perform kh_private.require_active();
   if jsonb_typeof(p_payload) is distinct from 'object' then raise exception 'KH_INVALID_PAYLOAD'; end if;
   if p_payload ? 'ownerId' and p_payload->>'ownerId' is distinct from v_user::text then
     raise exception 'KH_ACCOUNT_CHANGED' using errcode='42501';

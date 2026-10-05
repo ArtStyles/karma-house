@@ -1,3 +1,4 @@
+import {pathToFileURL} from 'node:url';import {resolve} from 'node:path';
 // No paths supplied by the caller; only server-leased jobs may be deleted.
 export async function cleanupRetiredMedia(port,{commit=false}={}) {
  if(!commit) return port.rpc('kh_pending_media_cleanup',{});
@@ -10,7 +11,7 @@ export async function cleanupRetiredMedia(port,{commit=false}={}) {
  }
  return {done,failed};
 }
-if(process.argv[1] && import.meta.url===new URL(process.argv[1],'file:').href){
+if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
  const base=process.env.KH_ASSISTED_URL,key=process.env.KH_ASSISTED_SERVICE_KEY;
  if(!base||!key)throw Error('Explicit KH_ASSISTED_URL and KH_ASSISTED_SERVICE_KEY required');
  const headers={apikey:key,Authorization:`Bearer ${key}`,'Content-Type':'application/json'};

@@ -82,7 +82,7 @@ select pg_temp.play_error($s$select public.kh_delete_account('68000000-0000-4000
 select pg_temp.play_as('68000000-0000-4000-8000-000000000001');
 select pg_temp.play_error($s$select public.kh_delete_account('68000000-0000-4000-8000-000000000001')$s$,'KH_ACCOUNT_FILES_REMAIN');
 update play_context set files=public.kh_begin_account_deletion('68000000-0000-4000-8000-000000000001');
-select pg_temp.play_assert((select jsonb_array_length(files->'property-photos')=3 and jsonb_array_length(files->'account-avatars')=1 from play_context),'begin returns only the owner''s own files');
+select pg_temp.play_assert((select jsonb_array_length(files->'property-photos')=0 and jsonb_array_length(files->'account-avatars')=1 from play_context),'begin returns own avatar; registered property media stays in the server queue');
 select pg_temp.play_assert(public.kh_begin_account_deletion('68000000-0000-4000-8000-000000000001')=(select files from play_context),'begin can be retried');
 select pg_temp.play_error($s$select public.kh_delete_account('68000000-0000-4000-8000-000000000001')$s$,'KH_ACCOUNT_FILES_REMAIN');
 -- The client removes those files through the Storage API, which is allowed to delete rows.

@@ -261,11 +261,11 @@ export function createMessagingController(repository: MessagingRepository, stora
     },
     dispose() { this.setSession(null, null); },
     refresh,
-    async startConversation(propertyId: string): Promise<string> {
+    async startConversation(propertyId: string, expectedManagerId?:string): Promise<string> {
       const scope = scopeForSession();
       try {
         if (!isUuid(propertyId)) throw new MessagingError('Este anuncio no está disponible para contactar.');
-        const conversation = await request(scope, context => repository.startConversation(propertyId, context));
+        const conversation = await request(scope, context => repository.startConversation(propertyId, context, expectedManagerId));
         revision++; upsertConversation(conversation);
         return conversation.id;
       } catch (error) { throw fail(error, scope); }

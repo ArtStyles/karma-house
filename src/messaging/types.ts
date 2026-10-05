@@ -4,7 +4,7 @@ export interface MessageNegotiation {
   amountUsd: number | null; visitAt: string | null; note: string; parentId: string | null;
 }
 export interface ChatMessage { id: string; conversationId: string; seq: number; clientMessageId: string; senderId: string; body: string; createdAt: string; negotiation?: MessageNegotiation | null }
-export interface Conversation { id: string; propertyId: string; propertyTitle: string; propertyLocation: string; buyerId: string; sellerId: string; otherUserId: string; otherName: string; lastMessage: string | null; lastMessageAt: string | null; lastSeq: number; unreadCount: number; blockedByMe: boolean; blockedByOther: boolean; canSend: boolean; propertyAvailable: boolean; createdAt: string }
+export interface Conversation { id: string; propertyId: string; propertyTitle: string; propertyLocation: string; buyerId: string; sellerId: string; otherUserId: string; otherName: string; lastMessage: string | null; lastMessageAt: string | null; lastSeq: number; unreadCount: number; blockedByMe: boolean; blockedByOther: boolean; canSend: boolean; propertyAvailable: boolean; createdAt: string; managementChanged?:boolean; currentManagerId?:string|null; currentManagerName?:string|null; currentContactAvailable?:boolean }
 export type ReportReason = 'spam' | 'fraud' | 'harassment' | 'other';
 export interface ChatReport { id: string; conversationId: string; propertyTitle: string; reporterId: string; reportedUserId: string; reason: ReportReason; details: string; status: 'open' | 'reviewed'; createdAt: string; reviewNote: string | null; context: ChatMessage[] }
 export interface PendingMessage { clientMessageId: string; conversationId: string; senderId: string; body: string; createdAt: string; status: 'sending' | 'failed'; error?: string }
@@ -15,7 +15,7 @@ export interface MessagingContextValue {
   unreadCount: number; error: string | null; pending: PendingMessage[];
   histories: Record<string, ConversationHistory>;
   refresh(): Promise<void>;
-  startConversation(propertyId: string): Promise<string>;
+  startConversation(propertyId: string, expectedManagerId?:string): Promise<string>;
   openConversation(id: string): Promise<void>;
   loadOlder(id: string): Promise<void>;
   sendMessage(id: string, body: string): Promise<void>;
@@ -35,7 +35,7 @@ export interface MessagingRequestContext {
 
 export interface MessagingRepository {
   listConversations(context: MessagingRequestContext): Promise<Conversation[]>;
-  startConversation(propertyId: string, context: MessagingRequestContext): Promise<Conversation>;
+  startConversation(propertyId: string, context: MessagingRequestContext, expectedManagerId?:string): Promise<Conversation>;
   getConversation(id: string, context: MessagingRequestContext): Promise<Conversation>;
   listMessages(id: string, beforeSeq: number | null, context: MessagingRequestContext): Promise<ChatMessage[]>;
   sendMessage(message: PendingMessage, context: MessagingRequestContext): Promise<ChatMessage>;

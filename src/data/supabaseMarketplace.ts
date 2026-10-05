@@ -22,7 +22,7 @@ export function createRowSigner(client: SupabaseClient): SignRows {
   return createCachedRowSigner(client.storage.from(BUCKET), photoLinks);
 }
 
-export function createSupabaseMarketplaceRepository(client: SupabaseClient, storage: MarketplaceStorage): RemoteMarketplaceRepository {
+export function createPropertyPhotoPort(client: SupabaseClient, storage: MarketplaceStorage): PhotoUploadPort {
   const bucket = client.storage.from(BUCKET);
   const photoPort: PhotoUploadPort = {
     async upload(path, bytes, contentType) {
@@ -56,6 +56,11 @@ export function createSupabaseMarketplaceRepository(client: SupabaseClient, stor
     },
   };
 
+  return photoPort;
+}
+
+export function createSupabaseMarketplaceRepository(client: SupabaseClient, storage: MarketplaceStorage): RemoteMarketplaceRepository {
+  const photoPort = createPropertyPhotoPort(client,storage);
   const resolveRows = createRowSigner(client);
   const readProperties = (filters: { ownerId?: string; publicOnly?: boolean; pendingOnly?: boolean }, checkpoint: () => void) => collectPages<RemotePropertyRow>(async (from, to) => {
     checkpoint();
@@ -94,7 +99,7 @@ export function createSupabaseMarketplaceRepository(client: SupabaseClient, stor
       const photos: PhotoDraft[] = draft.photos ?? (draft.photoUri ? [{ uri: draft.photoUri }] : []);
       if (moderation === 'pending' && photos.length === 0) throw new Error('Añade al menos una fotografía para enviar el anuncio a revisión.');
       const photoPaths = await uploadDraftPhotos(photos, ownerId, requestId, photoPort, checkpoint, current ? { propertyId: current.id, reusablePaths: current.photos?.flatMap(photo => photo.storagePath ? [photo.storagePath] : []) ?? [] } : undefined);
-      const coverThumbPath = await uploadCoverThumb(photos[0], photoPaths, photoPort, checkpoint);
+      const coverThumbPath = photoPaths[0]?.startsWith(`${ownerId}/${requestId}/`) ? await uploadCoverThumb(photos[0], photoPaths, photoPort, checkpoint) : undefined;
       checkpoint();
       const payload = propertyPayload(draft, ownerId, photoPaths, moderation, current, coverThumbPath);
       const { data, error } = await client.rpc('kh_save_property', { p_payload: payload });

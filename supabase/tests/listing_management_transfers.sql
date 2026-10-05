@@ -1,0 +1,32 @@
+begin;
+-- Fixture helper is prepended by the loopback-only runner.
+select pg_temp.kh_assert(to_regprocedure('public.kh_offer_listing_transfer(uuid,jsonb)') is not null,'transfer RPC installed');
+select pg_temp.kh_as('43000000-0000-4000-8000-000000000001');
+do $$ declare c uuid;p uuid;q uuid;r jsonb;input jsonb;decision jsonb;before jsonb;after jsonb;request uuid;begin
+ c:=pg_temp.kh_collaborator();p:=pg_temp.kh_listing(c,'transfer-active');q:=pg_temp.kh_listing(c,'transfer-paused');
+ update public.properties set availability='paused' where id=q;
+ insert into public.favorites(user_id,property_id) values('43000000-0000-4000-8000-000000000004',p);
+ select jsonb_agg(to_jsonb(x)-'owner_id'-'version' order by id) into before from public.properties x where id in(p,q);
+ input:=jsonb_build_object('clientRequestId',gen_random_uuid(),'collaboratorId',c,'expectedCollaboratorVersion',1,'recipientId','43000000-0000-4000-8000-000000000002','items',(select jsonb_agg(jsonb_build_object('propertyId',id,'expectedVersion',version,'expectedProvenanceVersion',1)) from public.properties where id in(p,q)));
+ r:=public.kh_offer_listing_transfer(auth.uid(),input);request:=(r->>'id')::uuid;
+ perform pg_temp.kh_assert(public.kh_offer_listing_transfer(auth.uid(),input)->>'id'=r->>'id','offer receipt stable');
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000003');
+ perform pg_temp.kh_error(format('select public.kh_offer_listing_transfer(auth.uid(),%L::jsonb)',input),'KH_OFFICIAL_ACCOUNT_REQUIRED');
+ perform pg_temp.kh_error(format('select public.kh_get_listing_transfer(auth.uid(),%L)',request),'KH_TRANSFER_NOT_FOUND');
+ perform pg_temp.kh_as('43000000-0000-4000-8000-000000000002');
+ r:=public.kh_get_listing_transfer(auth.uid(),request);
+ perform pg_temp.kh_assert(r->>'effectiveState'='pending' and (r->>'canAccept')::boolean,'recipient can review');
+ perform pg_temp.kh_assert(r::text not like '%solo fixture privado%' and r::text not like '%fixture privada%','no private evidence in recipient DTO');
+ decision:=jsonb_build_object('requestId',request,'expectedRequestVersion',1,'clientRequestId',gen_random_uuid(),'decision','accept');
+ r:=public.kh_decide_listing_transfer(auth.uid(),decision);
+ perform pg_temp.kh_assert(r->>'state'='accepted','atomic acceptance');
+ perform pg_temp.kh_assert(public.kh_decide_listing_transfer(auth.uid(),decision)=r,'decision ACK replay');
+ perform pg_temp.kh_assert((select count(*)=2 from public.properties where id in(p,q) and owner_id=auth.uid() and version=2),'one version increment for all');
+ select jsonb_agg(to_jsonb(x)-'owner_id'-'version' order by id) into after from public.properties x where id in(p,q);
+ perform pg_temp.kh_assert(before=after,'all remaining columns preserved');
+ perform pg_temp.kh_assert((select count(*)=1 from public.favorites where property_id=p),'favorites preserved');
+ perform pg_temp.kh_assert((select count(*)=1 from kh_private.listing_transfer_events where request_id=request and action='accepted'),'single acceptance event');
+ perform pg_temp.kh_error(format('select public.kh_offer_listing_transfer(auth.uid(),%L::jsonb)',input),'KH_OFFICIAL_ACCOUNT_REQUIRED');
+end $$;
+select pg_temp.kh_assert(not has_table_privilege('authenticated','kh_private.listing_transfer_items','SELECT'),'private requests deny direct access');
+rollback;

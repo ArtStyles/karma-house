@@ -24,7 +24,7 @@ insert into auth.sessions(id,user_id,created_at,updated_at,not_after) values
 ('88000000-0000-4000-8000-000000000102','88000000-0000-4000-8000-000000000002',now(),now(),now()+interval '1 day'),
 ('88000000-0000-4000-8000-000000000103','88000000-0000-4000-8000-000000000003',now(),now(),now()+interval '1 day');
 insert into public.properties(id,owner_id,client_request_id,title,location,province,type,description,price,area,bedrooms,bathrooms,photo_paths,moderation)
-values('88000000-0000-4000-8000-000000000010','88000000-0000-4000-8000-000000000001','push-sql','Título privado de prueba','Vedado','La Habana','Casa','Vivienda ficticia de pruebas de entrega Android.',50000,100,2,1,ARRAY['synthetic/push.jpg'],'approved');
+values('88000000-0000-4000-8000-000000000010','88000000-0000-4000-8000-000000000001','push-sql','Título privado de prueba','Vedado','La Habana','Casa','Vivienda ficticia de pruebas de entrega Android.',50000,100,2,1,ARRAY['88000000-0000-4000-8000-000000000001/push-sql/push.jpg'],'approved');
 create function pg_temp.push_exchange_done(p_installation uuid,p_token text) returns void language sql security definer as $$
   update kh_private.push_devices set expo_push_token=p_token,exchange_request_id=null,exchange_attempts=0,
     exchange_next_at=null,exchange_deadline_at=null,updated_at=clock_timestamp() where installation_id=p_installation;
