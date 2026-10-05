@@ -347,6 +347,17 @@ test('a signing failure or a missing path is an error and nothing is cached', as
   await assert.rejects(createRowSigner(partial, cache, now)([propertyRow('p1', ['o/r/a.jpg'])], () => {}, 'all'), /Faltan/);
 });
 
+test('private row signs briefly on each session load without consuming or persisting public links', async () => {
+  const now = () => 1000;
+  const cache = createSignedUrlCache({ storage: memoryStorage(), now });
+  await cache.put([{path:'o/r/a.jpg',url:'https://public.invalid',expiresAt:SIGNED_URL_SECONDS*1000}]);
+  const calls:number[]=[];
+  const sign=createRowSigner({async createSignedUrls(paths,seconds){calls.push(seconds);return {data:paths.map(path=>({path,signedUrl:'https://private.invalid',error:null})),error:null};}},cache,now);
+  const row={...propertyRow('p1',['o/r/a.jpg']),availability:'paused' as const};
+  await sign([row],()=>{});await sign([row],()=>{});
+  assert.deepEqual(calls,[300,300]);assert.equal(cache.get('o/r/a.jpg'),'https://public.invalid');
+});
+
 test('media waits for the saved preference before a cold start can download', async () => {
   assert.equal(typeof dataSaverModule.createDataSaverStore, 'function');
   let release;

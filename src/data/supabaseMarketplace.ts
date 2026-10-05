@@ -93,7 +93,7 @@ export function createSupabaseMarketplaceRepository(client: SupabaseClient, stor
       if (current && current.clientRequestId !== requestId) throw new Error('El borrador no corresponde a este anuncio.');
       const photos: PhotoDraft[] = draft.photos ?? (draft.photoUri ? [{ uri: draft.photoUri }] : []);
       if (moderation === 'pending' && photos.length === 0) throw new Error('Añade al menos una fotografía para enviar el anuncio a revisión.');
-      const photoPaths = await uploadDraftPhotos(photos, ownerId, requestId, photoPort, checkpoint);
+      const photoPaths = await uploadDraftPhotos(photos, ownerId, requestId, photoPort, checkpoint, current ? { propertyId: current.id, reusablePaths: current.photos?.flatMap(photo => photo.storagePath ? [photo.storagePath] : []) ?? [] } : undefined);
       const coverThumbPath = await uploadCoverThumb(photos[0], photoPaths, photoPort, checkpoint);
       checkpoint();
       const payload = propertyPayload(draft, ownerId, photoPaths, moderation, current, coverThumbPath);

@@ -33,13 +33,13 @@ export interface PhotoUploadPort {
 }
 
 /** Each checkpoint stops subsequent requests if the account changed while reading/uploading. */
-export async function uploadDraftPhotos(photos: PhotoDraft[], ownerId: string, requestId: string, port: PhotoUploadPort, checkpoint: () => void): Promise<string[]> {
+export async function uploadDraftPhotos(photos: PhotoDraft[], ownerId: string, requestId: string, port: PhotoUploadPort, checkpoint: () => void, current?: { propertyId: string; reusablePaths: readonly string[] }): Promise<string[]> {
   if (photos.length > 6) throw new Error('Puedes añadir hasta seis fotos.');
   const paths: string[] = [];
   for (const photo of photos) {
     checkpoint();
     if (photo.storagePath) {
-      if (!ownedPhotoPath(photo.storagePath, ownerId, requestId)) throw new Error('No puedes reutilizar fotos de otra propiedad o cuenta.');
+      if (!ownedPhotoPath(photo.storagePath, ownerId, requestId) && !(current?.propertyId && current.reusablePaths.includes(photo.storagePath))) throw new Error('No puedes reutilizar fotos de otra propiedad o cuenta.');
       paths.push(photo.storagePath);
       continue;
     }
