@@ -3,6 +3,30 @@
 Revisión inicial del 2 de octubre y publicación del 3 de octubre de 2026. La distribución elegida es la descarga directa
 desde la página oficial, sin una cuenta de pago de Google Play.
 
+## Entrega 0.1.16 del 6 de octubre de 2026
+
+Se reconstruyeron APK y AAB desde la aplicación integrada en `99e175648e50615be7b5251cf8ad9f68241d1eff`, regenerando el proyecto Android desde Expo 57 y refrescando el bundle. La release apunta a `2095f02279b7a2e7b1960e56c3ee50006a3a657b`: ese commit solo añade el workflow y controles de distribución; `src/`, configuración, dependencias y migraciones coinciden con las fuentes compiladas.
+
+| Comprobación | Resultado |
+| --- | --- |
+| Paquete / versión / código | `com.karmahouse.karmahouse` / `0.1.16` / `17` |
+| APK público | `KarmaHouse.apk`, 84.544.831 bytes (84,5 MB) |
+| APK SHA-256 | `896dacb901cb65e8d6ba7cbc206833bc92b05ebc18b7f28bcef9b865f31635e4` |
+| Certificado habitual SHA-256 | `1752d33a3fb6e45fada4e6adbbec99af851d9ae6716a73770c382c79d3356ac6` |
+| Android / ABI / firma | Android 7+, arm64-v8a y armeabi-v7a, firma v2 válida, no depurable |
+| Bundle y secretos | Configuración pública de producción incluida; 1.386 entradas sin los valores privados comprobados ni marcadores de clave privada |
+| AAB local | 51.946.771 bytes; firma válida con el mismo certificado |
+| AAB SHA-256 | `01286df54f1e44bfa8e2eddc90746e1ffa0e7f4a63cd77b9fba29e7cdb674abe` |
+| Validación de fuentes | TypeScript y 418 pruebas; build y TypeScript de la web; versión, enlaces y ausencia de overflow a 390 y 1280 px |
+
+El correo de ayuda aprobado en `src/lib/assistedPublication.ts` es público. Los verificadores permiten únicamente ese correo administrativo cuando coincide exactamente con el contacto aprobado; siguen rechazando claves, contraseñas y otro correo administrativo. El nuevo ensayo comprueba también que una credencial igual al contacto continúa bloqueada.
+
+La [release v0.1.16](https://github.com/ArtStyles/karma-house/releases/tag/v0.1.16), ID `404949505`, es pública, estable y la entrega más reciente. El activo APK `616087644` está `uploaded`, con tamaño y digest iguales a los locales. Se descargaron íntegramente y sin autenticación el APK, `KarmaHouse.apk.sha256` e `INSTALACION.txt`; sus tres hashes coinciden con los archivos preparados. Conserva la release 0.1.15 como entrega anterior. La portada actualiza conjuntamente versión, tamaño y enlaces de esa misma entrega.
+
+El [backend compatible](assisted-listings-activation.md) quedó preparado, con sus tres migraciones registradas y el endpoint probado mediante Auth, REST y Storage reales. Las cuentas, filas y objetos sintéticos se eliminaron; se conservan las tres propiedades y cinco objetos existentes. **Los traspasos permanecen desactivados.**
+
+Esta publicación no repite la instalación de 0.1.16 en un teléfono físico ni verifica el resultado de Play Protect o las notificaciones en ese dispositivo. La firma compatible acredita la identidad del APK; el piloto con material real sigue pendiente del protocolo y de autorización operativa.
+
 ## Publicación verificada el 3 de octubre de 2026
 
 - Release `v0.1.15`, ID `402039134`, pública y no marcada como prerelease:

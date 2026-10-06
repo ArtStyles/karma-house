@@ -1,6 +1,20 @@
-# Activación controlada, todavía sin ejecutar
+# Preparación del backend y activación controlada
 
-La implementación y los ensayos locales no autorizan aplicar migraciones, desplegar funciones, distribuir una actualización pública ni utilizar material real. La cuenta principal debe coincidir con `kh_private.platform_owner`; no se busca por nombre ni se sustituye por otro administrador.
+La preparación del backend y la distribución del cliente 0.1.16 fueron autorizadas el 6 de octubre de 2026. Esto no activa traspasos ni autoriza utilizar material real en el piloto. La cuenta principal debe coincidir con `kh_private.platform_owner`; no se busca por nombre ni se sustituye por otro administrador.
+
+## Preparación ejecutada el 6 de octubre de 2026
+
+Se aplicaron y registraron las tres migraciones en una única transacción al proyecto que utiliza el cliente de producción. Antes del inventario y del primer backfill se adquirió `LOCK TABLE public.properties, storage.objects IN ACCESS EXCLUSIVE MODE`, con `lock_timeout='5s'` y `statement_timeout='60s'`. Este bloqueo previo impide que una publicación o subida concurrente quede fuera del inventario inicial. Una repetición debe comprobar el ledger y no volver a ejecutar estas migraciones ya registradas.
+
+La transacción verificó la cuenta protegida y confirmada, la igualdad completa de las filas de propiedades antes/después, los conteos de Storage y los backfills. Se conservaron las tres propiedades y los cinco objetos existentes; cinco referencias de medios, sin ausencias ni duplicados. `official_publisher_id` coincide con `platform_owner` y **`transfers_enabled=false`**.
+
+La función `listing-transfer-preview` se desplegó mediante el workflow manual [assisted-backend.yml](../.github/workflows/assisted-backend.yml), con verificación JWT habilitada y comprobación del proyecto de destino. Ejecución: [37498365522](https://github.com/ArtStyles/karma-house/actions/runs/37498365522).
+
+La verificación fresca cubrió 21 suites SQL y diez escenarios concurrentes en PostgreSQL local; seis suites nuevas se ensayaron además en el proyecto alojado dentro de una transacción revertida. Los fixtures que eliminan `storage.objects` por SQL o suponen un inventario vacío se reservaron a la base local: en el proyecto alojado se utilizó la API real de Storage para subir y eliminar únicamente bytes sintéticos.
+
+La prueba remota posterior utilizó dos cuentas Auth confirmadas y sesiones reales. Verificó RPC y rechazo de un actor suplantado, subida privada, aislamiento de fotos, vista previa del receptor con JWT válido, descarga anónima de los bytes firmados con vencimiento de 300 segundos y rechazo después de cancelar. El anuncio sintético permaneció pausado y nunca fue visible en el catálogo público. La limpieza eliminó solo sus filas, objetos mediante Storage API y cuentas mediante Auth Admin API; el inventario final volvió a tres propiedades y cinco objetos, sin cuentas, propiedades ni colaboradores de prueba. El flag permaneció false durante todo el ensayo; las ofertas y aceptaciones reales no se activaron.
+
+La preparación técnica no sustituye completar responsable, permiso y retención en el protocolo, el recorrido físico del cliente público ni el piloto. Las ofertas y aceptaciones seguirán desactivadas hasta revisar esas etapas y autorizar su activación.
 
 ## Orden de preparación
 
