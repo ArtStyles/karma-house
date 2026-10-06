@@ -64,6 +64,14 @@ foreach ($name in $publicNames) {
 foreach ($name in $privateNames) {
   if ([string]::IsNullOrWhiteSpace($privateConfiguration[$name])) { throw "Falta el valor privado de referencia para la comprobación: $name" }
 }
+# The intake address was approved for public display. Exempt only that exact
+# administrator email, never either credential or an unrelated admin address.
+$publicContactSource = [System.IO.File]::ReadAllText((Join-Path $projectPath 'src/lib/assistedPublication.ts'))
+if ($publicContactSource -match "(?m)^export const ASSISTED_PUBLICATION_EMAIL = '([^']+)';\r?$") {
+  if ($privateConfiguration['KARMAHOUSE_ADMIN_EMAIL'] -ceq $matches[1]) {
+    $privateNames = @('SUPABASE_SECRET_KEY', 'SUPABASE_DB_PASSWORD')
+  }
+}
 
 $previousJavaHome = $env:JAVA_HOME
 try {

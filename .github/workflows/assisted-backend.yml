@@ -1,0 +1,41 @@
+name: assisted-backend
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_project_ref:
+        description: Project reference verified against the production client
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: assisted-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      EXPECTED_PROJECT_REF: ${{ inputs.expected_project_ref }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify the deployment destination
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_PROJECT_REF"
+          test "$SUPABASE_PROJECT_REF" = "$EXPECTED_PROJECT_REF"
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.119.0
+      - name: Deploy the authenticated transfer preview
+        run: >-
+          supabase functions deploy listing-transfer-preview
+          --project-ref "$SUPABASE_PROJECT_REF"
+          --import-map supabase/functions/listing-transfer-preview/deno.json
+          --use-api
+
