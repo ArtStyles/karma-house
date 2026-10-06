@@ -1,6 +1,6 @@
 # Decisiones y límites de la entrega local
 
-Este registro recoge las decisiones de ejecución y lo que quedó fuera de la evidencia. El informe principal es [design-conversion-verification.md](design-conversion-verification.md); no acredita despliegue ni Android.
+Este registro recoge las decisiones de ejecución y lo que quedó fuera de la evidencia. El informe principal es [design-conversion-verification.md](design-conversion-verification.md); incluye recorridos físicos con una app QA y backend ficticio, sin acreditar despliegue ni backend remoto.
 
 | Orden | Decisión | Motivo y coste si resulta insuficiente |
 | --- | --- | --- |
@@ -34,15 +34,16 @@ Este registro recoge las decisiones de ejecución y lo que quedó fuera de la ev
 | 28 | Trasladar la copia de QA a `D:\work\karma-house\artifacts\design-conversion-qa`, una carpeta nueva e ignorada, para compilar Android. | Se preservan las fuentes originales y las cachés antiguas. La ruta anterior provocó conflicto de raíces y después exceso de longitud en Ninja; el paquete QA tiene identidad y backend sintético propios. No es una entrega pública. |
 | 29 | Detener acciones del Pixel cuando otra app tome el foco; continuar tras la confirmación del usuario, sin leer sus pantallas personales. | La QA cubre la app aislada. Se restauran texto/animaciones y se limpian solo sus datos descartables; la instalación habitual permanece 0.1.15/16. |
 | 30 | Dejar pendiente el editor físico tras rechazo de la revisión automática. | El comando de apertura de un anuncio sintético fue bloqueado con «blocked by policy» y no se ejecutó. No se cambia de camino para eludirlo; las pruebas puras y de navegador de portadas no se presentan como prueba Android. |
+| 31 | Completar la prueba física con apertura y acciones manuales del usuario, observando QA y contrastando el backend local. | Supera el pendiente de la decisión 30 mediante el paso humano autorizado. Se verificaron portada interior, JPEG nuevo de 480 × 320, un guardado y persistencia al reabrir el editor. La evidencia se conserva antes de limpiar solo QA, el fixture y su reverse; no prueba Supabase remoto ni distribución. |
 
 ## Lo que el revisor dejó fuera del veredicto
 
 | Parte | Decisión del ejecutor y límite |
 | --- | --- |
 | Correo real, Auth/Storage/RLS desplegados, URLs tras publicación, APK y activación de traspasos | Mantener pendientes operativos; no autorizados en esta ejecución. Las pruebas locales no los sustituyen. |
-| Teclado/Atrás/TalkBack, texto ampliado, movimiento reducido real, picker y rendimiento nativo | Mantener pendientes de dispositivo; las funciones puras y el navegador no acreditan su comportamiento Android. |
+| TalkBack, mapa/correo reales, picker y rendimiento nativo medido | Mantener esos casos pendientes. Teclado/Atrás, fuente ampliada, ahorro y portada heredada tienen evidencia física específica de QA; no se deducen de funciones puras ni del navegador. |
 | Nueva ejecución SQL de concurrencia/actualización | No se modificó SQL funcional en esta fase. Se revisó el contrato integrado, pero no se reutiliza su informe como una ejecución nueva. |
-| CTA asistida y de portada | Diferidas hasta canal operativo y activación autorizada; costo: menor captación hasta entonces. |
+| CTA asistida y de portada | El correo confirmado y las entradas locales se implementaron en la decisión 25. Quedan consolidación/portado Vite, publicación y activación remota. |
 | Anuncios reales y calidad de sus fotos | Propuestas en lista editorial para el responsable; no se aplicaron ni se inventaron atributos. |
 | Extracción de editor y fundido de fotos | Evaluadas y diferidas en las decisiones 16–17. |
 | Provincia sin puntos cargados | Mantener Cuba como fallback; costo: primer encuadre amplio. |
