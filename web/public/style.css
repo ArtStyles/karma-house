@@ -331,3 +331,14 @@ summary, a { -webkit-tap-highlight-color: transparent; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition: none !important; }
 }
+.publication-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.publication-card { min-width: 0; padding: 30px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); }
+.publication-card h3 { font-size: 23px; line-height: 1.3; margin: 0 0 18px; }
+.publication-card p { font-size: 15px; line-height: 1.7; margin: 0 0 20px; }
+.publication-card .button { max-width: 100%; white-space: normal; }
+.publication-card p.publication-contact { font-size: 13px; margin: 18px 0 0; overflow-wrap: anywhere; }
+@media (max-width: 650px) {
+  .publication-grid { grid-template-columns: 1fr; gap: 16px; }
+  .publication-card { padding: 24px; }
+  .publication-card h3 { font-size: 21px; }
+}

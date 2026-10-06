@@ -145,7 +145,7 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 
 ### Tarea 6: publicación propia o asistida
 
-**Estado:** contrato integrado y confianza revisados; entrada asistida y portada pendientes de un destino real. No activar ni inventar canal.
+**Estado:** el usuario confirmó `fejames07@gmail.com` como destino operativo. Las dos entradas y la llamada de la portada rastreada están implementadas localmente; no se activa el backend ni se publica esta entrega. La nueva portada Vite del checkout principal sigue sin confirmar y debe consolidarse antes de trasladar allí esta llamada.
 
 **Dependencia obligatoria:** publicación asistida y traspaso integrados y verificados. Si todavía no están listos, continuar con tareas independientes de la etapa 4; no reconstruir servidor, permisos ni traspaso dentro de esta entrega.
 
@@ -154,11 +154,12 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 **Límite de negocio:** la cuenta oficial publica inicialmente con autorización. Solo la cuenta oficial principal inicia el traspaso de sus anuncios; el destinatario acepta o rechaza y no puede retransmitirlos a terceros. ID, enlaces, fotos y favoritos se conservan. Otras colaboraciones quedan fuera.
 
 - [x] Leer el contrato final integrado y usar sus estados reales. Verificar la ruta de ayuda/contacto ya acordada; si no existe una operativa, dejar esa acción pendiente de un destino real y no inventar número, formulario o canal de recepción.
-- [ ] Mostrar «Publicar por mi cuenta» y «Publicar con ayuda de KarmaHouse» en la entrada de publicación. Explicar los datos/fotos necesarios y el consentimiento; hacer descubrible «Pegar anuncio» dentro del flujo propio.
-- [ ] Añadir a la portada una llamada a aportar una vivienda y una explicación breve del proceso asistido, conectadas al destino operativo existente.
+- [x] Mostrar «Publicar por mi cuenta» y «Publicar con ayuda de KarmaHouse» en la entrada de publicación. Explicar los datos/fotos necesarios y el consentimiento; hacer descubrible «Pegar anuncio» dentro del flujo propio.
+- [x] Añadir a la portada rastreada (`web/public/index.html`) una llamada a aportar una vivienda y una explicación breve del proceso asistido, conectadas al destino operativo existente. No copiar la portada Vite sin confirmar de otro trabajo.
 - [x] Distinguir quién ayudó a publicar y quién gestiona actualmente el anuncio. Revisar etiquetas de perfil/anuncio verificado para que no prometan titularidad comprobada.
 - [ ] Verificar antes/después de aceptar o rechazar traspaso, cuenta oficial, destinatario y tercero, conservando referencias del mismo anuncio. Reutilizar las pruebas de permisos y persistencia del trabajo integrado.
-- [ ] Ejecutar `node --experimental-strip-types --test tests/import-listing.test.ts tests/trust-profile.test.ts`, las pruebas de publicación asistida incorporadas a la suite, `npm run check` y `npm --prefix web run build`. Revisar los recorridos autenticados con cuentas de prueba autorizadas y limpiar fixtures.
+- [x] Ejecutar las pruebas de importación, confianza y publicación asistida incorporadas a `npm run check`: TypeScript y 417 pruebas pasan tras corregir la reserva inferior. Revisar el recorrido autenticado con la cuenta sintética local, conservación de borrador al cambiar de opción y tras recargar; exportación Expo web estándar exit 0. La portada rastreada es estática y no tiene script build; revisar su render y enlaces en navegador.
+- [ ] Tras consolidar la nueva portada Vite, portar la llamada y ejecutar su build. Mantener separadas publicación, pruebas de correo real y activación remota.
 
 **Aceptación:** el visitante entiende cómo aportar un anuncio y quién lo gestiona; los controles visibles corresponden a permisos efectivos. La entrada asistida funciona sin abrir una función nueva de transferencia entre usuarios.
 
@@ -226,7 +227,7 @@ Ejecutar en entregas pequeñas. Las etapas 1 y 2 pueden avanzar antes de integra
 
 - [x] Ejecutar las pruebas específicas descritas y `npm run check`. Ejecutar `npm --prefix web run build` cuando cambie la portada. Registrar comandos y resultado real; no reutilizar resultados anteriores como prueba de la entrega nueva.
 - [ ] Revisar en navegador 390 × 843 y 1280 × 900; incluir 320 px y texto aumentado donde se modifican controles. Guardar capturas nuevas de antes/después y anotar qué escenario utiliza fixtures.
-- [ ] Revisar Android físico para los cambios nativos relevantes: navegación, acceso, modales, teclado, botón Atrás, reducción de movimiento y ahorro. Si no hay dispositivo, dejar esa validación pendiente explícita.
+- [ ] Completar Android físico. En esta continuación se verificaron filtros/error/reintento, acceso contextual y modal sin guardar, teclado/Atrás, fuente 1.5, movimiento reducido y persistencia de ahorro en el paquete QA. Quedan TalkBack, mapa/correo real y editor de portadas; la apertura del editor sintético fue rechazada automáticamente. No presentar los casos pendientes como comprobados.
 - [x] Verificar cuenta invitada y autenticada donde corresponda, limpieza de fixtures, respuestas tardías, cambio de cuenta y carga sin red. No tocar datos reales para simular errores.
 - [x] Ejecutar `git diff --check` y revisar el diff de la entrega; actualizar las casillas y un registro breve con base, archivos, evidencia y pendientes.
 - [x] Preparar la entrega para revisión. Despliegue, nueva APK y comprobación pública son pasos posteriores dentro del alcance autorizado al retomar; no se ejecutan por guardar este plan. Cuando se publiquen cambios, volver a verificar los recorridos en sus URLs reales.
@@ -253,4 +254,4 @@ Estos puntos requieren una necesidad comprobada y un plan separado; no bloquean 
 
 ## Cierre local del 5 de octubre
 
-La segunda fase se integró y completó en lo implementable, con revisión independiente y una pasada de correcciones. TypeScript y 415/415 pruebas pasan; exportación estándar Expo web exit 0. Véanse docs/design-conversion-verification.md y docs/design-conversion-decisions.md (rutas desde la raíz del repo). Las casillas compuestas de correo real, Android, texto aumentado, mapa real, destino asistido y despliegue permanecen abiertas. Los pasos condicionados de limpieza del importador y extracción no se ejecutan porque no se introdujeron esos cambios. El aviso de inicio ya se emitió una vez y la continuación se desactiva tras este cierre.
+La segunda fase se integró y completó en lo implementable, con revisión independiente y una pasada de correcciones. La continuación añadió el correo confirmado, las dos entradas de publicación y la llamada de la portada estática. TypeScript y 417/417 pruebas pasan; exportación estándar Expo web exit 0. En Pixel se verificaron los recorridos enumerados en docs/design-conversion-verification.md, incluido texto ampliado, teclado y Atrás. Las casillas compuestas de correo real, Android completo, mapa real, consolidación Vite y despliegue permanecen abiertas. Los pasos condicionados de limpieza del importador y extracción no se ejecutan porque no se introdujeron esos cambios. Las decisiones están en docs/design-conversion-decisions.md. El aviso de inicio ya se emitió una vez y la continuación permanece PAUSED tras este cierre.

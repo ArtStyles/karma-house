@@ -30,9 +30,9 @@ Capturas en `C:/Users/ACER NITRO/.codex/visualizations/2026/10/05/01a10caa-337d-
 
 ## Pendientes
 
-El trabajo implementable del acceso contextual, tarjetas, Mi espacio, mapa y accesibilidad queda guardado localmente. El canal real de recepción de publicaciones asistidas y la activación remota siguen pendientes de la operación; no se inventó un destino de contacto. Los cambios locales de la portada Vite no se copiaron desde otro checkout.
+El trabajo implementable del acceso contextual, tarjetas, Mi espacio, mapa y accesibilidad queda guardado localmente. En la continuación, el usuario confirmó el correo de recepción y se implementaron las entradas de publicación propia/asistida; su evidencia aparece al final. La activación remota sigue pendiente. Los cambios locales de la portada Vite no se copiaron desde otro checkout.
 
-La evidencia de navegador no prueba Android, teclado nativo, botón Atrás, TalkBack, texto ampliado del sistema ni rendimiento. Tampoco prueba despliegue público, Supabase real ni apertura de enlaces con/sin app instalada. Estas verificaciones quedan explícitamente pendientes.
+La evidencia de navegador no prueba Android. La continuación añade pruebas físicas de teclado, Atrás, texto ampliado y otros recorridos enumerados al final, con un paquete QA separado y backend sintético. Siguen pendientes TalkBack, rendimiento medido, mapa/correo reales, despliegue público, Supabase real y apertura de enlaces con/sin la app habitual.
 
 ## Acceso contextual
 
@@ -64,7 +64,7 @@ Capturas adicionales: `phase2-profile-guest-320.png`, `phase2-profile-guest-390.
 
 ## Alcance implementable y acciones pendientes
 
-Quedan el destino operativo de asistencia y su entrada en la portada, la revisión editorial por el responsable, el correo real, Android físico (texto ampliado, teclado, Atrás, TalkBack y reducción de movimiento), publicación y apertura de enlaces instalada/no instalada. No se activó asistencia remota, no se publicaron APK, no se desplegó ni se modificaron anuncios reales. El build Vite no aplica: la portada rastreada no tiene script build; sus cambios sin confirmar en el checkout principal siguen preservados.
+El destino de asistencia y las dos entradas se completaron en la continuación descrita al final, junto con las pruebas físicas allí enumeradas. Quedan la revisión editorial por el responsable, TalkBack, mapa/correo reales, portadas en Android, publicación y apertura de enlaces con/sin la app habitual. No se activó asistencia remota, no se publicaron APK, no se desplegó ni se modificaron anuncios reales. El build Vite no aplica a la portada rastreada de esta rama: no tiene script build. Tras consolidar la nueva portada sin confirmar del checkout principal, hay que portar allí la llamada y ejecutar su build.
 
 ## Revisión independiente y cierre
 
@@ -84,3 +84,39 @@ Capturas nuevas de cierre en la carpeta de evidencia: `phase2-review-filter-erro
 Menor diferido: línea vacía adicional al final de `scripts/local-sql/bootstrap.sql:29`, incorporada con el trabajo asistido. No cambia SQL; no se modificó ese archivo solo por formato.
 
 La entrega quedó guardada en `124f185`, en `codex/public-journey`, con el worktree conservado y los [pendientes y decisiones](design-conversion-decisions.md) disponibles para revisión. El registro solicitado se mantiene en `.superpowers/sdd/2026-10-05-design-and-conversion/progress.md`. Los tabs de QA se cerraron, el viewport se restauró y el servidor loopback se detuvo. La revisión automática rechazó la eliminación de `ui-project` y `web-fixture` con el motivo genérico «blocked by policy»; se conservan ignoradas, aproximadamente 2 GB, sin intentar otro método de borrado. La continuación `continuar-mejoras-de-karmahouse` quedó **PAUSED**, confirmado por la herramienta de la aplicación, porque lo restante requiere destino operativo, autorización de publicación o dispositivo.
+
+## Continuación: canal de publicación asistida
+
+El usuario respondió que `fejames07@gmail.com` atenderá las solicitudes. «Publicar» ofrece publicación propia o con ayuda. La ayuda está disponible para invitados y explica operación, provincia, zona aproximada, características, precio/condiciones, fotos y revisión. La cuenta oficial necesita autorización expresa antes de publicar; el texto explica la invitación posterior para aceptar o rechazar el traspaso. El botón prepara un correo con campos vacíos y una solicitud de información; no incorpora datos de la cuenta ni del borrador, no envía correo ni otorga consentimiento. Si no puede abrir un cliente, informa y conserva visible la dirección seleccionable. Las cuentas suspendidas mantienen el bloqueo.
+
+El formulario propio permanece montado al cambiar de opción, oculto de pantalla y accesibilidad mientras se consulta ayuda. En el navegador con la cuenta sintética, el título y la operación se conservaron al ir a ayuda y volver, y tras recargar. «Pegar anuncio» sigue visible en el selector de operaciones. Se vació el título añadido para la prueba; no se envió ningún anuncio.
+
+La portada estática rastreada incorpora una llamada desde el inicio y el pie, dos opciones y el correo operativo. Se mantuvieron el contacto general anterior y la descarga pública 0.1.15. Se revisaron anchos 320, 390 y 1280, sin desbordamiento horizontal. No se copiaron las fuentes Vite ni otros archivos sin confirmar del checkout principal; su integración y build quedan pendientes.
+
+Una revisión independiente encontró un P2: el scroll no reservaba espacio para la barra flotante. Se añadió `layout.tabContentBottom`; la captura final a 320 muestra el correo en y=655–679, por encima de la barra. No quedan otros hallazgos en esa revisión. Verificación posterior a la corrección: TypeScript y **417/417 pruebas**, exportación Expo web estándar exit 0 y cambios propios sin errores de `git diff --check`. Las dos pruebas nuevas verifican el mailto y el fallo de apertura sin reintentos ni envío. Se leyeron las [referencias exactas de Expo v57](https://docs.expo.dev/versions/v57.0.0/) y [Linking v57](https://docs.expo.dev/versions/v57.0.0/sdk/linking/).
+
+Capturas nuevas en la carpeta de evidencia: `phase3-publish-390.png`, `phase3-help-320-final.png`, `phase3-help-1280-final.png`, `phase3-public-320.png`, `phase3-public-390.png` y `phase3-public-1280-final.png`. Los recorridos de app utilizan exclusivamente el servidor sintético loopback; las imágenes de portada son las del sitio rastreado.
+
+### Preparación Android y límite de dispositivo
+
+La copia de QA encontró dos límites de Windows: raíces R:/C: distintas en codegen y longitud de rutas en Ninja. Se trasladó solo esa copia a una carpeta nueva e ignorada, `D:\work\karma-house\artifacts\design-conversion-qa`; se preservaron las cachés antiguas, sin borrarlas. La compilación posterior `assembleRelease` arm64 pasó: 571 tareas, `BUILD SUCCESSFUL`, 6 min 46 s. La fuente final de PublishScreen tiene el mismo SHA-256 en el worktree y la copia.
+
+El APK de **pruebas**, firmado con la clave debug de su proyecto generado, usa `com.karmahouse.karmahouse.conversionqa`, nombre «KarmaHouse Conversion QA», 0.1.16/17 y un backend local sintético. Se omiten Firebase/EAS y credenciales reales; el manifiesto QA permite HTTP solo para esta prueba de loopback. No es un artefacto de distribución. Ruta: `D:\work\karma-house\artifacts\design-conversion-qa\android\app\build\outputs\apk\release\app-release.apk`, 62.254.819 bytes, SHA-256 `CD9E47B5426A68628848D40E97A9ADD1A3308ABE3E4263F491E6B6B0747E8DC0`.
+
+La instalación y apertura en Pixel 7 Pro tuvieron éxito. La instalación habitual `com.karmahouse.karmahouse` sigue en 0.1.15/16. Al pasar Teléfono al primer plano, las acciones se detuvieron por la comprobación de foco; el usuario confirmó que el Pixel estaba libre y autorizó continuar. No se capturó Teléfono ni se modificaron sus datos. Se comprobaron estos recorridos físicos con la app QA y el backend sintético:
+
+- Ayuda visible como invitado con fuente habitual 1.15; fuente 1.5 y escala de animador 0: las opciones responden, el texto se puede desplazar y el correo queda por encima de la barra. No se midieron duración real ni fps.
+- Mi espacio como invitado con fuente 1.5: preferencias antes del acceso, texto y acciones legibles. Ahorro de datos pasó a `checked=true` y permaneció así después de detener y abrir otra vez **solo** la app QA. No se midieron bytes de fotos o mapas.
+- Acceso desde publicación propia: el teclado se mostró (`mInputShown=true`); Atrás lo ocultó (`false`), y un segundo Atrás volvió a Publicar.
+- Filtros: desde una vivienda, máximo 1 USD con respuesta retrasada pasó a «Actualizando…» sin el conteo antiguo. Un 503 mostró «Resultados sin actualizar» y Reintentar. Al recuperar el backend, el reintento obtuvo el vacío para máximo 1 USD.
+- Guardar ese vacío con orden Mayor precio abrió el acceso con su motivo. Tras entrar con `buyer@example.invalid`, apareció la hoja de confirmación con máximo 1 USD. Se canceló sin guardar. La lista conservó «Mayor precio» y «0 – 1 USD»; los logs de RPC confirman `max_price:1`, `sort:price-desc`, `cursor:null`.
+
+Capturas físicas: `phase3-native-help-default.png`, `phase3-native-help-large-reduced.png`, `phase3-native-profile-large.png`, `phase3-native-data-saver-restored.png`, `phase3-native-auth-back.png`, `phase3-native-catalog.png`, `phase3-native-filters-updating.png`, `phase3-native-filter-error.png`, `phase3-native-filter-recovered.png` y `phase3-native-search-restored.png`. Los estados y las fotos ausentes son sintéticos; no prueban backend desplegado, correo real ni recepción push.
+
+La revisión automática rechazó el comando para abrir el editor Android con un anuncio sintético, con el motivo genérico «blocked by policy». Ninguna parte de ese comando se ejecutó. La prueba física de portadas almacenadas/heredadas queda pendiente y no se intentó otro camino para sortear el rechazo. También quedan TalkBack, correo/confirmación real, mapa real y apertura del enlace público con/sin la app habitual.
+
+Se restauraron y verificaron fuente 1.15 y las tres escalas de animación 1.0. No se cambiaron permisos. La cuenta sintética del navegador se cerró; sus tabs se cerraron y el viewport se restableció. Cuando otro app pasó al primer plano del Pixel se evitó interactuar allí; se limpiaron únicamente los datos descartables del paquete QA con `pm clear`, confirmado por Success. El paquete QA sigue instalado, sin sesión ni borradores; la app habitual y sus datos se preservaron. Se retiró solo el reverse TCP 8106 creado para esta prueba.
+
+Registros nuevos: `contact-check-final.log`, `contact-web-export-final.log`, `conversion-android-build-shortpath.log` y `native-fixture-log.json`, en el directorio ignorado del plan. Los logs fallidos de raíces/ruta se conservan como diagnóstico, no como evidencia de compilación correcta. La continuación permanece PAUSED: los siguientes pasos dependen de consolidación de la portada, pruebas personales pendientes o autorización concreta para publicación y activación. No se repitió el aviso de inicio de segunda fase.
+
+Al cerrar esta continuación se detuvo el servidor sintético y se verificó que no quedaba un listener en 8106. Se retiró la unidad R: después de confirmar que apuntaba exclusivamente al directorio de QA de este plan. Se conservaron los logs, la copia QA, su APK y las capturas para revisión.
