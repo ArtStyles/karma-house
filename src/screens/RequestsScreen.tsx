@@ -14,9 +14,10 @@ import { isSupabaseConfigured } from '../lib/supabase';
 import { useMessaging } from '../messaging/MessagingProvider';
 import type { Negotiation } from '../negotiations/types';
 import { useNegotiations } from '../negotiations/useNegotiations';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 
 export default function RequestsScreen(){
+  const { colors, styles } = useStyles();
   const auth=useAuth();
   return <SafeAreaView edges={['top','left','right','bottom']} style={styles.safe}><View style={styles.shell}>
     <View style={styles.header}><PageTitle title="Solicitudes" subtitle="Tus visitas y ofertas, en un lugar." back/></View>
@@ -24,6 +25,7 @@ export default function RequestsScreen(){
   </View></SafeAreaView>;
 }
 function RequestsBody({userId}:{userId:string}){
+  const { colors, styles } = useStyles();
   const drafts=useProposalDrafts();
   const [pendingOnly,setPendingOnly]=useState(true),[counter,setCounter]=useState<Negotiation|null>(null),[counterOpen,setCounterOpen]=useState(false);
   const store=useNegotiations({pendingOnly}),messaging=useMessaging();
@@ -41,4 +43,4 @@ function RequestsBody({userId}:{userId:string}){
     <NegotiationSheet visible={counterOpen} title="Proponer una alternativa" busy={store.mutating} onClose={()=>{if(!store.mutating)setCounterOpen(false)}}>{counter&&target&&<NegotiationComposer key={`${counter.id}:${counter.version}`} target={target} draft={drafts.get(target)} updateDraft={patch=>drafts.update(target,patch)} disabled={!selected?.canAct||selected.status!=='pending'} disabledReason="La propuesta anterior cambió o no admite una alternativa ahora. Vuelve a la lista para consultar su estado." onCreate={mutations.create} onRefresh={store.refresh} onBack={()=>setCounterOpen(false)} onConfirmed={()=>{drafts.discard(target);setCounter(null);setCounterOpen(false)}}/>}</NegotiationSheet>
   </>;
 }
-const styles=StyleSheet.create({safe:{flex:1,backgroundColor:colors.paper},shell:{flex:1,width:'100%',maxWidth:780,alignSelf:'center'},header:{paddingHorizontal:20},loading:{padding:40},tabs:{flexDirection:'row',gap:8,paddingHorizontal:20,paddingBottom:16},list:{paddingHorizontal:20,paddingBottom:24,gap:12,flexGrow:1},message:{gap:7,paddingBottom:10},feedback:{fontSize:14,lineHeight:21,color:colors.green,paddingBottom:12},footer:{gap:15,paddingTop:15},hint:{fontSize:12,lineHeight:19,color:colors.muted,textAlign:'center'}});
+const useStyles = createThemedStyles(colors => StyleSheet.create({safe:{flex:1,backgroundColor:colors.paper},shell:{flex:1,width:'100%',maxWidth:780,alignSelf:'center'},header:{paddingHorizontal:20},loading:{padding:40},tabs:{flexDirection:'row',gap:8,paddingHorizontal:20,paddingBottom:16},list:{paddingHorizontal:20,paddingBottom:24,gap:12,flexGrow:1},message:{gap:7,paddingBottom:10},feedback:{fontSize:14,lineHeight:21,color:colors.green,paddingBottom:12},footer:{gap:15,paddingTop:15},hint:{fontSize:12,lineHeight:19,color:colors.muted,textAlign:'center'}}));

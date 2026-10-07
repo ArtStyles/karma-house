@@ -18,9 +18,10 @@ import { useNegotiations } from '../negotiations/useNegotiations';
 import { Button, EmptyState, goBack, Icon, IconButton, Notice, PageTitle } from '../components/ui';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 
 export default function ConversationScreen() {
+  const { colors, styles } = useStyles();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const messaging = useMessaging();
@@ -34,6 +35,7 @@ export default function ConversationScreen() {
 }
 
 function ConversationBody({ id, userId }: { id: string; userId: string }) {
+  const { colors, styles } = useStyles();
   const auth = useAuth();
   const messaging = useMessaging();
   const { invalidateAfterBlockChange } = useNotifications();
@@ -237,7 +239,7 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
           </Pressable>
           <TextInput accessibilityLabel="Escribe un mensaje" placeholder={auth.suspended ? 'Tu cuenta está suspendida' : composer.ready ? 'Escribe un mensaje…' : 'Recuperando borrador…'} placeholderTextColor={colors.muted} value={composer.text} onChangeText={composer.change} multiline maxLength={2000} editable={composer.ready && !busy && !auth.suspended && !conversation.managementChanged} style={[styles.input, !conversation.canSend && styles.mutedInput]} textAlignVertical="top" />
           <Pressable accessibilityRole="button" accessibilityLabel="Enviar mensaje" accessibilityState={{ disabled: auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim() }} disabled={auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim()} onPress={send} style={({ pressed }) => [styles.send, (auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim() || pressed) && styles.sendDisabled]}>
-            {busy === 'send' ? <ActivityIndicator color={colors.white} /> : <Icon name="arrow-up" size={24} color={colors.white} />}
+            {busy === 'send' ? <ActivityIndicator color={colors.onPrimary} /> : <Icon name="arrow-up" size={24} color={colors.onPrimary} />}
           </Pressable>
         </View>
         {composer.text.length > 1800 && <Text style={styles.count}>{composer.text.length}/2000</Text>}
@@ -268,17 +270,17 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
 
 function message(failure: unknown, fallback: string) { return failure instanceof Error && failure.message ? failure.message : fallback; }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 }, shell: { flex: 1, width: '100%', maxWidth: 800, alignSelf: 'center' }, padding: { paddingHorizontal: 20 }, loading: { padding: 36 },
   chatHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }, person: { flex: 1, gap: 3 }, personName: { color: colors.ink, fontSize: 18, fontWeight: '600' }, personHint: { color: colors.muted, fontSize: 12 },
   propertyLink: { color: colors.primary },
   plus: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
   messages: { paddingHorizontal: 18, paddingVertical: 12, flexGrow: 1 }, older: { alignSelf: 'center', marginBottom: 12 }, day: { color: colors.muted, textAlign: 'center', fontSize: 12, fontWeight: '500', marginTop: 14, marginBottom: 10 },
-  sync: { marginHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFF2F0', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 }, syncText: { flex: 1, fontSize: 12, lineHeight: 17, color: colors.danger }, retryLink: { minHeight: 44, justifyContent: 'center' }, link: { color: colors.primary, fontSize: 13, fontWeight: '600' },
-  notice: { marginHorizontal: 20, paddingVertical: 8, color: colors.green, fontSize: 12, lineHeight: 18 }, disabledReason: { color: colors.muted, fontSize: 12, lineHeight: 18, paddingHorizontal: 20, paddingVertical: 9, backgroundColor: '#EEEEF2' },
-  toBottom: { position: 'absolute', bottom: 10, alignSelf: 'center', flexDirection: 'row', gap: 6, alignItems: 'center', minHeight: 44, paddingHorizontal: 18, backgroundColor: colors.white, borderRadius: 22, boxShadow: '0 2px 10px rgba(0,0,0,0.12)' },
-  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, padding: 14, paddingTop: 10, backgroundColor: colors.white, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  sync: { marginHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.softDanger, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 }, syncText: { flex: 1, fontSize: 12, lineHeight: 17, color: colors.danger }, retryLink: { minHeight: 44, justifyContent: 'center' }, link: { color: colors.primary, fontSize: 13, fontWeight: '600' },
+  notice: { marginHorizontal: 20, paddingVertical: 8, color: colors.green, fontSize: 12, lineHeight: 18 }, disabledReason: { color: colors.muted, fontSize: 12, lineHeight: 18, paddingHorizontal: 20, paddingVertical: 9, backgroundColor: colors.softNeutral },
+  toBottom: { position: 'absolute', bottom: 10, alignSelf: 'center', flexDirection: 'row', gap: 6, alignItems: 'center', minHeight: 44, paddingHorizontal: 18, backgroundColor: colors.surface, borderRadius: 22, boxShadow: '0 2px 10px rgba(0,0,0,0.12)' },
+  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, padding: 14, paddingTop: 10, backgroundColor: colors.surface, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   input: { flex: 1, minHeight: 46, maxHeight: 128, fontSize: 16, lineHeight: 23, paddingTop: 11, paddingBottom: 11, paddingHorizontal: 15, backgroundColor: colors.paper, borderRadius: 23, color: colors.ink }, mutedInput: { opacity: 0.6 },
-  send: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }, sendDisabled: { opacity: 0.45 }, count: { fontSize: 12, color: colors.muted, textAlign: 'right', paddingHorizontal: 20, paddingBottom: 6, backgroundColor: colors.white },
-  backdrop: { flex: 1, justifyContent: 'center', backgroundColor: '#17233170', paddingHorizontal: 20 }, actionSheet: { width: '100%', maxWidth: 480, alignSelf: 'center', padding: 24, borderRadius: 28, backgroundColor: colors.white, gap: 14 }, sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '600' }, sheetDescription: { color: colors.muted, fontSize: 15, lineHeight: 22 },
-});
+  send: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center' }, sendDisabled: { opacity: 0.45 }, count: { fontSize: 12, color: colors.muted, textAlign: 'right', paddingHorizontal: 20, paddingBottom: 6, backgroundColor: colors.surface },
+  backdrop: { flex: 1, justifyContent: 'center', backgroundColor: colors.overlay, paddingHorizontal: 20 }, actionSheet: { width: '100%', maxWidth: 480, alignSelf: 'center', padding: 24, borderRadius: 28, backgroundColor: colors.surface, gap: 14 }, sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '600' }, sheetDescription: { color: colors.muted, fontSize: 15, lineHeight: 22 },
+}));

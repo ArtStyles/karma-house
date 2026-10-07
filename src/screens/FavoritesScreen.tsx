@@ -9,10 +9,11 @@ import { useFavoriteListings } from '../catalog/useCatalog';
 import { useAuth } from '../auth/AuthProvider';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import type { Listing } from '../domain/listings';
-import { colors, layout } from '../theme';
+import { createThemedStyles, layout } from '../theme';
 import { listingPresentation, unavailableFavoriteCount } from '../catalog/presentation';
 
 export default function FavoritesScreen() {
+  const { colors, styles } = useStyles();
   const { favoriteIds, toggleFavorite, mode, storageError, refresh } = useMarketplace();
   const auth = useAuth();
   const [refreshing, setRefreshing] = useState(false);
@@ -60,4 +61,4 @@ export default function FavoritesScreen() {
     </>}
   </ScrollView></SafeAreaView>;
 }
-const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: 900, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: layout.tabContentBottom }, grid: { flexDirection: 'row', flexWrap: 'wrap', gap: '2%', rowGap: 24 }, faded: { opacity: .6 }, undoRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 4 }, undoText: { flex: 1, fontSize: 13, lineHeight: 20, color: colors.muted }, undoButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 6 }, undo: { color: colors.primary, fontSize: 13, fontWeight: '600' } });
+const useStyles = createThemedStyles(colors => StyleSheet.create({ safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: 900, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: layout.tabContentBottom }, grid: { flexDirection: 'row', flexWrap: 'wrap', gap: '2%', rowGap: 24 }, faded: { opacity: .6 }, undoRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 4 }, undoText: { flex: 1, fontSize: 13, lineHeight: 20, color: colors.muted }, undoButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 6 }, undo: { color: colors.primary, fontSize: 13, fontWeight: '600' } }));

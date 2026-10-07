@@ -6,12 +6,13 @@ import { listingFacts, operationBadge, priceLabel, priceSuffix } from '../domain
 import { useAuth } from '../auth/AuthProvider';
 import { pendingIntentStore } from '../auth/pendingIntentStorage';
 import { useMarketplace } from '../state/MarketplaceProvider';
-import { colors, formatMoney } from '../theme';
+import { createThemedStyles, formatMoney } from '../theme';
 import { PropertyImage } from './PropertyImage';
 import { Icon, IconButton } from './ui';
 
 /** Photo first: the image carries the card, and the text sits on the screen's own background. */
 export function PropertyCard({ listing, horizontal = false, offline = false }: { listing: Listing; horizontal?: boolean; offline?: boolean }) {
+  const { colors, styles } = useStyles();
   const { favoriteIds, toggleFavorite, mode } = useMarketplace();
   const { user, ready } = useAuth();
   const [error, setError] = useState('');
@@ -41,7 +42,7 @@ export function PropertyCard({ listing, horizontal = false, offline = false }: {
           ? <View style={[horizontal ? styles.horizontalImage : styles.image, styles.wantedImage]}><Icon name="search-outline" size={37} color={colors.primary} /><Text style={styles.wantedText}>Busco vivienda</Text></View>
           : <PropertyImage listing={listing} variant="thumb" style={horizontal ? styles.horizontalImage : styles.image} />}
         {badge ? <Text style={[styles.badge, badge === 'Nueva' && styles.newBadge, !!operation && badge === operation && styles.operationBadge]}>{badge}</Text> : null}
-        {photos > 1 && <View style={styles.photoCount}><Icon name="images-outline" size={13} color={colors.white} /><Text style={styles.photoCountText}>{photos}</Text></View>}
+        {photos > 1 && <View style={styles.photoCount}><Icon name="images-outline" size={13} color={colors.onPrimary} /><Text style={styles.photoCountText}>{photos}</Text></View>}
       </View>
       <View style={horizontal ? styles.horizontalBody : styles.body}>
         <View style={styles.priceRow}>
@@ -61,22 +62,22 @@ export function PropertyCard({ listing, horizontal = false, offline = false }: {
   </View>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   image: { height: 200, borderRadius: 16 },
-  badge: { position: 'absolute', top: 12, left: 12, borderRadius: 12, overflow: 'hidden', backgroundColor: '#FFFFFFF2', paddingVertical: 5, paddingHorizontal: 10, fontSize: 12, fontWeight: '600', color: colors.ink },
+  badge: { position: 'absolute', top: 12, left: 12, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.navigationGlass, paddingVertical: 5, paddingHorizontal: 10, fontSize: 12, fontWeight: '600', color: colors.ink },
   newBadge: { color: colors.green }, operationBadge: { color: colors.primary },
   wantedImage: { backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center', gap: 8 }, wantedText: { color: colors.primary, fontWeight: '600' },
-  photoCount: { position: 'absolute', bottom: 10, right: 10, borderRadius: 9, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: '#000000A6', flexDirection: 'row', gap: 5, alignItems: 'center' }, photoCountText: { color: colors.white, fontSize: 12, fontWeight: '600' },
-  heart: { position: 'absolute', top: 8, right: 8, width: 44, minHeight: 44, backgroundColor: '#FFFFFFF2' },
+  photoCount: { position: 'absolute', bottom: 10, right: 10, borderRadius: 9, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: colors.photoOverlay, flexDirection: 'row', gap: 5, alignItems: 'center' }, photoCountText: { color: colors.onPrimary, fontSize: 12, fontWeight: '600' },
+  heart: { position: 'absolute', top: 8, right: 8, width: 44, minHeight: 44, backgroundColor: colors.navigationGlass },
   body: { paddingTop: 10, paddingHorizontal: 2, gap: 2 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   price: { fontSize: 22, letterSpacing: -.5, fontWeight: '700', color: colors.ink }, currency: { fontSize: 13, color: colors.muted, fontWeight: '500', letterSpacing: 0 },
   negotiable: { marginLeft: 'auto', fontSize: 12, fontWeight: '600', color: colors.primary, backgroundColor: colors.softBlue, borderRadius: 8, overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 3 },
   title: { marginTop: 2, fontSize: 16, lineHeight: 22, letterSpacing: -.2, fontWeight: '500', color: colors.ink },
   meta: { fontSize: 14, lineHeight: 20, color: colors.muted },
-  horizontalCard: { backgroundColor: colors.white, borderRadius: 24, overflow: 'hidden' },
+  horizontalCard: { backgroundColor: colors.surface, borderRadius: 24, overflow: 'hidden' },
   horizontal: { flexDirection: 'row' }, wideImage: { width: '50%' }, horizontalImage: { height: '100%', minHeight: 295 },
   horizontalBody: { flex: 1, justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 32, gap: 4 },
   detailsLink: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 20 }, detailsText: { color: colors.primary, fontSize: 13, fontWeight: '600' },
   error: { paddingTop: 8, color: colors.danger, fontSize: 13 },
-});
+}));

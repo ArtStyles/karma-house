@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { availableNegotiationActions, formatNegotiationValue } from '../../negotiations/domain';
 import type { Negotiation, NegotiationAction } from '../../negotiations/types';
-import { colors } from '../../theme';
+import { createThemedStyles } from '../../theme';
 import { Button, Icon } from '../ui';
 
 const statusLabels:Record<Negotiation['status'],string>={pending:'Pendiente',accepted:'Aceptada',declined:'Rechazada',cancelled:'Cancelada',superseded:'Con alternativa',expired:'Vencida'};
@@ -9,6 +9,7 @@ export function NegotiationCard({ item, userId, busy = false, managementChanged=
   item:Negotiation; userId:string; busy?:boolean;managementChanged?:boolean;
   onRespond(item:Negotiation,action:NegotiationAction):void; onCounter(item:Negotiation):void; onOpenConversation?:()=>void;
 }) {
+  const { colors, styles } = useStyles();
   const actions=availableNegotiationActions(item,userId);
   const own=item.createdBy===userId;
   const active=item.status==='pending'||item.status==='accepted';
@@ -29,6 +30,6 @@ export function NegotiationCard({ item, userId, busy = false, managementChanged=
     {onOpenConversation&&<Button label="Abrir conversación" secondary onPress={onOpenConversation} disabled={busy}/>}
   </View>;
 }
-const styles=StyleSheet.create({
-  card:{backgroundColor:colors.white,borderWidth:1,borderColor:'#E1EAF5',borderRadius:23,padding:17,gap:12},heading:{flexDirection:'row',alignItems:'center',gap:9,flexWrap:'wrap'},icon:{width:40,height:40,borderRadius:14,backgroundColor:colors.softBlue,alignItems:'center',justifyContent:'center'},headingCopy:{flexGrow:1,flexBasis:125,gap:3},kind:{fontSize:14,fontWeight:'600',color:colors.ink},author:{fontSize:11,lineHeight:16,color:colors.muted},badge:{borderRadius:11,paddingHorizontal:9,paddingVertical:5,backgroundColor:'#EDF2F9'},status:{fontSize:10,fontWeight:'600',color:'#4D6585'},accepted:{backgroundColor:'#E7F4ED'},acceptedText:{color:'#267249'},value:{fontSize:22,lineHeight:29,fontWeight:'600',letterSpacing:-.5,color:colors.ink},property:{fontSize:13,lineHeight:19,color:colors.primary},note:{fontSize:14,lineHeight:21,color:colors.ink},meta:{fontSize:12,lineHeight:18,color:colors.muted},unavailable:{fontSize:12,lineHeight:19,color:'#775F3C'},actions:{flexDirection:'row',flexWrap:'wrap',gap:8},action:{flexGrow:1,flexBasis:110,minHeight:44,paddingHorizontal:12,paddingVertical:11},fullAction:{width:'100%',minHeight:44,paddingVertical:11},
-});
+const useStyles = createThemedStyles(colors => StyleSheet.create({
+  card:{backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,borderRadius:23,padding:17,gap:12},heading:{flexDirection:'row',alignItems:'center',gap:9,flexWrap:'wrap'},icon:{width:40,height:40,borderRadius:14,backgroundColor:colors.softBlue,alignItems:'center',justifyContent:'center'},headingCopy:{flexGrow:1,flexBasis:125,gap:3},kind:{fontSize:14,fontWeight:'600',color:colors.ink},author:{fontSize:11,lineHeight:16,color:colors.muted},badge:{borderRadius:11,paddingHorizontal:9,paddingVertical:5,backgroundColor:colors.softNeutral},status:{fontSize:10,fontWeight:'600',color:colors.mutedBlue},accepted:{backgroundColor:colors.softGreen},acceptedText:{color:colors.green},value:{fontSize:22,lineHeight:29,fontWeight:'600',letterSpacing:-.5,color:colors.ink},property:{fontSize:13,lineHeight:19,color:colors.primary},note:{fontSize:14,lineHeight:21,color:colors.ink},meta:{fontSize:12,lineHeight:18,color:colors.muted},unavailable:{fontSize:12,lineHeight:19,color:colors.amber},actions:{flexDirection:'row',flexWrap:'wrap',gap:8},action:{flexGrow:1,flexBasis:110,minHeight:44,paddingHorizontal:12,paddingVertical:11},fullAction:{width:'100%',minHeight:44,paddingVertical:11},
+}));

@@ -7,7 +7,7 @@ import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { useAuth } from '../auth/AuthProvider';
 import { useMarketplace } from '../state/MarketplaceProvider';
-import { colors, layout } from '../theme';
+import { createThemedStyles, layout } from '../theme';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { AccountMenu } from '../components/account/AccountMenu';
@@ -16,6 +16,7 @@ import { setDataSaver, useDataSaver } from '../settings/useDataSaver';
 import {useIncomingTransferCount} from '../transfers/useIncomingTransferCount';
 
 export default function ProfileScreen() {
+  const { colors, styles } = useStyles();
   const { favoriteIds, ownListings: own, mode } = useMarketplace();
   const { user, displayName, isAdmin, isOwner, suspended, suspensionReason, signOut, error: authError, refreshProfile } = useAuth();
   const { unreadCount } = useMessaging();
@@ -32,7 +33,7 @@ export default function ProfileScreen() {
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
     <ScrollView contentContainerStyle={styles.content}>
-      <PageTitle title="Mi espacio" right={user ? <IconButton name="settings-outline" label="Ajustes de cuenta" onPress={() => router.push('/account-settings')} /> : undefined} />
+      <PageTitle title="Mi espacio" right={<IconButton name="settings-outline" label="Ajustes de cuenta" onPress={() => router.push('/account-settings')} />} />
 
       <View style={styles.identity}>
         <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.identityRing} />
@@ -51,7 +52,7 @@ export default function ProfileScreen() {
           <View style={styles.rowIcon}><Icon name="cellular-outline" size={21} color={colors.primary} /></View>
           <View style={styles.rowBody}>
             <View style={styles.rowCopy}><Text style={styles.rowTitle}>Ahorro de datos</Text><Text style={styles.rowDescription}>Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas.</Text></View>
-            <Switch accessibilityLabel="Ahorro de datos" accessibilityHint="Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas." value={dataSaver} onValueChange={setDataSaver} trackColor={{ false: '#DADCE2', true: colors.primary }} thumbColor={colors.white} ios_backgroundColor="#DADCE2" />
+            <Switch accessibilityLabel="Ahorro de datos" accessibilityHint="Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas." value={dataSaver} onValueChange={setDataSaver} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.onPrimary} ios_backgroundColor={colors.switchTrack} />
           </View>
         </View>
       </View>
@@ -78,7 +79,7 @@ export default function ProfileScreen() {
         </Pressable>
         <View style={styles.separator} />
         <Pressable accessibilityRole="button" accessibilityLabel={`Mis anuncios, ${own.length}`} onPress={() => router.push('/my-listings')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-          <View style={[styles.rowIcon, styles.listingsIcon]}><Icon name="home-outline" size={21} color="#467660" /></View>
+          <View style={[styles.rowIcon, styles.listingsIcon]}><Icon name="home-outline" size={21} color={colors.green} /></View>
           <View style={styles.rowBody}>
             <View style={styles.rowCopy}><Text style={styles.rowTitle}>Mis anuncios</Text><Text style={styles.rowDescription}>{mode === 'demo' ? 'Tus anuncios en este dispositivo' : 'Tus viviendas y su revisión'}</Text></View>
             <View style={styles.accessory}><Text style={styles.count}>{own.length}</Text><Icon name="chevron-forward" size={17} color={colors.muted} /></View>
@@ -86,7 +87,7 @@ export default function ProfileScreen() {
         </Pressable>
         <View style={styles.separator} />
         <Pressable accessibilityRole="button" accessibilityLabel={`Favoritos, ${favoriteIds.length}`} onPress={() => router.push('/favorites')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-          <View style={[styles.rowIcon, styles.favoritesIcon]}><Icon name="heart-outline" size={21} color="#A85D70" /></View>
+          <View style={[styles.rowIcon, styles.favoritesIcon]}><Icon name="heart-outline" size={21} color={colors.rose} /></View>
           <View style={styles.rowBody}>
             <View style={styles.rowCopy}><Text style={styles.rowTitle}>Favoritos</Text><Text style={styles.rowDescription}>Lugares que quieres recordar</Text></View>
             <View style={styles.accessory}><Text style={styles.count}>{favoriteIds.length}</Text><Icon name="chevron-forward" size={17} color={colors.muted} /></View>
@@ -119,7 +120,7 @@ export default function ProfileScreen() {
       {user && <>
         <Text style={styles.sectionLabel}>Cuenta</Text>
         <View style={styles.group}>
-          <AccountRow icon="settings-outline" title="Ajustes de cuenta" description="Nombre, foto, privacidad y eliminar cuenta" onPress={() => router.push('/account-settings')} />
+          <AccountRow icon="settings-outline" title="Ajustes de cuenta" description="Apariencia, nombre, foto y privacidad" onPress={() => router.push('/account-settings')} />
           <View style={styles.separator} />
           <AccountRow icon="notifications-outline" title="Preferencias de notificaciones" description="Qué avisos quieres recibir" onPress={() => router.push('/notification-settings')} />
           <View style={styles.separator} />
@@ -147,31 +148,32 @@ export default function ProfileScreen() {
 }
 
 function AccountRow({ icon, title, description, onPress }: { icon: IconName; title: string; description: string; onPress(): void }) {
+  const { colors, styles } = useStyles();
   return <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
     <View style={styles.rowIcon}><Icon name={icon} size={21} color={colors.primary} /></View>
     <View style={styles.rowBody}><View style={styles.rowCopy}><Text style={styles.rowTitle}>{title}</Text><Text style={styles.rowDescription}>{description}</Text></View><Icon name="chevron-forward" size={17} color={colors.muted} /></View>
   </Pressable>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper },
   content: { width: '100%', maxWidth: 700, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: layout.tabContentBottom },
-  identity: { flexDirection: 'row', alignItems: 'center', gap: 15, backgroundColor: '#EAF2FC', borderRadius: 26, padding: 22, borderWidth: 1, borderColor: '#DDE9F8', overflow: 'hidden' },
-  identityRing: { position: 'absolute', right: -72, top: -73, width: 195, height: 195, borderRadius: 100, borderWidth: 30, borderColor: '#DEEBFB' },
-  avatar: { width: 62, height: 62, backgroundColor: colors.white, borderRadius: 22, borderWidth: 4, borderColor: '#F8FBFF', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 12px rgba(51, 87, 137, 0.05)' },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 15, backgroundColor: colors.softBlue, borderRadius: 26, padding: 22, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  identityRing: { position: 'absolute', right: -72, top: -73, width: 195, height: 195, borderRadius: 100, borderWidth: 30, borderColor: colors.border },
+  avatar: { width: 62, height: 62, backgroundColor: colors.surface, borderRadius: 22, borderWidth: 4, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 12px rgba(51, 87, 137, 0.05)' },
   initials: { color: colors.primary, fontSize: 22, fontWeight: '600', letterSpacing: -0.5 },
   identityText: { flex: 1, minWidth: 0, gap: 5 },
-  identityEyebrow: { color: '#46698F', fontSize: 10, lineHeight: 14, fontWeight: '700', letterSpacing: 1.1 },
-  heading: { color: '#213B5A', fontSize: 21, lineHeight: 27, fontWeight: '600', letterSpacing: -.5 },
-  identityDescription: { color: '#566D87', fontSize: 13, lineHeight: 19 },
+  identityEyebrow: { color: colors.mutedBlue, fontSize: 10, lineHeight: 14, fontWeight: '700', letterSpacing: 1.1 },
+  heading: { color: colors.inkBlue, fontSize: 21, lineHeight: 27, fontWeight: '600', letterSpacing: -.5 },
+  identityDescription: { color: colors.mutedBlue, fontSize: 13, lineHeight: 19 },
   accountPrompt: { marginTop: 18 },
   sectionLabel: { color: colors.muted, fontSize: 13, fontWeight: '600', marginTop: 26, marginBottom: 11, marginLeft: 4 },
-  group: { backgroundColor: colors.white, borderRadius: 23, overflow: 'hidden', borderWidth: 1, borderColor: '#ECEFF3' },
+  group: { backgroundColor: colors.surface, borderRadius: 23, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
   row: { minHeight: 79, flexDirection: 'row', alignItems: 'center', gap: 13, paddingLeft: 16, paddingRight: 18, paddingVertical: 15 },
   pressed: { backgroundColor: colors.paper },
   rowIcon: { width: 39, height: 39, borderRadius: 13, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
   compactRow: { minHeight: 60 }, dangerIcon: { backgroundColor: colors.softDanger },
-  listingsIcon: { backgroundColor: '#EAF3EE' }, favoritesIcon: { backgroundColor: '#F8ECEF' },
+  listingsIcon: { backgroundColor: colors.softGreen }, favoritesIcon: { backgroundColor: colors.softRose },
   rowBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
   rowCopy: { flex: 1, gap: 4 },
   rowTitle: { fontSize: 16, fontWeight: '500', color: colors.ink, letterSpacing: -.25 },
@@ -179,14 +181,14 @@ const styles = StyleSheet.create({
   accessory: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   count: { color: colors.muted, fontSize: 13, lineHeight: 18, fontVariant: ['tabular-nums'], minWidth: 26, textAlign: 'center', paddingHorizontal: 7, paddingVertical: 4, backgroundColor: colors.paper, borderRadius: 12 },
   unread: { color: colors.primary, backgroundColor: colors.softBlue, fontWeight: '600' },
-  separator: { height: StyleSheet.hairlineWidth, backgroundColor: '#ECEFF3', marginLeft: 68 },
-  publish: { padding: 22, backgroundColor: '#EDF4FD', borderRadius: 25, gap: 12, marginTop: 24, borderWidth: 1, borderColor: '#E1ECFA' },
+  separator: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginLeft: 68 },
+  publish: { padding: 22, backgroundColor: colors.softBlue, borderRadius: 25, gap: 12, marginTop: 24, borderWidth: 1, borderColor: colors.border },
   publishHeading: { flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: 2 },
-  publishIcon: { width: 43, height: 43, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.white, borderRadius: 14 },
-  publishEyebrow: { color: '#4C6C93', fontSize: 10, fontWeight: '600', letterSpacing: 0.8 },
+  publishIcon: { width: 43, height: 43, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderRadius: 14 },
+  publishEyebrow: { color: colors.mutedBlue, fontSize: 10, fontWeight: '600', letterSpacing: 0.8 },
   publishTitle: { fontSize: 22, lineHeight: 28, fontWeight: '600', letterSpacing: -.5, color: colors.ink },
   publishText: { fontSize: 15, color: colors.muted, lineHeight: 22, marginBottom: 6 },
   legal: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 14, minHeight: 44 }, legalText: { color: colors.muted, fontSize: 13, textDecorationLine: 'none' },
   legalLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
   demoNote: { color: colors.muted, fontSize: 13, lineHeight: 20, paddingHorizontal: 16, marginTop: 18 },
-});
+}));

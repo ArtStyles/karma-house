@@ -4,11 +4,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ListingFilters } from '../domain/listings';
 import { describeSearch, searchName, toSavedFilters } from '../searches/domain';
 import { useSavedSearches } from '../searches/useSavedSearches';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 import { Button, Icon, Notice } from './ui';
 
 /** Mounted only while open, so Explorar asks for the saved searches only when someone saves one. */
 export function SaveSearchSheet({ filters, onClose, onSaved }: { filters: ListingFilters; onClose(): void; onSaved(): void }) {
+  const { colors, styles } = useStyles();
   const { save, saving, error } = useSavedSearches();
   const [name, setName] = useState(() => searchName(filters).slice(0, 60));
   // The hook also reports list errors; the sheet only shows the outcome of a save.
@@ -41,11 +42,11 @@ export function SaveSearchSheet({ filters, onClose, onSaved }: { filters: Listin
   </Modal>;
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: '#17233170', justifyContent: 'center', paddingHorizontal: 16 },
-  sheet: { backgroundColor: colors.white, width: '100%', maxWidth: 520, maxHeight: '100%', alignSelf: 'center', borderRadius: 28, overflow: 'hidden' },
+const useStyles = createThemedStyles(colors => StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', paddingHorizontal: 16 },
+  sheet: { backgroundColor: colors.surface, width: '100%', maxWidth: 520, maxHeight: '100%', alignSelf: 'center', borderRadius: 28, overflow: 'hidden' },
   content: { padding: 24, gap: 14 }, icon: { width: 54, height: 54, borderRadius: 20, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 25, fontWeight: '600', letterSpacing: -0.5, color: colors.ink }, description: { fontSize: 15, lineHeight: 22, color: colors.muted },
   label: { fontSize: 13, fontWeight: '500', color: colors.muted },
   input: { minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 14, fontSize: 16, color: colors.ink }, counter: { color: colors.muted, fontSize: 11, textAlign: 'right', marginTop: -6 },
-});
+}));

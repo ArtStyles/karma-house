@@ -9,13 +9,14 @@ import { pendingIntentStore } from '../auth/pendingIntentStorage';
 import { createAuthFocusScope } from '../auth/intentLifecycle';
 import { Brand, Button, goBack, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { isSupabaseConfigured } from '../lib/supabase';
-import { colors, typefaces } from '../theme';
+import { createThemedStyles, typefaces } from '../theme';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 
 type Mode = 'signin' | 'signup' | 'forgot' | 'recovery';
 const initialMode = (value: unknown): Mode => value === 'signup' || value === 'recovery' || value === 'forgot' ? value : 'signin';
 
 export default function AuthScreen() {
+  const { colors, styles } = useStyles();
   const params = useLocalSearchParams<{ mode?: string; returnTo?: string }>();
   const auth = useAuth();
   const [mode, setMode] = useState<Mode>(() => initialMode(params.mode));
@@ -146,6 +147,7 @@ export default function AuthScreen() {
 }
 
 function Field({ label, icon, accessory, inputRef, ...input }: TextInputProps & { label: string; icon: IconName; accessory?: React.ReactNode; inputRef?: React.Ref<TextInput> }) {
+  const { colors, styles } = useStyles();
   const [focused, setFocused] = useState(false);
   return <View style={styles.field}>
     <Text style={styles.label}>{label}</Text>
@@ -157,7 +159,7 @@ function Field({ label, icon, accessory, inputRef, ...input }: TextInputProps & 
   </View>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 },
   scroll: { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: 40, flexGrow: 1 },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, paddingBottom: 24 },
@@ -167,12 +169,12 @@ const styles = StyleSheet.create({
   title: { fontFamily: typefaces.display, color: colors.ink, fontSize: 39, lineHeight: 44, fontWeight: '700', letterSpacing: -1.4 },
   subtitle: { color: colors.muted, fontSize: 16, lineHeight: 24, marginTop: 14, maxWidth: 385 },
   form: { marginTop: 30, gap: 17 },
-  segment: { flexDirection: 'row', backgroundColor: '#E9E9ED', padding: 4, borderRadius: 15, marginBottom: 7 },
+  segment: { flexDirection: 'row', backgroundColor: colors.softNeutral, padding: 4, borderRadius: 15, marginBottom: 7 },
   segmentItem: { flex: 1, minHeight: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  segmentSelected: { backgroundColor: colors.white, boxShadow: '0 1px 5px rgba(0, 0, 0, 0.06)' },
+  segmentSelected: { backgroundColor: colors.surface, boxShadow: '0 1px 5px rgba(0, 0, 0, 0.06)' },
   segmentText: { fontSize: 15, fontWeight: '500', color: colors.muted }, segmentTextSelected: { color: colors.ink, fontWeight: '600' },
   field: { gap: 9 }, label: { fontSize: 14, fontWeight: '500', color: colors.ink, marginLeft: 4 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: colors.white, borderRadius: 15, paddingLeft: 16, paddingRight: 8, borderWidth: 1, borderColor: colors.border },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: colors.surface, borderRadius: 15, paddingLeft: 16, paddingRight: 8, borderWidth: 1, borderColor: colors.border },
   inputFocused: { borderColor: colors.primary },
   input: { flex: 1, minWidth: 0, minHeight: 56, fontSize: 16, color: colors.ink, paddingVertical: 15, outlineWidth: 0 },
   eye: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
@@ -180,8 +182,8 @@ const styles = StyleSheet.create({
   helper: { color: colors.muted, fontSize: 13, lineHeight: 20, textAlign: 'center', paddingHorizontal: 14 },
   explore: { flexDirection: 'row', alignSelf: 'center', alignItems: 'center', gap: 8, minHeight: 48, marginTop: 28 },
   exploreText: { fontSize: 14, fontWeight: '500', color: colors.muted },
-  successCard: { marginTop: 30, padding: 24, borderRadius: 24, backgroundColor: colors.white, gap: 16 },
+  successCard: { marginTop: 30, padding: 24, borderRadius: 24, backgroundColor: colors.surface, gap: 16 },
   successIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.softGreen, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontSize: 23, fontWeight: '600', letterSpacing: -.5, color: colors.ink },
   cardCopy: { color: colors.muted, fontSize: 15, lineHeight: 23, marginBottom: 7 },
-});
+}));

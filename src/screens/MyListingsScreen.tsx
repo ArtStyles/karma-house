@@ -10,23 +10,25 @@ import { listingBoardState, type Listing, type ListingBoardState, type ListingSt
 import { listingOperation, operationBadge, priceSuffix } from '../domain/operations';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { remoteErrorMessage } from '../state/remoteMarketplaceStore';
-import { colors, formatMoney } from '../theme';
+import { createThemedStyles, formatMoney } from '../theme';
 import {useIncomingTransferCount} from '../transfers/useIncomingTransferCount';
 
 const boardLabels: Record<ListingBoardState, string> = {
   sold: 'Vendido', rejected: 'Necesita cambios', draft: 'Borrador',
   pending: 'En revisión', paused: 'En pausa', live: 'En el catálogo',
 };
-const boardTones: Record<ListingBoardState, { color: string; background: string }> = {
-  sold: { color: colors.muted, background: colors.paper },
-  rejected: { color: colors.danger, background: colors.softDanger },
-  draft: { color: colors.muted, background: colors.paper },
-  pending: { color: colors.amber, background: '#FFF3DA' },
-  paused: { color: colors.amber, background: '#FFF3DA' },
-  live: { color: colors.green, background: colors.softGreen },
-};
+
 
 export default function MyListingsScreen() {
+  const { colors, styles } = useStyles();
+  const boardTones: Record<ListingBoardState, { color: string; background: string }> = {
+    sold: { color: colors.muted, background: colors.paper },
+    rejected: { color: colors.danger, background: colors.softDanger },
+    draft: { color: colors.muted, background: colors.paper },
+    pending: { color: colors.amber, background: colors.softAmber },
+    paused: { color: colors.amber, background: colors.softAmber },
+    live: { color: colors.green, background: colors.softGreen },
+  };
   const { ownListings: own, setStatus, mode, refresh, submitForReview } = useMarketplace();
   const { user, isOwner } = useAuth();
   const transfers=useIncomingTransferCount();
@@ -134,12 +136,12 @@ export default function MyListingsScreen() {
   </SafeAreaView>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper },
   content: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: 24, gap: 8 },
   list: { gap: 16, marginTop: 18 },
   sectionLabel: { color: colors.muted, fontSize: 14, marginLeft: 4, marginBottom: -4 },
-  card: { backgroundColor: colors.white, padding: 16, borderRadius: 22 },
+  card: { backgroundColor: colors.surface, padding: 16, borderRadius: 22 },
   overview: { flexDirection: 'row', gap: 13, alignItems: 'center', borderRadius: 12 },
   pressed: { opacity: .65 },
   image: { width: 92, height: 114, borderRadius: 14 },
@@ -160,9 +162,9 @@ const styles = StyleSheet.create({
   soldText: { color: colors.primary, fontSize: 14, fontWeight: '500' },
   disabled: { opacity: .5 },
   createButton: { marginTop: 6 },
-  backdrop: { flex: 1, backgroundColor: '#00000050', justifyContent: 'center', padding: 24 },
-  modal: { backgroundColor: colors.white, borderRadius: 28, padding: 24, gap: 14, width: '100%', maxWidth: 420, alignSelf: 'center' },
+  backdrop: { flex: 1, backgroundColor: colors.photoOverlay, justifyContent: 'center', padding: 24 },
+  modal: { backgroundColor: colors.surface, borderRadius: 28, padding: 24, gap: 14, width: '100%', maxWidth: 420, alignSelf: 'center' },
   modalIcon: { width: 58, height: 58, backgroundColor: colors.softBlue, borderRadius: 29, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 4 },
   modalTitle: { color: colors.ink, fontSize: 23, lineHeight: 29, fontWeight: '600', letterSpacing: -.5, textAlign: 'center' },
   modalText: { color: colors.muted, fontSize: 15, lineHeight: 23, textAlign: 'center', marginBottom: 8 },
-});
+}));

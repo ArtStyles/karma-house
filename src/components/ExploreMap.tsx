@@ -5,7 +5,7 @@ import type { BoundingBox, MapLocation } from '../domain/geo';
 import { initialExploreFrame } from '../domain/mapFrame';
 import type { ListingFilters } from '../domain/listings';
 import { useListing, useMapView } from '../catalog/useCatalog';
-import { colors, formatMoney } from '../theme';
+import { createThemedStyles, formatMoney } from '../theme';
 import { KarmaMap } from './maps/KarmaMap';
 import { PropertyImage } from './PropertyImage';
 import { Button, Icon, Notice } from './ui';
@@ -22,6 +22,7 @@ export function ExploreMap({ filters, context = [], withoutLocation, onShowList 
   withoutLocation: number;
   onShowList: () => void;
 }) {
+  const { colors, styles } = useStyles();
   const { width } = useWindowDimensions();
   const [initialFrame] = useState(() => initialExploreFrame(filters.province, context, width));
   const [camera, setCamera] = useState({ center: initialFrame.center, zoom: initialFrame.zoom });
@@ -92,6 +93,7 @@ export function MapOnDemand({ height, children }: { height: number; children: Re
 }
 
 function LoadMap({ height, onLoad }: { height: number; onLoad(): void }) {
+  const { colors, styles } = useStyles();
   return <View style={[styles.load, { height }]}>
     <Icon name="map-outline" size={30} color={colors.muted} />
     <Text style={styles.loadText}>El mapa descarga datos al moverlo.</Text>
@@ -99,12 +101,12 @@ function LoadMap({ height, onLoad }: { height: number; onLoad(): void }) {
   </View>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   container: { gap: 12 }, failure: { gap: 8 },
   load: { alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20, backgroundColor: colors.paper },
   loadText: { fontSize: 13, lineHeight: 19, color: colors.muted, textAlign: 'center' },
-  mapFrame: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: '#E1E5EB', backgroundColor: colors.white },
-  card: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 20, backgroundColor: colors.white, borderWidth: 1, borderColor: '#E1E5EB' },
+  mapFrame: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   photo: { width: 84, height: 84, borderRadius: 14 },
   copy: { flex: 1, gap: 2 },
   price: { fontSize: 17, fontWeight: '700', color: colors.ink, letterSpacing: -.4 },
@@ -114,6 +116,6 @@ const styles = StyleSheet.create({
   precision: { fontSize: 11, color: colors.primary, marginTop: 2 },
   hint: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 18, backgroundColor: colors.softBlue },
   hintText: { flex: 1, fontSize: 12, lineHeight: 18, color: colors.ink },
-  missing: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 44, paddingHorizontal: 14, borderRadius: 16, borderWidth: 1, borderColor: '#E1E5EB' },
+  missing: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 44, paddingHorizontal: 14, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
   missingText: { fontSize: 12, color: colors.primary },
-});
+}));

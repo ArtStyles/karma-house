@@ -3,7 +3,7 @@ import { Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDime
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { APPROXIMATE_RADIUS_METERS, normalizeMapLocation, type MapLocation } from '../../domain/geo';
-import { colors } from '../../theme';
+import { createThemedStyles } from '../../theme';
 import { Button, Icon, IconButton, Pill } from '../ui';
 import { KarmaMap } from './KarmaMap';
 import { CUBA_CENTER, CUBA_ZOOM } from './mapConfig';
@@ -18,6 +18,7 @@ interface LocationPickerProps {
 }
 
 export function LocationPicker({ value, onChange, disabled = false, error, readOnly = false }: LocationPickerProps) {
+  const { colors, styles } = useStyles();
   const [open, setOpen] = useState(false);
   const published = useMemo(() => value ? normalizeMapLocation(value) : undefined, [value]);
   const markers = useMemo(() => published ? [{ id: 'location', coordinate: published, precision: published.precision }] : [], [published]);
@@ -57,6 +58,7 @@ export function LocationPicker({ value, onChange, disabled = false, error, readO
 }
 
 function LocationPickerModal({ value, onCancel, onConfirm }: { value?: MapLocation; onCancel: () => void; onConfirm: (value: MapLocation | undefined) => void }) {
+  const { colors, styles } = useStyles();
   const [selection, dispatch] = useReducer(locationSelectionReducer, value, beginLocationSelection);
   const published = useMemo(() => publishedSelection(selection), [selection]);
   const initialCenter = useRef(value ?? CUBA_CENTER);
@@ -101,7 +103,7 @@ function LocationPickerModal({ value, onCancel, onConfirm }: { value?: MapLocati
   </Modal>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   field: { gap: 14 },
   labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   fieldTitle: { fontSize: 17, fontWeight: '600', color: colors.ink },
@@ -117,8 +119,8 @@ const styles = StyleSheet.create({
   removeText: { fontSize: 14, fontWeight: '500', color: colors.danger },
   dimmed: { opacity: 0.5 },
   error: { color: colors.danger, fontSize: 13, lineHeight: 19 },
-  backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#17233170', paddingHorizontal: 12 },
-  sheet: { flex: 1, width: '100%', borderRadius: 24, overflow: 'hidden', backgroundColor: colors.white },
+  backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.overlay, paddingHorizontal: 12 },
+  sheet: { flex: 1, width: '100%', borderRadius: 24, overflow: 'hidden', backgroundColor: colors.surface },
   wideSheet: { width: 680 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16 },
   headerCopy: { flex: 1, gap: 5 },
@@ -133,4 +135,4 @@ const styles = StyleSheet.create({
   cancelAction: { flexGrow: 1, flexBasis: 110 },
   confirmAction: { flexGrow: 2, flexBasis: 190 },
   clearPoint: { flexDirection: 'row', gap: 6, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-});
+}));

@@ -1,10 +1,11 @@
 import { useEffect, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../../theme';
+import { createThemedStyles } from '../../theme';
 import { IconButton } from '../ui';
 
 export function NegotiationSheet({ visible, title = 'Visitas y ofertas', busy = false, onClose, children }: { visible:boolean; title?:string; busy?:boolean; onClose():void; children:ReactNode }) {
+  const { styles } = useStyles();
   const insets=useSafeAreaInsets();
   useEffect(()=>{
     if(!visible||Platform.OS!=='web')return;
@@ -23,4 +24,4 @@ export function NegotiationSheet({ visible, title = 'Visitas y ofertas', busy = 
     </KeyboardAvoidingView>
   </Modal>;
 }
-const styles=StyleSheet.create({flex:{flex:1},overlay:{flex:1,backgroundColor:'#14283D70',paddingHorizontal:14,justifyContent:'center'},sheet:{width:'100%',maxWidth:580,maxHeight:'100%',alignSelf:'center',backgroundColor:colors.paper,borderRadius:27,overflow:'hidden',flexShrink:1},header:{flexDirection:'row',alignItems:'center',gap:10,padding:18,paddingBottom:13,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:'#DBE5F1'},title:{flex:1,color:colors.ink,fontSize:21,lineHeight:27,fontWeight:'600',letterSpacing:-.4},close:{backgroundColor:'#E7EFF9'},content:{padding:18,gap:15,paddingBottom:25}});
+const useStyles = createThemedStyles(colors => StyleSheet.create({flex:{flex:1},overlay:{flex:1,backgroundColor:colors.overlay,paddingHorizontal:14,justifyContent:'center'},sheet:{width:'100%',maxWidth:580,maxHeight:'100%',alignSelf:'center',backgroundColor:colors.paper,borderRadius:27,overflow:'hidden',flexShrink:1},header:{flexDirection:'row',alignItems:'center',gap:10,padding:18,paddingBottom:13,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:colors.border},title:{flex:1,color:colors.ink,fontSize:21,lineHeight:27,fontWeight:'600',letterSpacing:-.4},close:{backgroundColor:colors.softBlue},content:{padding:18,gap:15,paddingBottom:25}}));

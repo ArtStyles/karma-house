@@ -6,7 +6,7 @@ import {useAuth} from '../auth/AuthProvider';
 import {accountActions,actionLabel,adminError,decodeAdminPage,eventLabel,roleLabel,type AccountAction,type AdminAccount,type AdminEvent,type AdminListing,type AdminPage,type AdminSection} from '../admin/domain';
 import {useAdminApi} from '../admin/useAdminApi';
 import {Button,EmptyState,Notice,PageTitle,Pill} from '../components/ui';
-import {colors} from '../theme';
+import {createThemedStyles} from '../theme';
 
 type Selection = {actor:string;kind:'account';row:AdminAccount;action:AccountAction}|{actor:string;kind:'listing';row:AdminListing};
 const titles:Record<AdminSection,string>={accounts:'Cuentas',listings:'Anuncios',history:'Historial'};
@@ -15,6 +15,7 @@ const moderationLabel:Record<string,string>={draft:'Borrador',pending:'En revisi
 const availabilityLabel:Record<string,string>={active:'Activo',paused:'En pausa',sold:'Cerrado'};
 
 export default function AdminManagementScreen({section}:{section:AdminSection}) {
+  const { colors, styles: s } = useStyles();
   const {user,isAdmin,isOwner}=useAuth(); const call=useAdminApi();
   const [query,setQuery]=useState('');const [search,setSearch]=useState('');
   const [status,setStatus]=useState('all');const [offset,setOffset]=useState(0);
@@ -78,4 +79,4 @@ export default function AdminManagementScreen({section}:{section:AdminSection}) 
     {error?<Notice error>{error}</Notice>:null}<Button label="Confirmar gestión" loading={busy} disabled={reason.trim().length<3} onPress={()=>void confirm()}/><Button label="Cancelar" secondary disabled={busy} onPress={()=>setSelection(null)}/>
   </View></ScrollView></View></Modal></SafeAreaView>;
 }
-const s=StyleSheet.create({safe:{flex:1,backgroundColor:colors.paper},content:{width:'100%',maxWidth:820,alignSelf:'center',padding:20,paddingBottom:36,gap:14},search:{gap:10},input:{backgroundColor:colors.white,borderWidth:1,borderColor:colors.border,borderRadius:16,minHeight:48,padding:14,fontSize:16,color:colors.ink},filters:{flexDirection:'row',flexWrap:'wrap',gap:8},card:{padding:20,borderRadius:22,backgroundColor:colors.white,gap:12},title:{fontSize:18,fontWeight:'600',color:colors.ink},body:{fontSize:15,lineHeight:23,color:colors.ink},meta:{fontSize:14,lineHeight:21,color:colors.muted},row:{flexDirection:'row',gap:12,alignItems:'center'},copy:{flex:1,gap:5},initial:{width:46,height:46,borderRadius:23,backgroundColor:colors.softBlue,alignItems:'center',justifyContent:'center'},initialText:{fontSize:20,fontWeight:'600',color:colors.primary},actions:{flexDirection:'row',flexWrap:'wrap',gap:10},pagination:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10},backdrop:{flex:1,backgroundColor:'#00000055'},modalScroll:{flexGrow:1,justifyContent:'center',padding:20},modal:{width:'100%',maxWidth:480,alignSelf:'center',backgroundColor:colors.white,borderRadius:26,padding:24,gap:16},modalTitle:{fontSize:24,fontWeight:'700',color:colors.ink},reason:{minHeight:112,textAlignVertical:'top',backgroundColor:colors.paper}});
+const useStyles = createThemedStyles(colors => StyleSheet.create({safe:{flex:1,backgroundColor:colors.paper},content:{width:'100%',maxWidth:820,alignSelf:'center',padding:20,paddingBottom:36,gap:14},search:{gap:10},input:{backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,borderRadius:16,minHeight:48,padding:14,fontSize:16,color:colors.ink},filters:{flexDirection:'row',flexWrap:'wrap',gap:8},card:{padding:20,borderRadius:22,backgroundColor:colors.surface,gap:12},title:{fontSize:18,fontWeight:'600',color:colors.ink},body:{fontSize:15,lineHeight:23,color:colors.ink},meta:{fontSize:14,lineHeight:21,color:colors.muted},row:{flexDirection:'row',gap:12,alignItems:'center'},copy:{flex:1,gap:5},initial:{width:46,height:46,borderRadius:23,backgroundColor:colors.softBlue,alignItems:'center',justifyContent:'center'},initialText:{fontSize:20,fontWeight:'600',color:colors.primary},actions:{flexDirection:'row',flexWrap:'wrap',gap:10},pagination:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10},backdrop:{flex:1,backgroundColor:colors.photoOverlay},modalScroll:{flexGrow:1,justifyContent:'center',padding:20},modal:{width:'100%',maxWidth:480,alignSelf:'center',backgroundColor:colors.surface,borderRadius:26,padding:24,gap:16},modalTitle:{fontSize:24,fontWeight:'700',color:colors.ink},reason:{minHeight:112,textAlignVertical:'top',backgroundColor:colors.paper}}));

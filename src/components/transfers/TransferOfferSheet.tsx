@@ -1,5 +1,6 @@
-import {useEffect,useState} from 'react';import {Modal,ScrollView,StyleSheet,Text,View} from 'react-native';import {Button,Notice,PageTitle} from '../ui';import {colors} from '../../theme';import type {AssistedListingRow} from '../../assisted/types';
+import {useEffect,useState} from 'react';import {Modal,ScrollView,StyleSheet,Text,View} from 'react-native';import {Button,Notice,PageTitle} from '../ui';import {createThemedStyles} from '../../theme';import type {AssistedListingRow} from '../../assisted/types';
 export function TransferOfferSheet({visible,recipientId,recipientName,items,busy,error,onClose,onOffer}:{visible:boolean;recipientId:string;recipientName:string;items:AssistedListingRow[];busy:boolean;error?:string|null;onClose():void;onOffer():void}){
+  const { styles: s } = useStyles();
  const [confirmed,setConfirmed]=useState(false);useEffect(()=>{setConfirmed(false);},[visible,recipientId]);
  return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><View style={s.shade}><View style={s.sheet}><ScrollView contentContainerStyle={s.content}>
  <PageTitle title="Ofrecer gestión" subtitle={`${items.length} de un máximo de 20 anuncios por lote`}/>
@@ -12,4 +13,4 @@ export function TransferOfferSheet({visible,recipientId,recipientName,items,busy
  <Button label="Enviar solicitud" disabled={!confirmed||!items.length||items.length>20} loading={busy} onPress={onOffer}/><Button label="Volver" secondary disabled={busy} onPress={onClose}/>
  </ScrollView></View></View></Modal>;
 }
-const s=StyleSheet.create({shade:{flex:1,backgroundColor:'#0007',justifyContent:'flex-end',alignItems:'center'},sheet:{width:'100%',maxWidth:660,maxHeight:'92%',backgroundColor:colors.paper,borderTopLeftRadius:28,borderTopRightRadius:28},content:{padding:24,gap:16,paddingBottom:36},label:{color:colors.muted,fontSize:13},title:{color:colors.ink,fontSize:16,fontWeight:'600'},detail:{color:colors.muted,fontSize:14,lineHeight:21},row:{padding:14,backgroundColor:colors.white,borderRadius:16,gap:5}});
+const useStyles = createThemedStyles(colors => StyleSheet.create({shade:{flex:1,backgroundColor:colors.photoOverlay,justifyContent:'flex-end',alignItems:'center'},sheet:{width:'100%',maxWidth:660,maxHeight:'92%',backgroundColor:colors.paper,borderTopLeftRadius:28,borderTopRightRadius:28},content:{padding:24,gap:16,paddingBottom:36},label:{color:colors.muted,fontSize:13},title:{color:colors.ink,fontSize:16,fontWeight:'600'},detail:{color:colors.muted,fontSize:14,lineHeight:21},row:{padding:14,backgroundColor:colors.surface,borderRadius:16,gap:5}}));

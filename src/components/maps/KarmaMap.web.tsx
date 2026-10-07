@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { GeoJSONSource, Map as WebMap, Marker as WebMarker } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { colors } from '../../theme';
+import { createThemedStyles } from '../../theme';
 import type { KarmaMapProps } from './KarmaMap.types';
 import { CUBA_CENTER, CUBA_ZOOM } from './mapConfig';
 import { approximateAreas, coordinatesFromMapPress } from './mapGeometry';
@@ -13,6 +13,7 @@ import { useMapStyle } from './useMapStyle';
 export type { KarmaMapProps, MapMarker } from './KarmaMap.types';
 
 export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM, selectedMarkerId, onMarkerPress, onMapPress, onRegionChange, interactive = true, style, accessibilityLabel = 'Mapa de viviendas de KarmaHouse' }: KarmaMapProps) {
+  const { colors, styles } = useStyles();
   const host = useRef<HTMLDivElement>(null);
   const map = useRef<WebMap | null>(null);
   const markerConstructor = useRef<typeof WebMarker | null>(null);
@@ -96,6 +97,8 @@ export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM,
     const instance = map.current;
     const Marker = markerConstructor.current;
     if (!instance || !Marker || !instance.getSource('karma-approximate-areas')) return;
+    instance.setPaintProperty('karma-approximate-fill', 'fill-color', colors.primary);
+    instance.setPaintProperty('karma-approximate-outline', 'line-color', colors.primary);
     (instance.getSource('karma-approximate-areas') as GeoJSONSource).setData(areas);
     buttons.current.forEach(marker => marker.remove());
     buttons.current = markers.map(marker => {
@@ -108,15 +111,15 @@ export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM,
       if (onMarkerPress) element.setAttribute('aria-pressed', String(selected));
       Object.assign(element.style, {
         boxSizing: 'border-box', minWidth: '44px', minHeight: '44px', padding: '8px 12px', borderRadius: '24px',
-        border: `1.5px solid ${selected ? '#FFFFFF' : '#DCE2E7'}`, background: selected ? colors.primary : colors.white,
-        color: selected ? colors.white : colors.ink, font: marker.label ? '700 13px system-ui, sans-serif' : '700 27px system-ui, sans-serif',
+        border: `1.5px solid ${selected ? colors.onPrimary : colors.border}`, background: selected ? colors.primaryFill : colors.surface,
+        color: selected ? colors.onPrimary : colors.ink, font: marker.label ? '700 13px system-ui, sans-serif' : '700 27px system-ui, sans-serif',
         boxShadow: '0 2px 6px rgba(30, 50, 70, 0.18)', cursor: onMarkerPress ? 'pointer' : 'default', whiteSpace: 'nowrap',
         display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: selected ? '2' : '1',
       });
       element.addEventListener('click', event => { event.stopPropagation(); callbacks.current.onMarkerPress?.(marker.id); });
       return new Marker({ element, anchor: 'center' }).setLngLat([marker.coordinate.longitude, marker.coordinate.latitude]).addTo(instance);
     });
-  }, [markers, selectedMarkerId, areas, generation, onMarkerPress]);
+  }, [markers, selectedMarkerId, areas, generation, onMarkerPress, colors]);
 
   return <View style={[styles.wrapper, style]}>
     <View style={styles.canvas}>
@@ -128,7 +131,7 @@ export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM,
   </View>;
 }
 
-const styles = StyleSheet.create({
-  wrapper: { minHeight: 180, backgroundColor: '#EAF0F4', overflow: 'hidden', borderRadius: 20, borderWidth: 1, borderColor: colors.border },
+const useStyles = createThemedStyles(colors => StyleSheet.create({
+  wrapper: { minHeight: 180, backgroundColor: colors.softNeutral, overflow: 'hidden', borderRadius: 20, borderWidth: 1, borderColor: colors.border },
   canvas: { flex: 1, overflow: 'hidden' },
-});
+}));

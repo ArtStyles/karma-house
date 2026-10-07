@@ -1,10 +1,11 @@
 import { SelectionField } from '../SelectionField';
 import { StyleSheet, Text, View } from 'react-native';
 import { havanaDateTime } from '../../negotiations/domain';
-import { colors } from '../../theme';
+import { createThemedStyles } from '../../theme';
 
 const pad = (value: number) => String(value).padStart(2,'0');
 export function VisitDateTimeFields({ date, time, disabled, onDate, onTime }: { date: string; time: string; disabled: boolean; onDate(value: string): void; onTime(value: string): void }) {
+  const { styles } = useStyles();
   const today = havanaDateTime().date;
   const [firstYear,firstMonth] = today.split('-').map(Number);
   const months = Array.from({length:7},(_,index) => {
@@ -28,4 +29,4 @@ export function VisitDateTimeFields({ date, time, disabled, onDate, onTime }: { 
     <Text style={styles.hint}>Hora de Cuba · Elige una fecha futura, dentro de los próximos 180 días.</Text>
   </View>;
 }
-const styles=StyleSheet.create({fields:{gap:13},timeRow:{flexDirection:'row',gap:10},timeField:{flex:1,minWidth:0},hint:{fontSize:12,lineHeight:19,color:colors.muted}});
+const useStyles = createThemedStyles(colors => StyleSheet.create({fields:{gap:13},timeRow:{flexDirection:'row',gap:10},timeField:{flex:1,minWidth:0},hint:{fontSize:12,lineHeight:19,color:colors.muted}}));

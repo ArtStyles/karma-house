@@ -3,13 +3,14 @@ import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDime
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SORT_OPTIONS } from '../catalog/sortOptions';
 import type { ListingFilters } from '../domain/listings';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 import { Icon } from './ui';
 
 /** A small menu anchored to the current order; choosing never touches the other filters. */
 export function CatalogSortMenu({ value, onChange, disabled = false }: {
   value: ListingFilters['sort']; onChange(value: ListingFilters['sort']): void; disabled?: boolean;
 }) {
+  const { colors, styles } = useStyles();
   const trigger = useRef<View>(null);
   const [anchor, setAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const { width, height } = useWindowDimensions();
@@ -41,7 +42,7 @@ export function CatalogSortMenu({ value, onChange, disabled = false }: {
       accessibilityState={{ expanded: !!anchor, disabled }} aria-haspopup="menu" disabled={disabled}
       onPress={() => trigger.current?.measureInWindow((x, y, width, height) => setAnchor({ x, y, width, height }))}
       style={({ pressed }) => [styles.trigger, pressed && { opacity: .7 }]}>
-      <Text style={styles.triggerText}>{selected.label}</Text><Icon name={anchor ? 'chevron-up' : 'chevron-down'} size={13} color={colors.primary} />
+      <Text style={styles.triggerText}>{selected.label}</Text><Icon name={anchor ? 'chevron-up' : 'chevron-down'} size={13} color={colors.muted} />
     </Pressable>
     <Modal visible={!!anchor && !disabled} transparent animationType="fade" statusBarTranslucent onRequestClose={close}>
       <View style={styles.overlay}>
@@ -64,14 +65,14 @@ export function CatalogSortMenu({ value, onChange, disabled = false }: {
   </>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   trigger: { flexDirection: 'row', minHeight: 44, gap: 4, alignItems: 'center' },
-  triggerText: { fontSize: 14, color: colors.primary },
-  overlay: { flex: 1, backgroundColor: '#14283D18' },
-  menu: { position: 'absolute', padding: 8, borderRadius: 18, backgroundColor: colors.white, borderWidth: 1, borderColor: '#E1E5EB', boxShadow: '0 6px 24px rgba(20,40,61,0.16)' },
+  triggerText: { fontSize: 13, color: colors.muted },
+  overlay: { flex: 1, backgroundColor: colors.subtleOverlay },
+  menu: { position: 'absolute', padding: 8, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, boxShadow: '0 6px 24px rgba(20,40,61,0.16)' },
   heading: { color: colors.muted, fontSize: 12, fontWeight: '600', paddingHorizontal: 12, paddingVertical: 9 },
   option: { minHeight: 48, paddingHorizontal: 12, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 11 },
   selected: { backgroundColor: colors.softBlue },
   optionText: { flex: 1, fontSize: 15, color: colors.ink },
   selectedText: { color: colors.primary, fontWeight: '600' },
-});
+}));

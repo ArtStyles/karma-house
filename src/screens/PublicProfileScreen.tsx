@@ -8,9 +8,10 @@ import { PropertyCard } from '../components/PropertyCard';
 import { Button, EmptyState, Icon, Notice, PageTitle, type IconName } from '../components/ui';
 import { levelDescription, levelLabel, memberSinceText, PROFILE_NOT_FOUND, responseText } from '../profiles/domain';
 import { usePublicProfile } from '../profiles/usePublicProfile';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 
 export default function PublicProfileScreen() {
+  const { colors, styles } = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
   const auth = useAuth();
   const { profile, avatarUrl, listings, loading, notFound, error, saving, saveError, retry, setVerified } = usePublicProfile(id, { withListings: true });
@@ -77,26 +78,27 @@ export default function PublicProfileScreen() {
 }
 
 function Fact({ icon, text }: { icon: IconName; text: string }) {
+  const { colors, styles } = useStyles();
   return <View style={styles.fact}><Icon name={icon} size={20} color={colors.primary} /><Text style={styles.factText}>{text}</Text></View>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: 900, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 32, gap: 18 },
   loading: { padding: 40 }, gap: { gap: 10 }, muted: { color: colors.muted, fontSize: 14, lineHeight: 21 },
-  identity: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: colors.white, borderRadius: 26, padding: 20 },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: colors.surface, borderRadius: 26, padding: 20 },
   identityCopy: { flex: 1, minWidth: 0, gap: 8, alignItems: 'flex-start' },
   name: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '700', letterSpacing: -.5 },
   verified: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.softGreen, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 5 },
   verifiedText: { color: colors.green, fontSize: 13, fontWeight: '600' },
   level: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.softBlue, borderRadius: 14, paddingHorizontal: 12, minHeight: 32 },
   levelText: { color: colors.primary, fontSize: 13, fontWeight: '600' },
-  facts: { backgroundColor: colors.white, borderRadius: 24, padding: 20, gap: 16 },
+  facts: { backgroundColor: colors.surface, borderRadius: 24, padding: 20, gap: 16 },
   fact: { flexDirection: 'row', alignItems: 'center', gap: 12 }, factText: { flex: 1, color: colors.ink, fontSize: 15, lineHeight: 21 },
   section: { color: colors.ink, fontSize: 17, fontWeight: '600', letterSpacing: -.2, marginTop: 6 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: '2%', rowGap: 24 },
-  backdrop: { flex: 1, backgroundColor: '#00000055', justifyContent: 'center', padding: 16 },
-  sheet: { width: '100%', maxWidth: 460, alignSelf: 'center', backgroundColor: colors.white, borderRadius: 28, padding: 24, gap: 16 },
+  backdrop: { flex: 1, backgroundColor: colors.photoOverlay, justifyContent: 'center', padding: 16 },
+  sheet: { width: '100%', maxWidth: 460, alignSelf: 'center', backgroundColor: colors.surface, borderRadius: 28, padding: 24, gap: 16 },
   sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '700', letterSpacing: -.5 }, sheetText: { color: colors.ink, fontSize: 16, lineHeight: 24 },
   reason: { flexDirection: 'row', alignItems: 'center', gap: 10 }, reasonText: { flex: 1, color: colors.ink, fontSize: 15, lineHeight: 21 },
   input: { minHeight: 96, backgroundColor: colors.paper, borderRadius: 16, padding: 15, fontSize: 16, lineHeight: 23, color: colors.ink, textAlignVertical: 'top' },
-});
+}));

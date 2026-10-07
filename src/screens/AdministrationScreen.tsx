@@ -11,8 +11,9 @@ const entries: {title:string;description:string;icon:IconName;path:'/admin'|'/ad
   {title:'Reportes de mensajes',description:'Revisar las conversaciones denunciadas.',icon:'chatbubbles-outline',path:'/message-reports'},
   {title:'Historial',description:'Consultar las gestiones y sus motivos.',icon:'time-outline',path:'/admin-history'},
 ];
-import {colors} from '../theme';
+import {createThemedStyles} from '../theme';
 export default function AdministrationScreen(){
+  const { colors, styles: s } = useStyles();
   const {isAdmin,isOwner}=useAuth();
   return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView contentContainerStyle={s.content}>
     <PageTitle title="Administración" subtitle="Cuida la comunidad de KarmaHouse." back />
@@ -25,4 +26,4 @@ export default function AdministrationScreen(){
     </>}
   </ScrollView></SafeAreaView>;
 }
-const s=StyleSheet.create({safe:{flex:1,backgroundColor:colors.paper},content:{width:'100%',maxWidth:800,alignSelf:'center',padding:20,gap:20,paddingBottom:36},banner:{backgroundColor:colors.softBlue,padding:20,borderRadius:24,flexDirection:'row',gap:14,alignItems:'center'},copy:{flex:1,minWidth:0,gap:5},title:{color:colors.ink,fontSize:17,fontWeight:'600'},description:{color:colors.muted,fontSize:14,lineHeight:21},cards:{gap:12},card:{backgroundColor:colors.white,padding:18,borderRadius:20,flexDirection:'row',alignItems:'center',gap:14,minHeight:96},icon:{backgroundColor:colors.paper,width:46,height:46,borderRadius:16,alignItems:'center',justifyContent:'center'}});
+const useStyles = createThemedStyles(colors => StyleSheet.create({safe:{flex:1,backgroundColor:colors.paper},content:{width:'100%',maxWidth:800,alignSelf:'center',padding:20,gap:20,paddingBottom:36},banner:{backgroundColor:colors.softBlue,padding:20,borderRadius:24,flexDirection:'row',gap:14,alignItems:'center'},copy:{flex:1,minWidth:0,gap:5},title:{color:colors.ink,fontSize:17,fontWeight:'600'},description:{color:colors.muted,fontSize:14,lineHeight:21},cards:{gap:12},card:{backgroundColor:colors.surface,padding:18,borderRadius:20,flexDirection:'row',alignItems:'center',gap:14,minHeight:96},icon:{backgroundColor:colors.paper,width:46,height:46,borderRadius:16,alignItems:'center',justifyContent:'center'}}));

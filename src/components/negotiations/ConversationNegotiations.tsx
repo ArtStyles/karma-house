@@ -4,7 +4,7 @@ import { useAuth } from '../../auth/AuthProvider';
 import type { Conversation } from '../../messaging/types';
 import type { useNegotiations } from '../../negotiations/useNegotiations';
 import type { Negotiation, NegotiationKind } from '../../negotiations/types';
-import { colors } from '../../theme';
+import { createThemedStyles } from '../../theme';
 import { Button, Icon, Notice } from '../ui';
 import { NegotiationCard } from './NegotiationCard';
 import { NegotiationComposer, type ProposalTarget } from './NegotiationComposer';
@@ -24,6 +24,7 @@ export interface ConversationNegotiationsProps {
 }
 export function ConversationNegotiations(props:ConversationNegotiationsProps){return <ConversationNegotiationsBody key={`${props.userId}:${props.conversation.id}`} {...props}/>}
 function ConversationNegotiationsBody({conversation,userId,store,mutations,request,onClose}:ConversationNegotiationsProps){
+  const { colors, styles } = useStyles();
   const auth=useAuth();
   const drafts=useProposalDrafts();
   const open=request!==null;
@@ -61,4 +62,4 @@ function ConversationNegotiationsBody({conversation,userId,store,mutations,reque
     </NegotiationSheet>
   </>;
 }
-const styles=StyleSheet.create({hidden:{display:'none'},intro:{gap:6},property:{color:colors.ink,fontSize:18,lineHeight:24,fontWeight:'600',letterSpacing:-.3},description:{color:colors.muted,fontSize:13,lineHeight:20},newActions:{flexDirection:'row',flexWrap:'wrap',gap:9},newAction:{flexGrow:1,flexBasis:155},hint:{fontSize:12,lineHeight:18,color:colors.muted},listHeading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:15,marginTop:8},sectionTitle:{fontSize:17,fontWeight:'600',color:colors.ink},link:{fontSize:13,color:colors.primary,paddingVertical:9},loading:{padding:25},empty:{padding:23,borderRadius:23,backgroundColor:colors.white,gap:12,alignItems:'flex-start'},emptyTitle:{fontSize:18,lineHeight:24,fontWeight:'600',color:colors.ink},feedback:{flexDirection:'row',gap:8,alignItems:'center'},feedbackText:{flex:1,color:colors.green,fontSize:13,lineHeight:20}});
+const useStyles = createThemedStyles(colors => StyleSheet.create({hidden:{display:'none'},intro:{gap:6},property:{color:colors.ink,fontSize:18,lineHeight:24,fontWeight:'600',letterSpacing:-.3},description:{color:colors.muted,fontSize:13,lineHeight:20},newActions:{flexDirection:'row',flexWrap:'wrap',gap:9},newAction:{flexGrow:1,flexBasis:155},hint:{fontSize:12,lineHeight:18,color:colors.muted},listHeading:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:15,marginTop:8},sectionTitle:{fontSize:17,fontWeight:'600',color:colors.ink},link:{fontSize:13,color:colors.primary,paddingVertical:9},loading:{padding:25},empty:{padding:23,borderRadius:23,backgroundColor:colors.surface,gap:12,alignItems:'flex-start'},emptyTitle:{fontSize:18,lineHeight:24,fontWeight:'600',color:colors.ink},feedback:{flexDirection:'row',gap:8,alignItems:'center'},feedbackText:{flex:1,color:colors.green,fontSize:13,lineHeight:20}}));

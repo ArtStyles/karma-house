@@ -8,9 +8,10 @@ import { Button, EmptyState, Notice, PageTitle } from '../components/ui';
 import { describeSearch } from '../searches/domain';
 import type { SavedSearch } from '../searches/types';
 import { useSavedSearches } from '../searches/useSavedSearches';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 
 export default function SavedSearchesScreen() {
+  const { colors, styles } = useStyles();
   const auth = useAuth();
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}><View style={styles.shell}>
     <View style={styles.inset}><PageTitle title="Mis alertas" subtitle="Búsquedas guardadas que te avisan" back fallback="/profile" /></View>
@@ -21,6 +22,7 @@ export default function SavedSearchesScreen() {
 }
 
 function SavedSearchesBody() {
+  const { colors, styles } = useStyles();
   const { items, loading, error, saving, refresh, toggle, remove } = useSavedSearches();
   const [deleting, setDeleting] = useState<SavedSearch | null>(null);
   const [failed, setFailed] = useState(false);
@@ -39,7 +41,7 @@ function SavedSearchesBody() {
       : items.map(item => <View key={item.id} style={styles.card}>
         <View style={styles.cardTop}>
           <View style={styles.cardCopy}><Text style={styles.name}>{item.name}</Text><Text style={styles.summary}>{describeSearch(item.filters)}</Text></View>
-          <Switch accessibilityLabel={`Alerta ${item.name}`} accessibilityHint={item.enabled ? 'Pausar avisos' : 'Activar avisos'} value={item.enabled} disabled={saving} onValueChange={() => void toggle(item)} trackColor={{ false: '#DADCE2', true: colors.primary }} thumbColor={colors.white} ios_backgroundColor="#DADCE2" />
+          <Switch accessibilityLabel={`Alerta ${item.name}`} accessibilityHint={item.enabled ? 'Pausar avisos' : 'Activar avisos'} value={item.enabled} disabled={saving} onValueChange={() => void toggle(item)} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.onPrimary} ios_backgroundColor={colors.switchTrack} />
         </View>
         <Text style={[styles.status, !item.enabled && styles.paused]}>{item.enabled ? 'Activa' : 'En pausa'}</Text>
         <View style={styles.actions}>
@@ -54,7 +56,7 @@ function SavedSearchesBody() {
           <Text style={styles.sheetText}>Dejarás de recibir avisos de «{deleting?.name}».</Text>
           {failed && error ? <Notice error>{error}</Notice> : null}
           <Pressable accessibilityRole="button" disabled={saving} onPress={() => void confirmDelete()} style={({ pressed }) => [styles.dangerFilled, (pressed || saving) && { opacity: .7 }]}>
-            {saving ? <ActivityIndicator color={colors.white} /> : <Text style={styles.dangerFilledText}>{failed ? 'Reintentar' : 'Borrar'}</Text>}
+            {saving ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.dangerFilledText}>{failed ? 'Reintentar' : 'Borrar'}</Text>}
           </Pressable>
           <Button label="Cancelar" secondary disabled={saving} onPress={() => setDeleting(null)} />
         </View>
@@ -63,15 +65,15 @@ function SavedSearchesBody() {
   </ScrollView>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, shell: { flex: 1, width: '100%', maxWidth: 740, alignSelf: 'center' }, inset: { paddingHorizontal: 20 },
   list: { paddingHorizontal: 20, paddingBottom: 28, gap: 12, flexGrow: 1 }, loading: { padding: 40 }, error: { gap: 8 },
-  card: { backgroundColor: colors.white, borderWidth: 1, borderColor: '#E5ECF5', borderRadius: 22, padding: 18, gap: 10 },
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 22, padding: 18, gap: 10 },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 }, cardCopy: { flex: 1, gap: 4 },
   name: { color: colors.ink, fontSize: 17, lineHeight: 23, fontWeight: '600' }, summary: { color: colors.muted, fontSize: 13, lineHeight: 19 },
   status: { color: colors.green, fontSize: 12, fontWeight: '600' }, paused: { color: colors.muted },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 }, action: { flexGrow: 1, flexBasis: 140 },
-  backdrop: { flex: 1, backgroundColor: '#00000055', justifyContent: 'center', padding: 16 }, sheet: { width: '100%', maxWidth: 460, alignSelf: 'center', backgroundColor: colors.white, borderRadius: 28, padding: 24, gap: 16 },
+  backdrop: { flex: 1, backgroundColor: colors.photoOverlay, justifyContent: 'center', padding: 16 }, sheet: { width: '100%', maxWidth: 460, alignSelf: 'center', backgroundColor: colors.surface, borderRadius: 28, padding: 24, gap: 16 },
   sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '700', letterSpacing: -.5 }, sheetText: { color: colors.ink, fontSize: 16, lineHeight: 24 },
-  dangerFilled: { minHeight: 52, borderRadius: 18, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 }, dangerFilledText: { color: colors.white, fontSize: 16, fontWeight: '600' },
-});
+  dangerFilled: { minHeight: 52, borderRadius: 18, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 }, dangerFilledText: { color: colors.onPrimary, fontSize: 16, fontWeight: '600' },
+}));

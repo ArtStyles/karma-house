@@ -1,7 +1,7 @@
 import { Image, Platform, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import type { Listing } from '../domain/listings';
 import { useDataSaverState } from '../settings/useDataSaver';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 import { Icon } from './ui';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
@@ -22,6 +22,7 @@ const subscribe = (listener: () => void) => { listeners.add(listener); return ()
 export function PropertyImage({ listing, style, photoIndex = 0, variant = 'full', eager = false, onReveal }: {
   listing: Pick<Listing, 'id' | 'photoUri' | 'imageKey' | 'title' | 'owner' | 'photos' | 'coverThumb'>; style?: StyleProp<ViewStyle>; photoIndex?: number; variant?: 'thumb' | 'full'; eager?: boolean; onReveal?: () => void;
 }) {
+  const { colors, styles } = useStyles();
   const [failed, setFailed] = useState(false);
   const full = listing.photos?.[photoIndex]?.uri || (photoIndex === 0 ? listing.photoUri : undefined);
   const thumb = photoIndex === 0 ? listing.coverThumb?.uri : undefined;
@@ -41,9 +42,9 @@ export function PropertyImage({ listing, style, photoIndex = 0, variant = 'full'
     </Pressable>
     : failed || !source ? <View style={styles.placeholder} accessibilityLabel={failed ? 'No se pudo cargar la fotografía' : 'Sin fotografía disponible'}><Icon name="image-outline" size={32} color={colors.muted} /><Text style={styles.placeholderText}>{failed ? 'Foto no disponible' : 'Sin fotografía'}</Text></View> : <Image key={uri || listing.imageKey} source={source} accessibilityLabel={`${listing.title}${listing.photos && listing.photos.length > 1 ? `, foto ${photoIndex + 1}` : ''}`} style={styles.image} resizeMode="cover" onError={() => setFailed(true)} />}</View>;
 }
-const styles = StyleSheet.create({
-  container: { backgroundColor: '#E5E9E3', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+const useStyles = createThemedStyles(colors => StyleSheet.create({
+  container: { backgroundColor: colors.softNeutral, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   image: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
   placeholder: { alignItems: 'center', gap: 7, padding: 4 }, placeholderText: { fontSize: 11, textAlign: 'center', color: colors.muted },
   tap: { alignSelf: 'stretch', flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 6, padding: 4 },
-});
+}));

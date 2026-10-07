@@ -20,7 +20,7 @@ import {
   type DraftValidation,
   type ListingDraft,
 } from '../domain/listings';
-import { colors, formatMoney, layout, typefaces } from '../theme';
+import { createThemedStyles, formatMoney, layout, typefaces } from '../theme';
 import { createDraftPersistence, draftToken, hasDraftVersionConflict, restoreDraft } from '../domain/draftPersistence';
 import { draftStorage } from '../data/draftStorage';
 import { ListingPhotos } from './ListingPhotos';
@@ -96,6 +96,7 @@ export function ListingForm({
   directPublication = false,
   draftStorageKey,
 }: ListingFormProps) {
+  const { colors, styles } = useStyles();
   const [draft, setDraft] = useState<ListingDraft>(() => ({ ...cloneDraft(initialDraft ?? emptyDraft), clientRequestId: initialDraft?.clientRequestId ?? draftToken() }));
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<DraftErrors>({});
@@ -335,7 +336,7 @@ export function ListingForm({
               <View key={label} style={styles.stepItem}>
                 <View style={[styles.stepDot, index <= step && styles.stepDotActive]}>
                   {index < step ? (
-                    <Icon name="checkmark" size={12} color={colors.white} />
+                    <Icon name="checkmark" size={12} color={colors.onPrimary} />
                   ) : (
                     <Text style={[styles.stepNumber, index <= step && styles.stepNumberActive]}>
                       {index + 1}
@@ -707,6 +708,7 @@ function Field({ label, error, required = false, inputStyle, ...props }: TextInp
   required?: boolean;
   inputStyle?: TextInputProps['style'];
 }) {
+  const { colors, styles } = useStyles();
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.label}>
@@ -725,6 +727,7 @@ function Field({ label, error, required = false, inputStyle, ...props }: TextInp
 }
 
 function ChoiceField({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+  const { styles } = useStyles();
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.label}>{label}</Text>
@@ -735,6 +738,7 @@ function ChoiceField({ label, error, children }: { label: string; error?: string
 }
 
 function FieldError({ message }: { message: string }) {
+  const { colors, styles } = useStyles();
   return (
     <View accessibilityRole="alert" style={styles.errorRow}>
       <Icon name="alert-circle-outline" size={15} color={colors.danger} />
@@ -744,6 +748,7 @@ function FieldError({ message }: { message: string }) {
 }
 
 function SectionHeading({ title, description }: { title: string; description: string }) {
+  const { styles } = useStyles();
   return (
     <View style={styles.sectionHeading}>
       <Text accessibilityRole="header" style={styles.sectionTitle}>{title}</Text>
@@ -753,6 +758,7 @@ function SectionHeading({ title, description }: { title: string; description: st
 }
 
 function Fact({ icon, value }: { icon: Parameters<typeof Icon>[0]['name']; value: string }) {
+  const { colors, styles } = useStyles();
   return (
     <View style={styles.fact}>
       <Icon name={icon} size={18} color={colors.muted} />
@@ -769,23 +775,23 @@ function readError(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.trim() ? error.message : fallback;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   flex: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: layout.tabContentBottom },
   formShell: { width: '100%', maxWidth: 680, alignSelf: 'center', gap: 20 },
-  steps: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 8, borderRadius: 16, backgroundColor: colors.white },
+  steps: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 8, borderRadius: 16, backgroundColor: colors.surface },
   stepItem: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7 },
   stepDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
-  stepDotActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  stepDotActive: { backgroundColor: colors.primaryFill, borderColor: colors.primary },
   stepNumber: { color: colors.muted, fontSize: 11, fontWeight: '600' },
-  stepNumberActive: { color: colors.white },
+  stepNumberActive: { color: colors.onPrimary },
   stepLabel: { color: colors.muted, fontSize: 13 },
   stepLabelActive: { color: colors.ink, fontWeight: '600' },
   section: { gap: 16 },
   sectionHeading: { gap: 6, paddingTop: 4, paddingBottom: 2 },
   sectionTitle: { color: colors.ink, fontFamily: typefaces.display, fontSize: 26, fontWeight: '600', lineHeight: 32, letterSpacing: -0.6 },
   sectionDescription: { color: colors.muted, fontSize: 15, lineHeight: 21, maxWidth: 560 },
-  fieldCard: { backgroundColor: colors.white, borderRadius: 20, padding: 16, gap: 20 },
+  fieldCard: { backgroundColor: colors.surface, borderRadius: 20, padding: 16, gap: 20 },
   fieldGroup: { gap: 7 },
   previewGroup: { gap: 6 },
   publishNote: { color: colors.muted, fontSize: 12, lineHeight: 18 },
@@ -793,10 +799,10 @@ const styles = StyleSheet.create({
   label: { color: colors.muted, fontSize: 13, fontWeight: '500' },
   required: { color: colors.muted },
   helper: { color: colors.muted, fontSize: 13 },
-  input: { minHeight: 44, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, backgroundColor: colors.white, color: colors.ink, paddingHorizontal: 0, paddingTop: 6, paddingBottom: 11, fontSize: 17, lineHeight: 23 },
-  inputError: { borderBottomColor: colors.danger, backgroundColor: '#FFF9F9' },
+  input: { minHeight: 44, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, backgroundColor: colors.surface, color: colors.ink, paddingHorizontal: 0, paddingTop: 6, paddingBottom: 11, fontSize: 17, lineHeight: 23 },
+  inputError: { borderBottomColor: colors.danger, backgroundColor: colors.softDanger },
   descriptionInput: { minHeight: 132, paddingTop: 8 },
-  fieldHint: { flexShrink: 1, color: colors.muted, fontSize: 12, lineHeight: 18 }, descriptionHelp: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: '#F1F6FC', borderRadius: 13, padding: 12 }, characterCount: { color: colors.muted, fontSize: 11, textAlign: 'right', marginTop: -12 },
+  fieldHint: { flexShrink: 1, color: colors.muted, fontSize: 12, lineHeight: 18 }, descriptionHelp: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: colors.softBlue, borderRadius: 13, padding: 12 }, characterCount: { color: colors.muted, fontSize: 11, textAlign: 'right', marginTop: -12 },
   errorRow: { flexDirection: 'row', gap: 6, alignItems: 'flex-start' },
   errorText: { color: colors.danger, fontSize: 13, lineHeight: 18, flex: 1 },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -812,8 +818,8 @@ const styles = StyleSheet.create({
   photoActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   photoButton: { flexGrow: 1, minWidth: 145 },
   reviewPhoto: { width: '100%', aspectRatio: 16 / 9, borderRadius: 20, backgroundColor: colors.paper },
-  reviewPhotoPlaceholder: { minHeight: 150, borderRadius: 20, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  reviewCard: { backgroundColor: colors.white, borderRadius: 20, padding: 20, gap: 10 },
+  reviewPhotoPlaceholder: { minHeight: 150, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  reviewCard: { backgroundColor: colors.surface, borderRadius: 20, padding: 20, gap: 10 },
   reviewTitle: { color: colors.ink, fontFamily: typefaces.display, fontSize: 24, fontWeight: '600', lineHeight: 30, letterSpacing: -0.4 },
   reviewLocation: { color: colors.muted, fontSize: 15 },
   reviewPrice: { color: colors.ink, fontSize: 24, fontWeight: '600', marginTop: 4 },
@@ -834,8 +840,8 @@ const styles = StyleSheet.create({
   operationText: { fontSize: 14, color: colors.muted },
   operationTag: { color: colors.primary, fontSize: 15, fontWeight: '600' },
   importOffer: { gap: 10, paddingTop: 4 },
-  importNotice: { backgroundColor: colors.white, borderRadius: 20, paddingHorizontal: 16, paddingBottom: 16, gap: 4 },
+  importNotice: { backgroundColor: colors.surface, borderRadius: 20, paddingHorizontal: 16, paddingBottom: 16, gap: 4 },
   demoNote: { color: colors.muted, fontSize: 13, lineHeight: 18, textAlign: 'center', paddingHorizontal: 12 },
-});
+}));
 
 export default ListingForm;

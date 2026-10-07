@@ -10,9 +10,10 @@ import { notificationErrorMessage } from '../notifications/domain';
 import { reconcileNotificationPreferenceDraft, sameNotificationChoices } from '../notifications/preferenceDraft';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import type { NotificationPreferences } from '../notifications/types';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 
 export default function NotificationSettingsScreen() {
+  const { colors, styles } = useStyles();
   const auth = useAuth();
   const store = useNotifications();
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
@@ -27,6 +28,7 @@ export default function NotificationSettingsScreen() {
 }
 
 function PreferencesBody({ userId }: { userId: string }) {
+  const { colors, styles } = useStyles();
   const store = useNotifications();
   const active = useMessagingActivity();
   const { loadPreferences } = store;
@@ -39,6 +41,7 @@ function PreferencesBody({ userId }: { userId: string }) {
 }
 
 function PreferencesForm({ userId, preferences }: { userId: string; preferences: NotificationPreferences }) {
+  const { colors, styles } = useStyles();
   const store = useNotifications();
   const [draft, setDraft] = useState(preferences);
   const [saved, setSaved] = useState(false);
@@ -96,14 +99,15 @@ function PreferencesForm({ userId, preferences }: { userId: string; preferences:
 function PreferenceRow({ label, description, icon, value, disabled, onChange, last = false }: {
   label: string; description: string; icon: IconName; value: boolean; disabled: boolean; onChange(value: boolean): void; last?: boolean;
 }) {
+  const { colors, styles } = useStyles();
   return <View style={[styles.row, !last && styles.rowBorder]}>
-    <View style={styles.rowTop}><View style={styles.rowIcon}><Icon name={icon} color={colors.primary} size={20} /></View><Text style={styles.rowTitle}>{label}</Text><Switch accessibilityLabel={`Avisos de ${label.toLowerCase()}`} accessibilityHint={description} value={value} disabled={disabled} onValueChange={onChange} trackColor={{ false: '#DADCE2', true: colors.primary }} thumbColor={colors.white} ios_backgroundColor="#DADCE2" /></View>
+    <View style={styles.rowTop}><View style={styles.rowIcon}><Icon name={icon} color={colors.primary} size={20} /></View><Text style={styles.rowTitle}>{label}</Text><Switch accessibilityLabel={`Avisos de ${label.toLowerCase()}`} accessibilityHint={description} value={value} disabled={disabled} onValueChange={onChange} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.onPrimary} ios_backgroundColor={colors.switchTrack} /></View>
     <Text style={styles.rowDescription}>{description}</Text>
   </View>;
 }
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 36 }, loading: { padding: 40 }, form: { gap: 18 },
   groupLabel: { color: colors.ink, fontSize: 15, fontWeight: '600', letterSpacing: -0.2, marginBottom: -6, paddingHorizontal: 3 },
-  card: { backgroundColor: colors.white, borderWidth: 1, borderColor: '#E5ECF5', borderRadius: 24, paddingHorizontal: 18 }, row: { paddingVertical: 19, gap: 10 }, rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, rowTop: { flexDirection: 'row', alignItems: 'center', gap: 10 }, rowIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' }, rowTitle: { flex: 1, minWidth: 0, fontSize: 16, fontWeight: '600', color: colors.ink }, rowDescription: { color: colors.muted, fontSize: 13, lineHeight: 20 }, footnote: { color: colors.muted, fontSize: 12, lineHeight: 19, paddingHorizontal: 3 },
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 24, paddingHorizontal: 18 }, row: { paddingVertical: 19, gap: 10 }, rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, rowTop: { flexDirection: 'row', alignItems: 'center', gap: 10 }, rowIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' }, rowTitle: { flex: 1, minWidth: 0, fontSize: 16, fontWeight: '600', color: colors.ink }, rowDescription: { color: colors.muted, fontSize: 13, lineHeight: 20 }, footnote: { color: colors.muted, fontSize: 12, lineHeight: 19, paddingHorizontal: 3 },
   success: { flexDirection: 'row', alignItems: 'center', gap: 8 }, successText: { flex: 1, color: colors.green, fontSize: 14, lineHeight: 21 },
-});
+}));

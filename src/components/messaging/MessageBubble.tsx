@@ -1,12 +1,13 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ChatMessage, PendingMessage } from '../../messaging/types';
-import { colors } from '../../theme';
+import { createThemedStyles } from '../../theme';
 import { Icon } from '../ui';
 
 export type MessageRow = { key: string; message: ChatMessage; pending?: never } | { key: string; pending: PendingMessage; message?: never };
 
 /** `showStatus` marks the latest own message; pending and failed ones always show their state. */
 export function MessageBubble({ row, own, showStatus = false, canRetry, busy, onRetry, onDiscard }: { row: MessageRow; own: boolean; showStatus?: boolean; canRetry: boolean; busy: boolean; onRetry: () => void; onDiscard: () => void }) {
+  const { colors, styles } = useStyles();
   const item = row.message ?? row.pending;
   const failed = row.pending?.status === 'failed';
   return <View style={[styles.row, own && styles.ownRow]}>
@@ -31,14 +32,14 @@ export function MessageBubble({ row, own, showStatus = false, canRetry, busy, on
   </View>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   row: { alignItems: 'flex-start', paddingVertical: 5 }, ownRow: { alignItems: 'flex-end' },
-  bubble: { maxWidth: '87%', paddingHorizontal: 15, paddingTop: 11, paddingBottom: 8, borderRadius: 20, borderBottomLeftRadius: 6, backgroundColor: colors.white },
-  ownBubble: { backgroundColor: colors.primary, borderBottomLeftRadius: 20, borderBottomRightRadius: 6 },
-  failedBubble: { backgroundColor: '#375D88' }, body: { color: colors.ink, fontSize: 16, lineHeight: 23 }, ownBody: { color: colors.white },
+  bubble: { maxWidth: '87%', paddingHorizontal: 15, paddingTop: 11, paddingBottom: 8, borderRadius: 20, borderBottomLeftRadius: 6, backgroundColor: colors.surface },
+  ownBubble: { backgroundColor: colors.primaryFill, borderBottomLeftRadius: 20, borderBottomRightRadius: 6 },
+  failedBubble: { backgroundColor: colors.primaryFill }, body: { color: colors.ink, fontSize: 16, lineHeight: 23 }, ownBody: { color: colors.onPrimary },
   metadata: { flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 7, marginTop: 5 },
-  time: { fontSize: 12, lineHeight: 16, color: colors.muted }, ownTime: { color: '#E0EEFF' },
+  time: { fontSize: 12, lineHeight: 16, color: colors.muted }, ownTime: { color: colors.onPrimaryMuted },
   failure: { maxWidth: '90%', alignItems: 'flex-end', paddingTop: 5 }, error: { color: colors.danger, fontSize: 12, lineHeight: 17 },
   actions: { flexDirection: 'row', gap: 16 }, action: { minHeight: 44, flexDirection: 'row', gap: 5, alignItems: 'center', paddingHorizontal: 2 },
   actionText: { color: colors.primary, fontWeight: '600', fontSize: 13 }, discardText: { color: colors.muted, fontSize: 13 }, dimmed: { opacity: 0.45 },
-});
+}));

@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Modal, ScrollView, StyleSheet, Text, TextInput, V
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createMessageId } from '../../messaging/domain';
 import type { ReportReason } from '../../messaging/types';
-import { colors } from '../../theme';
+import { createThemedStyles } from '../../theme';
 import { Button, Icon, Notice, Pill } from '../ui';
 
 const chatReasons: { value: ReportReason; label: string }[] = [
@@ -21,6 +21,7 @@ export function ReportConversationSheet<R extends string = ReportReason>({ visib
   reasons = chatReasons as { value: R; label: string }[], title = 'Reportar conversación',
   description = 'Cuéntanos qué ocurre. El reporte incluirá los mensajes recientes para que podamos revisarlo.',
   confirmation = 'El equipo de KarmaHouse podrá revisar tu reporte y los mensajes recientes de esta conversación.' }: SheetProps<R>) {
+  const { colors, styles } = useStyles();
   const [reason, setReason] = useState<R>(reasons[0].value);
   const [details, setDetails] = useState('');
   const [busy, setBusy] = useState(false);
@@ -76,11 +77,11 @@ export function ReportConversationSheet<R extends string = ReportReason>({ visib
   </Modal>;
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: '#17233170', justifyContent: 'center', paddingHorizontal: 16 },
-  sheet: { backgroundColor: colors.white, width: '100%', maxWidth: 520, maxHeight: '100%', alignSelf: 'center', borderRadius: 28, overflow: 'hidden' },
+const useStyles = createThemedStyles(colors => StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', paddingHorizontal: 16 },
+  sheet: { backgroundColor: colors.surface, width: '100%', maxWidth: 520, maxHeight: '100%', alignSelf: 'center', borderRadius: 28, overflow: 'hidden' },
   content: { padding: 24, gap: 14 }, icon: { width: 54, height: 54, borderRadius: 20, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 25, fontWeight: '600', letterSpacing: -0.5, color: colors.ink }, description: { fontSize: 15, lineHeight: 22, color: colors.muted },
   reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, backgroundColor: colors.paper, borderRadius: 18, padding: 7 }, label: { fontSize: 13, fontWeight: '500', color: colors.muted },
   input: { minHeight: 100, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 14, fontSize: 15, lineHeight: 22, color: colors.ink }, counter: { color: colors.muted, fontSize: 11, textAlign: 'right', marginTop: -6 },
-});
+}));

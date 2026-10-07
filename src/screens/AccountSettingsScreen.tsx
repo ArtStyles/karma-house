@@ -8,16 +8,19 @@ import { pickAccountAvatar, type PreparedAvatar } from '../auth/prepareAvatar';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { UserAvatar } from '../components/account/UserAvatar';
+import { AppearanceSettings } from '../components/AppearanceSettings';
 import { Button, EmptyState, Icon, Notice, PageTitle } from '../components/ui';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 
 export default function AccountSettingsScreen() {
+  const { colors, styles } = useStyles();
   const auth = useAuth();
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <PageTitle title="Ajustes de cuenta" back />
+        <AppearanceSettings />
         {!isSupabaseConfigured ? <EmptyState icon="person-outline" title="Tu perfil, a tu manera" description="La foto y el nombre de tu cuenta estarán disponibles con el servicio conectado." /> : !auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : !auth.user ? <AccountPrompt returnTo="/account-settings" title="Tu perfil, a tu manera" description="Inicia sesión para personalizar el nombre y la foto de tu cuenta." /> : !auth.profileReady ? <View style={styles.card}><Notice error={!!auth.error}>{auth.error || 'Cargando tu perfil…'}</Notice><Button label="Volver a cargar perfil" secondary onPress={() => void auth.refreshProfile()} /></View> : <AccountSettingsForm key={auth.user.id} ownerId={auth.user.id} />}
       </ScrollView>
     </KeyboardAvoidingView>
@@ -25,6 +28,7 @@ export default function AccountSettingsScreen() {
 }
 
 function AccountSettingsForm({ ownerId }: { ownerId: string }) {
+  const { colors, styles } = useStyles();
   const auth = useAuth();
   const [name, setName] = useState(auth.displayName);
   const [avatar, setAvatar] = useState<PreparedAvatar | null | undefined>(undefined);
@@ -97,6 +101,7 @@ function AccountSettingsForm({ ownerId }: { ownerId: string }) {
 }
 
 function DeleteAccountSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { colors, styles } = useStyles();
   const auth = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -115,24 +120,24 @@ function DeleteAccountSheet({ visible, onClose }: { visible: boolean; onClose: (
         <Text style={styles.description}>Los reportes enviados a moderación se conservan sin tus datos de cuenta.</Text>
         {error ? <Notice error>{error}</Notice> : null}
         <Pressable accessibilityRole="button" disabled={busy} onPress={() => void confirm()} style={({ pressed }) => [styles.dangerFilled, (pressed || busy) && { opacity: .7 }]}>
-          {busy ? <ActivityIndicator color={colors.white} /> : <Text style={styles.dangerFilledText}>{error ? 'Reintentar eliminación' : 'Eliminar definitivamente'}</Text>}
+          {busy ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.dangerFilledText}>{error ? 'Reintentar eliminación' : 'Eliminar definitivamente'}</Text>}
         </Pressable>
         <Button label="Cancelar" secondary disabled={busy} onPress={onClose} />
       </View>
     </View>
   </Modal>;
 }
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 }, content: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 36 }, loading: { padding: 40 },
-  form: { gap: 18 }, card: { backgroundColor: colors.white, borderWidth: 1, borderColor: '#E5ECF5', borderRadius: 25, padding: 22, gap: 22 }, photoCard: { backgroundColor: '#EFF5FD', alignItems: 'center', gap: 17 },
-  avatarFrame: { position: 'relative' }, photoAccent: { position: 'absolute', bottom: 0, right: -3, width: 32, height: 32, borderRadius: 16, backgroundColor: colors.white, borderWidth: 2, borderColor: '#EFF5FD', alignItems: 'center', justifyContent: 'center' },
+  form: { gap: 18 }, card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 25, padding: 22, gap: 22 }, photoCard: { backgroundColor: colors.softBlue, alignItems: 'center', gap: 17 },
+  avatarFrame: { position: 'relative' }, photoAccent: { position: 'absolute', bottom: 0, right: -3, width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
   photoCopy: { alignItems: 'center', gap: 7, maxWidth: 360 }, cardTitle: { color: colors.ink, fontSize: 19, lineHeight: 25, fontWeight: '600', letterSpacing: -0.35 }, description: { color: colors.muted, fontSize: 13, lineHeight: 20 },
-  photoActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: '100%' }, photoButton: { flexGrow: 1, flexBasis: 140 }, privacy: { color: '#526B89', fontSize: 11, lineHeight: 17, textAlign: 'center' },
+  photoActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: '100%' }, photoButton: { flexGrow: 1, flexBasis: 140 }, privacy: { color: colors.mutedBlue, fontSize: 11, lineHeight: 17, textAlign: 'center' },
   field: { gap: 8 }, label: { color: colors.muted, fontSize: 13, fontWeight: '500' }, input: { minHeight: 48, paddingVertical: 8, color: colors.ink, fontSize: 17, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, email: { color: colors.ink, fontSize: 16, lineHeight: 23 },
   links: { gap: 14 }, link: { color: colors.primary, fontSize: 16, fontWeight: '500', minHeight: 24 },
   danger: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }, dangerText: { color: colors.danger, fontSize: 16, fontWeight: '600' },
-  backdrop: { flex: 1, backgroundColor: '#00000055', justifyContent: 'center', padding: 16 }, sheet: { width: '100%', maxWidth: 460, alignSelf: 'center', backgroundColor: colors.white, borderRadius: 28, padding: 24, gap: 16 },
+  backdrop: { flex: 1, backgroundColor: colors.photoOverlay, justifyContent: 'center', padding: 16 }, sheet: { width: '100%', maxWidth: 460, alignSelf: 'center', backgroundColor: colors.surface, borderRadius: 28, padding: 24, gap: 16 },
   sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '700', letterSpacing: -.5 }, sheetText: { color: colors.ink, fontSize: 16, lineHeight: 24 },
-  dangerFilled: { minHeight: 52, borderRadius: 18, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 }, dangerFilledText: { color: colors.white, fontSize: 16, fontWeight: '600' },
+  dangerFilled: { minHeight: 52, borderRadius: 18, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 }, dangerFilledText: { color: colors.onPrimary, fontSize: 16, fontWeight: '600' },
   success: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingHorizontal: 4 }, successText: { color: colors.green, fontSize: 14, fontWeight: '500' },
-});
+}));

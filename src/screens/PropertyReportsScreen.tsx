@@ -7,12 +7,13 @@ import { AccountPrompt } from '../components/AccountPrompt';
 import { Button, EmptyState, Icon, Notice, PageTitle, Pill } from '../components/ui';
 import { createPropertyReportRepository, PROPERTY_REPORT_REASONS, type PropertyReport } from '../data/propertyReports';
 import { supabase } from '../lib/supabase';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 
 const reasonLabel = (reason: PropertyReport['reason']) => PROPERTY_REPORT_REASONS.find(item => item.value === reason)?.label ?? reason;
 const dateLabel = (value: string) => new Date(value).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 export default function PropertyReportsScreen() {
+  const { colors, styles } = useStyles();
   const { user, session, isAdmin } = useAuth();
   const owner = isAdmin ? user?.id ?? '' : '';
   const repository = useMemo(() => supabase && owner && session?.access_token ? createPropertyReportRepository(supabase, { actorId: owner, accessToken: session.access_token }) : null, [owner, session?.access_token]);
@@ -103,14 +104,14 @@ export default function PropertyReportsScreen() {
   </SafeAreaView>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: 28, gap: 14 },
   filters: { flexDirection: 'row', gap: 10 }, meta: { color: colors.muted, fontSize: 13, lineHeight: 20 },
-  card: { backgroundColor: colors.white, borderRadius: 24, padding: 20, gap: 14 }, row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  card: { backgroundColor: colors.surface, borderRadius: 24, padding: 20, gap: 14 }, row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   flag: { width: 44, height: 44, backgroundColor: colors.softBlue, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 18, fontWeight: '600', color: colors.ink }, property: { fontSize: 16, fontWeight: '600', lineHeight: 23, color: colors.ink },
   body: { fontSize: 15, lineHeight: 23, color: colors.ink }, label: { fontSize: 14, lineHeight: 20, color: colors.ink, fontWeight: '600' },
-  backdrop: { flex: 1, backgroundColor: '#00000055', padding: 16, justifyContent: 'center' }, modal: { width: '100%', maxWidth: 580, maxHeight: '94%', alignSelf: 'center', backgroundColor: colors.white, borderRadius: 28, overflow: 'hidden' },
+  backdrop: { flex: 1, backgroundColor: colors.photoOverlay, padding: 16, justifyContent: 'center' }, modal: { width: '100%', maxWidth: 580, maxHeight: '94%', alignSelf: 'center', backgroundColor: colors.surface, borderRadius: 28, overflow: 'hidden' },
   modalContent: { padding: 22, gap: 16 }, modalTitle: { fontSize: 26, lineHeight: 32, fontWeight: '700', letterSpacing: -.6, color: colors.ink },
   input: { minHeight: 100, borderRadius: 16, padding: 14, backgroundColor: colors.paper, color: colors.ink, fontSize: 15, lineHeight: 23, textAlignVertical: 'top' },
-});
+}));

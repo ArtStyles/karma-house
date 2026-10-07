@@ -3,11 +3,11 @@
     "name": "KarmaHouse",
     "slug": "karma-house",
     "owner": "artstyless-team",
-    "version": "0.1.16",
+    "version": "0.1.19",
     "scheme": "karmahouse",
     "orientation": "portrait",
     "icon": "./assets/karmahouse-icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.karmahouse.app"
@@ -15,7 +15,7 @@
     "android": {
       "package": "com.karmahouse.karmahouse",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 17,
+      "versionCode": 20,
       "adaptiveIcon": {
         "backgroundColor": "#0153A8",
         "foregroundImage": "./assets/karmahouse-icon.png"
@@ -63,7 +63,10 @@
           "image": "./assets/karmahouse-mark.png",
           "imageWidth": 96,
           "resizeMode": "contain",
-          "backgroundColor": "#FFFFFF"
+          "backgroundColor": "#FFFFFF",
+          "dark": {
+            "backgroundColor": "#10141C"
+          }
         }
       ],
       "expo-font",

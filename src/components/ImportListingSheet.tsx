@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { parseListingText, type ImportResult } from '../domain/importListing';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 import { Button, Icon } from './ui';
 
 const MAX_LENGTH = 4000;
@@ -10,6 +10,7 @@ const MIN_LENGTH = 20;
 
 /** Mounted only while open. The text is pasted with the system gesture; there is no clipboard button. */
 export function ImportListingSheet({ onClose, onImport }: { onClose(): void; onImport(result: ImportResult): void }) {
+  const { colors, styles } = useStyles();
   const [text, setText] = useState('');
   const insets = useSafeAreaInsets();
   return <Modal transparent visible animationType="fade" onRequestClose={onClose}>
@@ -32,11 +33,11 @@ export function ImportListingSheet({ onClose, onImport }: { onClose(): void; onI
   </Modal>;
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: '#17233170', justifyContent: 'center', paddingHorizontal: 16 },
-  sheet: { backgroundColor: colors.white, width: '100%', maxWidth: 560, maxHeight: '100%', alignSelf: 'center', borderRadius: 28, overflow: 'hidden' },
+const useStyles = createThemedStyles(colors => StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', paddingHorizontal: 16 },
+  sheet: { backgroundColor: colors.surface, width: '100%', maxWidth: 560, maxHeight: '100%', alignSelf: 'center', borderRadius: 28, overflow: 'hidden' },
   content: { padding: 24, gap: 14 }, icon: { width: 54, height: 54, borderRadius: 20, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 25, fontWeight: '600', letterSpacing: -0.5, color: colors.ink }, description: { fontSize: 15, lineHeight: 22, color: colors.muted },
   input: { minHeight: 200, maxHeight: 360, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 14, fontSize: 16, lineHeight: 22, color: colors.ink },
   counter: { color: colors.muted, fontSize: 11, textAlign: 'right', marginTop: -6 },
-});
+}));

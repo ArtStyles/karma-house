@@ -10,11 +10,12 @@ import type { Listing } from '../domain/listings';
 import { listingFacts, operationBadge, typeLabel } from '../domain/operations';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { remoteErrorMessage, type ReviewDecision } from '../state/remoteMarketplaceStore';
-import { colors, formatMoney } from '../theme';
+import { createThemedStyles, formatMoney } from '../theme';
 
 type Review = { listing: Listing; decision: ReviewDecision; actorId: string };
 
 export default function AdminScreen() {
+  const { colors, styles } = useStyles();
   const { user, isAdmin } = useAuth();
   const { mode, moderationQueue, loadModerationQueue, reviewListing } = useMarketplace();
   const [loading, setLoading] = useState(false);
@@ -117,18 +118,18 @@ export default function AdminScreen() {
   </SafeAreaView>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper },
   content: { width: '100%', maxWidth: 820, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: 28, gap: 10 },
   loader: { marginVertical: 40 }, list: { gap: 20, marginTop: 12 }, count: { color: colors.muted, fontSize: 14, marginLeft: 4 },
-  card: { backgroundColor: colors.white, padding: 20, borderRadius: 24, gap: 10 },
+  card: { backgroundColor: colors.surface, padding: 20, borderRadius: 24, gap: 10 },
   photos: { gap: 10, marginBottom: 8 }, photo: { width: 232, height: 172, borderRadius: 16 },
   title: { color: colors.ink, fontSize: 22, lineHeight: 28, fontWeight: '600', letterSpacing: -.5 },
   price: { color: colors.ink, fontSize: 20, fontWeight: '600' }, meta: { color: colors.muted, fontSize: 14, lineHeight: 21 },
   description: { color: colors.ink, fontSize: 15, lineHeight: 23 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10 }, action: { flex: 1, minWidth: 150 },
-  backdrop: { flex: 1, backgroundColor: '#00000050', justifyContent: 'center', padding: 24 },
-  modal: { backgroundColor: colors.white, borderRadius: 26, padding: 24, gap: 15, width: '100%', maxWidth: 480, alignSelf: 'center' },
+  backdrop: { flex: 1, backgroundColor: colors.photoOverlay, justifyContent: 'center', padding: 24 },
+  modal: { backgroundColor: colors.surface, borderRadius: 26, padding: 24, gap: 15, width: '100%', maxWidth: 480, alignSelf: 'center' },
   modalTitle: { fontSize: 24, fontWeight: '600', letterSpacing: -.5, color: colors.ink }, label: { fontSize: 14, fontWeight: '600', color: colors.ink },
   input: { minHeight: 128, backgroundColor: colors.paper, borderRadius: 16, padding: 15, fontSize: 16, lineHeight: 23, color: colors.ink, textAlignVertical: 'top' },
-});
+}));

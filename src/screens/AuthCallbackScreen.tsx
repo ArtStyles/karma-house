@@ -7,9 +7,10 @@ import { completeAuthCallback } from '../auth/completeCallback';
 import { pendingIntentStore } from '../auth/pendingIntentStorage';
 import { pendingIntentReturnTo } from '../auth/pendingIntent';
 import { Button, Icon, Notice } from '../components/ui';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 
 export default function AuthCallbackScreen() {
+  const { colors, styles } = useStyles();
   const linkingUrl = Linking.useLinkingURL();
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -40,10 +41,10 @@ export default function AuthCallbackScreen() {
   </SafeAreaView>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper, justifyContent: 'center', padding: 24 },
   content: { width: '100%', maxWidth: 420, alignSelf: 'center', gap: 20 },
   symbol: { width: 64, height: 64, borderRadius: 20, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
   title: { color: colors.ink, fontSize: 30, fontWeight: '700', letterSpacing: -.8 },
   copy: { color: colors.muted, fontSize: 16, lineHeight: 24, marginBottom: 12 },
-});
+}));

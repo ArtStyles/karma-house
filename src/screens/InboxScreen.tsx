@@ -8,9 +8,10 @@ import { Button, EmptyState, Icon, Notice, PageTitle } from '../components/ui';
 import { useMessagingActivity } from '../components/messaging/useMessagingActivity';
 import { useMessaging } from '../messaging/MessagingProvider';
 import type { Conversation } from '../messaging/types';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 
 export default function InboxScreen() {
+  const { colors, styles } = useStyles();
   const messaging = useMessaging();
   const auth = useAuth();
   const active = useMessagingActivity();
@@ -48,6 +49,7 @@ export default function InboxScreen() {
 }
 
 function ConversationCard({ conversation: item }: { conversation: Conversation }) {
+  const { colors, styles } = useStyles();
   return <Pressable accessibilityRole="button" accessibilityLabel={`${item.otherName}. ${item.propertyTitle}. ${item.unreadCount ? `${item.unreadCount} mensajes sin leer` : 'Sin mensajes nuevos'}`} onPress={() => router.push(`/messages/${item.id}`)} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
     <View style={styles.icon}><Icon name="home-outline" size={23} color={colors.primary} /></View>
     <View style={styles.copy}>
@@ -64,17 +66,17 @@ function shortDate(value: string) {
   return date.toDateString() === new Date().toDateString() ? date.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) : date.toLocaleDateString('es', { day: 'numeric', month: 'short' });
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, shell: { width: '100%', maxWidth: 800, alignSelf: 'center', flex: 1 }, header: { paddingHorizontal: 20 },
   loading: { padding: 50 }, sync: { paddingHorizontal: 20, paddingBottom: 14 }, list: { paddingHorizontal: 20, paddingBottom: 28, gap: 10, flexGrow: 1 },
-  card: { padding: 16, borderRadius: 22, backgroundColor: colors.white, flexDirection: 'row', gap: 12 }, pressed: { opacity: 0.7 },
+  card: { padding: 16, borderRadius: 22, backgroundColor: colors.surface, flexDirection: 'row', gap: 12 }, pressed: { opacity: 0.7 },
   icon: { width: 48, height: 48, borderRadius: 17, backgroundColor: colors.softBlue, justifyContent: 'center', alignItems: 'center' },
   copy: { flex: 1, gap: 5 }, line: { flexDirection: 'row', alignItems: 'center', gap: 10 }, name: { flex: 1, color: colors.ink, fontSize: 16, fontWeight: '500' }, unreadName: { fontWeight: '700' },
   date: { fontSize: 11, color: colors.muted }, property: { color: colors.primary, fontSize: 12, fontWeight: '500' },
   preview: { flex: 1, color: colors.muted, fontSize: 14, lineHeight: 20 }, unreadPreview: { color: colors.ink },
-  badge: { minWidth: 22, height: 22, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, borderRadius: 11 }, badgeText: { color: colors.white, fontSize: 11, fontWeight: '700' },
+  badge: { minWidth: 22, height: 22, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryFill, borderRadius: 11 }, badgeText: { color: colors.onPrimary, fontSize: 11, fontWeight: '700' },
   blocked: { color: colors.muted, fontSize: 11, marginTop: 3 }, footer: { color: colors.muted, textAlign: 'center', fontSize: 12, lineHeight: 19, padding: 20 },
   requests: { marginHorizontal: 20, marginBottom: 18, padding: 16, borderRadius: 22, backgroundColor: colors.softBlue, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  requestIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: colors.white, justifyContent: 'center', alignItems: 'center' },
+  requestIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' },
   requestTitle: { color: colors.ink, fontSize: 16, fontWeight: '600' }, requestSubtitle: { color: colors.muted, fontSize: 12, lineHeight: 18 },
-});
+}));

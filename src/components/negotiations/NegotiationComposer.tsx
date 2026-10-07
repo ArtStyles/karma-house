@@ -4,7 +4,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { formatNegotiationValue, negotiationErrorMessage, validateCreateNegotiation } from '../../negotiations/domain';
 import type { CreateNegotiationInput, Negotiation } from '../../negotiations/types';
 import type { ProposalDraft, ProposalTarget } from '../../negotiations/proposalDraft';
-import { colors } from '../../theme';
+import { createThemedStyles } from '../../theme';
 import { Button, Icon, Notice } from '../ui';
 import { VisitDateTimeFields } from './VisitDateTimeFields';
 
@@ -14,6 +14,7 @@ export function NegotiationComposer({ target, draft, updateDraft, disabled, disa
   target:ProposalTarget; disabled:boolean; disabledReason?:string; onCreate(input:CreateNegotiationInput):Promise<Negotiation>;
   onRefresh():Promise<void>; onBack():void; onConfirmed():void;
 }) {
+  const { colors, styles } = useStyles();
   const {amount,date,time,note,error,confirmed}=draft;
   const setAmount=(amount:string)=>updateDraft({amount}),setDate=(date:string)=>updateDraft({date}),setTime=(time:string)=>updateDraft({time}),setNote=(note:string)=>updateDraft({note});
   const [busy,setBusy]=useState(false);
@@ -50,4 +51,4 @@ export function NegotiationComposer({ target, draft, updateDraft, disabled, disa
     <Button label="Volver al historial" secondary disabled={busy} onPress={onBack}/>
   </View>;
 }
-const styles=StyleSheet.create({form:{gap:16},title:{color:colors.ink,fontSize:25,lineHeight:31,fontWeight:'600',letterSpacing:-.6},copy:{color:colors.muted,fontSize:14,lineHeight:21},field:{gap:8},label:{color:colors.ink,fontSize:13,fontWeight:'600'},input:{minHeight:53,borderRadius:16,borderWidth:1,borderColor:'#DDE6F1',backgroundColor:'#F8FAFD',paddingHorizontal:14,paddingVertical:13,color:colors.ink,fontSize:17},note:{minHeight:90,fontSize:14,lineHeight:21},help:{color:colors.muted,fontSize:12,lineHeight:19},previous:{padding:15,borderRadius:17,backgroundColor:colors.softBlue,gap:7},previousValue:{color:colors.primary,fontSize:17,lineHeight:24,fontWeight:'500'},successIcon:{backgroundColor:'#EBF7F0',width:55,height:55,borderRadius:19,alignItems:'center',justifyContent:'center'},value:{fontSize:23,lineHeight:30,fontWeight:'600',color:colors.ink}});
+const useStyles = createThemedStyles(colors => StyleSheet.create({form:{gap:16},title:{color:colors.ink,fontSize:25,lineHeight:31,fontWeight:'600',letterSpacing:-.6},copy:{color:colors.muted,fontSize:14,lineHeight:21},field:{gap:8},label:{color:colors.ink,fontSize:13,fontWeight:'600'},input:{minHeight:53,borderRadius:16,borderWidth:1,borderColor:colors.border,backgroundColor:colors.paper,paddingHorizontal:14,paddingVertical:13,color:colors.ink,fontSize:17},note:{minHeight:90,fontSize:14,lineHeight:21},help:{color:colors.muted,fontSize:12,lineHeight:19},previous:{padding:15,borderRadius:17,backgroundColor:colors.softBlue,gap:7},previousValue:{color:colors.primary,fontSize:17,lineHeight:24,fontWeight:'500'},successIcon:{backgroundColor:colors.softGreen,width:55,height:55,borderRadius:19,alignItems:'center',justifyContent:'center'},value:{fontSize:23,lineHeight:30,fontWeight:'600',color:colors.ink}}));

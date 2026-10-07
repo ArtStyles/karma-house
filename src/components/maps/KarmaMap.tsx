@@ -1,7 +1,7 @@
 import { Camera, GeoJSONSource, Layer, Map as NativeMap, Marker } from '@maplibre/maplibre-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../theme';
+import { createThemedStyles } from '../../theme';
 import { Icon } from '../ui';
 import type { KarmaMapProps } from './KarmaMap.types';
 import { CUBA_CENTER, CUBA_ZOOM } from './mapConfig';
@@ -13,6 +13,7 @@ import { useMapStyle } from './useMapStyle';
 export type { KarmaMapProps, MapMarker } from './KarmaMap.types';
 
 export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM, selectedMarkerId, onMarkerPress, onMapPress, onRegionChange, interactive = true, style, accessibilityLabel = 'Mapa de viviendas de KarmaHouse' }: KarmaMapProps) {
+  const { colors, styles } = useStyles();
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const { mapStyle, styleFailed } = useMapStyle(attempt);
@@ -50,7 +51,7 @@ export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM,
             onPress={event => { event.stopPropagation(); onMarkerPress?.(marker.id); }}>
             <View accessible accessibilityRole={onMarkerPress ? 'button' : 'image'} accessibilityLabel={label} accessibilityState={{ selected }}
               onAccessibilityTap={() => onMarkerPress?.(marker.id)} style={[styles.marker, selected && styles.selectedMarker]}>
-              {marker.label ? <Text numberOfLines={1} style={[styles.markerText, selected && styles.selectedText]}>{marker.precision === 'approximate' ? '≈ ' : ''}{marker.label}</Text> : <Icon name="home" size={20} color={selected ? colors.white : colors.primary} />}
+              {marker.label ? <Text numberOfLines={1} style={[styles.markerText, selected && styles.selectedText]}>{marker.precision === 'approximate' ? '≈ ' : ''}{marker.label}</Text> : <Icon name="home" size={20} color={selected ? colors.onPrimary : colors.primary} />}
             </View>
           </Marker>;
         })}
@@ -62,11 +63,11 @@ export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM,
   </View>;
 }
 
-const styles = StyleSheet.create({
-  wrapper: { minHeight: 180, backgroundColor: '#EAF0F4', overflow: 'hidden', borderRadius: 20, borderWidth: 1, borderColor: colors.border },
+const useStyles = createThemedStyles(colors => StyleSheet.create({
+  wrapper: { minHeight: 180, backgroundColor: colors.softNeutral, overflow: 'hidden', borderRadius: 20, borderWidth: 1, borderColor: colors.border },
   canvas: { flex: 1, overflow: 'hidden' },
-  marker: { minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 22, backgroundColor: colors.white, borderWidth: 1.5, borderColor: '#DCE2E7', boxShadow: '0 2px 6px rgba(30, 50, 70, 0.18)' },
-  selectedMarker: { backgroundColor: colors.primary, borderColor: colors.white },
+  marker: { minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 22, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, boxShadow: '0 2px 6px rgba(30, 50, 70, 0.18)' },
+  selectedMarker: { backgroundColor: colors.primaryFill, borderColor: colors.surface },
   markerText: { color: colors.ink, fontSize: 13, fontWeight: '700' },
-  selectedText: { color: colors.white },
-});
+  selectedText: { color: colors.onPrimary },
+}));

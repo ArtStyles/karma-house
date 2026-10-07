@@ -4,11 +4,12 @@ import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../auth/AuthProvider';
 import { useNotifications } from '../../notifications/NotificationsProvider';
-import { colors } from '../../theme';
+import { createThemedStyles } from '../../theme';
 import { Icon, Notice } from '../ui';
 import { UserAvatar } from './UserAvatar';
 
 export function AccountMenu({ size = 44 }: { size?: number }) {
+  const { colors, styles } = useStyles();
   const auth = useAuth();
   const { unreadCount } = useNotifications();
   const trigger = useRef<View>(null);
@@ -70,11 +71,11 @@ export function AccountMenu({ size = 44 }: { size?: number }) {
     </Modal>
   </>;
 }
-const styles = StyleSheet.create({
-  outside: { ...StyleSheet.absoluteFill, backgroundColor: '#142E461A' },
-  menu: { position: 'absolute', backgroundColor: colors.white, padding: 8, borderRadius: 23, borderWidth: 1, borderColor: '#E5ECF5', boxShadow: '0 12px 38px rgba(25, 57, 94, 0.15)', overflow: 'hidden' },
+const useStyles = createThemedStyles(colors => StyleSheet.create({
+  outside: { ...StyleSheet.absoluteFill, backgroundColor: colors.subtleOverlay },
+  menu: { position: 'absolute', backgroundColor: colors.surface, padding: 8, borderRadius: 23, borderWidth: 1, borderColor: colors.border, boxShadow: '0 12px 38px rgba(25, 57, 94, 0.15)', overflow: 'hidden' },
   identity: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, paddingBottom: 14 }, nameCopy: { flex: 1, gap: 3 }, name: { color: colors.ink, fontSize: 15, fontWeight: '600' }, caption: { color: colors.muted, fontSize: 11 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginHorizontal: 8, marginBottom: 5 },
   badge: { color: colors.primary, backgroundColor: colors.softBlue, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, fontSize: 11, fontWeight: '600' },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 48, gap: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 14 }, pressed: { backgroundColor: colors.paper }, label: { flex: 1, color: colors.ink, fontSize: 14, fontWeight: '500' }, logout: { color: colors.danger }, error: { paddingHorizontal: 9 },
-});
+}));

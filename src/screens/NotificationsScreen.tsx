@@ -7,9 +7,10 @@ import { NotificationCard } from '../components/notifications/NotificationCard';
 import { Button, EmptyState, IconButton, Notice, PageTitle, Pill } from '../components/ui';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { useNotificationCenter } from '../notifications/useNotificationCenter';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 
 export default function NotificationsScreen() {
+  const { colors, styles } = useStyles();
   const auth = useAuth();
   const store = useNotifications();
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}><View style={styles.shell}>
@@ -22,6 +23,7 @@ export default function NotificationsScreen() {
 }
 
 function NotificationsBody() {
+  const { colors, styles } = useStyles();
   const store = useNotificationCenter();
   const { list } = store;
   const issue = store.mutationError || list.error || store.summaryError;
@@ -56,8 +58,8 @@ function NotificationsBody() {
     />
   </>;
 }
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, shell: { flex: 1, width: '100%', maxWidth: 740, alignSelf: 'center' }, inset: { paddingHorizontal: 20 },
   filters: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingBottom: 16 }, filterOptions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', flexShrink: 1 }, list: { paddingHorizontal: 20, paddingBottom: 28, gap: 12, flexGrow: 1 },
   loading: { padding: 40 }, listHeader: { gap: 14, paddingBottom: 4 }, summary: { gap: 6 }, count: { color: colors.ink, fontSize: 16, fontWeight: '600' }, hint: { color: colors.muted, fontSize: 12, lineHeight: 19 }, error: { gap: 7 }, footer: { paddingTop: 12, gap: 16 },
-});
+}));

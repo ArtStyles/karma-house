@@ -3,11 +3,12 @@ import { useWindowDimensions, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NavigationMaterial } from '../../components/NavigationMaterial';
 import { Icon, type IconName } from '../../components/ui';
-import { colors } from '../../theme';
+import { useTheme } from '../../theme';
 import { useMessaging } from '../../messaging/MessagingProvider';
 import { useNotifications } from '../../notifications/NotificationsProvider';
 
 export default function TabLayout() {
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { unreadCount: messageUnread } = useMessaging();
   const { unreadCount: noticeUnread } = useNotifications();
@@ -22,14 +23,14 @@ export default function TabLayout() {
       headerShown: false,
       tabBarActiveTintColor: colors.primary,
       tabBarInactiveTintColor: colors.muted,
-      tabBarActiveBackgroundColor: '#E5EFFACC',
+      tabBarActiveBackgroundColor: colors.navigationActive,
       tabBarHideOnKeyboard: true,
       tabBarBackground: () => <NavigationMaterial />,
       tabBarStyle: {
         // Override the navigator's logical edges and axis-specific padding on Android.
         position: 'absolute', start: inset, end: inset, bottom: Math.max(insets.bottom + 8, 16),
         height: 68, paddingTop: 6, paddingHorizontal: 6, paddingBottom: 6, borderRadius: 34, borderTopWidth: 0,
-        borderWidth: 1, borderColor: '#FFFFFFCC', backgroundColor: 'transparent', overflow: 'hidden',
+        borderWidth: 1, borderColor: colors.navigationBorder, backgroundColor: 'transparent', overflow: 'hidden',
         elevation: 0, boxShadow: '0 3px 14px rgba(0, 0, 0, 0.08)',
       },
       tabBarItemStyle: { borderRadius: 27, overflow: 'hidden', marginHorizontal: 2 },
@@ -40,7 +41,7 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{ title: 'Explorar', tabBarIcon: tabIcon('compass-outline', 'compass') }} />
       <Tabs.Screen name="favorites" options={{ title: 'Favoritos', tabBarIcon: tabIcon('heart-outline', 'heart') }} />
       <Tabs.Screen name="publish" options={{ title: 'Publicar', tabBarIcon: tabIcon('add-circle-outline', 'add-circle') }} />
-      <Tabs.Screen name="profile" options={{ title: 'Mi espacio', tabBarIcon: tabIcon('person-circle-outline', 'person-circle'), tabBarBadge: unreadCount ? (unreadCount > 99 ? '99+' : unreadCount) : undefined, tabBarBadgeStyle: { backgroundColor: colors.primary, color: colors.white, fontSize: 10 } }} />
+      <Tabs.Screen name="profile" options={{ title: 'Mi espacio', tabBarIcon: tabIcon('person-circle-outline', 'person-circle'), tabBarBadge: unreadCount ? (unreadCount > 99 ? '99+' : unreadCount) : undefined, tabBarBadgeStyle: { backgroundColor: colors.primaryFill, color: colors.onPrimary, fontSize: 10 } }} />
     </Tabs>
   );
 }

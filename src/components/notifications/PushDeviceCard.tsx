@@ -1,9 +1,10 @@
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { usePushNotifications } from '../../push/PushProvider';
-import { colors } from '../../theme';
+import { createThemedStyles } from '../../theme';
 import { Button, Icon, Notice } from '../ui';
 
 export function PushDeviceCard() {
+  const { colors, styles } = useStyles();
   const push = usePushNotifications();
   const blocked = push.permission === 'denied' && !push.canAskAgain;
   const run = (action: () => Promise<void>) => { void action().catch(() => {}); };
@@ -35,14 +36,14 @@ export function PushDeviceCard() {
   </View>;
 }
 
-const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderColor: '#DDE7F2', borderRadius: 24, backgroundColor: colors.white, padding: 19, gap: 16 },
+const useStyles = createThemedStyles(colors => StyleSheet.create({
+  card: { borderWidth: 1, borderColor: colors.border, borderRadius: 24, backgroundColor: colors.surface, padding: 19, gap: 16 },
   heading: { flexDirection: 'row', alignItems: 'flex-start', gap: 13 },
   icon: { width: 44, height: 44, borderRadius: 15, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
-  enabledIcon: { backgroundColor: '#EAF6EF' }, copy: { flex: 1, minWidth: 0, gap: 6 },
+  enabledIcon: { backgroundColor: colors.softGreen }, copy: { flex: 1, minWidth: 0, gap: 6 },
   title: { fontSize: 18, lineHeight: 24, fontWeight: '600', letterSpacing: -0.3, color: colors.ink },
   description: { fontSize: 13, lineHeight: 20, color: colors.muted },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 9 }, dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#9AA5B4' }, enabledDot: { backgroundColor: colors.green },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 9 }, dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.muted }, enabledDot: { backgroundColor: colors.green },
   statusText: { flex: 1, color: colors.ink, fontSize: 13, lineHeight: 19, fontWeight: '500' },
   footnote: { color: colors.muted, fontSize: 12, lineHeight: 18 },
-});
+}));

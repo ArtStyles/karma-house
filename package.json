@@ -1,6 +1,6 @@
 {
   "name": "karma-house",
-  "version": "0.1.16",
+  "version": "0.1.19",
   "main": "index.ts",
   "type": "module",
   "dependencies": {

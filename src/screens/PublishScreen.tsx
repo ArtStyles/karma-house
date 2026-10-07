@@ -10,9 +10,10 @@ import { useAuth } from '../auth/AuthProvider';
 import { Button, PageTitle, Notice } from '../components/ui';
 import { ASSISTED_PUBLICATION_EMAIL, openAssistedPublicationRequest } from '../lib/assistedPublication';
 import { useMarketplace } from '../state/MarketplaceProvider';
-import { colors, layout } from '../theme';
+import { createThemedStyles, layout } from '../theme';
 
 export default function PublishScreen() {
+  const { colors, styles } = useStyles();
   const { ready, saveListing, mode } = useMarketplace();
   const { user, isOwner, suspended } = useAuth();
   const [section, setSection] = useState<'choose' | 'own' | 'help'>('choose');
@@ -84,16 +85,16 @@ export default function PublishScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.paper },
   header: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 20 },
   change: { marginBottom: 12 },
   content: { width: '100%', maxWidth: 720, alignSelf: 'center', padding: 20, paddingBottom: layout.tabContentBottom, gap: 16 },
-  card: { padding: 20, gap: 16, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white },
+  card: { padding: 20, gap: 16, borderRadius: 20, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   title: { fontSize: 20, lineHeight: 27, fontWeight: '600', color: colors.ink },
   text: { fontSize: 14, lineHeight: 22, color: colors.muted },
   email: { fontSize: 16, lineHeight: 24, color: colors.primary },
   form: { flex: 1 },
   hidden: { display: 'none' },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-});
+}));

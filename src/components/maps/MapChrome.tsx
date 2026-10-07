@@ -1,15 +1,17 @@
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../theme';
+import { createThemedStyles } from '../../theme';
 import { Brand, Icon } from '../ui';
 import { MAP_ATTRIBUTION } from './mapConfig';
 
 export function MapAttribution() {
+  const { styles } = useStyles();
   return <View style={styles.attribution}>
     {MAP_ATTRIBUTION.map(item => <Text key={item.url} accessibilityRole="link" onPress={() => { void Linking.openURL(item.url); }} style={styles.attributionText}>{item.label}</Text>)}
   </View>;
 }
 
 export function MapStatus({ status, onRetry }: { status: 'loading' | 'ready' | 'error'; onRetry: () => void }) {
+  const { colors, styles } = useStyles();
   if (status === 'ready') return null;
   return <View style={styles.status} pointerEvents={status === 'loading' ? 'none' : 'auto'}>
     <View accessibilityRole={status === 'error' ? 'alert' : undefined} style={styles.statusCard}>
@@ -24,17 +26,18 @@ export function MapStatus({ status, onRetry }: { status: 'loading' | 'ready' | '
 }
 
 export function MapBrand() {
+  const { styles } = useStyles();
   return <View pointerEvents="none" style={styles.brand}><Brand height={18} /></View>;
 }
 
-const styles = StyleSheet.create({
-  attribution: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 9, paddingHorizontal: 7, paddingVertical: 5, backgroundColor: '#FAFBFC' },
-  attributionText: { fontSize: 10, lineHeight: 14, color: '#50565C' },
+const useStyles = createThemedStyles(colors => StyleSheet.create({
+  attribution: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 9, paddingHorizontal: 7, paddingVertical: 5, backgroundColor: colors.paper },
+  attributionText: { fontSize: 10, lineHeight: 14, color: colors.muted },
   status: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', padding: 18, zIndex: 4 },
-  statusCard: { maxWidth: 285, alignItems: 'center', gap: 10, padding: 18, borderRadius: 19, backgroundColor: '#FFFFFFF5', borderColor: colors.border, borderWidth: 1 },
+  statusCard: { maxWidth: 285, alignItems: 'center', gap: 10, padding: 18, borderRadius: 19, backgroundColor: colors.navigationGlass, borderColor: colors.border, borderWidth: 1 },
   statusText: { color: colors.muted, fontSize: 13, lineHeight: 19, textAlign: 'center' },
   errorTitle: { color: colors.ink, fontSize: 15, fontWeight: '600', textAlign: 'center' },
   retry: { minHeight: 42, paddingHorizontal: 16, borderRadius: 21, backgroundColor: colors.softBlue, flexDirection: 'row', alignItems: 'center', gap: 7 },
   retryText: { fontSize: 14, color: colors.primary, fontWeight: '600' },
-  brand: { position: 'absolute', top: 10, left: 10, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 12, backgroundColor: '#FFFFFFEB' },
-});
+  brand: { position: 'absolute', top: 10, left: 10, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 12, backgroundColor: colors.navigationGlass },
+}));

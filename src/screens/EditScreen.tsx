@@ -9,10 +9,11 @@ import { Button, goBack, Notice, PageTitle } from '../components/ui';
 import type { Listing, ListingDraft } from '../domain/listings';
 import { normalizeMapLocation } from '../domain/geo';
 import { useMarketplace } from '../state/MarketplaceProvider';
-import { colors } from '../theme';
+import { createThemedStyles } from '../theme';
 import {useListingManagement} from '../transfers/useListingManagement';
 
 export default function EditScreen() {
+  const { colors, styles } = useStyles();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const { saveListing, storageError, isOwnListing, mode, refresh } = useMarketplace();
@@ -65,6 +66,7 @@ export default function EditScreen() {
 }
 
 function Unavailable({ message, onBack }: { message: string; onBack: () => void }) {
+  const { styles } = useStyles();
   return (
     <View style={styles.unavailable}>
       <Notice error>{message}</Notice>
@@ -105,9 +107,9 @@ export function toDraft(listing: Listing): ListingDraft {
   };
 }
 
-const styles = StyleSheet.create({
+const useStyles = createThemedStyles(colors => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.paper },
   header: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 20 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   unavailable: { width: '100%', maxWidth: 720, alignSelf: 'center', padding: 20, gap: 16 },
-});
+}));
