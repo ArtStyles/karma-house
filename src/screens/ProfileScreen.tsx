@@ -13,6 +13,7 @@ import { useNotifications } from '../notifications/NotificationsProvider';
 import { AccountMenu } from '../components/account/AccountMenu';
 import { useSavedSearches } from '../searches/useSavedSearches';
 import { setDataSaver, useDataSaver } from '../settings/useDataSaver';
+import {useAgencyWorkspace} from '../agencies/useAgencyWorkspace';
 import {useIncomingTransferCount} from '../transfers/useIncomingTransferCount';
 
 export default function ProfileScreen() {
@@ -26,6 +27,7 @@ export default function ProfileScreen() {
   const savedSearches = useSavedSearches();
   const dataSaver = useDataSaver();
   const transfers=useIncomingTransferCount();
+  const agencies=useAgencyWorkspace();
   // Tabs stay mounted: recount alerts saved or removed elsewhere when Mi espacio comes back into view.
   const refreshSearches = savedSearches.refresh;
   const seen = useRef(false);
@@ -61,6 +63,7 @@ export default function ProfileScreen() {
       {suspended && <Notice error>Tu cuenta está suspendida. No puedes publicar ni enviar mensajes. {suspensionReason}</Notice>}
       {isOwner && <Notice>Tu información de cuenta es privada. Los demás solo ven tu nombre y foto de perfil.</Notice>}
       {(user || mode === 'demo') && <><Text style={styles.sectionLabel}>Tu actividad</Text>
+      {user&&(agencies.enabled||agencies.agencies.length>0)&&<Button secondary icon="business-outline" label="Mi inmobiliaria e invitaciones" onPress={()=>router.push('/agency-workspace')}/>}
       {user&&!isOwner&&<Button secondary icon="swap-horizontal-outline" label={`Anuncios por aceptar${transfers.count===null?'':` · ${transfers.count}`}`} onPress={()=>router.push('/listing-transfers')}/>}
       <View style={styles.group}>
         <Pressable accessibilityRole="button" accessibilityLabel={`Notificaciones, ${notificationUnreadCount} sin leer`} onPress={() => router.push('/notifications')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>

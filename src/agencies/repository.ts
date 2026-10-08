@@ -17,10 +17,10 @@ export function decodeAgencySummary(value:unknown):AgencySummary{
  return {id:uuid(v.id),tradeName:str(v.tradeName),state:enumValue(v.state,['pending','needs_changes','approved','rejected','suspended']),version:version(v.version),logoPath:nullable(v.logoPath),verified:v.verified,verificationVersion:version(v.verificationVersion)};
 }
 export function decodeAgencyMembership(value:unknown):AgencyMembership{
- const v=object(value);return {agencyId:uuid(v.agencyId),userId:uuid(v.userId),role:enumValue(v.role,['manager','coordinator','admin']),state:enumValue(v.state,['active','removed']),version:version(v.version)};
+ const v=object(value);return {...(v.displayName===undefined?{}:{displayName:str(v.displayName)}),agencyId:uuid(v.agencyId),userId:uuid(v.userId),role:enumValue(v.role,['manager','coordinator','admin']),state:enumValue(v.state,['active','removed']),version:version(v.version)};
 }
 export function decodeAgencyInvitation(value:unknown):AgencyInvitation{
- const v=object(value);return {id:uuid(v.id),agencyId:uuid(v.agencyId),recipientId:uuid(v.recipientId),role:enumValue(v.role,['manager','coordinator','admin']),state:enumValue(v.state,['pending','accepted','declined','cancelled','expired']),version:version(v.version),expiresAt:iso(v.expiresAt)};
+ const v=object(value);return {...(v.agencyName===undefined?{}:{agencyName:str(v.agencyName)}),id:uuid(v.id),agencyId:uuid(v.agencyId),recipientId:uuid(v.recipientId),role:enumValue(v.role,['manager','coordinator','admin']),state:enumValue(v.state,['pending','accepted','declined','cancelled','expired']),version:version(v.version),expiresAt:iso(v.expiresAt)};
 }
 export function decodeAgencyApplication(value:unknown):AgencyApplication{
  const v=object(value);if(typeof v.emailConfirmed!=='boolean')throw invalid();return {agency:decodeAgencySummary(v.agency),input:normalizeAgencyApplication(v.input),reviewNote:nullable(v.reviewNote),emailConfirmed:v.emailConfirmed};
@@ -45,7 +45,7 @@ export function createAgencyRepository(client:SupabaseClient){
   async membership(agencyId:string,context:MessagingRequestContext):Promise<AgencyMembership|null>{const v=await rpc('kh_agency_membership',{p_agency_id:uuid(agencyId)},context);if(v===null)return null;const m=decodeAgencyMembership(v);if(m.agencyId!==agencyId||m.userId!==context.userId)throw invalid();return m},
   async listMembers(offset:number,context:AgencyRequestContext):Promise<Page<AgencyMembership>>{return decodeAgencyPage(await rpc('kh_list_agency_members',{p_agency_id:context.agencyId,p_offset:offset,p_limit:30},context),v=>sameAgency(decodeAgencyMembership(v),context))},
   async listInvitations(offset:number,context:MessagingRequestContext):Promise<Page<AgencyInvitation>>{return decodeAgencyPage(await rpc('kh_list_agency_invitations',{p_offset:offset,p_limit:30},context),v=>{const i=decodeAgencyInvitation(v);if(i.recipientId!==context.userId)throw invalid();return i})},
-  async inviteMember(input:{userId:string;role:AgencyRole}&Request,context:AgencyRequestContext):Promise<AgencyInvitation>{return sameAgency(decodeAgencyInvitation(await rpc('kh_invite_agency_member',{p_agency_id:context.agencyId,p_payload:input},context)),context)},
+  async inviteMember(input:{userId:string;role:AgencyRole}&Request,context:AgencyRequestContext):Promise<AgencyInvitation>{const invitation=sameAgency(decodeAgencyInvitation(await rpc('kh_invite_agency_member',{p_agency_id:context.agencyId,p_payload:input},context)),context);if(invitation.recipientId!==input.userId||invitation.role!==input.role)throw invalid();return invitation},
   async decideInvitation(input:{invitationId:string;accept:boolean;expectedVersion:number}&Request,context:MessagingRequestContext):Promise<AgencyInvitation>{const i=decodeAgencyInvitation(await rpc('kh_decide_agency_invitation',{p_payload:input},context));if(i.id!==input.invitationId||i.recipientId!==context.userId)throw invalid();return i},
   async setMemberRole(input:MemberChange&{role:AgencyRole},context:AgencyRequestContext):Promise<AgencyMembership>{const m=sameAgency(decodeAgencyMembership(await rpc('kh_set_agency_member_role',{p_agency_id:context.agencyId,p_payload:input},context)),context);if(m.userId!==input.userId)throw invalid();return m},
   async removeMember(input:MemberChange,context:AgencyRequestContext):Promise<AgencyMembership>{const m=sameAgency(decodeAgencyMembership(await rpc('kh_remove_agency_member',{p_agency_id:context.agencyId,p_payload:input},context)),context);if(m.userId!==input.userId)throw invalid();return m},
@@ -58,4 +58,3 @@ export function createAgencyRepository(client:SupabaseClient){
  };
 }
 export type AgencyRepository=ReturnType<typeof createAgencyRepository>;
-

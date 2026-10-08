@@ -2,6 +2,7 @@ import { Stack, usePathname } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import {AgencyProvider} from '../agencies/AgencyProvider';
 import { AuthProvider, useAuth } from '../auth/AuthProvider';
 import { shouldClearAuthIntent } from '../auth/intentLifecycle';
 import { pendingIntentStore } from '../auth/pendingIntentStorage';
@@ -12,7 +13,7 @@ import { MarketplaceProvider } from '../state/MarketplaceProvider';
 import { ThemeProvider, useTheme } from '../theme';
 
 export default function RootLayout() {
-  return <ThemeProvider><SafeAreaProvider><AuthProvider><NotificationsProvider><PushProvider><MessagingProvider><MarketplaceProvider><AppContent /></MarketplaceProvider></MessagingProvider></PushProvider></NotificationsProvider></AuthProvider></SafeAreaProvider></ThemeProvider>;
+  return <ThemeProvider><SafeAreaProvider><AuthProvider><AgencyProvider><NotificationsProvider><PushProvider><MessagingProvider><MarketplaceProvider><AppContent /></MarketplaceProvider></MessagingProvider></PushProvider></NotificationsProvider></AgencyProvider></AuthProvider></SafeAreaProvider></ThemeProvider>;
 }
 function AppContent() {
   const { colors } = useTheme();

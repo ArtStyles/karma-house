@@ -11,7 +11,7 @@ export interface AgencyApplicationInput {tradeName:string;responsibleFullName:st
 export interface AgencyVerificationRequestInput {message:string;evidenceReferences:string[]}
 export interface AgencySummary {id:string;tradeName:string;state:AgencyState;version:number;logoPath:string|null;verified:boolean;verificationVersion:number}
 export interface AgencyApplication {agency:AgencySummary;input:AgencyApplicationInput;reviewNote:string|null;emailConfirmed:boolean}
-export interface AgencyMembership {agencyId:string;userId:string;role:AgencyRole;state:'active'|'removed';version:number}
-export interface AgencyInvitation {id:string;agencyId:string;recipientId:string;role:AgencyRole;state:'pending'|'accepted'|'declined'|'cancelled'|'expired';version:number;expiresAt:string}
+export interface AgencyMembership {displayName?:string;agencyId:string;userId:string;role:AgencyRole;state:'active'|'removed';version:number}
+export interface AgencyInvitation {agencyName?:string;id:string;agencyId:string;recipientId:string;role:AgencyRole;state:'pending'|'accepted'|'declined'|'cancelled'|'expired';version:number;expiresAt:string}
 export interface AgencyVerificationRequest {id:string;agencyId:string;input:AgencyVerificationRequestInput;state:AgencyVerificationRequestState;reviewNote:string|null;version:number;createdAt:string;reviewedAt:string|null}
 export type AgencyAction='manage_deal'|'coordinate'|'manage_team'|'manage_property'|'confirm_sale'|'request_verification';

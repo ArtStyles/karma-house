@@ -38,7 +38,7 @@ export function canPerformAgencyAction(role:AgencyRole,action:AgencyAction):bool
  return ['manage_team','manage_property','confirm_sale','request_verification'].includes(action)&&role==='admin';
 }
 export function agencyError(error:unknown):string{
- const message=error instanceof Error?error.message:String(error);
+ const message=error instanceof Error?error.message:error&&typeof error==='object'&&'message'in error&&typeof error.message==='string'?error.message:String(error);
  if(/ACCOUNT_CHANGED|SESSION_REQUIRED/.test(message))return 'La sesión cambió. Actualiza antes de continuar.';
  if(/KH_AGENCY_DISABLED/.test(message))return 'El espacio de inmobiliarias aún no está habilitado.';
  if(/KH_AGENCY_NOT_APPROVED/.test(message))return 'La inmobiliaria debe ser aprobada por KarmaHouse antes de operar.';
