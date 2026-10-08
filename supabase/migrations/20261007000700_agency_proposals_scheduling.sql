@@ -181,7 +181,7 @@ create function kh_private.agency_origin_schedule(actor uuid,agency uuid,pid uui
  perform kh_private.agency_actor(actor,agency,'admin');
  if not exists(select 1 from kh_private.agency_property_origins where property_id=kh_private.agency_effective_property(pid) and origin_agency_id=agency) then raise exception 'KH_AGENCY_ORIGIN_REQUIRED';end if;
  if require_live and not kh_private.agency_flow_live(agency,pid) then raise exception 'KH_AGENCY_PROPERTY_CLOSED';end if;end $$;
-create function kh_private.agency_reservation_json(r kh_private.property_reservations) returns jsonb language sql stable set search_path='' as $$select jsonb_build_object('id',r.id,'propertyId',r.property_id,'agencyId',r.agency_id,'expiresAt',r.expires_at,'releasedAt',r.released_at,'version',r.version,'active',r.released_at is null and r.expires_at>statement_timestamp())$$;
+create function kh_private.agency_reservation_json(r kh_private.property_reservations) returns jsonb language sql volatile set search_path='' as $$select jsonb_build_object('id',r.id,'propertyId',r.property_id,'agencyId',r.agency_id,'expiresAt',r.expires_at,'releasedAt',r.released_at,'version',r.version,'active',r.released_at is null and r.expires_at>clock_timestamp())$$;
 create function public.kh_set_agency_reservation(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare pid uuid:=(p_payload->>'propertyId')::uuid;expires timestamptz;reservation kh_private.property_reservations;r jsonb;begin
  if p_payload-array['propertyId','expiresAt','clientRequestId']<>'{}'::jsonb then raise exception 'KH_AGENCY_INVALID';end if;
@@ -221,7 +221,7 @@ create function public.kh_agency_calendar(p_actor_id uuid,p_agency_id uuid,p_fro
  declare items jsonb;begin perform kh_private.agency_account(p_actor_id);
  if p_agency_id is null or not kh_private.agency_contact_member(p_agency_id,p_actor_id) then raise exception 'KH_AGENCY_MEMBERSHIP_REQUIRED';end if;
  if p_from is null or p_to is null or p_to<=p_from or p_to>p_from+interval '366 days' or p_offset is null or p_offset<0 or p_limit is null or p_limit not between 1 and 50 then raise exception 'KH_AGENCY_INVALID';end if;
- select coalesce(jsonb_agg(x.item order by x.starts_at,x.id),'[]') into items from(select s.id,s.starts_at,kh_private.agency_visit_json(s)||jsonb_build_object('dealId',d.id,'agencyId',d.agency_id,'buyerId',d.buyer_id,'contactName',coalesce(d.private_contact->>'name',(select display_name from public.profiles where id=d.buyer_id),'Comprador con cuenta'),'assigneeName',coalesce((select display_name from public.profiles where id=s.assignee_id),'Cuenta eliminada'),'propertyTitle',coalesce(p.title,i.title,'Vivienda'),'existingConflict',s.existing_conflict) item
+ select coalesce(jsonb_agg(x.item order by x.starts_at,x.id),'[]') into items from(select s.id,s.starts_at,kh_private.agency_visit_json(s)||jsonb_build_object('dealId',d.id,'agencyId',d.agency_id,'buyerId',d.buyer_id,'contactName',coalesce(d.private_contact->>'name',(select display_name from public.profiles where id=d.buyer_id),'Comprador con cuenta'),'assigneeName',case when s.assignee_id is null then 'Sin asignar' else coalesce((select display_name from public.profiles where id=s.assignee_id),'Cuenta eliminada') end,'propertyTitle',coalesce(p.title,i.title,'Vivienda'),'existingConflict',s.existing_conflict) item
  from kh_private.property_visit_slots s join kh_private.agency_proposals proposal on proposal.id=s.proposal_id join kh_private.agency_deals d on d.id=proposal.deal_id left join public.properties p on p.id=d.property_id join kh_private.agency_property_identities i on i.property_id=d.property_id
  where kh_private.agency_deal_visible(p_actor_id,p_agency_id,d) and s.starts_at<p_to and s.ends_at>p_from order by s.starts_at,s.id offset p_offset limit p_limit+1)x;
  return jsonb_build_object('items',case when jsonb_array_length(items)>p_limit then items-p_limit else items end,'hasMore',jsonb_array_length(items)>p_limit);end $$;
@@ -247,7 +247,9 @@ create function kh_private.terminate_mandate_flows(p_property_id uuid,p_agency_i
  update kh_private.property_reservations set released_at=clock_timestamp(),closed_reason=p_reason,version=version+1 where agency_id=p_agency_id and kh_private.agency_effective_property(property_id)=kh_private.agency_effective_property(p_property_id) and released_at is null;
  perform kh_private.terminate_mandate_flows_pre_scheduling(p_property_id,p_agency_id,p_reason);end $$;
 create function kh_private.terminate_agency_member_flows(p_agency_id uuid,p_user_id uuid,p_reason text) returns void language plpgsql security definer set search_path='' as $$begin
- perform kh_private.agency_terminate_scheduling((select array_agg(id) from kh_private.agency_deals where agency_id=p_agency_id and assignee_id=p_user_id),p_reason);
+ -- Membership ends responsibility, not the agency's commitment. Retain the
+ -- property booking and proposal history; completed outcomes keep their actor.
+ update kh_private.property_visit_slots set assignee_id=null,version=version+1 where agency_id=p_agency_id and assignee_id=p_user_id and outcome='unrecorded';
  perform kh_private.terminate_agency_member_flows_pre_scheduling(p_agency_id,p_user_id,p_reason);end $$;
 -- Personal create and respond keep the established validation/receipts/chat
 -- events. The wrapper takes common locks BEFORE the legacy conversation lock.
