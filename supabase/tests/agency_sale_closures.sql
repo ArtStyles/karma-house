@@ -1,3 +1,43 @@
+-- Closure lock participants follow business roles, never corporate technical custody.
+create function pg_temp.sale_account_locked(actor uuid) returns boolean language sql as $$
+ select exists(
+  select 1 from pg_locks
+  where locktype='advisory' and pid=pg_backend_pid() and granted and objsubid=1
+    and classid::bigint=((hashtextextended('kh:account:'||actor::text,0)>>32)&4294967295)
+    and objid::bigint=(hashtextextended('kh:account:'||actor::text,0)&4294967295)
+ )
+$$;
+do $$
+declare
+ f jsonb:=pg_temp.schedule_fixture(50);
+ a uuid:=(f->>'agency')::uuid;
+ u uuid:=(f->>'actor')::uuid;
+ pid uuid:=(f->>'property')::uuid;
+ owner uuid:='45000000-0000-4000-8000-000000000001';
+ personal uuid:=gen_random_uuid();
+ d jsonb;
+begin
+ perform pg_temp.kh_assert((select owner_id=owner from public.properties where id=pid),'fixture_has_protected_technical_custodian');
+ perform pg_temp.kh_assert(not(owner=any(kh_private.sale_group_people(pid))),'corporate_custody_alone_excludes_protected_owner');
+ perform pg_temp.kh_assert(u=any(kh_private.sale_group_people(pid)),'actual_responsible_remains_in_closure_set');
+ -- A preparation by the actual team must not acquire the unrelated owner's lock.
+ perform pg_temp.kh_as(u);
+ perform public.kh_prepare_agency_sale(u,a,(f->>'deal')::uuid);
+ perform pg_temp.kh_assert(not pg_temp.sale_account_locked(owner),'corporate_preparation_does_not_lock_technical_owner');
+ -- The validation-free common mutex independently appends the actual actor.
+ perform pg_temp.kh_as(owner);
+ perform kh_private.sale_group_lock(owner,a,pid);
+ perform pg_temp.kh_assert(pg_temp.sale_account_locked(owner),'protected_owner_retained_when_actual_actor');
+ -- A real buyer role independently includes that same protected owner.
+ perform pg_temp.kh_as(u);
+ d:=public.kh_create_agency_deal(u,a,jsonb_build_object('propertyId',pid,'buyerId',owner,'assigneeId',u,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert(owner=any(kh_private.sale_group_people(pid)),'protected_owner_retained_when_actual_buyer');
+ -- A personal-origin listing uses its actual owner as source responsibility.
+ perform pg_temp.kh_as(owner);
+ insert into public.properties(id,owner_id,client_request_id,title,location,province,type,price,bedrooms,bathrooms,description,moderation,photo_paths)
+ values(personal,owner,personal::text,'Origen personal protegido','Vedado','La Habana','Casa',30000,2,1,'Vivienda personal del actor protegido.','approved',array[owner||'/'||personal||'/photo.jpg']);
+ perform pg_temp.kh_assert(owner=any(kh_private.sale_group_people(personal)),'protected_personal_source_retained');
+end $$;
 -- Each named assertion exercises persisted sale authority and atomic termination.
 do $$declare f jsonb:=pg_temp.schedule_fixture(41);a uuid:=(f->>'agency')::uuid;u uuid:=(f->>'actor')::uuid;pid uuid:=(f->>'property')::uuid;did uuid:=(f->>'deal')::uuid;
  b uuid:=pg_temp.kh_agency_signup(42);v uuid:='45000000-0000-4000-8000-000000000042';m uuid:='45000000-0000-4000-8000-000000000008';coord uuid:='45000000-0000-4000-8000-000000000006';q jsonb;d jsonb;r jsonb;body jsonb;decision jsonb;result jsonb;offer jsonb;visit jsonb;past jsonb;t jsonb;begin

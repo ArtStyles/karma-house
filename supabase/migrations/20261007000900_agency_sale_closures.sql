@@ -27,7 +27,9 @@ do $$declare t text;begin foreach t in array array['agency_sale_requests','prope
 
 create function kh_private.sale_group_people(pid uuid) returns uuid[] language sql stable set search_path='' as $$
  with group_ids as(select property_id id from kh_private.agency_property_identities where kh_private.agency_effective_property(property_id)=kh_private.agency_effective_property(pid)),people as(
- select owner_id id from public.properties where id in(select id from group_ids)
+ select p.owner_id id from public.properties p
+ where p.id in(select id from group_ids)
+ and not exists(select 1 from kh_private.agency_property_origins o where o.property_id=p.id)
  union select buyer_id from kh_private.agency_deals where property_id in(select id from group_ids)
  union select assignee_id from kh_private.agency_deals where property_id in(select id from group_ids)
  union select buyer_id from public.kh_conversations where property_id in(select id from group_ids)
@@ -106,59 +108,223 @@ create or replace function kh_private.guard_property_alias_write() returns trigg
  and not(tg_op='DELETE' and exists(select 1 from kh_private.agency_property_identities where property_id=old.id and withdrawn_at is not null and personal_source_id=old.owner_id))
  and not exists(select 1 from kh_private.agency_property_write_permits where transaction_id=txid_current() and property_id=old.id and actor_id=auth.uid() and purpose='merge') then raise exception 'KH_PROPERTY_ALIAS_READ_ONLY';end if;return case when tg_op='DELETE' then old else new end;
 end $$;
-create function kh_private.close_commercial_cycle(p_property_id uuid,p_request_id uuid,p_actor uuid) returns jsonb language plpgsql security definer set search_path='' as $$
- declare pid uuid;req kh_private.agency_sale_requests;closure kh_private.property_sale_closures;cid uuid;ids uuid[];deals uuid[];p kh_private.agency_proposals;n public.kh_negotiations;begin
+create function kh_private.close_commercial_cycle(p_property_id uuid,p_request_id uuid,p_actor uuid)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare
+ pid uuid;
+ req kh_private.agency_sale_requests;
+ closure kh_private.property_sale_closures;
+ cid uuid;
+ ids uuid[];
+ deals uuid[];
+ p kh_private.agency_proposals;
+ n public.kh_negotiations;
+begin
  pid:=kh_private.sale_group_lock(p_actor,null,p_property_id);
- perform kh_private.require_active();if kh_private.is_deleting(p_actor) then raise exception 'KH_ACCOUNT_DELETING';end if;
- if p_request_id is not null then select * into req from kh_private.agency_sale_requests where id=p_request_id;if req.id is null or req.property_id<>pid then raise exception 'KH_AGENCY_SALE_INVALID';end if;perform kh_private.sale_assert_current(req);cid:=req.cycle_id;
- else
-  if not kh_private.property_source_decider(p_actor,null,pid) then raise exception 'KH_AGENCY_ORIGIN_REQUIRED';end if;
-  select id into cid from kh_private.commercial_cycles where property_id=pid and state='open';
-  if cid is null and not exists(select 1 from kh_private.commercial_cycles where kh_private.agency_effective_property(property_id)=pid) then insert into kh_private.commercial_cycles(property_id)values(pid)returning id into cid;end if;
-  if cid is null then select * into closure from kh_private.property_sale_closures where property_id=pid order by confirmed_at desc limit 1;if closure.id is not null then return kh_private.sale_closure_json(closure);end if;raise exception 'KH_AGENCY_PROPERTY_CLOSED';end if;
+ perform kh_private.require_active();
+ if kh_private.is_deleting(p_actor) then
+  raise exception 'KH_ACCOUNT_DELETING';
  end if;
- select array_agg(property_id order by property_id) into ids from kh_private.agency_property_identities where kh_private.agency_effective_property(property_id)=pid;
- if exists(select 1 from public.properties where id=any(ids) and availability='sold') or exists(select 1 from kh_private.property_sale_closures where property_id=any(ids)) then raise exception 'KH_AGENCY_PROPERTY_CLOSED';end if;
- insert into kh_private.property_sale_closures(property_id,cycle_id,request_id,origin_agency_id,executing_agency_id,executing_manager_id,confirmed_by,amount_usd,occurred_at)values(pid,cid,req.id,req.origin_agency_id,req.executing_agency_id,req.executing_manager_id,p_actor,req.amount_usd,req.occurred_at)returning * into closure;
+
+ if p_request_id is not null then
+  select * into req from kh_private.agency_sale_requests where id=p_request_id;
+  if req.id is null or req.property_id<>pid then
+   raise exception 'KH_AGENCY_SALE_INVALID';
+  end if;
+  perform kh_private.sale_assert_current(req);
+  cid:=req.cycle_id;
+ else
+  if not kh_private.property_source_decider(p_actor,null,pid) then
+   raise exception 'KH_AGENCY_ORIGIN_REQUIRED';
+  end if;
+  select id into cid from kh_private.commercial_cycles where property_id=pid and state='open';
+  if cid is null and not exists(
+   select 1 from kh_private.commercial_cycles where kh_private.agency_effective_property(property_id)=pid
+  ) then
+   insert into kh_private.commercial_cycles(property_id) values(pid) returning id into cid;
+  end if;
+  if cid is null then
+   select * into closure from kh_private.property_sale_closures
+   where property_id=pid order by confirmed_at desc limit 1;
+   if closure.id is not null then
+    return kh_private.sale_closure_json(closure);
+   end if;
+   raise exception 'KH_AGENCY_PROPERTY_CLOSED';
+  end if;
+ end if;
+
+ select array_agg(property_id order by property_id) into ids
+ from kh_private.agency_property_identities where kh_private.agency_effective_property(property_id)=pid;
+ if exists(select 1 from public.properties where id=any(ids) and availability='sold')
+ or exists(select 1 from kh_private.property_sale_closures where property_id=any(ids)) then
+  raise exception 'KH_AGENCY_PROPERTY_CLOSED';
+ end if;
+ insert into kh_private.property_sale_closures(
+  property_id,cycle_id,request_id,origin_agency_id,executing_agency_id,
+  executing_manager_id,confirmed_by,amount_usd,occurred_at
+ ) values(
+  pid,cid,req.id,req.origin_agency_id,req.executing_agency_id,
+  req.executing_manager_id,p_actor,req.amount_usd,req.occurred_at
+ ) returning * into closure;
  select coalesce(array_agg(id),'{}') into deals from kh_private.agency_deals where property_id=any(ids);
+
  -- Expired, declined, cancelled, performed and accepted historical facts remain.
- for p in update kh_private.agency_proposals x set status='cancelled',closed_reason='property_sold',version=version+1 where deal_id=any(deals) and id is distinct from req.winning_proposal_id and (status='pending' and expires_at>clock_timestamp() or status='accepted' and kind='visit' and exists(select 1 from kh_private.property_visit_slots s where s.proposal_id=x.id and outcome='unrecorded' and starts_at>clock_timestamp())) returning x.* loop perform kh_private.agency_proposal_event(p,p_actor,'system','property_sold');end loop;
+ for p in
+  update kh_private.agency_proposals x
+  set status='cancelled',closed_reason='property_sold',version=version+1
+  where deal_id=any(deals) and id is distinct from req.winning_proposal_id
+   and (
+    status='pending' and expires_at>clock_timestamp()
+    or status='accepted' and kind='visit' and exists(
+     select 1 from kh_private.property_visit_slots s
+     where s.proposal_id=x.id and outcome='unrecorded' and starts_at>clock_timestamp()
+    )
+   )
+  returning x.*
+ loop
+  perform kh_private.agency_proposal_event(p,p_actor,'system','property_sold');
+ end loop;
+
  -- Accepted competitor offers remain accepted facts, with explicit termination.
- for p in update kh_private.agency_proposals x set closed_reason='property_sold',version=version+1 where deal_id=any(deals) and kind='offer' and status='accepted' and closed_reason is null and id is distinct from req.winning_proposal_id returning x.* loop perform kh_private.agency_proposal_event(p,p_actor,'system','property_sold');end loop;
- for n in update public.kh_negotiations x set status='cancelled',termination_reason='property_sold',version=version+1,updated_at=clock_timestamp() where conversation_id in(select id from public.kh_conversations where property_id=any(ids)) and (status='pending' and expires_at>clock_timestamp() or status='accepted' and kind='visit' and exists(select 1 from kh_private.property_visit_slots s where s.personal_negotiation_id=x.id and outcome='unrecorded' and starts_at>clock_timestamp())) returning x.* loop insert into kh_private.negotiation_events(negotiation_id,actor_id,action,snapshot)values(n.id,p_actor,'cancelled',kh_private.negotiation_json(n,p_actor,clock_timestamp())||jsonb_build_object('terminationReason','property_sold'));end loop;
- update public.kh_negotiations set termination_reason='property_sold',version=version+1,updated_at=clock_timestamp() where conversation_id in(select id from public.kh_conversations where property_id=any(ids)) and kind='offer' and status='accepted' and termination_reason is null;
- update kh_private.property_visit_slots set outcome='cancelled',closed_reason='property_sold',version=version+1 where property_id=any(ids) and outcome='unrecorded' and starts_at>clock_timestamp();
+ for p in
+  update kh_private.agency_proposals x set closed_reason='property_sold',version=version+1
+  where deal_id=any(deals) and kind='offer' and status='accepted'
+   and closed_reason is null and id is distinct from req.winning_proposal_id
+  returning x.*
+ loop
+  perform kh_private.agency_proposal_event(p,p_actor,'system','property_sold');
+ end loop;
+
+ for n in
+  update public.kh_negotiations x
+  set status='cancelled',termination_reason='property_sold',version=version+1,updated_at=clock_timestamp()
+  where conversation_id in(select id from public.kh_conversations where property_id=any(ids))
+   and (
+    status='pending' and expires_at>clock_timestamp()
+    or status='accepted' and kind='visit' and exists(
+     select 1 from kh_private.property_visit_slots s
+     where s.personal_negotiation_id=x.id and outcome='unrecorded' and starts_at>clock_timestamp()
+    )
+   )
+  returning x.*
+ loop
+  insert into kh_private.negotiation_events(negotiation_id,actor_id,action,snapshot)
+  values(
+   n.id,p_actor,'cancelled',
+   kh_private.negotiation_json(n,p_actor,clock_timestamp())||jsonb_build_object('terminationReason','property_sold')
+  );
+ end loop;
+ update public.kh_negotiations
+ set termination_reason='property_sold',version=version+1,updated_at=clock_timestamp()
+ where conversation_id in(select id from public.kh_conversations where property_id=any(ids))
+  and kind='offer' and status='accepted' and termination_reason is null;
+ update kh_private.property_visit_slots
+ set outcome='cancelled',closed_reason='property_sold',version=version+1
+ where property_id=any(ids) and outcome='unrecorded' and starts_at>clock_timestamp();
  perform kh_private.agency_terminate_followups(deals,'property_sold');
- update kh_private.property_reservations set released_at=clock_timestamp(),closed_reason='property_sold',version=version+1 where property_id=any(ids) and released_at is null;
- insert into kh_private.commercial_termination_events(closure_id,property_id,subject_kind,subject_id,agency_id,recipient_id)
- select closure.id,d.property_id,'agency_deal',d.id,d.agency_id,recipient from kh_private.agency_deals d cross join lateral(select d.buyer_id recipient union select d.assignee_id)x where d.id=any(deals) and d.closed_reason is null and recipient is not null;
- insert into kh_private.commercial_termination_events(closure_id,property_id,subject_kind,subject_id,recipient_id)
- select closure.id,c.property_id,'personal_conversation',c.id,recipient from public.kh_conversations c cross join lateral(select c.buyer_id recipient union select c.seller_id)x where c.property_id=any(ids);
- update kh_private.agency_deals set stage=case when id=req.winning_deal_id then 'won' else stage end,closed_reason='property_sold',version=version+1 where id=any(deals) and closed_reason is null and stage not in('won','lost');
- update kh_private.commercial_cycles set state='closed',termination_reason='property_sold',version=version+1 where property_id=any(ids) and state='open';
- update kh_private.agency_property_changes set state='withdrawn',termination_reason='property_sold',version=version+1,decided_at=clock_timestamp() where property_id=any(ids) and state='pending';
- update kh_private.agency_mandate_requests set state='withdrawn',termination_reason='property_sold',version=version+1,decided_at=clock_timestamp() where property_id=any(ids) and state in('pending','accepted');
- update kh_private.agency_sale_requests set state='cancelled',note='Vivienda vendida',decided_by=p_actor,decided_at=clock_timestamp(),version=version+1 where property_id=any(ids) and state='pending' and id is distinct from p_request_id;
- insert into kh_private.agency_property_write_permits select txid_current(),id,p_actor,closure.id::text,'sale' from public.properties where id=any(ids);
+ update kh_private.property_reservations
+ set released_at=clock_timestamp(),closed_reason='property_sold',version=version+1
+ where property_id=any(ids) and released_at is null;
+
+ insert into kh_private.commercial_termination_events(
+  closure_id,property_id,subject_kind,subject_id,agency_id,recipient_id
+ )
+ select closure.id,d.property_id,'agency_deal',d.id,d.agency_id,recipient
+ from kh_private.agency_deals d
+ cross join lateral(select d.buyer_id recipient union select d.assignee_id)x
+ where d.id=any(deals) and d.closed_reason is null and recipient is not null;
+ insert into kh_private.commercial_termination_events(
+  closure_id,property_id,subject_kind,subject_id,recipient_id
+ )
+ select closure.id,c.property_id,'personal_conversation',c.id,recipient
+ from public.kh_conversations c
+ cross join lateral(select c.buyer_id recipient union select c.seller_id)x
+ where c.property_id=any(ids);
+
+ update kh_private.agency_deals
+ set stage=case when id=req.winning_deal_id then 'won' else stage end,
+  closed_reason='property_sold',version=version+1
+ where id=any(deals) and closed_reason is null and stage not in('won','lost');
+ update kh_private.commercial_cycles
+ set state='closed',termination_reason='property_sold',version=version+1
+ where property_id=any(ids) and state='open';
+ update kh_private.agency_property_changes
+ set state='withdrawn',termination_reason='property_sold',version=version+1,decided_at=clock_timestamp()
+ where property_id=any(ids) and state='pending';
+ update kh_private.agency_mandate_requests
+ set state='withdrawn',termination_reason='property_sold',version=version+1,decided_at=clock_timestamp()
+ where property_id=any(ids) and state in('pending','accepted');
+ update kh_private.agency_sale_requests
+ set state='cancelled',note='Vivienda vendida',decided_by=p_actor,decided_at=clock_timestamp(),version=version+1
+ where property_id=any(ids) and state='pending' and id is distinct from p_request_id;
+ insert into kh_private.agency_property_write_permits
+ select txid_current(),id,p_actor,closure.id::text,'sale' from public.properties where id=any(ids);
  update public.properties set availability='sold',version=version+1,updated_at=clock_timestamp() where id=any(ids);
  delete from kh_private.agency_property_write_permits where transaction_id=txid_current() and property_id=any(ids);
  return kh_private.sale_closure_json(closure);
 end $$;
-create function kh_private.decide_sale(actor uuid,agency uuid,payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
- declare r kh_private.agency_sale_requests;receipt jsonb;closure jsonb:=null;action text:=payload->>'action';begin
- perform kh_private.agency_prepare_account(actor);select * into r from kh_private.agency_sale_requests where id=(payload->>'requestId')::uuid;
- if r.id is null or not coalesce(kh_private.sale_request_visible(actor,agency,r),false) then raise exception 'KH_AGENCY_ORIGIN_REQUIRED';end if;
- perform kh_private.sale_group_lock(actor,agency,r.property_id);perform kh_private.agency_account(actor);if not(select enabled from kh_private.agency_settings where singleton) then raise exception 'KH_AGENCY_DISABLED';end if;if agency is not null then perform kh_private.agency_actor(actor,agency,'manager');end if;
+
+create function kh_private.decide_sale(actor uuid,agency uuid,payload jsonb)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare
+ r kh_private.agency_sale_requests;
+ receipt jsonb;
+ closure jsonb:=null;
+ action text:=payload->>'action';
+begin
+ perform kh_private.agency_prepare_account(actor);
+ select * into r from kh_private.agency_sale_requests where id=(payload->>'requestId')::uuid;
+ if r.id is null or not coalesce(kh_private.sale_request_visible(actor,agency,r),false) then
+  raise exception 'KH_AGENCY_ORIGIN_REQUIRED';
+ end if;
+ perform kh_private.sale_group_lock(actor,agency,r.property_id);
+ perform kh_private.agency_account(actor);
+ if not(select enabled from kh_private.agency_settings where singleton) then
+  raise exception 'KH_AGENCY_DISABLED';
+ end if;
+ if agency is not null then
+  perform kh_private.agency_actor(actor,agency,'manager');
+ end if;
  select * into r from kh_private.agency_sale_requests where id=r.id;
- if action in('confirm','reject') then if not kh_private.property_source_decider(actor,agency,r.property_id) then raise exception 'KH_AGENCY_ORIGIN_REQUIRED';end if;
- elsif action='cancel' then if agency is distinct from r.executing_agency_id or not kh_private.sale_request_visible(actor,agency,r) then raise exception 'KH_AGENCY_ORIGIN_REQUIRED';end if;
- else raise exception 'KH_AGENCY_SALE_INVALID';end if;
- receipt:=kh_private.agency_receipt(actor,r.property_id,'decide_agency_sale',payload);if receipt is not null then return receipt;end if;
- if payload-array['requestId','action','expectedRequestVersion','expectedPropertyVersion','expectedAuthorityVersion','note','clientRequestId']<>'{}'::jsonb or jsonb_typeof(payload->'note') is distinct from 'string' or char_length(payload->>'note')>500 then raise exception 'KH_AGENCY_SALE_INVALID';end if;
- if r.state<>'pending' or r.version is distinct from (payload->>'expectedRequestVersion')::integer or (select version from public.properties where id=r.property_id) is distinct from (payload->>'expectedPropertyVersion')::integer or coalesce((select authority_version from kh_private.agency_property_origins where property_id=r.property_id),1) is distinct from (payload->>'expectedAuthorityVersion')::integer then raise exception 'KH_AGENCY_SALE_STALE';end if;
- if action='confirm' then closure:=kh_private.close_commercial_cycle(r.property_id,r.id,actor);end if;
- update kh_private.agency_sale_requests set state=case action when 'confirm' then 'confirmed' when 'reject' then 'rejected' else 'cancelled' end,decided_by=actor,decided_at=clock_timestamp(),note=payload->>'note',version=version+1 where id=r.id returning * into r;
- return kh_private.agency_remember(actor,r.property_id,'decide_agency_sale',payload,jsonb_build_object('request',kh_private.sale_request_json(actor,agency,r),'closure',closure));
+
+ if action in('confirm','reject') then
+  if not kh_private.property_source_decider(actor,agency,r.property_id) then
+   raise exception 'KH_AGENCY_ORIGIN_REQUIRED';
+  end if;
+ elsif action='cancel' then
+  if agency is distinct from r.executing_agency_id or not kh_private.sale_request_visible(actor,agency,r) then
+   raise exception 'KH_AGENCY_ORIGIN_REQUIRED';
+  end if;
+ else
+  raise exception 'KH_AGENCY_SALE_INVALID';
+ end if;
+ receipt:=kh_private.agency_receipt(actor,r.property_id,'decide_agency_sale',payload);
+ if receipt is not null then
+  return receipt;
+ end if;
+
+ if payload-array[
+  'requestId','action','expectedRequestVersion','expectedPropertyVersion','expectedAuthorityVersion','note','clientRequestId'
+ ]<>'{}'::jsonb or jsonb_typeof(payload->'note') is distinct from 'string' or char_length(payload->>'note')>500 then
+  raise exception 'KH_AGENCY_SALE_INVALID';
+ end if;
+ if r.state<>'pending' or r.version is distinct from (payload->>'expectedRequestVersion')::integer
+ or (select version from public.properties where id=r.property_id) is distinct from (payload->>'expectedPropertyVersion')::integer
+ or coalesce((select authority_version from kh_private.agency_property_origins where property_id=r.property_id),1)
+  is distinct from (payload->>'expectedAuthorityVersion')::integer then
+  raise exception 'KH_AGENCY_SALE_STALE';
+ end if;
+ if action='confirm' then
+  closure:=kh_private.close_commercial_cycle(r.property_id,r.id,actor);
+ end if;
+ update kh_private.agency_sale_requests
+ set state=case action when 'confirm' then 'confirmed' when 'reject' then 'rejected' else 'cancelled' end,
+  decided_by=actor,decided_at=clock_timestamp(),note=payload->>'note',version=version+1
+ where id=r.id returning * into r;
+ return kh_private.agency_remember(
+  actor,r.property_id,'decide_agency_sale',payload,
+  jsonb_build_object('request',kh_private.sale_request_json(actor,agency,r),'closure',closure)
+ );
 end $$;
 create function public.kh_decide_agency_sale(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$begin if p_agency_id is null then raise exception 'KH_AGENCY_ORIGIN_REQUIRED';end if;return kh_private.decide_sale(p_actor_id,p_agency_id,p_payload);end $$;
 create function public.kh_decide_personal_sale(p_actor_id uuid,p_payload jsonb) returns jsonb language sql security definer set search_path='' as $$select kh_private.decide_sale(p_actor_id,null,p_payload)$$;
