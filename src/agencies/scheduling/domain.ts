@@ -61,6 +61,8 @@ export function decodeAgencyProposalEvent(value: unknown, proposalId: string): A
 export const visitOutcomeLabel = (v: AgencyVisit['outcome']) => ({ unrecorded: 'Resultado sin registrar', performed: 'Visita realizada', no_show: 'Interesado ausente', cancelled: 'Visita cancelada' }[v]);
 export function schedulingError(e: unknown): string {
     const message = e instanceof Error ? e.message : e && typeof e === 'object' && 'message' in e ? String(e.message) : '';
+    if (/NOT_YOUR_TURN/.test(message)) return 'La aceptación o el rechazo corresponden a la otra parte. Revisa quién creó la propuesta y selecciona quién respondió.';
+    if (/INVALID_EXTERNAL_RESPONSE|^Revisa la referencia/.test(message)) return 'Revisa la referencia de la respuesta del interesado y el canal por el que la recibiste.';
     if (/VISIT_CONFLICT/.test(message))
         return 'La vivienda o el responsable ya tienen una cita en ese horario.';
     if (/PROPERTY_RESERVED/.test(message))

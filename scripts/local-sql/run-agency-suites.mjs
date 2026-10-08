@@ -34,7 +34,7 @@ try{
    }
    const last=files.find(f=>f.startsWith(through));if(!last)throw Error(`Missing migration ${through}`);
    if(!fixtureLoaded)await db.query(await readFile(new URL('../../supabase/tests/helpers/agency_fixture.sql',import.meta.url),'utf8'));
-   if(['proposals','scheduling'].includes(suite))await db.query(await readFile(new URL('../../supabase/tests/helpers/agency_scheduling_fixture.sql',import.meta.url),'utf8'));
+   if(['proposals','scheduling','followups'].includes(suite))await db.query(await readFile(new URL('../../supabase/tests/helpers/agency_scheduling_fixture.sql',import.meta.url),'utf8'));
    await db.query(await readFile(new URL(`../../supabase/tests/agency_${names[suite]??suite.replaceAll('-','_')}.sql`,import.meta.url),'utf8'));
    await db.query('rollback');assert.deepEqual(await inventory(),before);console.log(`PASS ${suite} (rollback, inventoryUnchanged:true)`);
   }catch(error){await db.query('rollback');throw error;}
