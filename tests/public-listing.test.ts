@@ -108,6 +108,7 @@ function fakeFetch(rest: { status: number; body?: unknown }, sign?: Reply, profi
     calls.push({ url, init });
     if (url.includes('/rest/v1/properties')) return respond(rest);
     if (url.includes('/storage/v1/object/sign/')) return respond(sign ?? { status: 500 });
+    if (url.includes('/rest/v1/rpc/kh_public_property_contact')) return respond({status:200,body:{propertyId:row.id,personalContact:true,agencies:[]}});
     if (url.includes('/rest/v1/rpc/kh_public_profile')) return respond(profile);
     if (url.includes('/rest/v1/rpc/kh_resolve_property_alias')) return respond({status:200,body:JSON.parse(String(init?.body)).p_property_id});
     throw new Error(`unexpected ${url}`);
@@ -158,13 +159,14 @@ test('handle renders an approved listing with signed photos and the canonical pa
   assert.ok(html.includes('<meta property="og:image" content="https://example.supabase.co/storage/v1/object/sign/property-photos/u/a/one.jpg?token=1">'));
   assert.equal((html.match(/<img loading="lazy"/g) ?? []).length, 2);
   assert.ok(html.includes(`<link rel="canonical" href="https://karmahouse.vercel.app/p/${row.id}">`));
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 4);
   assert.ok(calls[0].url.startsWith(`https://example.supabase.co/rest/v1/properties?select=`));
   assert.ok(calls[0].url.includes(`id=eq.${row.id}&moderation=eq.approved&availability=eq.active`));
   assert.ok(!calls[0].url.includes('latitude'));
   assert.equal((calls[0].init?.headers as Record<string, string>).apikey, 'anon-key');
-  assert.equal(calls[1].url, 'https://example.supabase.co/storage/v1/object/sign/property-photos');
-  assert.deepEqual(JSON.parse(String(calls[1].init?.body)), { expiresIn: 3600, paths: dbRow.photo_paths });
+  const signing=calls.find(call=>call.url.includes('/storage/v1/object/sign/'))!;
+  assert.equal(signing.url, 'https://example.supabase.co/storage/v1/object/sign/property-photos');
+  assert.deepEqual(JSON.parse(String(signing.init?.body)), { expiresIn: 3600, paths: dbRow.photo_paths });
 });
 async function expectedDiagnostics<T>(expected:RegExp,run:()=>Promise<T>):Promise<T>{
  const previous=console.error,lines:string[]=[];
@@ -199,7 +201,7 @@ test('handle loads the seller for a listing without photos', async () => {
   const { fetch, calls } = fakeFetch({ status: 200, body: [{ ...dbRow, photo_paths: null }] }, undefined, { status: 200, body: { ...profile, verified: false, level: 'new' } });
   const html = await (await handle(get(`/api/p?id=${row.id}`), env, fetch)).text();
   assert.ok(html.includes('Publicado por Ana &lt;b&gt;López&lt;/b&gt; · Nuevo') && !html.includes('Verificado por KarmaHouse'));
-  assert.deepEqual(calls.map((call) => call.url.split('?')[0]), ['https://example.supabase.co/rest/v1/properties', PROFILE_URL]);
+  assert.deepEqual(calls.map((call) => call.url.split('?')[0]), ['https://example.supabase.co/rest/v1/properties','https://example.supabase.co/rest/v1/rpc/kh_public_property_contact', PROFILE_URL]);
 });
 test('handle renders without the seller line when the profile is missing or malformed', async () => {
   const failures: Reply[] = [
