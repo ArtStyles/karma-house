@@ -55,7 +55,7 @@ export async function schemaInventory(db,names){
    (select jsonb_agg(jsonb_build_object('name',a.attname,'type',format_type(a.atttypid,a.atttypmod),'nullable',not a.attnotnull,'default',pg_get_expr(d.adbin,d.adrelid)) order by a.attnum) from pg_attribute a left join pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum where a.attrelid=c.oid and a.attnum>0 and not a.attisdropped) columns,
    (select jsonb_agg(pg_get_constraintdef(oid,true) order by pg_get_constraintdef(oid,true) collate "C") from pg_constraint where conrelid=c.oid) constraints,
    (select jsonb_agg(pg_get_indexdef(indexrelid) order by pg_get_indexdef(indexrelid) collate "C") from pg_index where indrelid=c.oid) indexes,
-   (select jsonb_agg(pg_get_triggerdef(oid,true) order by tgname collate "C") from pg_trigger where tgrelid=c.oid and not tgisinternal) triggers,
+   (select jsonb_agg(jsonb_build_object('definition',pg_get_triggerdef(oid,true),'enabled',tgenabled) order by tgname collate "C") from pg_trigger where tgrelid=c.oid and not tgisinternal) triggers,
    (select jsonb_agg(jsonb_build_object('name',polname,'cmd',polcmd,'using',pg_get_expr(polqual,polrelid),'check',pg_get_expr(polwithcheck,polrelid),'roles',(select jsonb_agg(case when r=0 then 'public' else pg_get_userbyid(r) end order by (case when r=0 then 'public' else pg_get_userbyid(r) end) collate "C") from unnest(polroles)r)) order by polname collate "C") from pg_policy where polrelid=c.oid) policies
    from pg_class c where c.oid=to_regclass($1)`,[name])).rows[0];
   if(!row)throw Error('Required agency table missing');

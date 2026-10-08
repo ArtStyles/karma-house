@@ -26,6 +26,18 @@ try{
  await db.query('begin');await db.query('alter table auth.users add column unrelated_provider_metadata text;alter table storage.objects add column unrelated_provider_metadata text');await verifyAgencies(db);await db.query('rollback');
  console.log('managed agency policy/trigger drift rejected; unrelated Supabase baseline columns accepted');
  process.env.KH_LOCAL_DATABASE_URL=clone.url.href;
+ await db.query('alter table public.properties disable trigger kh_agency_property_guard');
+ assert.equal((await db.query("select tgenabled from pg_trigger where tgrelid='public.properties'::regclass and tgname='kh_agency_property_guard'")).rows[0].tgenabled,'D');
+ await assert.rejects(verifyAgencies(db),/inventory differs/,'disabled property guard must fail verification');
+ await assert.rejects(runAgencyCommand({target:'local',action:'enable',reason:'must reject disabled property guard',config:null}),/inventory differs/);
+ assert.equal((await db.query('select enabled from kh_private.agency_settings')).rows[0].enabled,false);
+ await db.query('update kh_private.agency_settings set enabled=true');
+ const disabledGuard=await runAgencyCommand({target:'local',action:'disable',reason:'emergency off with disabled property guard',config:null});
+ assert.equal(disabledGuard.disabled,true);assert.equal(disabledGuard.enabled,false);assert.equal(disabledGuard.complete,false);assert.equal(disabledGuard.cancellationComplete,true);
+ assert.equal((await db.query('select enabled from kh_private.agency_settings')).rows[0].enabled,false);
+ await db.query('alter table public.properties enable trigger kh_agency_property_guard');
+ assert.equal((await verifyAgencies(db)).complete,true);
+ console.log('disabled affected-table property guard: verify and enable rejected; emergency disable confirmed OFF with complete=false; restored guard verifies');
  await db.query('grant select on kh_private.agency_events to authenticated');
  await assert.rejects(runAgencyCommand({target:'local',action:'enable',reason:'must reject drift',config:null}));
  assert.equal((await runAgencyCommand({target:'local',action:'disable',reason:'emergency off despite drift',config:null})).enabled,false);
