@@ -18,8 +18,8 @@ test('APK verifier uses the explicit private reference and retains its old defau
   writeFileSync(join(root,'outside.env'),'SUPABASE_DB_PASSWORD=private-explicit-fixture\n');
   const run=(extra:string[])=>spawnSync('pwsh',['-NoProfile','-File',join(root,'scripts/verify.ps1'),'-ApkPath',join(root,'test.apk'),'-SdkPath',join(root,'sdk'),'-JdkPath',join(root,'jdk'),'-BuildToolsVersion','test',...extra],{encoding:'utf8'});
   const standard=run([]),explicit=run(['-PrivateConfigurationPath',join(root,'outside.env')]);
-  assert.notEqual(standard.status,0);assert.match(standard.stderr,/Falta el valor privado.*SUPABASE_DB_PASSWORD/);
-  assert.notEqual(explicit.status,0);assert.match(explicit.stderr,/Falta el valor privado.*SUPABASE_SECRET_KEY/);
+  assert.notEqual(standard.status,0);assert.match(standard.stderr,/Falta el valor privado.*SUPABASE_DB_PASSWORD/s);
+  assert.notEqual(explicit.status,0);assert.match(explicit.stderr,/Falta el valor privado.*SUPABASE_SECRET_KEY/s);
   assert.doesNotMatch(standard.stderr+explicit.stderr,/private-default-fixture|private-explicit-fixture/);
  }finally{const inside=relative(tmpdir(),root);assert.ok(inside&&!inside.startsWith('..')&&!isAbsolute(inside));rmSync(root,{recursive:true,force:true});}
 });
