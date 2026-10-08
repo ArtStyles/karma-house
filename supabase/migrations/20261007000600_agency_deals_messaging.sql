@@ -270,7 +270,8 @@ create function public.kh_set_agency_conversation_block(p_actor_id uuid,p_agency
   if target is distinct from d.assignee_id and not exists(select 1 from kh_private.agency_messages where conversation_id=c.id and author_id=target and author_id<>p_actor_id)
    and (blocked or not kh_private.agency_retained_block(p_actor_id,d.agency_id,c.id,target)) then raise exception 'KH_CHAT_INVALID_BLOCK';end if;
  else
-  if target is distinct from d.buyer_id or (p_actor_id is distinct from d.assignee_id and not exists(select 1 from kh_private.agency_messages where conversation_id=c.id and author_id=p_actor_id)) then raise exception 'KH_CHAT_INVALID_BLOCK';end if;
+  if target is distinct from d.buyer_id or (p_actor_id is distinct from d.assignee_id and not exists(select 1 from kh_private.agency_messages where conversation_id=c.id and author_id=p_actor_id)
+   and (blocked or not kh_private.agency_retained_block(p_actor_id,d.agency_id,c.id,target))) then raise exception 'KH_CHAT_INVALID_BLOCK';end if;
  end if;
  if blocked then
   if not exists(select 1 from auth.users where id=target) then raise exception 'KH_CHAT_INVALID_BLOCK';end if;

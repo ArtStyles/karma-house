@@ -5,9 +5,22 @@ import { pendingIntentDestination, createPendingIntentStore } from '../src/auth/
 import { safeReturnTo } from '../src/auth/callback.ts';
 import { renderListing, handle } from '../web/api/p.ts';
 import { createReportModerationRepository } from '../src/messaging/reportModeration.ts';
+import { agencyConversationCounterparts } from '../src/agencies/messaging/counterparts.ts';
 const id = (n: number) => `45000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const context = { userId: id(1), accessToken: 'buyer', signal: new AbortController().signal, checkpoint() { } };
 const msg = (seq: number) => ({ id: id(seq + 10), conversationId: id(2), seq, clientMessageId: id(seq + 20), senderId: id(1), body: 'Hola', createdAt: '2026-10-08T12:00:00Z' });
+test('former authorized staff keeps only Unblock for its retained own target without authored messages', () => {
+    const conversation = { buyerId: id(1), assigneeId: id(4), blockedUserIds: [id(1)] };
+    const expected = [{ userId: id(1), canBlock: false, canUnblock: true, canReport: false }];
+    assert.deepEqual(agencyConversationCounterparts(conversation, [], id(3), true), expected);
+    assert.deepEqual(agencyConversationCounterparts(conversation, [id(1)], id(3), true), expected);
+    assert.deepEqual(agencyConversationCounterparts({ ...conversation, blockedUserIds: [] }, [id(1)], id(3), true), []);
+    assert.deepEqual(agencyConversationCounterparts(null, [id(1)], id(3), true), []);
+    assert.deepEqual(agencyConversationCounterparts(conversation, [], undefined, true), []);
+    assert.deepEqual(agencyConversationCounterparts({ ...conversation, blockedUserIds: [id(9)] }, [], id(3), true), []);
+    assert.deepEqual(agencyConversationCounterparts(conversation, [], id(4), true), [{ userId: id(1), canBlock: true, canUnblock: true, canReport: false }]);
+    assert.deepEqual(agencyConversationCounterparts({ buyerId: id(1), assigneeId: null, blockedUserIds: [id(3)] }, [], id(1), false), [{ userId: id(3), canBlock: false, canUnblock: true, canReport: false }]);
+});
 test('conversation retains only validated own blocked target IDs for former-assignee unblock', () => {
     const row = { id: id(2), agencyId: id(3), dealId: id(4), propertyId: id(5), buyerId: id(1), canSend: true, closedReason: null, lastSeq: 0, agencyName: 'Agencia', propertyTitle: 'Casa', assigneeId: null, dealVersion: 2, unreadCount: 0, blockedUserIds: [id(8)] };
     assert.deepEqual(decodeAgencyConversation({ ...row, receipt: { secret: true } }, context).blockedUserIds, [id(8)]);
