@@ -97,3 +97,23 @@ Ejecutar con parada ante errores (`psql -v ON_ERROR_STOP=1 -f supabase/tests/clo
 - Invitación de la cuenta administrativa solicitada guardada de forma privada, pendiente de confirmar el correo. No se probó entrega SMTP ni un teléfono físico.
 
 Supabase bloquea actualmente el `DELETE` directo de `storage.objects` mediante su trigger de protección. La regresión SQL comprueba el predicado de elegibilidad y revierte sus objetos de metadatos; la prueba REST comprueba las eliminaciones reales mediante Storage. No se desactiva ese trigger ni se borra metadato de imágenes por SQL.
+
+## Inmobiliarias: contrato preparado el 8 de octubre de 2026
+
+Las diez migraciones `20261007000100`–`20261007001000` añaden autoridad empresarial privada y se instalan con `kh_private.agency_settings.enabled=false`. Esta sección documenta el candidato local de Task 15, no acredita ejecución hosted. La autorización posterior del usuario y la secuencia de release están en [activación](agency-workspaces-activation.md); los controles de operación y reversión están en [operación](agency-workspaces-operation.md).
+
+`supabase/agency-activation-manifest.json` fija los diez hashes UTF-8/LF, el SQL registrado literalmente en ledger, las firmas/definiciones y permisos efectivos de las funciones, las tablas afectadas y los triggers/políticas empresariales específicos sobre `auth.users`/`storage.objects`. No fija columnas administradas ajenas de Auth/Storage ni OIDs locales. Los registros históricos de migración permanecen intactos.
+
+| Área | RPC y autoridad |
+| --- | --- |
+| Identidad/equipo | `kh_agency_capabilities`, solicitud/aprobación de agencia, `kh_list_agency_members`, invitación/aceptación, cambio de rol y retirada. Actor real confirmado, membresía y rol actuales; metadatos Auth no conceden autoridad. |
+| Verificación | `kh_agency_verification_request`, solicitud y revisión protegida. Sello separado de aprobación y habilitación; su retirada sola no despublica anuncios aprobados. |
+| Cartera/mandatos | `kh_agency_properties`, `kh_agency_property`, `kh_agency_save_property`, solicitudes/decisiones/retirada de mandato y propuestas de cambio. Identidad canónica, origen, mandato y versión del servidor; custodia técnica no equivale a propiedad personal. |
+| Contactos/mensajes | `kh_create_agency_deal`, `kh_get_agency_deal`, `kh_list_agency_deals`, conversaciones/mensajes/asignación. Expediente propio y privacidad por agencia, rol, asignación y comprador; no usa chats personales como alternativa de autorización. |
+| Agenda/seguimiento | Propuestas/respuestas, reservas/visitas conjuntas, `kh_list_agency_tasks`, `kh_save_agency_task`, `kh_finish_agency_task`, eventos y resultados. Mandato/ciclo/personas/versiones vigentes; histórica lectura independiente de nuevas operaciones. |
+| Venta | `kh_request_agency_sale`, `kh_list_agency_sale_requests`, `kh_decide_agency_sale`. Fuente actual confirma, gestor ejecutor definido, cierre canónico atómico, recibos e historial preservados. |
+| Avisos | Eventos/reminders empresariales y `push_outbox` compartido se materializan con permisos actuales. Inbox guardado no acredita recepción externa. `disable` cancela únicamente trabajo empresarial pendiente y mantiene avisos/personales/historia. |
+
+El manifest es el inventario exacto de nombres/sobrecargas; esta tabla resume el propósito. `agency_actor` conserva su gate operativo. La lectura nueva usa `agency_reader` o el alcance histórico de casos, con cuenta/membresía/rol vigentes. OFF y agencia suspendida permiten el historial autorizado; un mandato retirado no permite la cartera o fotos privadas actuales. `agency_media_read` requiere miembro activo, mandato activo y asset attached; el resto de políticas públicas/personales se mantiene. La carga, adjunto y nuevas operaciones siguen denegadas OFF. Ningún cliente tiene escritura directa en tablas privadas. RLS, EXECUTE, contexto JWT/generación y comprobación previa a recibos se verifican conjuntamente.
+
+La desactivación serializa worker→module y separa `disabled:true` de `complete`/`cancellationComplete`; ante deriva intenta cerrar operaciones con savepoints sin ocultar colas no canceladas. No revierte datos ni pretende recuperar una entrega ya autorizada por un proveedor. Los smokes hosted Auth/Storage y la recepción/tap en dispositivo quedan para el release autorizado, fuera de la evidencia local.

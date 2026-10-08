@@ -1,3 +1,4 @@
+import {useFocusEffect} from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { filterListings, type Listing, type ListingFilters } from '../domain/listings';
 import { createRowSigner } from '../data/supabaseMarketplace';
@@ -13,7 +14,7 @@ import { draftStorage } from '../data/draftStorage';
 import { COUNT_DEBOUNCE_MS, type BoundingBox, type CatalogRepository, type MapView } from './types';
 import {listingManagementEvents} from '../state/listingManagementEvents';
 import { catalogFiltersKey, catalogQueryStatus } from './presentation';
-import { createFavoriteListingsController, emptyFavoriteListingsState } from './favoritesController';
+import { createAccountFavoriteReader, visibleFavoriteListings, createFavoriteListingsController, emptyFavoriteListingsState } from './favoritesController';
 
 /** Null while Supabase is unconfigured; the screens never branch on mode themselves. */
 function useCatalogRepository(): CatalogRepository | null {
@@ -155,22 +156,22 @@ const EMPTY_FAVORITES = Object.freeze(emptyFavoriteListingsState());
 const emptyFavorites = () => EMPTY_FAVORITES;
 export function useFavoriteListings(): { listings: Listing[]; ready: boolean; loading: boolean; error: string | null; retry(): Promise<void> } {
   const managementGeneration=useSyncExternalStore(listingManagementEvents.subscribe,listingManagementEvents.getSnapshot,listingManagementEvents.getSnapshot);
-  const { mode, demoCatalog, favoriteIds, ready: marketplaceReady } = useMarketplace();
+  const { mode, demoCatalog, favoriteIds, normalizeFavoriteIds, ready: marketplaceReady } = useMarketplace();
   const { user } = useAuth();
   const sessionId = user?.id ?? null;
   const repository = useCatalogRepository();
-  const controller = useMemo(() => repository ? createFavoriteListingsController(repository) : null, [repository]);
+  const controller = useMemo(() => repository ? createFavoriteListingsController(createAccountFavoriteReader(repository,normalizeFavoriteIds)) : null, [repository,normalizeFavoriteIds]);
   const remote = useSyncExternalStore(controller ? controller.subscribe : noSubscribe, controller ? controller.getState : emptyFavorites, controller ? controller.getState : emptyFavorites);
   const state = remote.sessionId === sessionId ? remote : EMPTY_FAVORITES;
   const key = favoriteIds.join(',');
   useEffect(() => { controller?.setSession(sessionId); }, [controller, sessionId]);
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (mode !== 'demo' && marketplaceReady) void controller?.setIds(favoriteIds);
-  }, [mode, controller, key, sessionId, managementGeneration, marketplaceReady]);
+    return ()=>controller?.cancelRead();
+  }, [mode, controller, key, sessionId, managementGeneration, marketplaceReady]));
   const retry = useCallback(async () => { await controller?.retry(); }, [controller]);
 
-  const visible = (mode === 'demo' ? (demoCatalog ?? []) : state.listings)
-    .filter((item) => favoriteIds.includes(item.id) && item.status === 'active' && (!item.moderationStatus || item.moderationStatus === 'approved'));
+  const visible = visibleFavoriteListings(mode === 'demo' ? (demoCatalog ?? []) : state.listings,favoriteIds);
   return { listings: visible, ready: mode === 'demo' ? true : marketplaceReady && state.ready, loading: mode !== 'demo' && (!marketplaceReady || state.loading), error: mode === 'demo' ? null : state.error, retry };
 }
 

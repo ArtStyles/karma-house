@@ -6,8 +6,8 @@ import { useAuth } from '../auth/AuthProvider';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { Button, EmptyState, Icon, Notice, PageTitle, Pill } from '../components/ui';
 import { supabase } from '../lib/supabase';
-import { createReportModerationRepository } from '../messaging/reportModeration';
-import type { ChatReport, ReportReason } from '../messaging/types';
+import { createReportModerationRepository,type ModerationReport as ChatReport } from '../messaging/reportModeration';
+import type { ReportReason } from '../messaging/types';
 import { createThemedStyles } from '../theme';
 
 const reasonLabels: Record<ReportReason, string> = { spam: 'Spam', fraud: 'Posible fraude', harassment: 'Acoso', other: 'Otro motivo' };
@@ -19,27 +19,29 @@ export default function MessageReportsScreen() {
   const { colors, styles } = useStyles();
   const { user, session, isAdmin } = useAuth();
   const owner = isAdmin ? user?.id ?? '' : '';
+  const [source,setSource]=useState<'personal'|'agency'>('personal');
+  const queueOwner=`${owner}:${source}`;
   const [status, setStatus] = useState<'open' | 'reviewed'>('open');
   const [state, setState] = useState<QueueState>(initial);
   const [selection, setSelection] = useState<{ owner: string; report: ChatReport; note: string; error: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const scope = `${owner}:${status}`;
+  const scope = `${queueOwner}:${status}`;
   const currentScope = useRef(scope); currentScope.current = scope;
   const requestId = useRef(0);
   const loadingRef = useRef(false);
   const busyRef = useRef(false);
   const focused = useRef(false);
   const requests = useRef(new Set<AbortController>());
-  const repository = useMemo(() => supabase && owner && session?.access_token ? createReportModerationRepository(supabase, { actorId: owner, accessToken: session.access_token }) : null, [owner, session?.access_token]);
-  const visible = state.owner === owner && state.status === status ? state : initial(owner, status);
-  const selected = selection?.owner === owner && owner ? selection : null;
+  const repository = useMemo(() => supabase && owner && session?.access_token ? createReportModerationRepository(supabase, { actorId: owner, accessToken: session.access_token },source) : null, [owner, session?.access_token,source]);
+  const visible = state.owner === queueOwner && state.status === status ? state : initial(queueOwner, status);
+  const selected = selection?.owner === queueOwner && owner ? selection : null;
   const visibleRef = useRef(visible); visibleRef.current = visible;
 
   useLayoutEffect(() => {
     requests.current.forEach(request => request.abort()); requests.current.clear();
     requestId.current++; loadingRef.current = false; busyRef.current = false;
-    setState(initial(owner, status)); setSelection(null); setBusy(false);
-  }, [owner, status]);
+    setState(initial(queueOwner, status)); setSelection(null); setBusy(false);
+  }, [queueOwner, status]);
 
   const load = useCallback(async (append = false) => {
     if (!repository || !focused.current || loadingRef.current) return;
@@ -47,17 +49,17 @@ export default function MessageReportsScreen() {
     const version = ++requestId.current;
     const request = new AbortController(); requests.current.add(request);
     const offset = append ? visibleRef.current.reports.length : 0;
-    setState(old => ({ ...(old.owner === owner && old.status === status ? old : initial(owner, status)), loading: true, error: '' }));
+    setState(old => ({ ...(old.owner === queueOwner && old.status === status ? old : initial(queueOwner, status)), loading: true, error: '' }));
     try {
       const page = await repository.list(status, offset, request.signal);
-      if (focused.current && currentScope.current === scope && version === requestId.current) setState(old => ({ owner, status, loading: false, error: '', reports: append ? [...old.reports, ...page.filter(item => !old.reports.some(existing => existing.id === item.id))] : page, hasMore: page.length === 50 }));
+      if (focused.current && currentScope.current === scope && version === requestId.current) setState(old => ({ owner:queueOwner, status, loading: false, error: '', reports: append ? [...old.reports, ...page.filter(item => !old.reports.some(existing => existing.id === item.id))] : page, hasMore: page.length === (source==='agency'?30:50) }));
     } catch (error) {
       if (focused.current && currentScope.current === scope && version === requestId.current) setState(old => ({ ...old, loading: false, error: error instanceof Error ? error.message : 'No pudimos cargar los reportes.' }));
     } finally {
       requests.current.delete(request);
       if (currentScope.current === scope && version === requestId.current) loadingRef.current = false;
     }
-  }, [repository, owner, status, scope]);
+  }, [repository, queueOwner,source, status, scope]);
 
   useFocusEffect(useCallback(() => {
     focused.current = true; void load();
@@ -91,13 +93,14 @@ export default function MessageReportsScreen() {
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
     <ScrollView contentContainerStyle={styles.content}>
       <PageTitle title="Reportes" subtitle="Cuida las conversaciones de KarmaHouse." back />
+      <View style={styles.filters}><Pill label="Personales" active={source==='personal'} onPress={()=>setSource('personal')}/><Pill label="Inmobiliarias" active={source==='agency'} onPress={()=>setSource('agency')}/></View>
       {!user ? <AccountPrompt returnTo="/message-reports" /> : !owner || !repository ? <EmptyState icon="lock-closed-outline" title="Acceso reservado" description="Solo las cuentas administradoras pueden revisar reportes." /> : <>
         <View style={styles.filters}><Pill label="Pendientes" active={status === 'open'} onPress={() => setStatus('open')} /><Pill label="Revisados" active={status === 'reviewed'} onPress={() => setStatus('reviewed')} /></View>
         <Text style={styles.meta}>Cada reporte incluye el contexto de la conversación en el momento de enviarlo.</Text>
         <Button label="Actualizar reportes" secondary icon="refresh-outline" loading={visible.loading} disabled={busy} onPress={() => void load()} />
         {visible.error ? <Notice error>{visible.error}</Notice> : null}
         {visible.loading && visible.reports.length === 0 ? <ActivityIndicator color={colors.primary} style={{ margin: 40 }} /> : !visible.error && visible.reports.length === 0 ? <EmptyState icon="shield-checkmark-outline" title={status === 'open' ? 'Sin reportes pendientes' : 'Aún no hay revisiones'} description={status === 'open' ? 'Aquí aparecerán las conversaciones que necesiten atención.' : 'Los reportes revisados se conservarán aquí.'} /> : null}
-        {visible.reports.map(report => <Pressable key={report.id} accessibilityRole="button" accessibilityLabel={`Revisar reporte: ${reasonLabels[report.reason]}, ${report.propertyTitle}`} style={({ pressed }) => [styles.card, pressed && { opacity: .75 }]} onPress={() => setSelection({ owner, report, note: '', error: '' })}>
+        {visible.reports.map(report => <Pressable key={report.id} accessibilityRole="button" accessibilityLabel={`Revisar reporte: ${reasonLabels[report.reason]}, ${report.propertyTitle}`} style={({ pressed }) => [styles.card, pressed && { opacity: .75 }]} onPress={() => setSelection({ owner:queueOwner, report, note: '', error: '' })}>
           <View style={styles.row}><View style={styles.flag}><Icon name="flag-outline" color={colors.primary} /></View><View style={{ flex: 1, gap: 4 }}><Text style={styles.title}>{reasonLabels[report.reason]}</Text><Text style={styles.meta}>{dateLabel(report.createdAt)}</Text></View><Icon name="chevron-forward" color={colors.muted} size={18} /></View>
           <Text style={styles.property}>{report.propertyTitle}</Text>
           {report.details ? <Text numberOfLines={3} style={styles.body}>{report.details}</Text> : null}
@@ -118,11 +121,11 @@ export default function MessageReportsScreen() {
             <Text style={styles.meta}>Últimos mensajes guardados al enviar el reporte.</Text>
             {selected?.report.context.length === 0 ? <Text style={styles.meta}>Esta conversación todavía no tenía mensajes enviados.</Text> : null}
             {selected?.report.context.map(message => <View key={message.id} style={styles.message}>
-              <View style={styles.row}><Text style={[styles.label, { flex: 1 }]}>{message.senderId === selected.report.reporterId ? 'Quien reporta' : 'Cuenta reportada'}</Text><Text style={styles.time}>{dateLabel(message.createdAt)}</Text></View>
+              <View style={styles.row}><Text style={[styles.label, { flex: 1 }]}>{message.senderId === null ? 'Cuenta eliminada' : message.senderId === selected.report.reporterId ? 'Quien reporta' : message.senderId === selected.report.reportedUserId ? 'Cuenta reportada' : 'Otro participante'}</Text><Text style={styles.time}>{dateLabel(message.createdAt)}</Text></View>
               <Text selectable style={styles.body}>{message.body}</Text>
             </View>)}
             {selected?.report.status === 'reviewed' ? <Notice>{selected.report.reviewNote || 'Este reporte ya fue revisado.'}</Notice> : selected && (selected.report.reporterId === owner || selected.report.reportedUserId === owner) ? <Notice>Formas parte de esta conversación. Otra cuenta administradora debe revisar el reporte.</Notice> : <>
-              <Text style={styles.label}>Nota de revisión · opcional</Text>
+              <Text style={styles.label}>Nota de revisión {source==='personal'?'· opcional':'· obligatoria'}</Text>
               <TextInput accessibilityLabel="Nota de revisión del reporte" value={selected?.note ?? ''} onChangeText={note => setSelection(old => old ? { ...old, note } : null)} multiline maxLength={1000} editable={!busy} placeholder="Deja constancia de lo revisado." placeholderTextColor={colors.muted} style={styles.input} />
               <Text style={styles.meta}>Marcar como revisado conserva el contexto. No bloquea ni suspende cuentas automáticamente.</Text>
               {selected?.error ? <Notice error>{selected.error}</Notice> : null}

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createSupabaseNotificationRepository, decodeNotification } from '../src/notifications/repository.ts';
 const recipient='77000000-0000-4000-8000-000000000001', actor='77000000-0000-4000-8000-000000000002', id='77000000-0000-4000-8000-000000000003';
-const row={id,seq:'9007199254740993',recipientId:recipient,actorId:actor,conversationId:id,messageId:id,negotiationId:null,category:'message',actorName:'Ana',propertyTitle:'Casa',title:'Nuevo mensaje',body:'Tienes un mensaje en tu conversación.',createdAt:'2026-09-20T10:00:00Z',readAt:null,propertyId:null,savedSearchId:null};
+const row={agencyId:null,dealId:null,saleRequestId:null,verificationRequestId:null,eventKind:null,id,seq:'9007199254740993',recipientId:recipient,actorId:actor,conversationId:id,messageId:id,negotiationId:null,category:'message',actorName:'Ana',propertyTitle:'Casa',title:'Nuevo mensaje',body:'Tienes un mensaje en tu conversación.',createdAt:'2026-09-20T10:00:00Z',readAt:null,propertyId:null,savedSearchId:null};
 const page={items:[row],nextCursor:null,unreadCount:1,readThrough:row.seq};
 function fixture(data=page){
   const calls=[],abort=new AbortController(); let changed=false;
@@ -13,7 +13,7 @@ function fixture(data=page){
 }
 test('list and summary bind captured identity, JWT and signal without sharing pagination',async()=>{
   const f=fixture(); assert.deepEqual(await f.repo.list({unreadOnly:true},f.context),page);
-  assert.deepEqual(f.calls[0].args,{p_before_seq:null,p_unread_only:true,p_category:null,p_limit:30,p_include_alerts:true,p_actor_id:recipient});
+  assert.deepEqual(f.calls[0].args,{p_before_seq:null,p_unread_only:true,p_category:null,p_limit:30,p_include_alerts:true,p_include_agencies:true,p_actor_id:recipient});
   assert.deepEqual(f.calls[0].header,['Authorization','Bearer captured-token']); assert.equal(f.calls[0].signal,f.context.signal);
   const g=fixture({unreadCount:1,readThrough:row.seq});await g.repo.summary(g.context);assert.equal(g.calls[0].name,'kh_notification_summary');
 });
@@ -50,7 +50,7 @@ test('read operations preserve bigint cutoff and reject invalid server counts',a
   await assert.rejects(f.repo.markAllRead('01',f.context));
 });
 test('preferences validate versions and exact desired confirmation',async()=>{
-  const desired={messages:false,visits:true,offers:true,alerts:true,expectedVersion:0};
+  const desired={messages:false,visits:true,offers:true,alerts:true,agencies:true,expectedVersion:0};
   const f=fixture({messages:false,visits:true,offers:true,alerts:true,version:1});
   assert.equal((await f.repo.savePreferences(desired,f.context)).version,1);assert.deepEqual(f.calls[0].args.p_payload,desired);
   const g=fixture({messages:true,visits:true,offers:true,alerts:true,version:1});await assert.rejects(g.repo.savePreferences(desired,g.context));
@@ -67,6 +67,6 @@ test('alerts decode without a conversation, list with the flag and preferences c
   await f.repo.list({ category: 'alert' }, f.context);
   assert.equal(f.calls[0].args.p_include_alerts, true); assert.equal(f.calls[0].args.p_category, 'alert');
   const g = fixture({ unreadCount: 0, readThrough: '0' }); await g.repo.summary(g.context); assert.equal(g.calls[0].args.p_include_alerts, true);
-  const h = fixture({ messages: true, visits: true, offers: true, alerts: false, version: 3 });
-  assert.deepEqual(await h.repo.preferences(h.context), { messages: true, visits: true, offers: true, alerts: false, version: 3 });
+  const h = fixture({ messages: true, visits: true, offers: true, alerts: false, agencies:true,version: 3 });
+  assert.deepEqual(await h.repo.preferences(h.context), { messages: true, visits: true, offers: true, alerts: false, agencies:true,version: 3 });
 });

@@ -1,0 +1,17 @@
+# Deploy from repository root to the EXISTING project's Root Directory: web.
+# Root allowlist: no mobile, infra, credentials, scratch, PG or evidence uploads.
+*
+!web
+!web/**
+web/node_modules
+web/node_modules/**
+web/dist
+web/dist/**
+web/dist-ssr
+web/dist-ssr/**
+web/.vercel
+web/.vercel/**
+web/.env*
+web/**/.env*
+web/tsconfig.json
+web/**/*.log

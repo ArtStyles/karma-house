@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NavigationMaterial } from '../components/NavigationMaterial';
 import { PropertyImage } from '../components/PropertyImage';
@@ -8,6 +8,7 @@ import { KarmaMap } from '../components/maps/KarmaMap';
 import { MapOnDemand } from '../components/ExploreMap';
 import { Button, EmptyState, goBack, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { useMarketplace } from '../state/MarketplaceProvider';
+import { useFavoriteHeart } from '../state/useFavoriteHeart';
 import { createThemedStyles, formatMoney, typefaces } from '../theme';
 import { useListing } from '../catalog/useCatalog';
 import { useAuth } from '../auth/AuthProvider';
@@ -19,21 +20,37 @@ import { supabase } from '../lib/supabase';
 import { UserAvatar } from '../components/account/UserAvatar';
 import { levelLabel } from '../profiles/domain';
 import { usePublicProfile } from '../profiles/usePublicProfile';
-import { listingShareUrl } from '../lib/publicSite';
+import { PUBLIC_PAGES_URL, listingShareUrl } from '../lib/publicSite';
 import { listingOperation, minStayText, operationBadge, priceLabel, priceSuffix, shareText, swapBalanceText, typeLabel, wantedOperationsText } from '../domain/operations';
 import {useListingManagement} from '../transfers/useListingManagement';
 import { listingPresentation } from '../catalog/presentation';
 import { pendingIntentStore } from '../auth/pendingIntentStorage';
+import {pendingIntentDestination} from '../auth/pendingIntent';
+import {useAgencyWorkspace} from '../agencies/AgencyProvider';
+import {agencyError} from '../agencies/domain';
+import {readPublicPropertyContact,createAgencyMessagingRepository} from '../agencies/messaging/repository';
+import type {PublicPropertyContact,PublicAgencyContact} from '../agencies/messaging/types';
+import {AgencyVerifiedBadge} from '../components/agencies/AgencyVerifiedBadge';
+import {createMessageId,isUuid} from '../messaging/domain';
 
+import {validatePublicAgencyShare,agencyShareUrl} from '../agencies/share';
 const NEEDS_CONNECTION = 'Necesitas conexión para esto.';
 
 export default function DetailScreen() {
   const { colors, styles } = useStyles();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { favoriteIds, toggleFavorite, isOwnListing, mode, storageError } = useMarketplace();
+  const { id,agencyId,managerId } = useLocalSearchParams<{ id: string;agencyId?:string;managerId?:string }>();
+  const { toggleFavorite, isOwnListing, mode, storageError } = useMarketplace();
   const auth = useAuth();
   const messaging = useMessaging();
+  const workspace=useAgencyWorkspace();
+  const[publicContact,setPublicContact]=useState<{id:string;value:PublicPropertyContact|null}|null>(null);
+  const[agencyChoice,setAgencyChoice]=useState(false);
+  const[preferred,setPreferred]=useState<{agencyId:string;managerId?:string}|null>(null);
+  const contactOptions=publicContact?.id===id?publicContact.value:null;
+  const agencyAttempt=useRef<{key:string;requestId:string}|null>(null);
+  useFocusEffect(useCallback(()=>{const controller=new AbortController();setPublicContact(null);setPreferred(agencyId&&isUuid(agencyId)&&(!managerId||isUuid(managerId))?{agencyId,managerId}:null);if(supabase&&isUuid(id))void readPublicPropertyContact(supabase,id,controller.signal).then(value=>{if(!controller.signal.aborted)setPublicContact({id,value})}).catch(()=>{});return()=>controller.abort()},[id,agencyId,managerId]));
   const { listing, ready, offline, error: listingError, retry } = useListing(id);
+  const heart=useFavoriteHeart(listing?.id??id),favorite=heart.favorite;
   const management=useListingManagement(id);
   const [contact, setContact] = useState(false);
   const [contactBusy, setContactBusy] = useState(false);
@@ -51,26 +68,27 @@ export default function DetailScreen() {
   useFocusEffect(useCallback(() => {
     let active = true;
     setIntentNotice('');
-    if (auth.ready && auth.user) void pendingIntentStore.take(`/property/${id}`, () => active).then(intent => {
+    const destination=agencyId&&isUuid(agencyId)&&(!managerId||isUuid(managerId))?pendingIntentDestination({kind:'agency-contact',propertyId:id,agencyId,...(managerId?{preferredManagerId:managerId}:{})}):`/property/${id}`;
+    if (auth.ready && auth.user) void pendingIntentStore.take(destination, () => active).then(intent => {
+      if(active&&intent?.kind==='agency-contact')setPreferred({agencyId:intent.agencyId,managerId:intent.preferredManagerId});
       if (active && intent && intent.kind !== 'search') setIntentNotice(intent.kind === 'favorite'
         ? 'Volviste a esta vivienda. Toca el corazón para confirmar el favorito.'
         : 'Volviste a esta vivienda. Revisa su responsable y toca Contactar para iniciar la conversación.');
     });
     return () => { active = false; };
-  }, [id, auth.ready, auth.user?.id]));
+  }, [id,agencyId,managerId, auth.ready, auth.user?.id]));
   const [photoIndex, setPhotoIndex] = useState(0);
   const [report, setReport] = useState(false);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   useEffect(() => { setPhotoIndex(0); setError(''); setContact(false); setReport(false); }, [id]);
-  const sellerId = !offline && mode === 'cloud' && management.value?.contactAvailable && management.value.managerId!==auth.user?.id ? management.value.managerId : undefined;
+  const sellerId = contactOptions?.personalContact && !offline && mode === 'cloud' && management.value?.contactAvailable && management.value.managerId!==auth.user?.id ? management.value.managerId : undefined;
   // Only owners of an approved, active listing (or someone already in a chat) have a public profile.
   const seller = usePublicProfile(sellerId);
   const sellerProfile = sellerId ? seller.profile : null;
   const presentation = listingPresentation({ ready, hasData: !!listing, error: listingError, offline });
   if (!listing) return <SafeAreaView style={styles.safe}>{presentation === 'loading' ? <View style={styles.loading}><ActivityIndicator color={colors.primary} size="large" /><Text style={styles.sellerText}>Cargando vivienda…</Text></View> : presentation === 'error' ? <View style={styles.body}><Notice error>{`No pudimos cargar esta vivienda. ${listingError}`}</Notice><Button label="Reintentar" onPress={retry} /><Button label="Volver a explorar" secondary onPress={() => router.replace('/')} /></View> : <EmptyState title="Esta vivienda no está disponible" description="Vuelve al catálogo para explorar otras viviendas." action={<Button label="Volver a explorar" onPress={() => router.replace('/')} />} />}</SafeAreaView>;
-  const favorite = favoriteIds.includes(listing.id);
-  const own = mode==='demo'?isOwnListing(listing):Boolean(!offline&&auth.user&&management.value&&management.value.managerId===auth.user.id);
+  const own = mode==='demo'?isOwnListing(listing):Boolean(!offline&&auth.user&&management.value?.canEditPersonal&&management.value.managerId===auth.user.id);
   const operation = listingOperation(listing);
   const wanted = operation === 'wanted';
   const photoCount = offline ? (listing.coverThumb?.uri || listing.photoUri ? 1 : 0) : Math.min(listing.photos?.length || (listing.photoUri ? 1 : 0), 6);
@@ -79,29 +97,45 @@ export default function DetailScreen() {
   async function toggle() {
     if (busy || !listing || !auth.ready) return;
     if (offline) { setError(NEEDS_CONNECTION); return; }
+    if(favorite===null){if(!heart.checking)void heart.retry();return;}
     setBusy(true); setError('');
     try {
       if (mode === 'cloud' && !auth.user) {
         await pendingIntentStore.write({ kind: 'favorite', propertyId: listing.id });
         router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } });
-      } else { setIntentNotice(''); await toggleFavorite(listing.id); }
+      } else { setIntentNotice(''); await toggleFavorite(listing.id,!favorite); }
     }
     catch { setError('No pudimos guardar tu favorito. Inténtalo de nuevo.'); }
     finally { setBusy(false); }
   }
-  async function contactSeller() {
+  async function contactSeller(choice?:PublicAgencyContact,personal=false) {
     if (!listing || !auth.ready || contactInFlight.current) return;
     if (mode === 'demo') { setContact(true); return; }
     if (offline) { setContactError(NEEDS_CONNECTION); return; }
+    if(!contactOptions){setContactError('No pudimos comprobar las opciones de contacto. Actualiza la ficha.');return;}
+    if(!choice&&!personal&&((agencyId&&!isUuid(agencyId))||(managerId&&(!agencyId||!isUuid(managerId))))){setPreferred(null);setContactError('El destino del enlace no es válido. Elige un contacto para confirmarlo.');setAgencyChoice(true);return;}
+    if(!choice&&!personal&&(contactOptions.agencies.length>0||preferred)){setAgencyChoice(true);return;}
+    if(!choice&&!contactOptions.personalContact){setContactError('El contacto de esta inmobiliaria no está disponible.');return;}
     contactInFlight.current = true; setContactBusy(true); setContactError('');
     const scope = contactScope;
     try {
       if (!auth.user) {
-        await pendingIntentStore.write({ kind: 'contact', propertyId: listing.id });
-        router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } });
+        const intent=choice?{kind:'agency-contact' as const,propertyId:listing.id,agencyId:choice.agencyId,...(preferred?.agencyId===choice.agencyId&&preferred.managerId?{preferredManagerId:preferred.managerId}:{})}:{kind:'contact' as const,propertyId:listing.id};
+        await pendingIntentStore.write(intent);
+        router.push({ pathname: '/auth', params: { returnTo: pendingIntentDestination(intent) } });
         return;
       }
       setIntentNotice('');
+      if(choice){
+        if(!supabase)throw Error(NEEDS_CONNECTION);
+        const ctx=workspace.captureAccountContext();
+        try{const fresh=await readPublicPropertyContact(supabase,listing.id,ctx.signal);ctx.checkpoint();if(!fresh?.agencies.some(a=>a.agencyId===choice.agencyId&&a.contactAvailable))throw Error('La inmobiliaria elegida ya no está disponible. Revisa las opciones.');
+          const preferredManagerId=preferred?.agencyId===choice.agencyId?preferred.managerId:undefined,key=`${scope}:${choice.agencyId}:${preferredManagerId??''}`;
+          if(agencyAttempt.current?.key!==key)agencyAttempt.current={key,requestId:createMessageId()};
+          const conversation=await createAgencyMessagingRepository(supabase).start({propertyId:fresh.propertyId,agencyId:choice.agencyId,...(preferredManagerId?{preferredManagerId}:{}),clientRequestId:agencyAttempt.current.requestId},ctx);
+          ctx.checkpoint();if(mounted.current&&currentScope.current===scope){setAgencyChoice(false);router.push(`/agency-conversation/${conversation.id}`)}
+        }finally{ctx.release()}return;
+      }
       const expected=management.value?.managerId??listing.ownerId;
       const current=await management.refresh();
       if(!current?.contactAvailable)throw Error('Este anuncio ya no está disponible para contacto.');
@@ -109,16 +143,19 @@ export default function DetailScreen() {
       const conversationId = await messaging.startConversation(listing.id,current.managerId);
       if (mounted.current && currentScope.current === scope) router.push(`/messages/${conversationId}`);
     } catch (failure) {
+      if(!mounted.current||currentScope.current!==scope)return;
+      const failureText=failure instanceof Error?failure.message:failure&&typeof failure==='object'&&'message'in failure&&typeof failure.message==='string'?failure.message:'';
+      if(/KH_AGENCY_MANAGER_CHANGED|KH_AGENCY_ASSIGNMENT_CHANGED|KH_CHAT_BLOCKED/.test(failureText)){setPreferred(null);agencyAttempt.current=null;setAgencyChoice(true);setContactError('Ese contacto no está disponible. Elige de nuevo una inmobiliaria para confirmar el destino.');return;}
       if(/responsable.*cambió|KH_CHAT_MANAGER_CHANGED/i.test(failure instanceof Error?failure.message:'')){retry();void management.refresh().catch(()=>{});}
-      if (mounted.current && currentScope.current === scope) setContactError(failure instanceof Error ? failure.message : 'No pudimos abrir la conversación. Inténtalo de nuevo.');
+      if (mounted.current && currentScope.current === scope) setContactError(choice?agencyError(failure):failure instanceof Error ? failure.message : 'No pudimos abrir la conversación. Inténtalo de nuevo.');
     } finally {
       if (mounted.current && currentScope.current === scope) { contactInFlight.current = false; setContactBusy(false); }
     }
   }
   async function share() {
     if (!listing) return;
-    const message = shareText(listing, listingShareUrl(listing.id));
-    try { await Share.share({ title: listing.title, message, url: listingShareUrl(listing.id) }); } catch { /* Dismissed, or this browser has no share target. */ }
+    try { let url=listingShareUrl(listing.id);if(supabase&&preferred){const destination=await validatePublicAgencyShare(supabase,listing.id,preferred.agencyId,preferred.managerId);if(destination)url=agencyShareUrl(destination);else{setPreferred(null);setError('El contacto del enlace ya no está autorizado. Se comparte la ficha general.');}}
+    const message = shareText(listing,url);await Share.share({ title: listing.title, message, url }); } catch { /* Dismissed, or this browser has no share target. */ }
   }
   function openReport() {
     if (!listing) return;
@@ -143,7 +180,7 @@ export default function DetailScreen() {
           <View style={styles.navigationTitle}><Text style={styles.navText}>{operationBadge(listing) || listing.type}</Text></View>
           <View style={styles.navigationActions}>
             <IconButton name="share-social-outline" label="Compartir vivienda" onPress={() => void share()} style={styles.floatingButton} />
-            <IconButton name={favorite ? 'heart' : 'heart-outline'} label={favorite ? 'Quitar de favoritos' : 'Guardar en favoritos'} onPress={toggle} active={favorite} style={styles.floatingButton} />
+            <IconButton name={favorite===null?'ellipsis-horizontal':favorite ? 'heart' : 'heart-outline'} label={favorite===null?'Comprobar favoritos':favorite ? 'Quitar de favoritos' : 'Guardar en favoritos'} onPress={toggle} active={favorite??undefined} style={styles.floatingButton} />
           </View>
         </View>
         {photoCount > 1 && <View style={styles.photoControls}>
@@ -153,9 +190,12 @@ export default function DetailScreen() {
         </View>}
       </View>
       <View style={styles.body}>
+        {contactOptions?.agencies.map(agency=><View key={agency.agencyId} style={styles.group}><View style={styles.sellerBadges}><Text style={styles.sellerTitle}>{agency.tradeName}</Text><AgencyVerifiedBadge verified={agency.verified} agencyName={agency.tradeName}/></View><Button label="Ver perfil comercial" secondary onPress={()=>void Linking.openURL(`${PUBLIC_PAGES_URL}agency/${agency.agencyId}`)}/><Text style={styles.sellerText}>Consulta privada con esta inmobiliaria.</Text><Button label={`Contactar con ${agency.tradeName}`} secondary disabled={!agency.contactAvailable||contactBusy} onPress={()=>{setPreferred(null);setAgencyChoice(true)}}/></View>)}
+        {contactOptions&&!contactOptions.personalContact&&contactOptions.agencies.length===0&&<Notice>El contacto de esta inmobiliaria no está disponible ahora.</Notice>}
+        {Boolean(heart.error)&&<Notice error>{heart.error}</Notice>}
         {management.value?.assistedByKarmaHouse&&<Notice>Publicado con asistencia de KarmaHouse. {own ? 'Ahora tú gestionas este anuncio.' : sellerProfile?.displayName?`La gestión actual corresponde a ${sellerProfile.displayName}.`:'Las consultas nuevas se dirigen al responsable vigente.'}</Notice>}
-        {management.error&&!offline&&<Notice error>{management.error}</Notice>}
-        {listingError && !offline && <View style={{ gap: 8 }}><Notice error>{`No pudimos actualizar la ficha. ${listingError}`}</Notice><Button label="Reintentar ficha" secondary onPress={retry} /></View>}
+        {Boolean(management.error)&&!offline&&<Notice error>{management.error}</Notice>}
+        {Boolean(listingError) && !offline && <View style={{ gap: 8 }}><Notice error>{`No pudimos actualizar la ficha. ${listingError}`}</Notice><Button label="Reintentar ficha" secondary onPress={retry} /></View>}
         {offline && <View style={{ gap: 8 }}><Notice>Sin conexión. Esta es una copia guardada; el precio y la disponibilidad pueden haber cambiado. Contactar y guardar favoritos requieren conexión.</Notice><Button label="Reintentar conexión" secondary onPress={retry} /></View>}
         {photoCount > 1 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbnails}>
           {Array.from({ length: photoCount }, (_, index) => <Pressable key={index} accessibilityRole="button" accessibilityLabel={`Ver foto ${index + 1} de ${photoCount}`} accessibilityState={{ selected: index === selectedPhoto }} onPress={() => setPhotoIndex(index)} style={[styles.thumbnail, index === selectedPhoto && styles.thumbnailSelected]}>
@@ -259,6 +299,7 @@ export default function DetailScreen() {
         </View>
       </View>
     </Modal>
+    <Modal visible={agencyChoice} transparent animationType="fade" onRequestClose={()=>setAgencyChoice(false)}><View style={styles.modalBackdrop}><ScrollView contentContainerStyle={styles.modal} accessibilityViewIsModal><Text accessibilityRole="header" style={styles.modalTitle}>Elige con quién contactar</Text><Text style={styles.modalText}>Cada inmobiliaria lleva su propia conversación privada sobre esta vivienda.</Text>{preferred&&<Notice>El enlace propone una inmobiliaria{preferred.managerId?' y un gestor':''}. Revisa el destino y confirma para continuar.</Notice>}{Boolean(contactError)&&<Notice error>{contactError}</Notice>}{contactOptions?.agencies.map(agency=><View key={agency.agencyId} style={{gap:8}}><View style={styles.sellerBadges}><Text style={styles.sellerTitle}>{agency.tradeName}</Text><AgencyVerifiedBadge verified={agency.verified} agencyName={agency.tradeName}/></View><Button label={preferred?.agencyId===agency.agencyId&&preferred.managerId?'Confirmar contacto con el gestor del enlace':`Contactar con ${agency.tradeName}`} disabled={!agency.contactAvailable} loading={contactBusy} onPress={()=>void contactSeller(agency)}/></View>)}{contactOptions?.personalContact&&<Button label="Contactar con el responsable personal" secondary loading={contactBusy} onPress={()=>{setAgencyChoice(false);void contactSeller(undefined,true)}}/>}<Button label="Cerrar" secondary onPress={()=>setAgencyChoice(false)}/></ScrollView></View></Modal>
   </SafeAreaView>;
 }
 function Feature({ icon, value, label }: { icon: IconName; value: string; label: string }) {

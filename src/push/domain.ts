@@ -1,4 +1,4 @@
-import type { PushPayload, PushSession } from './types.ts';
+import type { AgencyPushTarget, PushPayload, PushSession } from './types.ts';
 
 export const PUSH_CHANNEL_ID = 'karmahouse-updates';
 export const isUuid = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -31,4 +31,14 @@ export const revocationError = () => new PushError('No pudimos confirmar la desa
 export function nextRevision(revision: number): number {
   if (!Number.isInteger(revision) || revision < 0 || revision >= MAX_PUSH_REVISION) throw new PushError('No se pudo actualizar el registro de este teléfono.');
   return revision + 1;
+}
+
+export function decodeAgencyPushTarget(value: unknown): AgencyPushTarget | null {
+ if(!value||typeof value!=='object'||Array.isArray(value))return null;
+ const t=value as AgencyPushTarget;
+ if(!['account_notice','reviews','verification_reviews','application','verification','team','closures','deal','buyer_conversation','personal_conversation'].includes(t.route)||!([t.agencyId,t.dealId].every(v=>v===null||isUuid(v))))return null;
+ if(['account_notice','reviews','verification_reviews','application','team','buyer_conversation','personal_conversation'].includes(t.route)&&t.agencyId!==null)return null;
+ if(['verification','deal'].includes(t.route)&&!isUuid(t.agencyId))return null;
+ if(['deal','buyer_conversation','personal_conversation'].includes(t.route)?!isUuid(t.dealId):t.dealId!==null)return null;
+ return {route:t.route,agencyId:t.agencyId,dealId:t.dealId};
 }

@@ -31,6 +31,7 @@ export interface MessagingRequestContext {
   accessToken: string;
   signal: AbortSignal;
   checkpoint(): void;
+  onAuthorizationError?(error: unknown): void;
 }
 
 export interface MessagingRepository {

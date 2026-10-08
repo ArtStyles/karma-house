@@ -1,4 +1,4 @@
-import { changed, isFcmToken, isRevision, isUuid, registrationError, revocationError, PushError } from './domain.ts';
+import { decodeAgencyPushTarget, changed, isFcmToken, isRevision, isUuid, registrationError, revocationError, PushError } from './domain.ts';
 import type { PushRepository, PushRequestContext, RevocationInput } from './types.ts';
 
 const invalid = () => new PushError('No se pudo confirmar el registro de avisos. Vuelve a intentarlo.');
@@ -43,9 +43,11 @@ export function createPushRepository(url: string, publicKey: string, fetcher: ty
       const result = await rpc('kh_resolve_push_notification', { p_actor_id: context.userId, p_notification_id: notificationId }, context);
       // Exactly one target: a conversation, or the property of a search alert. Older servers omit propertyId.
       const conversationId = result.conversationId ?? null, propertyId = result.propertyId ?? null;
+      const agencyTarget = result.agencyTarget === undefined ? null : decodeAgencyPushTarget(result.agencyTarget);
+      if (result.agencyTarget !== undefined && !agencyTarget) throw invalid();
       if (result.notificationId !== notificationId || result.recipientId !== context.userId
-        || (conversationId === null ? !isUuid(propertyId) : !isUuid(conversationId) || propertyId !== null)) throw invalid();
-      return { notificationId, recipientId: context.userId, conversationId: conversationId as string | null, propertyId: propertyId as string | null };
+        || (agencyTarget ? conversationId!==null||propertyId!==null : conversationId === null ? !isUuid(propertyId) : !isUuid(conversationId) || propertyId !== null)) throw invalid();
+      return { ...(agencyTarget?{agencyTarget}:{}),notificationId, recipientId: context.userId, conversationId: conversationId as string | null, propertyId: propertyId as string | null };
     },
   };
 }

@@ -1,7 +1,9 @@
 import type { MessagingRequestContext } from '../messaging/types.ts';
 
-export type NotificationCategory = 'message' | 'visit' | 'offer' | 'alert';
+export type NotificationCategory = 'message' | 'visit' | 'offer' | 'alert' | 'agency';
+export type AgencyNotificationKind = 'agency_review'|'agency_verification'|'team_invitation'|'deal_assignment'|'sale_request'|'property_sold'|'visit_reminder'|'task_reminder'|'manual_cancellation_notice';
 export interface AppNotification {
+  agencyId: string | null; dealId: string | null; saleRequestId: string | null; verificationRequestId: string | null; eventKind: AgencyNotificationKind | null;
   id: string;
   seq: string;
   recipientId: string;
@@ -24,6 +26,7 @@ export interface NotificationPreferences {
   visits: boolean;
   offers: boolean;
   alerts: boolean;
+  agencies: boolean;
   version: number;
 }
 export interface NotificationSummary { unreadCount: number; readThrough: string }
@@ -41,6 +44,7 @@ export interface SaveNotificationPreferencesInput {
   visits: boolean;
   offers: boolean;
   alerts: boolean;
+  agencies: boolean;
   expectedVersion: number;
 }
 export interface NotificationRepository {

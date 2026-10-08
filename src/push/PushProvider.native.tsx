@@ -2,7 +2,8 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore, type
 import { AppState, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
-import { router, useRootNavigationState } from 'expo-router';
+import { useRootNavigationState } from 'expo-router';
+import { useNotificationNavigation } from '../notifications/useNotificationNavigation';
 import { useAuth } from '../auth/AuthProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -27,14 +28,13 @@ export function PushProvider({ children }: PropsWithChildren) {
 
 function AndroidPushProvider({ children }: PropsWithChildren) {
   const auth = useAuth(), notices = useNotifications(), rootNavigation = useRootNavigationState();
+  const navigation=useNotificationNavigation(), navigator=useRef(navigation.navigate);navigator.current=navigation.navigate;
   const summary = useRef(notices.refreshSummary);
   useLayoutEffect(() => { summary.current = notices.refreshSummary; }, [notices.refreshSummary]);
   const controller = useMemo(() => createPushController({
     store: nativeInstallationStore, adapter: nativePushAdapter, projectId: pushProjectId,
     repository: createPushRepository(process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() ?? '', process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ?? '', createDeadlineFetch()),
-    navigate: target => 'conversationId' in target
-      ? router.push({ pathname: '/messages/[id]', params: { id: target.conversationId } })
-      : router.push({ pathname: '/property/[id]', params: { id: target.propertyId } }),
+    navigate: (target,checkpoint) => navigator.current(target,checkpoint),
     refreshSummary: () => summary.current(),
   }), []);
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState);

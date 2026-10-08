@@ -8,6 +8,8 @@ export type AuthCallback = CallbackDestination & (
 const invalidLink = () => new Error('El enlace no es válido o ha caducado. Solicita uno nuevo e inténtalo otra vez.');
 
 export function safeReturnTo(value: unknown): string {
+  const uuid='[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}';
+  if(typeof value==='string'&&new RegExp(`^/(?:property/${uuid}\\?agencyId=${uuid}(?:&managerId=${uuid})?|agency-conversation/${uuid}(?:\\?agencyId=${uuid})?)$`).test(value))return value;
   return typeof value === 'string' && /^(?:\/(?:profile|publish|favorites|my-listings|messages|message-reports|account-settings|requests|notifications|notification-settings)|\/(?:property|edit|messages)\/[A-Za-z0-9_-]+|\/)$/.test(value)
     ? value : '/profile';
 }

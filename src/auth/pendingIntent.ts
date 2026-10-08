@@ -6,12 +6,14 @@ import type { SavedSearchFilters } from '../searches/types.ts';
 import { safeReturnTo } from './callback.ts';
 
 export type PendingIntent = { kind: 'contact' | 'favorite'; propertyId: string }
+  | { kind: 'agency-contact'; propertyId: string; agencyId: string; preferredManagerId?: string }
   | { kind: 'search'; filters: SavedSearchFilters; sort: ListingFilters['sort'] };
 const LIFETIME = 30 * 60_000;
 const exact = (value: Record<string, unknown>, keys: string[]) => Object.keys(value).length === keys.length && keys.every(key => key in value);
 function decodeIntent(value: unknown): PendingIntent {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('No pudimos conservar el contexto de esta acción.');
   const item = value as Record<string, unknown>;
+  if(item.kind==='agency-contact'&&exact(item,['kind','propertyId','agencyId',...(item.preferredManagerId===undefined?[]:['preferredManagerId'])])&&isUuid(item.propertyId)&&isUuid(item.agencyId)&&(item.preferredManagerId===undefined||isUuid(item.preferredManagerId)))return{kind:'agency-contact',propertyId:item.propertyId,agencyId:item.agencyId,...(item.preferredManagerId?{preferredManagerId:item.preferredManagerId as string}:{})};
   if ((item.kind === 'contact' || item.kind === 'favorite') && exact(item, ['kind', 'propertyId']) && isUuid(item.propertyId)) {
     return { kind: item.kind, propertyId: item.propertyId as string };
   }
@@ -23,6 +25,7 @@ function decodeIntent(value: unknown): PendingIntent {
 
 export function pendingIntentDestination(intent: PendingIntent): string {
   const value = decodeIntent(intent);
+  if(value.kind==='agency-contact')return `/property/${value.propertyId}?agencyId=${value.agencyId}${value.preferredManagerId?`&managerId=${value.preferredManagerId}`:''}`;
   return value.kind === 'search' ? '/' : `/property/${value.propertyId}`;
 }
 

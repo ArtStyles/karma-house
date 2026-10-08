@@ -3,6 +3,7 @@ export interface PushSession { userId: string; sessionId: string; accessToken: s
 export interface PushRequestContext extends PushSession { signal: AbortSignal; checkpoint(): void }
 export interface InstallationIdentity { installationId: string; installationSecret: string }
 export interface PushIntent {
+  supportsAgencyNotifications?: boolean;
   enabled: boolean;
   userId: string | null;
   sessionId: string | null;
@@ -16,11 +17,12 @@ export interface InstallationStore {
   change(update: (current: InstallationState) => InstallationState): Promise<InstallationState>;
 }
 export interface RevocationInput extends InstallationIdentity { revision: number }
-export interface RegistrationInput extends RevocationInput { fcmToken: string; platform: 'android'; projectId: string }
+export interface RegistrationInput extends RevocationInput { fcmToken: string; platform: 'android'; projectId: string; supportsAgencyNotifications?: boolean }
 export interface RegistrationResult { enabled: true; revision: number; platform: 'android' }
 export interface RevocationResult { enabled: false; revision: number }
-export interface ResolvedPush { notificationId: string; recipientId: string; conversationId: string | null; propertyId: string | null }
-export type PushTarget = { conversationId: string } | { propertyId: string };
+export interface AgencyPushTarget { route: 'account_notice'|'reviews'|'verification_reviews'|'application'|'verification'|'team'|'closures'|'deal'|'buyer_conversation'|'personal_conversation'; agencyId: string|null; dealId: string|null }
+export interface ResolvedPush { agencyTarget?: AgencyPushTarget; notificationId: string; recipientId: string; conversationId: string | null; propertyId: string | null }
+export type PushTarget = { conversationId: string } | { propertyId: string } | { agencyTarget: AgencyPushTarget };
 export interface PushRepository {
   register(input: RegistrationInput, context: PushRequestContext): Promise<RegistrationResult>;
   disable(input: RevocationInput): Promise<RevocationResult>;

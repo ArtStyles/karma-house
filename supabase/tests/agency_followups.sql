@@ -1,0 +1,123 @@
+create function pg_temp.kh_business_fixture(a uuid,actor uuid) returns uuid language plpgsql as $$
+declare r uuid:=gen_random_uuid();x jsonb;body jsonb;begin
+ perform pg_temp.kh_as(actor);insert into storage.objects(bucket_id,name)values('property-photos',actor||'/'||r||'/photo.jpg');
+ body:=jsonb_build_object('clientRequestId',r,'sourceReference',r,'consentReference','Consentimiento comprobado','publicationIntent','submit','draft',jsonb_build_object('title','Casa de conversaciones','location','Vedado','province','La Habana','type','Casa','price',30000,'bedrooms',2,'bathrooms',1,'description','Vivienda sintética para los mensajes privados.','photoPaths',jsonb_build_array(actor||'/'||r||'/photo.jpg')));
+ body:=body||jsonb_build_object('duplicateDecision',public.kh_find_agency_property_matches(actor,a,body)->'review');
+ x:=public.kh_agency_save_property(actor,a,body);return (x#>>'{property,id}')::uuid;end $$;
+do $$declare a uuid:=pg_temp.kh_agency_signup(31);u uuid:='45000000-0000-4000-8000-000000000031';m uuid:='45000000-0000-4000-8000-000000000008';owner uuid:='45000000-0000-4000-8000-000000000001';pid uuid;d jsonb;t jsonb;payload jsonb;v text;begin
+ perform pg_temp.kh_agency_approve(a);pid:=pg_temp.kh_business_fixture(a,u);perform pg_temp.kh_as(owner);perform public.kh_review_property(pid,'approved',null,1);
+ insert into kh_private.agency_memberships(agency_id,user_id,role)values(a,m,'manager');perform pg_temp.kh_as(u);
+ d:=public.kh_create_agency_deal(u,a,jsonb_build_object('propertyId',pid,'assigneeId',m,'externalContact',jsonb_build_object('name','Contacto externo','phone',null,'consentReference','Consentimiento manual'),'clientRequestId',gen_random_uuid()));
+ select availability into v from public.properties where id=pid;
+ d:=public.kh_set_agency_deal_stage(u,a,jsonb_build_object('dealId',d->>'id','stage','offer','expectedVersion',1,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert((select availability=v from public.properties where id=pid),'stage_change_never_changes_property_availability');
+ payload:=jsonb_build_object('dealId',d->>'id','assigneeId',m,'dueAt',clock_timestamp()+interval '1 day','title','Llamar al contacto','clientRequestId',gen_random_uuid());t:=public.kh_save_agency_task(u,a,payload);
+ perform pg_temp.kh_assert(public.kh_save_agency_task(u,a,payload)=t and (select count(*)=1 from kh_private.agency_reminders where subject_id=(t->>'id')::uuid),'task_reminders_are_deduplicated');
+ perform pg_temp.kh_as(m);perform pg_temp.kh_error(format('select public.kh_save_agency_task(%L,%L,%L)',m,a,payload||jsonb_build_object('assigneeId',u,'clientRequestId',gen_random_uuid())),'KH_AGENCY_ROLE_REQUIRED');
+ perform pg_temp.kh_as(u);perform public.kh_remove_agency_member(u,a,jsonb_build_object('userId',m,'expectedVersion',1,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert((select assignee_id is null and state='open' from kh_private.agency_tasks where id=(t->>'id')::uuid),'retired_assignee_moves_tasks_to_unassigned_queue');
+ perform pg_temp.kh_assert(not exists(select 1 from kh_private.agency_reminders where subject_id=(t->>'id')::uuid and recipient_id=m and state='pending'),'departed_manager_receives_no_reminder');
+ t:=public.kh_finish_agency_task(u,a,jsonb_build_object('taskId',t->>'id','state','done','expectedVersion',2,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert(t->>'state'='done' and (select count(*)>=3 from kh_private.agency_followup_events where task_id=(t->>'id')::uuid),'task_completion_keeps_history');
+ d:=public.kh_assign_agency_deal(u,a,jsonb_build_object('dealId',d->>'id','userId',u,'expectedVersion',(select version from kh_private.agency_deals where id=(d->>'id')::uuid),'clientRequestId',gen_random_uuid()));
+ t:=public.kh_save_agency_task(u,a,jsonb_build_object('dealId',d->>'id','assigneeId',u,'dueAt',clock_timestamp()-interval '1 day','title','Pendiente atrasado','clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert((select assignee_id=u and due_at<clock_timestamp() from kh_private.agency_tasks where id=(t->>'id')::uuid) and (t->>'dueAt')::timestamptz<clock_timestamp() and not exists(select 1 from kh_private.agency_reminders where subject_id=(t->>'id')::uuid and state='pending'),'reminder_not_created_for_past_due_time');
+ perform pg_temp.kh_assert(jsonb_array_length(public.kh_list_agency_tasks(u,a,(d->>'id')::uuid,0,1)->'items')=1 and (public.kh_list_agency_tasks(u,a,(d->>'id')::uuid,0,1)->>'hasMore')::boolean and jsonb_array_length(public.kh_list_agency_tasks(u,a,(d->>'id')::uuid,1,1)->'items')=1,'task_server_pagination');
+ perform pg_temp.kh_assert(jsonb_array_length(public.kh_list_agency_deals(u,a,0,30,jsonb_build_object('propertyId',gen_random_uuid()))->'items')=0,'server_property_filter');
+ perform pg_temp.kh_error(format('select public.kh_save_agency_task(%L,%L,%L)',u,a,payload||jsonb_build_object('kind','external_notification','clientRequestId',gen_random_uuid())),'KH_AGENCY_INVALID_TASK');
+ perform kh_private.terminate_mandate_flows(pid,a,'test_termination');
+ perform pg_temp.kh_assert((select state='cancelled' from kh_private.agency_tasks where id=(t->>'id')::uuid),'termination_cancels_normal_followups');
+end $$;
+
+do $$declare a uuid:=pg_temp.kh_agency_signup(36);u uuid:='45000000-0000-4000-8000-000000000036';source uuid:='45000000-0000-4000-8000-000000000005';pid uuid:=gen_random_uuid();d jsonb;t jsonb;p jsonb;q jsonb;begin
+ perform pg_temp.kh_agency_approve(a);perform pg_temp.kh_as(source);
+ insert into public.properties(id,owner_id,client_request_id,title,location,province,type,price,bedrooms,bathrooms,description,moderation,photo_paths)values(pid,source,pid::text,'Origen personal histórico','Vedado','La Habana','Casa',30000,2,1,'Vivienda de origen personal para seguimiento.','approved',array[source||'/'||pid||'/photo.jpg']);
+ perform pg_temp.kh_as(u);q:=public.kh_request_agency_mandate(u,a,jsonb_build_object('propertyId',pid,'internalReference','PERSONAL-FOLLOWUP','clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(source);perform public.kh_decide_agency_mandate(source,null,jsonb_build_object('requestId',q->>'id','decision','accept','expectedVersion',1,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(u);d:=public.kh_create_agency_deal(u,a,jsonb_build_object('propertyId',pid,'assigneeId',u,'externalContact',jsonb_build_object('name','Contacto con consentimiento','phone',null,'consentReference','Consentimiento privado'),'clientRequestId',gen_random_uuid()));
+ t:=public.kh_save_agency_task(u,a,jsonb_build_object('dealId',d->>'id','assigneeId',u,'dueAt',clock_timestamp()+interval '1 day','title','Seguimiento de fuente personal','clientRequestId',gen_random_uuid()));
+ p:=pg_temp.visit_proposal(u,a,(d->>'id')::uuid,date_trunc('minute',clock_timestamp()+interval '9 days'));p:=pg_temp.accept_visit(u,a,p);
+ perform pg_temp.kh_as(null);delete from auth.users where id=source;
+ perform pg_temp.kh_as(u);perform pg_temp.kh_assert(public.kh_get_agency_deal(u,a,(d->>'id')::uuid)->>'propertyId'=pid::text and not exists(select 1 from public.properties where id=pid),'source_delete_retains_private_dwelling_without_public_recreation');
+ perform pg_temp.kh_assert((select state='cancelled' and reason='personal_source_deleted' from kh_private.agency_tasks where id=(t->>'id')::uuid) and not exists(select 1 from kh_private.agency_reminders where deal_id=(d->>'id')::uuid and state='pending'),'source_delete_cancels_followups_and_reminders');
+ perform pg_temp.kh_assert(public.kh_get_agency_deal_conversation_id(u,a,(d->>'id')::uuid) is null,'external_never_creates_chat');
+ select kh_private.agency_task_json(x) into t from kh_private.agency_tasks x where deal_id=(d->>'id')::uuid and kind='external_notification';
+ t:=public.kh_finish_agency_task(u,a,jsonb_build_object('taskId',t->>'id','state','done','expectedVersion',1,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert(t->>'state'='done','current_private_permission_completes_source_termination_communication');
+end $$;
+
+do $$declare f jsonb:=pg_temp.schedule_fixture(32);a uuid:=(f->>'agency')::uuid;u uuid:=(f->>'actor')::uuid;pid uuid:=(f->>'property')::uuid;did uuid:=(f->>'deal')::uuid;m uuid:='45000000-0000-4000-8000-000000000008';p jsonb;t jsonb;d jsonb;begin
+ insert into kh_private.agency_memberships(agency_id,user_id,role)values(a,m,'manager');
+ p:=pg_temp.visit_proposal(u,a,did,date_trunc('minute',clock_timestamp()+interval '3 days'));
+ p:=pg_temp.accept_visit(u,a,p);
+ perform pg_temp.kh_assert((select count(*)=2 from kh_private.agency_reminders where subject_id=(p->>'id')::uuid and state='pending'),'visit_24_and_2_hour_reminders_future');
+ delete from kh_private.agency_reminders where subject_id=(p->>'id')::uuid;
+ perform kh_private.agency_refresh_visit_reminders((select x from kh_private.property_visit_slots x where proposal_id=(p->>'id')::uuid));
+ perform pg_temp.kh_assert((select count(*)=2 from kh_private.agency_reminders where subject_id=(p->>'id')::uuid and state='pending'),'existing_booking_backfill_restores_future_reminders');
+ t:=public.kh_save_agency_task(u,a,jsonb_build_object('dealId',did,'assigneeId',null,'dueAt',null,'title','Cola deliberada','clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_error(format('select public.kh_save_agency_task(%L,%L,%L)',u,a,jsonb_build_object('dealId',did,'assigneeId',m,'dueAt',null,'title','Delegación incorrecta','clientRequestId',gen_random_uuid())),'KH_AGENCY_TASK_ASSIGNEE_MISMATCH');
+ d:=public.kh_assign_agency_deal(u,a,jsonb_build_object('dealId',did,'userId',m,'expectedVersion',(select version from kh_private.agency_deals where id=did),'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert((select assignee_id is null from kh_private.agency_tasks where id=(t->>'id')::uuid),'reassign_preserves_deliberate_null_queue');
+ perform pg_temp.kh_assert((select count(*)=2 from kh_private.agency_reminders where subject_id=(p->>'id')::uuid and state='pending' and recipient_id=m),'reassign_updates_booking_reminder_recipient');
+ perform pg_temp.kh_as(m);perform pg_temp.kh_assert(jsonb_array_length(public.kh_list_agency_tasks(m,a,did,0,30)->'items')=1,'assigned_manager_reads_null_task_without_wider_access');
+ perform pg_temp.kh_error(format('select public.kh_finish_agency_task(%L,%L,%L)',m,a,jsonb_build_object('taskId',t->>'id','state','done','expectedVersion',1,'clientRequestId',gen_random_uuid())),'KH_AGENCY_ROLE_REQUIRED');
+ perform pg_temp.kh_as(u);d:=public.kh_set_agency_deal_stage(u,a,jsonb_build_object('dealId',did,'stage','lost','expectedVersion',(d->>'version')::int,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert((select availability='active' from public.properties where id=pid),'lost_never_sells_dwelling');
+ perform pg_temp.kh_assert((select status='cancelled' from kh_private.agency_proposals where id=(p->>'id')::uuid) and (select outcome='cancelled' from kh_private.property_visit_slots where proposal_id=(p->>'id')::uuid),'lost_cancels_only_live_commitment');
+ perform pg_temp.kh_assert(not exists(select 1 from kh_private.agency_reminders where deal_id=did and state='pending'),'lost_cancels_pending_reminders');
+ select kh_private.agency_task_json(x) into t from kh_private.agency_tasks x where deal_id=did and kind='external_notification';
+ perform pg_temp.kh_assert(t->>'state'='open','server_creates_external_communication');
+ perform pg_temp.kh_as(m);t:=public.kh_finish_agency_task(m,a,jsonb_build_object('taskId',t->>'id','state','done','expectedVersion',(t->>'version')::int,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert(t->>'state'='done','current_assignee_completes_external_communication_after_closure');
+ perform pg_temp.kh_as(u);perform pg_temp.kh_error(format('select public.kh_set_agency_deal_stage(%L,%L,%L)',u,a,jsonb_build_object('dealId',did,'stage','inquiry','expectedVersion',(d->>'version')::int,'clientRequestId',gen_random_uuid())),'KH_AGENCY_PROPERTY_CLOSED');
+ perform pg_temp.kh_assert(not has_function_privilege('authenticated','public.kh_assign_agency_deal_pre_followups(uuid,uuid,jsonb)','EXECUTE') and not has_table_privilege('authenticated','kh_private.agency_tasks','SELECT'),'followup_helpers_and_tables_private');
+end $$;
+
+do $$declare f jsonb:=pg_temp.schedule_fixture(34);g jsonb:=pg_temp.schedule_fixture(35);a uuid:=(f->>'agency')::uuid;u uuid:=(f->>'actor')::uuid;did uuid:=(f->>'deal')::uuid;m uuid:='45000000-0000-4000-8000-000000000008';c uuid:='45000000-0000-4000-8000-000000000006';buyer uuid:='45000000-0000-4000-8000-000000000002';p jsonb;q jsonb;d jsonb;t jsonb;conv jsonb;otherd jsonb;pid uuid;at timestamptz:=date_trunc('minute',clock_timestamp()+interval '6 days');begin
+ insert into kh_private.agency_memberships(agency_id,user_id,role)values(a,m,'manager'),(a,c,'admin'),((g->>'agency')::uuid,m,'manager');
+ p:=pg_temp.visit_proposal(u,a,did,at);p:=pg_temp.accept_visit(u,a,p);
+ q:=pg_temp.visit_proposal((g->>'actor')::uuid,(g->>'agency')::uuid,(g->>'deal')::uuid,at);q:=pg_temp.accept_visit((g->>'actor')::uuid,(g->>'agency')::uuid,q);
+ perform public.kh_assign_agency_deal((g->>'actor')::uuid,(g->>'agency')::uuid,jsonb_build_object('dealId',g->>'deal','userId',m,'expectedVersion',(select version from kh_private.agency_deals where id=(g->>'deal')::uuid),'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(c);perform public.kh_remove_agency_member(c,a,jsonb_build_object('userId',u,'expectedVersion',1,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_error(format('select public.kh_assign_agency_deal(%L,%L,%L)',c,a,jsonb_build_object('dealId',did,'userId',m,'expectedVersion',(select version from kh_private.agency_deals where id=did),'clientRequestId',gen_random_uuid())),'KH_AGENCY_VISIT_CONFLICT');
+ perform pg_temp.kh_assert((select assignee_id is null and outcome='unrecorded' from kh_private.property_visit_slots where proposal_id=(p->>'id')::uuid),'collision_never_cancels_or_revives_retained_booking');
+ perform public.kh_record_agency_visit_outcome(c,a,jsonb_build_object('proposalId',p->>'id','outcome','cancelled','expectedVersion',(select version from kh_private.property_visit_slots where proposal_id=(p->>'id')::uuid),'clientRequestId',gen_random_uuid()));
+ perform kh_private.terminate_mandate_flows((f->>'property')::uuid,a,'closed_for_test');
+ select kh_private.agency_task_json(x) into t from kh_private.agency_tasks x where deal_id=did and kind='external_notification';
+ t:=public.kh_save_agency_task(c,a,jsonb_build_object('id',t->>'id','dealId',did,'assigneeId',null,'dueAt',null,'title','Comunicar cancelación pendiente','expectedVersion',(t->>'version')::int,'clientRequestId',gen_random_uuid()));
+ t:=public.kh_finish_agency_task(c,a,jsonb_build_object('taskId',t->>'id','state','done','expectedVersion',(t->>'version')::int,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert(t->>'state'='done' and t->>'kind'='external_notification','coordinator_completes_null_communication_after_closure');
+ perform pg_temp.kh_as(u);perform pg_temp.kh_error(format('select public.kh_list_agency_tasks(%L,%L,%L,0,30)',u,a,did),'KH_AGENCY_MEMBERSHIP_REQUIRED');
+ perform pg_temp.kh_error(format('select public.kh_list_agency_followup_events(%L,%L,%L,0,30)',u,a,did),'KH_AGENCY_DEAL_NOT_FOUND');
+ perform pg_temp.kh_as(c);
+ pid:=pg_temp.kh_business_fixture(a,c);perform pg_temp.kh_as('45000000-0000-4000-8000-000000000001');perform public.kh_review_property(pid,'approved',null,1);perform pg_temp.kh_as(c);
+ d:=public.kh_create_agency_deal(c,a,jsonb_build_object('propertyId',pid,'buyerId',buyer,'clientRequestId',gen_random_uuid()));
+ insert into public.kh_user_blocks(blocker_id,blocked_id)values(buyer,m);
+ perform pg_temp.kh_error(format('select public.kh_assign_agency_deal(%L,%L,%L)',c,a,jsonb_build_object('dealId',d->>'id','userId',m,'expectedVersion',1,'clientRequestId',gen_random_uuid())),'KH_CHAT_BLOCKED');
+ perform pg_temp.kh_as((g->>'actor')::uuid);q:=public.kh_request_agency_mandate((g->>'actor')::uuid,(g->>'agency')::uuid,jsonb_build_object('propertyId',pid,'internalReference','LOST-ISOLATION','clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(c);perform public.kh_decide_agency_mandate(c,a,jsonb_build_object('requestId',q->>'id','decision','accept','expectedVersion',1,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as((g->>'actor')::uuid);otherd:=public.kh_create_agency_deal((g->>'actor')::uuid,(g->>'agency')::uuid,jsonb_build_object('propertyId',pid,'externalContact',jsonb_build_object('name','Otro expediente privado','phone',null,'consentReference','Consentimiento de prueba'),'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(buyer);conv:=public.kh_start_agency_conversation(buyer,a,jsonb_build_object('propertyId',pid,'clientRequestId',gen_random_uuid()));
+ perform public.kh_send_agency_message(buyer,null,jsonb_build_object('conversationId',conv->>'id','body','Consulta que conserva historial','clientMessageId',gen_random_uuid(),'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(c);d:=public.kh_set_agency_deal_stage(c,a,jsonb_build_object('dealId',d->>'id','stage','lost','expectedVersion',1,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(buyer);perform pg_temp.kh_assert(not(public.kh_get_agency_conversation(buyer,null,(conv->>'id')::uuid)->>'canSend')::boolean and jsonb_array_length(public.kh_list_agency_messages(buyer,null,(conv->>'id')::uuid,null,30)->'items')=1,'lost_chat_read_only_preserves_same_conversation_history');
+ perform pg_temp.kh_assert((select availability='active' from public.properties where id=pid) and (select closed_reason is null and stage='inquiry' from kh_private.agency_deals where id=(otherd->>'id')::uuid),'lost_never_terminates_other_agency_or_global_property');
+end $$;
+
+do $$declare f jsonb:=pg_temp.schedule_fixture(33);a uuid:=(f->>'agency')::uuid;u uuid:=(f->>'actor')::uuid;did uuid:=(f->>'deal')::uuid;m uuid:='45000000-0000-4000-8000-000000000008';p jsonb;p2 jsonb;t jsonb;d jsonb;begin
+ insert into kh_private.agency_memberships(agency_id,user_id,role)values(a,m,'admin');
+ p:=pg_temp.visit_proposal(u,a,did,date_trunc('minute',clock_timestamp()+interval '4 days'));p:=pg_temp.accept_visit(u,a,p);
+ t:=public.kh_save_agency_task(u,a,jsonb_build_object('dealId',did,'assigneeId',u,'dueAt',clock_timestamp()+interval '2 days','title','Handoff Auth','clientRequestId',gen_random_uuid()));
+ update kh_private.agency_settings set enabled=false;perform pg_temp.kh_as(null);delete from auth.users where id=u;
+ perform pg_temp.kh_assert((select assignee_id is null and state='open' from kh_private.agency_tasks where id=(t->>'id')::uuid),'module_off_auth_delete_queues_task');
+ perform pg_temp.kh_assert((select assignee_id is null and outcome='unrecorded' from kh_private.property_visit_slots where proposal_id=(p->>'id')::uuid) and (select status='accepted' from kh_private.agency_proposals where id=(p->>'id')::uuid),'auth_delete_retains_confirmed_booking');
+ perform pg_temp.kh_assert(not exists(select 1 from kh_private.agency_reminders where deal_id=did and state='pending'),'auth_delete_cancels_former_recipient');
+ update kh_private.agency_settings set enabled=true;perform pg_temp.kh_as(m);
+ d:=public.kh_assign_agency_deal(m,a,jsonb_build_object('dealId',did,'userId',m,'expectedVersion',(select version from kh_private.agency_deals where id=did),'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert((select assignee_id=m and outcome='unrecorded' from kh_private.property_visit_slots where proposal_id=(p->>'id')::uuid),'assignment_consumes_retained_booking');
+ perform pg_temp.kh_assert((select assignee_id is null from kh_private.agency_tasks where id=(t->>'id')::uuid),'retained_task_queue_requires_explicit_assignment');
+ perform pg_temp.kh_assert(public.kh_list_agency_followup_events(m,a,did,0,30)#>'{items,1,actorId}'='null'::jsonb,'deleted_actor_history_nullable');
+ p2:=pg_temp.visit_proposal(m,a,did,date_trunc('minute',clock_timestamp()+interval '8 days'));
+ perform pg_temp.kh_assert(p2->>'createdBy'=m::text and (select role='admin' from kh_private.agency_memberships where agency_id=a and user_id=m),'admin_claims_and_proposes_without_losing_coordination_identity');
+ perform pg_temp.kh_error(format('select public.kh_set_agency_deal_stage(%L,%L,%L)',m,a,jsonb_build_object('dealId',did,'stage','won','expectedVersion',(d->>'version')::int,'clientRequestId',gen_random_uuid())),'KH_AGENCY_CLOSURE_REQUIRED');
+end $$;

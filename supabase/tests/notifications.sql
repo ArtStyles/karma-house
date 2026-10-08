@@ -37,7 +37,8 @@ select pg_temp.notice_assert((select page->>'unreadCount'='0' and page->'items'=
 select pg_temp.notice_assert(public.kh_list_notifications('77000000-0000-4000-8000-000000000002',null,false,'offer',30)->'items'='[]'::jsonb,'imitation text stays an ordinary message');
 select pg_temp.notice_error('select public.kh_list_notifications(''77000000-0000-4000-8000-000000000002'',null,false,''message'',30)','KH_NOTIFICATION_INVALID');
 select pg_temp.notice_assert((select page::text not like '%NOTA_PRIVADA%' and page::text not like '%1234%' from notice_context),'notification excludes message contents');
-select pg_temp.notice_assert(public.kh_get_notification_preferences('77000000-0000-4000-8000-000000000002')='{"messages":true,"visits":true,"offers":true,"alerts":true,"version":0}','default preferences');
+select pg_temp.notice_assert((public.kh_get_notification_preferences('77000000-0000-4000-8000-000000000002')-'agencies')='{"messages":true,"visits":true,"offers":true,"alerts":true,"version":0}','historical default preferences');
+select pg_temp.notice_assert(to_regclass('kh_private.agency_settings') is null or public.kh_get_notification_preferences('77000000-0000-4000-8000-000000000002')->>'agencies'='true','added agency preference default on upgraded schema');
 select pg_temp.notice_assert(public.kh_save_notification_preferences('77000000-0000-4000-8000-000000000002','{"messages":false,"visits":true,"offers":true,"expectedVersion":0}')->>'version'='1','save preferences');
 select pg_temp.notice_assert(public.kh_save_notification_preferences('77000000-0000-4000-8000-000000000002','{"messages":false,"visits":true,"offers":true,"expectedVersion":0}')->>'version'='1','same desired stale retry accepted');
 select pg_temp.notice_error('select public.kh_save_notification_preferences(''77000000-0000-4000-8000-000000000002'',''{"messages":true,"visits":true,"offers":true,"expectedVersion":0}'')','KH_NOTIFICATION_PREFERENCES_CONFLICT');
@@ -128,9 +129,10 @@ select pg_temp.notice_assert((select total=(select count(*) from kh_private.noti
 select pg_temp.notice_assert(not exists(select 1 from kh_private.negotiation_requests where client_request_id='77000000-0000-4000-8000-000000000019'),'failed notification leaves no receipt');
 select pg_temp.notice_assert(not exists(select 1 from public.kh_negotiations where conversation_id=(select conversation_id from notice_context) and status='pending'),'failed notification leaves no proposal');
 drop trigger notice_forced_failure on kh_private.notifications;
--- Direct fixture inserts exercise trigger pagination without bypassing public RPC rate limits.
-insert into public.kh_messages(conversation_id,sender_id,client_message_id,seq,body)
-select conversation_id,'77000000-0000-4000-8000-000000000001',gen_random_uuid(),100+g,'Mensaje sintético' from notice_context cross join generate_series(1,35) g;
+-- Seed historical pagination messages. The shared row-trigger rate limit remains
+-- enabled; this fixture represents a prior day's history, not 35 live sends.
+insert into public.kh_messages(conversation_id,sender_id,client_message_id,seq,body,created_at)
+select conversation_id,'77000000-0000-4000-8000-000000000001',gen_random_uuid(),100+g,'Mensaje sintético',clock_timestamp()-interval '1 day'+g*interval '1 minute' from notice_context cross join generate_series(1,35) g;
 -- Pagination is about the seek cursor, not the category, and the bell skips message notices.
 update kh_private.notifications set category='visit',title='Actualización de visita',body='Tienes una propuesta de visita para revisar.'
   where message_id in (select id from public.kh_messages where body='Mensaje sintético');
@@ -142,6 +144,6 @@ select pg_temp.notice_assert((select jsonb_array_length(public.kh_list_notificat
 select pg_temp.notice_error('select public.kh_list_notifications(''77000000-0000-4000-8000-000000000002'',''01'')','KH_NOTIFICATION_INVALID');
 select pg_temp.notice_error('select public.kh_read_notifications_through(''77000000-0000-4000-8000-000000000002'',''9223372036854775808'')','KH_NOTIFICATION_INVALID');
 reset role;
-select pg_temp.notice_assert(not has_function_privilege('anon','public.kh_notification_summary(uuid,boolean)','EXECUTE'),'anonymous RPC denied');
+select pg_temp.notice_assert((select count(*)=1 and bool_and(not has_function_privilege('anon',p.oid,'EXECUTE')) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='kh_notification_summary'),'one current RPC signature, anonymous execution denied');
 select pg_temp.notice_assert(not has_function_privilege('authenticated','kh_private.notification_from_message()','EXECUTE'),'trigger helper private');
 rollback;

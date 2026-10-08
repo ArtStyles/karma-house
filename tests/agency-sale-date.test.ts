@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {saleOccurredAt} from '../src/agencies/closures/domain.ts';
+import {readFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+import {runInNewContext} from 'node:vm';
+import ts from 'typescript';
+test('sale occurredAt allows historical Havana dates and rejects future or invalid dates',()=>{
+ const now=new Date('2026-10-08T12:00:00Z');
+ assert.equal(saleOccurredAt('2026-09-30','14:00',now),'2026-09-30T18:00:00.000Z');
+ assert.equal(saleOccurredAt('2026-10-08','08:00',now),now.toISOString());
+ assert.throws(()=>saleOccurredAt('2026-10-08','08:01',now),/SALE_INVALID/);
+ assert.throws(()=>saleOccurredAt('2026-02-30','10:00',now));
+ assert.throws(()=>saleOccurredAt('2026-03-08','00:30',now));
+});
+test('date fields retain default visit controls and expose historical sale input only with sale purpose',async()=>{
+ const source=await readFile(new URL('../src/components/negotiations/VisitDateTimeFields.tsx',import.meta.url),'utf8');
+ const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+ const require=createRequire(import.meta.url),exports:any={};
+ const mocks:any={'../SelectionField':{SelectionField:'SelectionField'},'react-native':{Text:'Text',TextInput:'TextInput',View:'View',StyleSheet:{create:(v:any)=>v}},'../../negotiations/domain':{havanaDateTime:()=>({date:'2026-10-08',time:'10:00'})},'../../theme':{createThemedStyles:()=>()=>({styles:{}})}};
+ runInNewContext(code,{exports,require:(id:string)=>id==='react/jsx-runtime'?require(id):mocks[id]??(()=>{throw Error(id)})()});
+ const flatten=(n:any):any[]=>!n?[]:Array.isArray(n)?n.flatMap(flatten):typeof n==='object'?[n,...flatten(n.props?.children)]:[n];
+ const base={date:'2026-10-08',time:'10:00',disabled:false,onDate(){},onTime(){}};
+ const visit=flatten(exports.VisitDateTimeFields(base));
+ assert.deepEqual(visit.filter(n=>n.type==='SelectionField').map(n=>n.props.label),['Mes de la visita','Día de la visita','Hora','Minutos']);
+ assert.ok(visit.includes('Hora de Cuba · Elige una fecha futura, dentro de los próximos 180 días.'));
+ let edited='';const sale=flatten(exports.VisitDateTimeFields({...base,purpose:'sale',date:'2020-01-01',onDate:(value:string)=>{edited=value;}}));
+ const input=sale.find(n=>n.type==='TextInput');assert.equal(input.props.value,'2020-01-01');input.props.onChangeText('2019-12-31');assert.equal(edited,'2019-12-31');
+ assert.deepEqual(sale.filter(n=>n.type==='SelectionField').map(n=>n.props.label),['Hora','Minutos']);
+ assert.ok(sale.includes('Hora de Cuba · Indica cuándo ocurrió la venta. La fecha y hora no pueden estar en el futuro.'));
+});

@@ -3,6 +3,7 @@ import type { RemotePropertyRow } from '../data/remoteMapping.ts';
 import { PROPERTY_COLUMNS, type SignRows } from '../data/supabaseMarketplace.ts';
 import { searchPayload } from './query.ts';
 import type { CatalogPage, CatalogRepository, MapView, SearchMode } from './types.ts';
+import {resolvePropertyAliases} from '../agencies/properties/domain.ts';
 
 export function createCatalogRepository(client: SupabaseClient, signRows: SignRows): CatalogRepository {
   const call = async (fn: string, payload: unknown, checkpoint: () => void): Promise<Record<string, unknown>> => {
@@ -18,7 +19,8 @@ export function createCatalogRepository(client: SupabaseClient, signRows: SignRo
   // authorises it, and an owner must still reach their own paused or pending listing to edit it.
   const readByIds = async (ids: string[], checkpoint: () => void) => {
     checkpoint();
-    const { data, error } = await client.from('properties').select(PROPERTY_COLUMNS).in('id', ids);
+    const canonical = await resolvePropertyAliases(ids,async id=>{const {data,error}=await client.rpc('kh_resolve_property_alias',{p_property_id:id});if(error)throw error;return data},checkpoint);
+    const { data, error } = await client.from('properties').select(PROPERTY_COLUMNS).in('id', [...new Set(canonical)]);
     checkpoint();
     if (error) throw error;
     return signRows((data ?? []) as RemotePropertyRow[], checkpoint, 'all');
@@ -54,7 +56,7 @@ export function createCatalogRepository(client: SupabaseClient, signRows: SignRo
       for (let start = 0; start < unique.length; start += 50) {
         result.push(...await readByIds(unique.slice(start, start + 50), checkpoint));
       }
-      return result;
+      return [...new Map(result.map(row=>[row.id,row])).values()];
     },
   };
 }

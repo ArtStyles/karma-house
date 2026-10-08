@@ -6,7 +6,7 @@ interface Dependencies {
   repository: PushRepository;
   adapter: PushAdapter;
   projectId: string;
-  navigate(target: PushTarget): void;
+  navigate(target: PushTarget, checkpoint?:()=>void): void | Promise<void>;
   refreshSummary(): Promise<void>;
 }
 const sameSession = (a: PushSession | null, b: PushSession | null) => a?.userId === b?.userId && a?.sessionId === b?.sessionId;
@@ -104,14 +104,14 @@ export function createPushController({ store, repository, adapter, projectId, na
     saved = await store.change(current => {
       assertCurrent(expectedEpoch, expectedIntent);
       const previous = current.intent;
-      if (previous?.enabled && previous.userId === captured.userId && previous.sessionId === captured.sessionId && previous.fcmToken === token) return current;
-      return { ...current, revision: nextRevision(current.revision), intent: { enabled: true, userId: captured.userId, sessionId: captured.sessionId, fcmToken: token, confirmed: false,
+      if (previous?.enabled && previous.userId === captured.userId && previous.sessionId === captured.sessionId && previous.fcmToken === token && previous.supportsAgencyNotifications===true) return current;
+      return { ...current, revision: nextRevision(current.revision), intent: { supportsAgencyNotifications:true,enabled: true, userId: captured.userId, sessionId: captured.sessionId, fcmToken: token, confirmed: false,
         wasEnabled: !!(previous?.enabled && previous.userId === captured.userId && previous.sessionId === captured.sessionId && (previous.confirmed || previous.wasEnabled)) } };
     });
     assertCurrent(expectedEpoch, expectedIntent);
     const request = context(expectedEpoch, expectedIntent);
     try {
-      const result = await repository.register({ installationId: saved.installationId, installationSecret: saved.installationSecret, revision: saved.revision, fcmToken: token, platform: 'android', projectId }, request);
+      const result = await repository.register({ installationId: saved.installationId, installationSecret: saved.installationSecret, revision: saved.revision, fcmToken: token, platform: 'android', projectId, supportsAgencyNotifications: true }, request);
       request.checkpoint();
       if (result.enabled !== true || result.revision !== saved.revision || result.platform !== 'android') throw registrationError();
       await store.change(current => { request.checkpoint(); return current.revision === saved.revision && current.intent?.enabled ? { ...current, intent: { ...current.intent, confirmed: true } } : current; });
@@ -178,8 +178,9 @@ export function createPushController({ store, repository, adapter, projectId, na
         try {
           const resolved = await repository.resolve(response.payload.notificationId, request); request.checkpoint();
           if (resolved.notificationId === response.payload.notificationId && resolved.recipientId === request.userId) {
-            if (isUuid(resolved.conversationId)) navigate({ conversationId: resolved.conversationId });
-            else if (isUuid(resolved.propertyId)) navigate({ propertyId: resolved.propertyId });
+            if (resolved.agencyTarget) await navigate({agencyTarget:resolved.agencyTarget},request.checkpoint);
+            else if (isUuid(resolved.conversationId)) await navigate({ conversationId: resolved.conversationId },request.checkpoint);
+            else if (isUuid(resolved.propertyId)) await navigate({ propertyId: resolved.propertyId },request.checkpoint);
           }
         } catch { /* Deleted, blocked, stale and inaccessible notices open nothing. */ }
         finally { request.release(); processingResponseId = null; await clearResponse(response.id); }

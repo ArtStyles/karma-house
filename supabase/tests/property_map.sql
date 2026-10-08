@@ -52,7 +52,7 @@ select pg_temp.map_error('update public.properties set latitude=23.13587 where i
 select set_config('request.jwt.claim.sub','22000000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claims','{"sub":"22000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 select pg_temp.map_assert(not exists(select 1 from public.properties where id=(select property_id from kh_map_context)),'pending position hidden from buyer');
-select pg_temp.map_error('select public.kh_save_property(payload || jsonb_build_object(''id'',property_id,''expectedVersion'',1)) from kh_map_context','KH_PROPERTY_NOT_FOUND');
+select pg_temp.map_error('select public.kh_save_property(payload || jsonb_build_object(''id'',property_id,''expectedVersion'',1)) from kh_map_context','KH_PROPERTY_MANAGEMENT_CHANGED');
 select set_config('request.jwt.claim.sub','22000000-0000-4000-8000-000000000003',true);
 select set_config('request.jwt.claims','{"sub":"22000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
 select public.kh_review_property(property_id,'approved',null,1) from kh_map_context;

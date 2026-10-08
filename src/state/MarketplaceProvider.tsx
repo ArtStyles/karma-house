@@ -32,12 +32,16 @@ export interface MarketplaceContextValue {
    */
   demoCatalog: Listing[] | null;
   favoriteIds: string[];
+  canonicalFavoriteId(id:string):string;
+  normalizeFavoriteIds(checkpoint?:()=>void):Promise<string[]>;
+  favoriteMembership(id:string):boolean|null;
+  prepareFavoriteHeart(id:string):Promise<void>;
   ownListings: Listing[];
   moderationQueue: Listing[];
   refresh(): Promise<void>;
   invalidateListingManagement(ids:readonly string[]):Promise<void>;
   isOwnListing(listing: Listing): boolean;
-  toggleFavorite(id: string): Promise<void>;
+  toggleFavorite(id: string, intendedFavorite?:boolean): Promise<void>;
   saveListing(draft: ListingDraft, existingId?: string, moderation?: SaveModeration): Promise<string>;
   setStatus(id: string, status: ListingStatus): Promise<void>;
   submitForReview(id: string): Promise<void>;
@@ -78,6 +82,10 @@ function DemoMarketplaceProvider({ children }: PropsWithChildren) {
       invalidateListingManagement:async(ids)=>{listingManagementEvents.invalidate(ids);await controller.hydrate();},
       isOwnListing: (listing) => listing.owner === 'local',
       toggleFavorite: controller.toggleFavorite,
+      canonicalFavoriteId:(id)=>id,
+      normalizeFavoriteIds:async(checkpoint)=>{checkpoint?.();return controller.getState().favoriteIds;},
+      favoriteMembership:(id)=>state.favoriteIds.includes(id),
+      prepareFavoriteHeart:async()=>{},
       saveListing: controller.saveListing,
       setStatus: controller.setStatus,
       submitForReview: async () => { throw new Error('La revisión está disponible en el catálogo conectado.'); },
@@ -123,6 +131,10 @@ function CloudMarketplaceProvider({ children }: PropsWithChildren) {
       refresh: controller.refresh,
       invalidateListingManagement:async(ids)=>{listingManagementEvents.invalidate(ids);await controller.invalidateListingManagement(ids);},
       toggleFavorite: controller.toggleFavorite,
+      canonicalFavoriteId:(id)=>state.sessionUserId===userId?controller.canonicalFavoriteId(id):id,
+      normalizeFavoriteIds:controller.normalizeFavoriteIds,
+      favoriteMembership:(id)=>auth.ready&&state.sessionUserId===userId?controller.favoriteMembership(id):null,
+      prepareFavoriteHeart:controller.prepareFavoriteHeart,
       saveListing: controller.saveListing,
       setStatus: controller.setStatus,
       submitForReview: controller.submitForReview,
