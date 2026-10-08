@@ -21,3 +21,24 @@ test('late canonical resolution cannot change a different account or perform a t
 test('late favorite list reconciliation cannot publish into a different account',async()=>{let release!:()=>void;const wait=new Promise<void>(r=>{release=r});const {store}=account([D],async()=>{await wait;return C});await store.refresh();const controller=favorites.createFavoriteListingsController(favorites.createAccountFavoriteReader({byIds:async()=>[listing]},store.normalizeFavoriteIds));controller.setSession('account-a');const pending=controller.setIds([D]);await new Promise(r=>setTimeout(r,0));store.setSession('account-b',false);controller.setSession('account-b');release();await pending;assert.deepEqual(store.getState().favoriteIds,[]);assert.deepEqual(controller.getState().listings,[])});
 
 test('leaving favorites cancels pending reconciliation without a global error; reopening resolves again',async()=>{let release!:()=>void,waitOnce=true;const wait=new Promise<void>(r=>{release=r});const {store}=account([D],async()=>{if(waitOnce){waitOnce=false;await wait}return C});await store.refresh();const controller=favorites.createFavoriteListingsController(favorites.createAccountFavoriteReader({byIds:async()=>[listing]},store.normalizeFavoriteIds));controller.setSession('account-a');const pending=controller.setIds([D]);await new Promise(r=>setTimeout(r,0));controller.cancelRead();release();await pending;assert.deepEqual(store.getState().favoriteIds,[D]);assert.equal(store.getState().storageError,null);await controller.setIds(store.getState().favoriteIds);assert.deepEqual(store.getState().favoriteIds,[C]);assert.equal(controller.getState().listings.length,1)});
+
+test('direct canonical card/detail exposes unknown until resolved, then removes and undoes the displayed favorite',async()=>{
+ let release!:()=>void;const wait=new Promise<void>(r=>{release=r});const {store,writes}=account([D],async id=>{await wait;return id===D?C:id});await store.refresh();
+ assert.equal(store.favoriteMembership(C),null);
+ const opening=store.prepareFavoriteHeart(C);await new Promise(r=>setTimeout(r,0));assert.equal(store.favoriteMembership(C),null);assert.deepEqual(writes,[]);
+ release();await opening;assert.equal(store.favoriteMembership(C),true);assert.deepEqual(store.getState().favoriteIds,[C]);
+ await store.toggleFavorite(C,false);assert.equal(store.favoriteMembership(C),false);await store.toggleFavorite(C,true);assert.equal(store.favoriteMembership(C),true);
+ assert.deepEqual(writes,[{id:C,favorite:false},{id:C,favorite:true}]);
+});
+test('direct heart resolution failure stays unknown and retry recovers without losing saved ids',async()=>{
+ let fail=true;const {store,writes}=account([D],async id=>{if(fail)throw Error('network unavailable');return id===D?C:id});await store.refresh();
+ await assert.rejects(store.prepareFavoriteHeart(C),/network/);assert.equal(store.favoriteMembership(C),null);assert.deepEqual(store.getState().favoriteIds,[D]);assert.deepEqual(writes,[]);
+ fail=false;await store.prepareFavoriteHeart(C);assert.equal(store.favoriteMembership(C),true);
+});
+test('direct heart resolution cannot expose the previous account membership after an account change',async()=>{
+ let release!:()=>void;const wait=new Promise<void>(r=>{release=r});const {store,writes}=account([D],async()=>{await wait;return C});await store.refresh();const opening=store.prepareFavoriteHeart(C);await new Promise(r=>setTimeout(r,0));store.setSession('account-b',false);release();await assert.rejects(opening,/sesión/);assert.equal(store.favoriteMembership(C),null);assert.deepEqual(store.getState().favoriteIds,[]);assert.deepEqual(writes,[]);
+});
+test('a merge after rendering cannot reverse the displayed add intent into a removal',async()=>{
+ let merged=false;const {store,writes}=account([D],async id=>merged&&id===D?C:id);await store.refresh();await store.prepareFavoriteHeart(C);assert.equal(store.favoriteMembership(C),false);merged=true;
+ await store.toggleFavorite(C,true);assert.deepEqual(writes,[{id:C,favorite:true}]);assert.deepEqual(store.getState().favoriteIds,[C]);
+});

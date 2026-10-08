@@ -41,6 +41,7 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
   let reviewSequence = 0;
   let mutationQueue: Promise<void> = Promise.resolve();
   let favoriteAliases=new Map<string,string>();
+  let resolvedHearts=new Set<string>();
   const canonicalFrom=(id:string,aliases:ReadonlyMap<string,string>)=>{const seen=new Set<string>();while(aliases.has(id)){if(seen.has(id))throw Error('El servidor devolvió un enlace de vivienda no válido.');seen.add(id);id=aliases.get(id)!}return id};
   const canonicalFavoriteId=(id:string)=>canonicalFrom(id,favoriteAliases);
   const resolveFavorites=async(extra:string[],checkpoint:()=>void)=>{
@@ -70,6 +71,7 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
     try {
       const result = await repository.load(userId, checkpoint);
       if (epoch !== generation || sequence !== refreshSequence) return;
+      resolvedHearts.clear();
       publish({ ...state, ...result, favoriteIds:[...new Set(result.favoriteIds.map(canonicalFavoriteId))], ready: true, storageError: null });
     } catch (error) {
       if (epoch !== generation || sequence !== refreshSequence) return;
@@ -120,7 +122,7 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
     subscribe(listener: () => void) { listeners.add(listener); return () => listeners.delete(listener); },
     setSession(nextUserId: string | null, nextAdmin: boolean) {
       if (userId === nextUserId && isAdmin === nextAdmin) return;
-      userId = nextUserId; isAdmin = nextAdmin; generation += 1;favoriteAliases=new Map();
+      userId = nextUserId; isAdmin = nextAdmin; generation += 1;favoriteAliases=new Map();resolvedHearts=new Set();
       refreshSequence += 1; reviewSequence += 1;
       // A new account must never wait behind another account's pending network request.
       mutationQueue = Promise.resolve();
@@ -135,16 +137,27 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
     },
     isOwnListing: (listing: Listing) => !!userId && listing.owner === 'remote' && listing.ownerId === userId,
     canonicalFavoriteId,
+    favoriteMembership(id:string):boolean|null {
+      return resolvedHearts.has(id)?state.favoriteIds.includes(canonicalFavoriteId(id)):null;
+    },
+    prepareFavoriteHeart(id:string) {
+      resolvedHearts.delete(id);
+      publish({...state});
+      return enqueue(async(_ownerId,checkpoint)=>{
+        await resolveFavorites([id],checkpoint);checkpoint();
+        resolvedHearts.add(id);publish({...state});
+      },false);
+    },
     normalizeFavoriteIds(externalCheckpoint:()=>void=()=>{}) {
       return enqueue(async(_ownerId,checkpoint)=>resolveFavorites([],()=>{checkpoint();externalCheckpoint()}),false);
     },
-    toggleFavorite(id: string) {
+    toggleFavorite(id: string, intendedFavorite?:boolean) {
       return enqueue(async (ownerId, checkpoint) => {
         await resolveFavorites([id],checkpoint);checkpoint();id=canonicalFavoriteId(id);
-        const favorite = !state.favoriteIds.includes(id);
+        const favorite = intendedFavorite ?? !state.favoriteIds.includes(id);
         await repository.setFavorite(ownerId, id, favorite, checkpoint); checkpoint();
         refreshSequence += 1;
-        publish({ ...state, storageError: null, favoriteIds: favorite ? [...state.favoriteIds, id] : state.favoriteIds.filter((value) => value !== id) });
+        publish({ ...state, storageError: null, favoriteIds: favorite ? [...new Set([...state.favoriteIds, id])] : state.favoriteIds.filter((value) => value !== id) });
       });
     },
     saveListing(draft: ListingDraft, id?: string, moderation: SaveModeration = 'pending') {

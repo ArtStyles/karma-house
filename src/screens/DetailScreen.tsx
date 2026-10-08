@@ -8,6 +8,7 @@ import { KarmaMap } from '../components/maps/KarmaMap';
 import { MapOnDemand } from '../components/ExploreMap';
 import { Button, EmptyState, goBack, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { useMarketplace } from '../state/MarketplaceProvider';
+import { useFavoriteHeart } from '../state/useFavoriteHeart';
 import { createThemedStyles, formatMoney, typefaces } from '../theme';
 import { useListing } from '../catalog/useCatalog';
 import { useAuth } from '../auth/AuthProvider';
@@ -30,10 +31,11 @@ const NEEDS_CONNECTION = 'Necesitas conexión para esto.';
 export default function DetailScreen() {
   const { colors, styles } = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { favoriteIds, canonicalFavoriteId, toggleFavorite, isOwnListing, mode, storageError } = useMarketplace();
+  const { toggleFavorite, isOwnListing, mode, storageError } = useMarketplace();
   const auth = useAuth();
   const messaging = useMessaging();
   const { listing, ready, offline, error: listingError, retry } = useListing(id);
+  const heart=useFavoriteHeart(listing?.id??id),favorite=heart.favorite;
   const management=useListingManagement(id);
   const [contact, setContact] = useState(false);
   const [contactBusy, setContactBusy] = useState(false);
@@ -69,7 +71,6 @@ export default function DetailScreen() {
   const sellerProfile = sellerId ? seller.profile : null;
   const presentation = listingPresentation({ ready, hasData: !!listing, error: listingError, offline });
   if (!listing) return <SafeAreaView style={styles.safe}>{presentation === 'loading' ? <View style={styles.loading}><ActivityIndicator color={colors.primary} size="large" /><Text style={styles.sellerText}>Cargando vivienda…</Text></View> : presentation === 'error' ? <View style={styles.body}><Notice error>{`No pudimos cargar esta vivienda. ${listingError}`}</Notice><Button label="Reintentar" onPress={retry} /><Button label="Volver a explorar" secondary onPress={() => router.replace('/')} /></View> : <EmptyState title="Esta vivienda no está disponible" description="Vuelve al catálogo para explorar otras viviendas." action={<Button label="Volver a explorar" onPress={() => router.replace('/')} />} />}</SafeAreaView>;
-  const favorite = favoriteIds.includes(canonicalFavoriteId(listing.id));
   const own = mode==='demo'?isOwnListing(listing):Boolean(!offline&&auth.user&&management.value&&management.value.managerId===auth.user.id);
   const operation = listingOperation(listing);
   const wanted = operation === 'wanted';
@@ -79,12 +80,13 @@ export default function DetailScreen() {
   async function toggle() {
     if (busy || !listing || !auth.ready) return;
     if (offline) { setError(NEEDS_CONNECTION); return; }
+    if(favorite===null){if(!heart.checking)void heart.retry();return;}
     setBusy(true); setError('');
     try {
       if (mode === 'cloud' && !auth.user) {
         await pendingIntentStore.write({ kind: 'favorite', propertyId: listing.id });
         router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } });
-      } else { setIntentNotice(''); await toggleFavorite(listing.id); }
+      } else { setIntentNotice(''); await toggleFavorite(listing.id,!favorite); }
     }
     catch { setError('No pudimos guardar tu favorito. Inténtalo de nuevo.'); }
     finally { setBusy(false); }
@@ -143,7 +145,7 @@ export default function DetailScreen() {
           <View style={styles.navigationTitle}><Text style={styles.navText}>{operationBadge(listing) || listing.type}</Text></View>
           <View style={styles.navigationActions}>
             <IconButton name="share-social-outline" label="Compartir vivienda" onPress={() => void share()} style={styles.floatingButton} />
-            <IconButton name={favorite ? 'heart' : 'heart-outline'} label={favorite ? 'Quitar de favoritos' : 'Guardar en favoritos'} onPress={toggle} active={favorite} style={styles.floatingButton} />
+            <IconButton name={favorite===null?'ellipsis-horizontal':favorite ? 'heart' : 'heart-outline'} label={favorite===null?'Comprobar favoritos':favorite ? 'Quitar de favoritos' : 'Guardar en favoritos'} onPress={toggle} active={favorite??undefined} style={styles.floatingButton} />
           </View>
         </View>
         {photoCount > 1 && <View style={styles.photoControls}>
@@ -153,6 +155,7 @@ export default function DetailScreen() {
         </View>}
       </View>
       <View style={styles.body}>
+        {heart.error&&<Notice error>{heart.error}</Notice>}
         {management.value?.assistedByKarmaHouse&&<Notice>Publicado con asistencia de KarmaHouse. {own ? 'Ahora tú gestionas este anuncio.' : sellerProfile?.displayName?`La gestión actual corresponde a ${sellerProfile.displayName}.`:'Las consultas nuevas se dirigen al responsable vigente.'}</Notice>}
         {management.error&&!offline&&<Notice error>{management.error}</Notice>}
         {listingError && !offline && <View style={{ gap: 8 }}><Notice error>{`No pudimos actualizar la ficha. ${listingError}`}</Notice><Button label="Reintentar ficha" secondary onPress={retry} /></View>}
