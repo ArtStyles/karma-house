@@ -6,6 +6,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useAuth} from '../auth/AuthProvider';
 import {pickAccountAvatar,type PreparedAvatar} from '../auth/prepareAvatar';
 import {useAgencyWorkspace} from '../agencies/useAgencyWorkspace';
+import type {CapturedAccountContext} from '../agencies/controller';
 import type {AgencyApplication} from '../agencies/types';
 import {agencyError} from '../agencies/domain';
 import {agencyApplicationErrors,agencyStateLabel,emptyAgencyApplication,type AgencyFieldErrors} from '../agencies/registration';
@@ -18,35 +19,35 @@ import {AccountPrompt} from '../components/AccountPrompt';
 export default function AgencyApplicationScreen(){
  const auth=useAuth(),workspace=useAgencyWorkspace(),{colors,styles:s}=useAgencyFormStyles();
  const [record,setRecord]=useState<{owner:string;application:AgencyApplication}|null>(null),[input,setInput]=useState(emptyAgencyApplication),[errors,setErrors]=useState<AgencyFieldErrors>({}),[issue,setIssue]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false),[logo,setLogo]=useState<PreparedAvatar|null>(null);
- const application=record&&record.owner===auth.user?.id?record.application:null;
+ const application=!auth.suspended&&auth.session&&record&&record.owner===auth.user?.id?record.application:null;
  const editable=Boolean(application&&['pending','needs_changes','rejected'].includes(application.agency.state)&&workspace.enabled);
  const load=useCallback(async()=>{
- if(!auth.user||!workspace.repository)return;
- const context=workspace.captureAccountContext();setLoading(true);setIssue('');
- try{const next=await workspace.repository.application(context);context.checkpoint();setRecord(next?{owner:context.userId,application:next}:null);if(next)setInput(next.input);}
- catch(cause){try{context.checkpoint();setIssue(agencyError(cause));}catch{}}
- finally{try{context.checkpoint();setLoading(false);}catch{}context.release();}
- },[auth.user?.id,workspace.repository,workspace.captureAccountContext]);
+ if(!auth.user||auth.suspended||!auth.session||!workspace.repository)return;
+ let context:CapturedAccountContext|null=null;setLoading(true);setIssue('');
+ try{context=workspace.captureAccountContext();const next=await workspace.repository.application(context);context.checkpoint();setRecord(next?{owner:context.userId,application:next}:null);if(next)setInput(next.input);}
+ catch(cause){try{context?.checkpoint();setIssue(agencyError(cause));}catch{}}
+ finally{try{context?.checkpoint();setLoading(false);}catch{}context?.release();}
+ },[auth.user?.id,auth.suspended,Boolean(auth.session),workspace.repository,workspace.captureAccountContext]);
  useFocusEffect(useCallback(()=>{setRecord(null);setIssue('');setBusy(false);setLoading(false);setLogo(null);setErrors({});void load();},[load]));
  async function save(){
  if(!application||!workspace.repository||busy||!editable)return;
  const found=agencyApplicationErrors(input);setErrors(found);if(Object.keys(found).length){setIssue('Revisa los campos indicados.');return;}
- const context=workspace.captureAccountContext();setBusy(true);setIssue('');
- try{const next=await workspace.repository.submitApplication(input,randomUUID(),application.agency.version,context);context.checkpoint();setRecord({owner:context.userId,application:next});setInput(next.input);}
- catch(cause){try{context.checkpoint();setIssue(agencyError(cause));}catch{}}
- finally{try{context.checkpoint();setBusy(false);}catch{}context.release();}
+ let context:CapturedAccountContext|null=null;setBusy(true);setIssue('');
+ try{context=workspace.captureAccountContext();const next=await workspace.repository.submitApplication(input,randomUUID(),application.agency.version,context);context.checkpoint();setRecord({owner:context.userId,application:next});setInput(next.input);}
+ catch(cause){try{context?.checkpoint();setIssue(agencyError(cause));}catch{}}
+ finally{try{context?.checkpoint();setBusy(false);}catch{}context?.release();}
  }
  async function selectLogo(){
- if(busy||!editable)return;const context=workspace.captureAccountContext();setBusy(true);setIssue('');
- try{const next=await pickAccountAvatar(context.checkpoint);context.checkpoint();if(next){validateAgencyLogo(next);setLogo(next);}}
- catch(cause){try{context.checkpoint();setIssue(cause instanceof Error?cause.message:'No se pudo preparar el logo.');}catch{}}
- finally{try{context.checkpoint();setBusy(false);}catch{}context.release();}
+ if(busy||!editable)return;let context:CapturedAccountContext|null=null;setBusy(true);setIssue('');
+ try{context=workspace.captureAccountContext();const next=await pickAccountAvatar(context.checkpoint);context.checkpoint();if(next){validateAgencyLogo(next);setLogo(next);}}
+ catch(cause){try{context?.checkpoint();setIssue(cause instanceof Error?cause.message:'No se pudo preparar el logo.');}catch{}}
+ finally{try{context?.checkpoint();setBusy(false);}catch{}context?.release();}
  }
  async function uploadLogo(){
- if(!application||!supabase||!logo||busy||!editable)return;const context=workspace.captureAccountContext();setBusy(true);setIssue('');
- try{const assets=createAgencyAssetsRepository(process.env.EXPO_PUBLIC_SUPABASE_URL?.trim()??'',process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()??'',createDeadlineFetch());const path=await assets.upload(application.agency.id,randomUUID(),logo,context);const next=await attachAgencyLogo(supabase,application.agency.id,path,application.agency.version,context);context.checkpoint();setRecord({owner:context.userId,application:next});setLogo(null);}
- catch(cause){try{context.checkpoint();setIssue(cause instanceof Error?cause.message:agencyError(cause));}catch{}}
- finally{try{context.checkpoint();setBusy(false);}catch{}context.release();}
+ if(!application||!supabase||!logo||busy||!editable)return;let context:CapturedAccountContext|null=null;setBusy(true);setIssue('');
+ try{context=workspace.captureAccountContext();const assets=createAgencyAssetsRepository(process.env.EXPO_PUBLIC_SUPABASE_URL?.trim()??'',process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim()??'',createDeadlineFetch());const path=await assets.upload(application.agency.id,randomUUID(),logo,context);const next=await attachAgencyLogo(supabase,application.agency.id,path,application.agency.version,context);context.checkpoint();setRecord({owner:context.userId,application:next});setLogo(null);}
+ catch(cause){try{context?.checkpoint();setIssue(cause instanceof Error?cause.message:agencyError(cause));}catch{}}
+ finally{try{context?.checkpoint();setBusy(false);}catch{}context?.release();}
  }
  return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled"><PageTitle title="Solicitud de inmobiliaria" subtitle="Consulta el estado y corrige los datos de tu solicitud." back fallback="/profile"/>
  {!auth.user?<AccountPrompt returnTo="/agency-application"/>:<><Button label="Actualizar solicitud" secondary onPress={()=>void load()} loading={loading} disabled={busy}/>{issue&&<Notice error>{issue}</Notice>}{loading&&!application?<ActivityIndicator color={colors.primary}/>:!application?<EmptyState title="No hay solicitud" description="El registro de inmobiliarias estará disponible cuando KarmaHouse lo habilite."/>:<>

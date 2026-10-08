@@ -1,10 +1,11 @@
 import {randomUUID} from 'expo-crypto';
 import {router,useFocusEffect} from 'expo-router';
-import {useCallback,useRef,useState} from 'react';
+import {useCallback,useEffect,useRef,useState} from 'react';
 import {ScrollView,Text,View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useAuth} from '../auth/AuthProvider';
 import {useAgencyWorkspace} from '../agencies/useAgencyWorkspace';
+import {agencyPrivateScreenKey,loadAgencyTeamPage,type AgencyTeamPage} from '../agencies/screenRequests';
 import {agencyError} from '../agencies/domain';
 import type {AgencyInvitation,AgencyMembership,AgencyRole} from '../agencies/types';
 import type {CapturedAccountContext,CapturedAgencyContext} from '../agencies/controller';
@@ -15,35 +16,40 @@ import {Button,Notice,PageTitle,Pill} from '../components/ui';
 import {agencyRoleLabel} from './AgencyWorkspaceScreen';
 const roles:AgencyRole[]=['manager','coordinator','admin'];
 export default function AgencyTeamScreen(){
- const {user}=useAuth(),w=useAgencyWorkspace(),{styles:s}=useAgencyFormStyles();
- const key=`${user?.id??''}:${w.activeAgencyId??''}:${w.generation}`;
+ const auth=useAuth(),{user}=auth,w=useAgencyWorkspace(),{styles:s}=useAgencyFormStyles();
+ const key=agencyPrivateScreenKey(user?.id,w.activeAgencyId,w.generation);
+ const workspaceRef=useRef(w),authRef=useRef(auth);workspaceRef.current=w;authRef.current=auth;
  const [record,setRecord]=useState<{key:string;members:AgencyMembership[];invitations:AgencyInvitation[];membersMore:boolean;invitationsMore:boolean}|null>(null);
  const [issue,setIssue]=useState(''),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[lookup,setLookup]=useState(''),[role,setRole]=useState<AgencyRole>('manager');
  const [candidate,setCandidate]=useState<{id:string;displayName:string;canInvite:boolean}|null>(null),[confirmRemove,setConfirmRemove]=useState<string|null>(null);
  const sequence=useRef(0),focused=useRef(false),latestKey=useRef(key);latestKey.current=key;
  const recordRef=useRef(record);recordRef.current=record;
- const data=record?.key===key?record:null,admin=w.membership?.role==='admin';
+ const data=record?.key===key&&!auth.suspended&&auth.session?record:null,admin=Boolean(data&&!busy&&w.membership?.role==='admin');
  const load=useCallback(async(append=false)=>{
-  if(!user||!w.repository||!w.ready)return;
-  const request=++sequence.current,account=w.captureAccountContext();let enterprise:CapturedAgencyContext|null=null;
-  const checkpoint=()=>{account.checkpoint();if(!focused.current||request!==sequence.current||latestKey.current!==key)throw Error('KH_AGENCY_CONTEXT_CHANGED')};
+  const currentAuth=authRef.current,currentWorkspace=workspaceRef.current;
+  if(!currentAuth.user||currentAuth.suspended||!currentAuth.session||!currentWorkspace.repository||!currentWorkspace.ready){setRecord(null);setBusy(false);return;}
+  const request=++sequence.current,checkpoint=()=>{if(!focused.current||request!==sequence.current)throw Error('KH_AGENCY_CONTEXT_CHANGED')};
   setBusy(true);setIssue('');
   try{
-   const invitations=await w.repository.listInvitations(append&&recordRef.current?.key===key?recordRef.current.invitations.length:0,account);checkpoint();
-   let members:AgencyMembership[]=[],membersMore=false;
-   if(w.activeAgencyId&&w.membership&&w.enabled){enterprise=w.captureAgencyContext();const page=await w.repository.listMembers(append&&recordRef.current?.key===key?recordRef.current.members.length:0,enterprise);enterprise.checkpoint();checkpoint();members=page.items;membersMore=page.hasMore;}
-   setRecord(previous=>({key,members:append&&previous?.key===key?[...previous.members,...members]:members,invitations:append&&previous?.key===key?[...previous.invitations,...invitations.items]:invitations.items,membersMore,invitationsMore:invitations.hasMore}));
-  }catch(error){try{checkpoint();setIssue(agencyError(error));}catch{}}
-  finally{try{checkpoint();setBusy(false);}catch{}account.release();enterprise?.release()}
- },[user?.id,w.repository,w.activeAgencyId,w.generation,w.membership?.version,w.enabled,w.ready,w.captureAccountContext,w.captureAgencyContext,key]);
- useFocusEffect(useCallback(()=>{focused.current=true;setRecord(null);setCandidate(null);setLookup('');setConfirmRemove(null);setIssue('');setNote('');setBusy(false);void load();return()=>{focused.current=false;sequence.current++}},[load]));
+   const old=recordRef.current,state=currentWorkspace.getCurrentWorkspace();
+   const previous:AgencyTeamPage|null=old&&old.key===agencyPrivateScreenKey(currentAuth.user.id,state.activeAgencyId,state.generation)?{...old,userId:currentAuth.user.id,agencyId:state.activeAgencyId,generation:state.generation}:null;
+   const result=await loadAgencyTeamPage({...currentWorkspace,repository:currentWorkspace.repository},append,previous,checkpoint);checkpoint();
+   const fresh=workspaceRef.current.getCurrentWorkspace(),actualKey=agencyPrivateScreenKey(result.userId,result.agencyId,result.generation);
+   if(actualKey!==agencyPrivateScreenKey(authRef.current.user?.id,fresh.activeAgencyId,fresh.generation)||authRef.current.suspended)throw Error('KH_AGENCY_CONTEXT_CHANGED');
+   setRecord({key:actualKey,members:result.members,invitations:result.invitations,membersMore:result.membersMore,invitationsMore:result.invitationsMore});
+  }catch(error){try{checkpoint();setRecord(null);setCandidate(null);setConfirmRemove(null);setIssue(agencyError(error));}catch{}}
+  finally{try{checkpoint();setBusy(false);}catch{}}
+ },[]);
+ useEffect(()=>{if(recordRef.current?.key!==key)setRecord(null);setCandidate(null);setLookup('');setConfirmRemove(null);setIssue('');setNote('');setBusy(false);},[key,auth.suspended]);
+ useFocusEffect(useCallback(()=>{focused.current=true;setRecord(null);setCandidate(null);setLookup('');setConfirmRemove(null);setIssue('');setNote('');setBusy(false);void load();return()=>{focused.current=false;sequence.current++}},[load,user?.id,w.activeAgencyId,w.ready,auth.suspended]));
  async function run(enterprise:boolean,action:(context:CapturedAccountContext|CapturedAgencyContext)=>Promise<void>,refresh=true){
-  if(busy||!w.repository)return;const context=enterprise?w.captureAgencyContext():w.captureAccountContext(),capturedKey=key;
-  const current=()=>{context.checkpoint();if(!focused.current||latestKey.current!==capturedKey)throw Error('KH_AGENCY_CONTEXT_CHANGED')};
+  if(busy||!w.repository||auth.suspended||!auth.session)return;
+  let context:CapturedAccountContext|CapturedAgencyContext|null=null;const capturedKey=key;
+  const current=()=>{context?.checkpoint();if(!focused.current||latestKey.current!==capturedKey)throw Error('KH_AGENCY_CONTEXT_CHANGED')};
   setBusy(true);setIssue('');setNote('');
-  try{await action(context);current();if(refresh){setCandidate(null);setConfirmRemove(null);setNote('Cambio guardado.');await load();}}
-  catch(error){try{current();setIssue(agencyError(error));}catch{}}
-  finally{try{current();setBusy(false);}catch{}context.release()}
+  try{context=enterprise?w.captureAgencyContext():w.captureAccountContext();await action(context);current();if(refresh){setCandidate(null);setConfirmRemove(null);setNote('Cambio guardado.');setBusy(false);await load();}}
+  catch(error){try{current();setRecord(null);setCandidate(null);setConfirmRemove(null);setIssue(agencyError(error));}catch{}}
+  finally{try{current();setBusy(false);}catch{}context?.release()}
  }
  async function find(){
   const raw=lookup.trim(),match=raw.match(/(?:^|\/user\/)([0-9a-f-]{36})(?:[?#].*)?$/i),id=match?.[1]??raw;
@@ -54,8 +60,8 @@ export default function AgencyTeamScreen(){
   await run(false,async context=>{await w.repository!.decideInvitation({invitationId:invitation.id,accept,expectedVersion:invitation.version,clientRequestId:randomUUID()},context);context.checkpoint();await w.refreshAgencies();});
  }
  return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled"><PageTitle title="Equipo e invitaciones" subtitle={w.activeAgency?.tradeName??'Acepta una invitación para empezar a trabajar con una agencia.'} back fallback="/agency-workspace"/>
- {!user?<AccountPrompt returnTo="/agency-team"/>:<>
- {issue&&<Notice error>{issue}</Notice>}{note&&<Notice>{note}</Notice>}
+ {!user?<AccountPrompt returnTo="/agency-team"/>:auth.suspended||!auth.session?<Notice>Tu sesión no permite consultar el equipo. Revisa el estado de tu cuenta.</Notice>:<>
+ {(issue||w.error)&&<Notice error>{issue||w.error}</Notice>}{note&&<Notice>{note}</Notice>}
  <Button label="Actualizar equipo e invitaciones" secondary loading={busy} onPress={()=>void load()}/>
  <Text style={s.title}>Invitaciones recibidas</Text>
  {data?.invitations.length===0&&<Text style={s.copy}>No tienes invitaciones.</Text>}

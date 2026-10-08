@@ -15,6 +15,7 @@ import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 import {AgencyRegistrationFields} from '../components/agencies/AgencyRegistrationFields';
 import {agencyApplicationErrors,emptyAgencyApplication,recoverAgencyRegistration,type AgencyFieldErrors,type RegistrationIntent} from '../agencies/registration';
 import {agencyRegistrationAvailable} from '../agencies/assets';
+import type {CapturedAccountContext} from '../agencies/controller';
 import {useAgencyWorkspace} from '../agencies/useAgencyWorkspace';
 import {supabase} from '../lib/supabase';
 
@@ -62,10 +63,10 @@ export default function AuthScreen() {
   async function continueToDestination() {
     const isCurrent=focus.checkpoint();
     if(!auth.user||auth.user.user_metadata.registration_intent!=='agency'){router.replace(returnTo);return;}
-    if(!workspace.repository)return;
-    const context=workspace.captureAccountContext();
-    try{const destination=await recoverAgencyRegistration(workspace.repository,context,auth.user.user_metadata.registration_intent==='agency'?'agency':'personal');context.checkpoint();if(!isCurrent())return;router.replace(destination==='/profile'?returnTo:destination);}
-    catch(cause){try{context.checkpoint();if(!isCurrent())return;setIssue(cause instanceof Error?cause.message:'Actualiza para consultar tu solicitud.');}catch{}}finally{context.release();}
+    if(!workspace.repository||auth.suspended||!auth.session)return;
+    let context:CapturedAccountContext|null=null;
+    try{context=workspace.captureAccountContext();const destination=await recoverAgencyRegistration(workspace.repository,context,auth.user.user_metadata.registration_intent==='agency'?'agency':'personal');context.checkpoint();if(!isCurrent())return;router.replace(destination==='/profile'?returnTo:destination);}
+    catch(cause){try{context?.checkpoint();if(!isCurrent())return;setIssue(cause instanceof Error?cause.message:'Actualiza para consultar tu solicitud.');}catch{}}finally{context?.release();}
   }
   async function cancel(explore = false) {
     if (submitting) return;
@@ -78,7 +79,7 @@ export default function AuthScreen() {
   useEffect(() => { setMode(initialMode(params.mode)); }, [params.mode]);
   useEffect(() => {
     if (focused && auth.ready && auth.user && mode !== 'recovery' && mode !== 'forgot' && !submitting && !notice && workspace.ready) void continueToDestination();
-  }, [focused, auth.ready, auth.user, mode, returnTo, submitting, notice, workspace.ready]);
+  }, [focused, auth.ready, auth.user, mode, returnTo, submitting, notice, workspace.ready,auth.suspended]);
 
   function changeMode(next: Mode) {
     if (submitting) return;

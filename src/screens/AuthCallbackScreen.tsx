@@ -7,6 +7,7 @@ import { completeAuthCallback } from '../auth/completeCallback';
 import { pendingIntentStore } from '../auth/pendingIntentStorage';
 import { pendingIntentReturnTo } from '../auth/pendingIntent';
 import { Button, Icon, Notice } from '../components/ui';
+import type {CapturedAccountContext} from '../agencies/controller';
 import {useAuth} from '../auth/AuthProvider';
 import {useAgencyWorkspace} from '../agencies/useAgencyWorkspace';
 import {recoverAgencyRegistration} from '../agencies/registration';
@@ -40,13 +41,13 @@ export default function AuthCallbackScreen() {
   }, [linkingUrl]);
 
   useEffect(()=>{
-    if(!destination||!auth.ready||!auth.user||!workspace.ready)return;
+    if(!destination||!auth.ready||!auth.user||auth.suspended||!auth.session||!workspace.ready)return;
     if(auth.user.user_metadata.registration_intent!=='agency'){router.replace(destination as Href);return;}
     if(!workspace.repository)return;
-    let active=true;const context=workspace.captureAccountContext();
-    void recoverAgencyRegistration(workspace.repository,context,'agency').then(route=>{context.checkpoint();if(active)router.replace(route);}).catch(cause=>{try{context.checkpoint();if(active)setError(agencyError(cause));}catch{}}).finally(()=>context.release());
+    let active=true;
+    void (async()=>{let context:CapturedAccountContext|null=null;try{context=workspace.captureAccountContext();const route=await recoverAgencyRegistration(workspace.repository!,context,'agency');context.checkpoint();if(active)router.replace(route);}catch(cause){try{context?.checkpoint();if(active)setError(agencyError(cause));}catch{}}finally{context?.release();}})();
     return ()=>{active=false;};
-  },[destination,auth.ready,auth.user?.id,workspace.ready,workspace.repository,workspace.captureAccountContext]);
+  },[destination,auth.ready,auth.user?.id,auth.suspended,Boolean(auth.session),workspace.ready,workspace.repository,workspace.captureAccountContext]);
 
   return <SafeAreaView style={styles.safe}>
     <View style={styles.content}>

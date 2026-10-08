@@ -30,3 +30,5 @@ test('invitation response must match the recipient selected by the administrator
 test('PostgREST error objects preserve the actionable agency rule without exposing raw detail',async()=>{
  const {agencyError}=await import('../src/agencies/domain.ts');assert.match(agencyError({message:'KH_AGENCY_LAST_ADMIN',details:'private user data'}),/al menos un administrador/);
 });
+
+test('invitation response must match the role selected by administrator',async()=>{const response={id:'45000000-0000-4000-8002-000000000001',agencyId:agency,recipientId:actor,role:'admin',state:'pending',version:1,expiresAt:'2026-10-15T12:00:00Z'};await assert.rejects(repository(response).inviteMember({userId:actor,role:'manager',clientRequestId:'45000000-0000-4000-8002-000000000002'},context),/interpretar/);});

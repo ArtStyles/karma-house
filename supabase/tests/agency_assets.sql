@@ -47,3 +47,20 @@ do $$declare invite uuid;begin
  insert into kh_private.agency_invitations(agency_id,recipient_id,role,invited_by)values(current_setting('kh.test.agency')::uuid,'45000000-0000-4000-8000-000000000002','manager','45000000-0000-4000-8000-000000000009')returning id into invite;
  perform pg_temp.kh_assert(kh_private.agency_invitation_json(invite)->>'agencyName'='Casas Fixture','recipient sees agency trade name');
 end$$;
+
+-- An older rejected request remains addressable after a new submission.
+do $$declare a uuid:=current_setting('kh.test.agency')::uuid;old_request jsonb;new_request jsonb;details jsonb;begin
+ update kh_private.agencies set state='approved'where id=a;
+ perform pg_temp.kh_as('45000000-0000-4000-8000-000000000009');
+ old_request:=public.kh_request_agency_verification(auth.uid(),a,jsonb_build_object('input',jsonb_build_object('message','Solicitud histórica para fixture suficiente.','evidenceReferences','[]'::jsonb),'clientRequestId',gen_random_uuid()));
+ -- The whole suite is one transaction; assign historical ordering explicitly.
+ update kh_private.agency_verification_requests set created_at=now()-interval '1 hour'where id=(old_request->>'id')::uuid;
+ perform pg_temp.kh_as('45000000-0000-4000-8000-000000000001');
+ perform public.kh_review_agency_verification(auth.uid(),jsonb_build_object('agencyId',a,'requestId',old_request->>'id','decision','reject','note','Histórica rechazada','expectedAgencyVersion',(select version from kh_private.agencies where id=a),'expectedVerificationVersion',(select verification_version from kh_private.agencies where id=a),'expectedRequestVersion',1,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as('45000000-0000-4000-8000-000000000009');
+ new_request:=public.kh_request_agency_verification(auth.uid(),a,jsonb_build_object('input',jsonb_build_object('message','Nueva solicitud para fixture suficiente.','evidenceReferences','[]'::jsonb),'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as('45000000-0000-4000-8000-000000000001');
+ details:=public.kh_agency_review_detail(auth.uid(),a,(old_request->>'id')::uuid);
+ perform pg_temp.kh_assert(details->'request'->>'id'=old_request->>'id'and details->'request'->>'state'='rejected','historical review id does not become newest pending request');
+ perform pg_temp.kh_assert(public.kh_agency_review_detail(auth.uid(),a)->'request'->>'id'=new_request->>'id','direct review defaults to latest request');
+end$$;

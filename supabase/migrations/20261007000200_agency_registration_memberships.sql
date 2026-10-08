@@ -235,11 +235,12 @@ end$$;
 revoke all on function public.kh_set_agency_logo(uuid,uuid,text,integer) from public;
 grant execute on function public.kh_set_agency_logo(uuid,uuid,text,integer) to authenticated;
 
-create function public.kh_agency_review_detail(p_actor_id uuid,p_agency_id uuid)returns jsonb language plpgsql security definer set search_path='' as $$declare r uuid;begin
+create function public.kh_agency_review_detail(p_actor_id uuid,p_agency_id uuid,p_request_id uuid default null)returns jsonb language plpgsql security definer set search_path='' as $$declare r uuid;begin
  perform kh_private.admin_actor(p_actor_id,true);
  if not exists(select 1 from kh_private.agencies where id=p_agency_id)then raise exception 'KH_AGENCY_REQUIRED';end if;
- select id into r from kh_private.agency_verification_requests where agency_id=p_agency_id order by created_at desc,id desc limit 1;
+ select id into r from kh_private.agency_verification_requests where agency_id=p_agency_id and(p_request_id is null or id=p_request_id) order by created_at desc,id desc limit 1;
+ if p_request_id is not null and r is null then raise exception 'KH_AGENCY_VERIFICATION_REQUEST_REQUIRED';end if;
  return jsonb_build_object('application',kh_private.agency_application_json(p_agency_id),'request',kh_private.agency_verification_request_json(r));
 end$$;
-revoke all on function public.kh_agency_review_detail(uuid,uuid) from public;
-grant execute on function public.kh_agency_review_detail(uuid,uuid) to authenticated;
+revoke all on function public.kh_agency_review_detail(uuid,uuid,uuid) from public;
+grant execute on function public.kh_agency_review_detail(uuid,uuid,uuid) to authenticated;
