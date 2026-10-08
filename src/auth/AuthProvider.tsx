@@ -13,6 +13,8 @@ import { PushError, sessionFromAccessToken } from '../push/domain';
 import { deleteAccount } from './deleteAccount';
 import { decodeAccess, type AccountAccess } from '../admin/domain';
 import { pendingIntentStore } from './pendingIntentStorage';
+import type {AgencyApplicationInput} from '../agencies/types';
+import {registrationMetadata} from '../agencies/registration';
 
 export type AuthContextValue = {
   ready: boolean;
@@ -28,7 +30,7 @@ export type AuthContextValue = {
   suspensionReason: string | null;
   error: string | null;
   signIn(email: string, password: string): Promise<void>;
-  signUp(name: string, email: string, password: string): Promise<{ needsConfirmation: boolean }>;
+  signUp(name: string, email: string, password: string, agencyApplication?: AgencyApplicationInput): Promise<{ needsConfirmation: boolean }>;
   signOut(): Promise<void>;
   deleteAccount(): Promise<void>;
   requestPasswordReset(email: string): Promise<void>;
@@ -193,13 +195,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (result.error) fail(result.error);
   }, [fail]);
 
-  const signUp = useCallback(async (name: string, email: string, password: string) => {
+  const signUp = useCallback(async (name: string, email: string, password: string, agencyApplication?: AgencyApplicationInput) => {
     const normalizedName = name.trim();
     if (normalizedName.length < 2 || normalizedName.length > 80) throw new Error('Escribe tu nombre, entre 2 y 80 caracteres.');
     const normalizedEmail = validateEmail(email);
     validateNewPassword(password);
     setError(null);
-    const result = await client().auth.signUp({ email: normalizedEmail, password, options: { data: { display_name: normalizedName }, emailRedirectTo: authCallbackUrl() } }).catch(fail);
+    const result = await client().auth.signUp({ email: normalizedEmail, password, options: { data: registrationMetadata(normalizedName, agencyApplication), emailRedirectTo: authCallbackUrl() } }).catch(fail);
     if (result.error) fail(result.error);
     return { needsConfirmation: !result.data.session };
   }, [fail]);

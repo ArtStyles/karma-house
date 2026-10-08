@@ -12,6 +12,12 @@ import { isSupabaseConfigured } from '../lib/supabase';
 import { createThemedStyles, typefaces } from '../theme';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 
+import {AgencyRegistrationFields} from '../components/agencies/AgencyRegistrationFields';
+import {agencyApplicationErrors,emptyAgencyApplication,recoverAgencyRegistration,type AgencyFieldErrors,type RegistrationIntent} from '../agencies/registration';
+import {agencyRegistrationAvailable} from '../agencies/assets';
+import {useAgencyWorkspace} from '../agencies/useAgencyWorkspace';
+import {supabase} from '../lib/supabase';
+
 type Mode = 'signin' | 'signup' | 'forgot' | 'recovery';
 const initialMode = (value: unknown): Mode => value === 'signup' || value === 'recovery' || value === 'forgot' ? value : 'signin';
 
@@ -19,6 +25,12 @@ export default function AuthScreen() {
   const { colors, styles } = useStyles();
   const params = useLocalSearchParams<{ mode?: string; returnTo?: string }>();
   const auth = useAuth();
+  const workspace=useAgencyWorkspace();
+  const [registrationIntent,setRegistrationIntent]=useState<RegistrationIntent>('personal');
+  const [agencyInput,setAgencyInput]=useState(emptyAgencyApplication);
+  const [agencyErrors,setAgencyErrors]=useState<AgencyFieldErrors>({});
+  const [agencyAvailable,setAgencyAvailable]=useState(false);
+  useEffect(()=>{if(!supabase)return;const controller=new AbortController();void agencyRegistrationAvailable(supabase,controller.signal).then(v=>{if(!controller.signal.aborted)setAgencyAvailable(v);}).catch(()=>undefined);return ()=>controller.abort();},[]);
   const [mode, setMode] = useState<Mode>(() => initialMode(params.mode));
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -47,7 +59,14 @@ export default function AuthScreen() {
     };
   }, [returnTo, focus]));
 
-  function continueToDestination() { router.replace(returnTo); }
+  async function continueToDestination() {
+    const isCurrent=focus.checkpoint();
+    if(!auth.user||auth.user.user_metadata.registration_intent!=='agency'){router.replace(returnTo);return;}
+    if(!workspace.repository)return;
+    const context=workspace.captureAccountContext();
+    try{const destination=await recoverAgencyRegistration(workspace.repository,context,auth.user.user_metadata.registration_intent==='agency'?'agency':'personal');context.checkpoint();if(!isCurrent())return;router.replace(destination==='/profile'?returnTo:destination);}
+    catch(cause){try{context.checkpoint();if(!isCurrent())return;setIssue(cause instanceof Error?cause.message:'Actualiza para consultar tu solicitud.');}catch{}}finally{context.release();}
+  }
   async function cancel(explore = false) {
     if (submitting) return;
     const isCurrent = focus.checkpoint();
@@ -58,8 +77,8 @@ export default function AuthScreen() {
 
   useEffect(() => { setMode(initialMode(params.mode)); }, [params.mode]);
   useEffect(() => {
-    if (focused && auth.ready && auth.user && mode !== 'recovery' && mode !== 'forgot' && !submitting && !notice) continueToDestination();
-  }, [focused, auth.ready, auth.user, mode, returnTo, submitting, notice]);
+    if (focused && auth.ready && auth.user && mode !== 'recovery' && mode !== 'forgot' && !submitting && !notice && workspace.ready) void continueToDestination();
+  }, [focused, auth.ready, auth.user, mode, returnTo, submitting, notice, workspace.ready]);
 
   function changeMode(next: Mode) {
     if (submitting) return;
@@ -72,15 +91,16 @@ export default function AuthScreen() {
     setIssue(null); setSubmitting(true);
     try {
       if (mode === 'signup') {
-        const { needsConfirmation } = await auth.signUp(name, email, password);
+        if(registrationIntent==='agency'){const errors=agencyApplicationErrors(agencyInput);setAgencyErrors(errors);if(Object.keys(errors).length)throw new Error('Revisa los campos de tu inmobiliaria.');if(!agencyAvailable)throw new Error('El registro de inmobiliarias aún no está habilitado.');}
+        const { needsConfirmation } = registrationIntent==='agency'?await auth.signUp(name,email,password,agencyInput):await auth.signUp(name, email, password);
         if (!isCurrent()) return;
-        if (needsConfirmation) { setNotice('confirmation'); setPassword(''); } else continueToDestination();
+        if (needsConfirmation) { setNotice('confirmation'); setPassword(''); } else router.replace(registrationIntent==='agency'?'/agency-application':returnTo);
       } else if (mode === 'forgot') {
         await auth.requestPasswordReset(email); if (!isCurrent()) return; setNotice('reset');
       } else if (mode === 'recovery') {
         if (password !== confirmation) throw new Error('Las contraseñas no coinciden.');
         await auth.updatePassword(password); if (!isCurrent()) return; setNotice('updated'); setPassword(''); setConfirmation('');
-      } else { await auth.signIn(email, password); if (!isCurrent()) return; continueToDestination(); }
+      } else { await auth.signIn(email, password); if (!isCurrent()) return; }
     } catch (error) {
       if (!isCurrent()) return;
       setIssue(error instanceof Error ? error.message : 'No se pudo completar la operación. Inténtalo de nuevo.');
@@ -113,7 +133,7 @@ export default function AuthScreen() {
             <View style={styles.successIcon}><Icon name={notice === 'updated' ? 'checkmark' : 'mail-outline'} color={colors.green} size={26} /></View>
             <Text style={styles.cardTitle}>{notice === 'updated' ? 'Contraseña actualizada' : 'Revisa tu correo'}</Text>
             <Text style={styles.cardCopy}>{notice === 'confirmation'
-              ? 'Si el registro puede completarse con esta dirección, encontrarás un enlace para confirmar tu cuenta. Revisa también spam y ábrelo en este dispositivo.'
+              ? registrationIntent==='agency'?'Si el registro puede completarse con esta dirección, encontrarás un enlace para confirmar tu cuenta. Revisa también spam. La solicitud de inmobiliaria estará disponible al confirmar, incluso en otro dispositivo.':'Si el registro puede completarse con esta dirección, encontrarás un enlace para confirmar tu cuenta. Revisa también spam y ábrelo en este dispositivo.'
               : notice === 'reset' ? 'Si existe una cuenta con ese correo, busca el enlace de recuperación. Revisa también spam y ábrelo en este dispositivo.'
                 : 'Ya puedes continuar en tu espacio con tu nueva contraseña.'}</Text>
             <Button label={notice === 'updated' ? 'Ir a mi espacio' : 'Volver a entrar'} onPress={() => notice === 'updated' ? router.replace(returnTo) : changeMode('signin')} />
@@ -126,11 +146,14 @@ export default function AuthScreen() {
                 <Text style={[styles.segmentText, mode === item && styles.segmentTextSelected]}>{item === 'signin' ? 'Entrar' : 'Crear cuenta'}</Text>
               </Pressable>)}
             </View>}
+            {mode==='signup'&&agencyAvailable&&<View style={styles.segment}>{(['personal','agency'] as const).map(value=><Pressable key={value} accessibilityRole="button" accessibilityState={{selected:registrationIntent===value,disabled:submitting}} disabled={submitting} onPress={()=>{setRegistrationIntent(value);setIssue(null);setAgencyErrors({});}} style={[styles.segmentItem,registrationIntent===value&&styles.segmentSelected]}><Text style={[styles.segmentText,registrationIntent===value&&styles.segmentTextSelected]}>{value==='personal'?'Cuenta personal':'Inmobiliaria'}</Text></Pressable>)}</View>}
+            {mode==='signup'&&registrationIntent==='agency'&&<Notice>Confirma tu correo y espera la aprobación de KarmaHouse para operar. Aprobar la agencia no concede su verificación.</Notice>}
             {mode === 'signup' && <Field label="Nombre público" icon="person-outline" value={name} onChangeText={setName} editable={!submitting} autoComplete="name" textContentType="name" autoCapitalize="words" maxLength={80} placeholder="Cómo quieres que te llamemos" returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => emailRef.current?.focus()} />}
             {mode !== 'recovery' && <Field label="Correo electrónico" icon="mail-outline" value={email} onChangeText={setEmail} editable={!submitting} autoComplete="email" textContentType="emailAddress" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" maxLength={254} placeholder="tu@correo.com" inputRef={emailRef} returnKeyType={mode === 'forgot' ? 'go' : 'next'} submitBehavior={mode === 'forgot' ? 'blurAndSubmit' : 'submit'} onSubmitEditing={mode === 'forgot' ? submit : () => passwordRef.current?.focus()} />}
             {mode !== 'forgot' && <Field label={mode === 'recovery' ? 'Nueva contraseña' : 'Contraseña'} icon="lock-closed-outline" value={password} onChangeText={setPassword} editable={!submitting} secureTextEntry={!showPassword} autoCapitalize="none" autoCorrect={false} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} textContentType={mode === 'signin' ? 'password' : 'newPassword'} maxLength={128} placeholder={mode === 'signin' ? 'Tu contraseña' : 'Al menos 8 caracteres'} inputRef={passwordRef} returnKeyType={mode === 'recovery' ? 'next' : 'go'} submitBehavior={mode === 'recovery' ? 'submit' : 'blurAndSubmit'} onSubmitEditing={mode === 'recovery' ? () => confirmationRef.current?.focus() : submit}
               accessory={<Pressable style={styles.eye} accessibilityRole="button" accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} onPress={() => setShowPassword(value => !value)}><Icon name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={21} color={colors.muted} /></Pressable>} />}
             {mode === 'recovery' && <Field label="Repite la contraseña" icon="lock-closed-outline" value={confirmation} onChangeText={setConfirmation} editable={!submitting} secureTextEntry={!showPassword} autoComplete="new-password" textContentType="newPassword" autoCapitalize="none" autoCorrect={false} maxLength={128} placeholder="La misma contraseña" inputRef={confirmationRef} returnKeyType="go" onSubmitEditing={submit} />}
+            {mode==='signup'&&registrationIntent==='agency'&&<AgencyRegistrationFields value={agencyInput} onChange={setAgencyInput} disabled={submitting} errors={agencyErrors}/>}
             {mode === 'signin' && <Pressable accessibilityRole="button" disabled={submitting} onPress={() => changeMode('forgot')} style={styles.forgot}><Text style={styles.linkText}>¿Olvidaste tu contraseña?</Text></Pressable>}
             <Button label={submitLabel} loading={submitting} onPress={submit} style={{ marginTop: 5 }} />
             {/* Under the button the error appears where the tap was, and never pushes the button away. */}

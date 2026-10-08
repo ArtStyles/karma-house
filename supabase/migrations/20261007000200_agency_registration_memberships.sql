@@ -127,10 +127,10 @@ create function kh_private.agency_lock_accounts(p_actor uuid,p_target uuid)retur
  for v_user in select distinct u from unnest(array[p_actor,p_target])u where u is not null order by u loop perform pg_advisory_xact_lock(hashtextextended('kh:account:'||v_user::text,0));end loop;
 end$$;
 create function kh_private.agency_invitation_json(p_id uuid)returns jsonb language sql stable security definer set search_path='' as $$
- select jsonb_build_object('id',i.id,'agencyId',i.agency_id,'recipientId',i.recipient_id,'role',i.role,'state',case when i.state='pending' and i.expires_at<=now()then 'expired'else i.state end,'version',i.version,'expiresAt',i.expires_at)from kh_private.agency_invitations i where i.id=p_id;
+ select jsonb_build_object('id',i.id,'agencyId',i.agency_id,'agencyName',(select a.trade_name from kh_private.agencies a where a.id=i.agency_id),'recipientId',i.recipient_id,'role',i.role,'state',case when i.state='pending' and i.expires_at<=now()then 'expired'else i.state end,'version',i.version,'expiresAt',i.expires_at)from kh_private.agency_invitations i where i.id=p_id;
 $$;
 create function kh_private.agency_membership_json(p_agency uuid,p_user uuid)returns jsonb language sql stable security definer set search_path='' as $$
- select jsonb_build_object('agencyId',m.agency_id,'userId',m.user_id,'role',m.role,'state',m.state,'version',m.version)from kh_private.agency_memberships m where m.agency_id=p_agency and m.user_id=p_user;
+ select jsonb_build_object('agencyId',m.agency_id,'userId',m.user_id,'displayName',coalesce((select p.display_name from public.profiles p where p.id=m.user_id),'Cuenta retirada'),'role',m.role,'state',m.state,'version',m.version)from kh_private.agency_memberships m where m.agency_id=p_agency and m.user_id=p_user;
 $$;
 create function public.kh_agency_membership(p_actor_id uuid,p_agency_id uuid)returns jsonb language plpgsql security definer set search_path='' as $$begin perform kh_private.agency_account(p_actor_id);return kh_private.agency_membership_json(p_agency_id,p_actor_id);end$$;
 create function public.kh_agency_invitation_candidate(p_actor_id uuid,p_agency_id uuid,p_user_id uuid)returns jsonb language plpgsql security definer set search_path='' as $$begin
@@ -195,3 +195,51 @@ do $$declare f record;begin
  end loop;
 end$$;
 
+
+-- Signup cannot call confirmed-account capabilities. Expose no account or agency data.
+create function public.kh_agency_registration_available() returns jsonb language sql stable security definer set search_path='' as $$
+ select to_jsonb(coalesce((select enabled from kh_private.agency_settings where singleton),false));
+$$;
+revoke all on function public.kh_agency_registration_available() from public;
+grant execute on function public.kh_agency_registration_available() to anon,authenticated;
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)values('agency-assets','agency-assets',false,1048576,array['image/jpeg']);
+create function kh_private.agency_logo_scope(p_path text) returns uuid language plpgsql immutable set search_path='' as $$begin
+ if p_path !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/logos/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg$' then return null;end if;
+ return split_part(p_path,'/',1)::uuid;
+end$$;
+create function kh_private.agency_asset_read(p_path text) returns boolean language sql stable security definer set search_path='' as $$
+ select exists(select 1 from kh_private.agencies a where a.id=kh_private.agency_logo_scope(p_path)and(
+ (a.state='approved' and a.logo_path=p_path)or
+ (auth.uid() is not null and (exists(select 1 from kh_private.platform_owner o where o.singleton and o.user_id=auth.uid()) or exists(select 1 from kh_private.agency_applications r where r.agency_id=a.id and r.responsible_id=auth.uid())))));
+$$;
+create function kh_private.agency_asset_write(p_path text) returns boolean language sql stable security definer set search_path='' as $$
+ select auth.uid() is not null and exists(select 1 from kh_private.agency_applications r join kh_private.agencies a on a.id=r.agency_id join auth.users u on u.id=r.responsible_id
+ where a.id=kh_private.agency_logo_scope(p_path)and r.responsible_id=auth.uid()and a.state in('pending','needs_changes','rejected')and u.email_confirmed_at is not null and not kh_private.is_suspended(auth.uid())and not kh_private.is_deleting(auth.uid()));
+$$;
+revoke all on function kh_private.agency_logo_scope(text),kh_private.agency_asset_read(text),kh_private.agency_asset_write(text) from public;
+grant execute on function kh_private.agency_asset_read(text) to anon,authenticated;
+grant execute on function kh_private.agency_asset_write(text) to authenticated;
+create function kh_private.agency_asset_unreferenced(p_path text) returns boolean language sql stable security definer set search_path='' as $$select not exists(select 1 from kh_private.agencies where logo_path=p_path)$$;
+revoke all on function kh_private.agency_asset_unreferenced(text) from public;grant execute on function kh_private.agency_asset_unreferenced(text) to authenticated;
+create policy kh_agency_assets_read on storage.objects for select to anon,authenticated using(bucket_id='agency-assets' and kh_private.agency_asset_read(name));
+create policy kh_agency_assets_insert on storage.objects for insert to authenticated with check(bucket_id='agency-assets' and kh_private.agency_asset_write(name));
+create policy kh_agency_assets_delete on storage.objects for delete to authenticated using(bucket_id='agency-assets' and kh_private.agency_asset_write(name)and kh_private.agency_asset_unreferenced(name));
+create function public.kh_set_agency_logo(p_actor_id uuid,p_agency_id uuid,p_path text,p_expected_version integer) returns jsonb language plpgsql security definer set search_path='' as $$begin
+ perform kh_private.agency_account(p_actor_id);perform kh_private.agency_lock(p_agency_id);
+ if not exists(select 1 from kh_private.agency_applications where agency_id=p_agency_id and responsible_id=p_actor_id)then raise exception 'KH_AGENCY_APPLICANT_REQUIRED';end if;
+ if not exists(select 1 from kh_private.agencies where id=p_agency_id and state in('pending','needs_changes','rejected')and version=p_expected_version)then raise exception 'KH_AGENCY_VERSION_CONFLICT';end if;
+ if kh_private.agency_logo_scope(p_path)is distinct from p_agency_id or not exists(select 1 from storage.objects where bucket_id='agency-assets' and name=p_path and metadata->>'mimetype'='image/jpeg'and (metadata->>'size')::bigint between 1 and 1048576)then raise exception 'KH_AGENCY_LOGO_INVALID';end if;
+ update kh_private.agencies set logo_path=p_path,version=version+1,updated_at=now()where id=p_agency_id;
+ insert into kh_private.agency_events(agency_id,actor_id,kind)values(p_agency_id,p_actor_id,'agency_logo_updated');return kh_private.agency_application_json(p_agency_id);
+end$$;
+revoke all on function public.kh_set_agency_logo(uuid,uuid,text,integer) from public;
+grant execute on function public.kh_set_agency_logo(uuid,uuid,text,integer) to authenticated;
+
+create function public.kh_agency_review_detail(p_actor_id uuid,p_agency_id uuid)returns jsonb language plpgsql security definer set search_path='' as $$declare r uuid;begin
+ perform kh_private.admin_actor(p_actor_id,true);
+ if not exists(select 1 from kh_private.agencies where id=p_agency_id)then raise exception 'KH_AGENCY_REQUIRED';end if;
+ select id into r from kh_private.agency_verification_requests where agency_id=p_agency_id order by created_at desc,id desc limit 1;
+ return jsonb_build_object('application',kh_private.agency_application_json(p_agency_id),'request',kh_private.agency_verification_request_json(r));
+end$$;
+revoke all on function public.kh_agency_review_detail(uuid,uuid) from public;
+grant execute on function public.kh_agency_review_detail(uuid,uuid) to authenticated;

@@ -7,10 +7,16 @@ import { completeAuthCallback } from '../auth/completeCallback';
 import { pendingIntentStore } from '../auth/pendingIntentStorage';
 import { pendingIntentReturnTo } from '../auth/pendingIntent';
 import { Button, Icon, Notice } from '../components/ui';
+import {useAuth} from '../auth/AuthProvider';
+import {useAgencyWorkspace} from '../agencies/useAgencyWorkspace';
+import {recoverAgencyRegistration} from '../agencies/registration';
+import {agencyError} from '../agencies/domain';
 import { createThemedStyles } from '../theme';
 
 export default function AuthCallbackScreen() {
   const { colors, styles } = useStyles();
+  const auth=useAuth();const workspace=useAgencyWorkspace();
+  const [destination,setDestination]=useState<string|null>(null);
   const linkingUrl = Linking.useLinkingURL();
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -21,8 +27,10 @@ export default function AuthCallbackScreen() {
     void completeAuthCallback(url).then(async result => {
       const intent = result.recovery ? null : await pendingIntentStore.read();
       if (!alive) return;
-      // Replace removes email credentials from the browser URL and its current history entry.
-      router.replace(result.recovery ? { pathname: '/auth', params: { mode: 'recovery' } } : pendingIntentReturnTo(intent, result.returnTo, true) as Href);
+      // Remove single-use email credentials before any server application lookup.
+      if(Platform.OS==='web'&&typeof window!=='undefined')window.history.replaceState(window.history.state,'','/auth/callback');
+      if(result.recovery)router.replace({pathname:'/auth',params:{mode:'recovery'}});
+      else setDestination(pendingIntentReturnTo(intent,result.returnTo,true));
     }).catch(cause => {
       if (!alive) return;
       if (Platform.OS === 'web' && typeof window !== 'undefined') window.history.replaceState(window.history.state, '', '/auth/callback');
@@ -30,6 +38,15 @@ export default function AuthCallbackScreen() {
     });
     return () => { alive = false; };
   }, [linkingUrl]);
+
+  useEffect(()=>{
+    if(!destination||!auth.ready||!auth.user||!workspace.ready)return;
+    if(auth.user.user_metadata.registration_intent!=='agency'){router.replace(destination as Href);return;}
+    if(!workspace.repository)return;
+    let active=true;const context=workspace.captureAccountContext();
+    void recoverAgencyRegistration(workspace.repository,context,'agency').then(route=>{context.checkpoint();if(active)router.replace(route);}).catch(cause=>{try{context.checkpoint();if(active)setError(agencyError(cause));}catch{}}).finally(()=>context.release());
+    return ()=>{active=false;};
+  },[destination,auth.ready,auth.user?.id,workspace.ready,workspace.repository,workspace.captureAccountContext]);
 
   return <SafeAreaView style={styles.safe}>
     <View style={styles.content}>
