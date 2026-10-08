@@ -1,10 +1,12 @@
 import { Client } from 'pg';
 import { readFile, readdir } from 'node:fs/promises';
 // Deliberately never reads infra/.env.local or the production connector.
-const url = process.env.KH_LOCAL_DATABASE_URL;
-if (!url) throw new Error('KH_LOCAL_DATABASE_URL required');
-const parsed = new URL(url);
-if (!['127.0.0.1','localhost','[::1]'].includes(parsed.hostname) || !parsed.pathname.startsWith('/kh_assisted_test')) throw new Error('Only a disposable loopback kh_assisted_test database is allowed');
+import { fixtureDatabaseUrl } from './agency-env.mjs';
+const parsed = fixtureDatabaseUrl(true);
+const url = parsed.href;
+const throughIndex = process.argv.indexOf('--through');
+const through = throughIndex < 0 ? null : process.argv[throughIndex + 1];
+if (throughIndex >= 0 && !/^[0-9]{14}$/.test(through ?? '')) throw new Error('Invalid --through timestamp');
 const admin = new Client({ connectionString: new URL('/postgres', parsed).href });
 await admin.connect();
 const name = parsed.pathname.slice(1);
@@ -20,6 +22,7 @@ try {
   const root = new URL('../../supabase/migrations/',import.meta.url);
   for (const file of (await readdir(root)).filter(f=>f.endsWith('.sql')).sort()) {
     if (process.argv.includes('--baseline-only') && file >= '20261005') continue;
+    if (through && file.slice(0,14) > through) continue;
     let sql = await readFile(new URL(file,root),'utf8');
     // Only transports unavailable in native PostgreSQL are replaced; all business SQL is real.
     sql = sql.replace(/^create extension if not exists (pg_cron|pg_net);\r?\n/gm,'');
@@ -27,3 +30,4 @@ try {
     console.log(`applied locally: ${file}`);
   }
 } finally { await db.end(); }
+

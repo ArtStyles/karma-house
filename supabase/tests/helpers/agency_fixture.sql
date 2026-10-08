@@ -1,0 +1,7 @@
+create function pg_temp.kh_assert(ok boolean,label text) returns void language plpgsql as $$begin if ok is not true then raise exception 'KH TEST: %',label;end if;end$$;
+create function pg_temp.kh_error(statement text,expected text) returns void language plpgsql as $$begin begin execute statement;exception when others then if strpos(sqlerrm,expected)>0 then return;end if;raise exception 'Wrong error %, expected %',sqlerrm,expected;end;raise exception 'KH TEST: missing error %',expected;end$$;
+create function pg_temp.kh_as(actor uuid) returns void language plpgsql as $$begin perform set_config('request.jwt.claim.sub',coalesce(actor::text,''),true);perform set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated','session_id',md5(actor::text||':session')::uuid)::text,true);end$$;
+insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) select ('45000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'agency-'||n||'@example.invalid',now(),jsonb_build_object('display_name','Fixture '||n) from generate_series(1,8)n;
+insert into auth.sessions(id,user_id,not_after) select md5(id::text||':session')::uuid,id,now()+interval '1 day' from auth.users where id::text like '45000000-%';
+insert into kh_private.platform_owner(singleton,user_id) values(true,'45000000-0000-4000-8000-000000000001') on conflict(singleton) do update set user_id=excluded.user_id;
+insert into public.kh_admins(user_id) values('45000000-0000-4000-8000-000000000003');
