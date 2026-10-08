@@ -14,13 +14,14 @@ import { useAgencyFormStyles } from './AgencyRegistrationFields';
 import { VisitDateTimeFields } from '../negotiations/VisitDateTimeFields';
 const repository = supabase ? createAgencySchedulingRepository(supabase) : null;
 const statusLabel = { pending: 'Pendiente', accepted: 'Aceptada', declined: 'Rechazada', cancelled: 'Cancelada', superseded: 'Sustituida', expired: 'Caducada' };
-export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, onChanged, external=false }: {
+export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, onChanged, onRequestClosure, external=false }: {
     conversation: Pick<AgencyConversation,'dealId'|'buyerId'|'assigneeId'|'canSend'>;
     actorId: string;
     staff: boolean;
     capture: () => CapturedAccountContext | CapturedAgencyContext;
     onChanged: () => Promise<void>;
     external?: boolean;
+    onRequestClosure?: () => void;
 }) {
     const { styles: s, colors } = useAgencyFormStyles();
     const [items, setItems] = useState<AgencyProposal[]>([]), [events, setEvents] = useState<AgencyProposalEvent[]>([]), [eventTarget, setEventTarget] = useState<string | null>(null), [moreEvents, setMoreEvents] = useState(false), [hasMore, setHasMore] = useState(false), [error, setError] = useState(''), [busy, setBusy] = useState(false);
@@ -88,7 +89,7 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
             const respondable = p.status === 'pending' && (external||!ownSide) && c.canSend;
             return <View key={p.id} style={s.card}>
  <Text style={s.title}>{p.kind === 'offer' ? `${p.amountUsd?.toLocaleString('es')} USD` : new Date(p.visitAt!).toLocaleString('es', { timeZone: NEGOTIATION_TIME_ZONE }) + ` · ${p.durationMinutes} min`}</Text><Text style={s.copy}>{statusLabel[p.status]}{p.parentId ? ' · Alternativa' : ''}</Text>{p.note ? <Text style={s.copy}>{p.note}</Text> : null}
- {p.kind === 'offer' && p.status === 'accepted' && <><Text style={s.title}>Acuerdo de negociación</Text><Notice>El acuerdo queda registrado. La venta se confirma por separado.</Notice>{staff && <Button label="Solicitar cierre" disabled onPress={() => { }}/>}</>}
+ {p.kind === 'offer' && p.status === 'accepted' && <><Text style={s.title}>Acuerdo de negociación</Text><Notice>El acuerdo queda registrado. La venta se confirma por separado.</Notice>{staff && onRequestClosure && <Button label="Solicitar cierre" onPress={onRequestClosure}/>}</>}
  {respondable && <><Button label={external?(buyerResponse?'Registrar aceptación del interesado':'Aceptar como agencia'):'Aceptar propuesta'} disabled={!!attempt.current || p.kind === 'visit' && !c.assigneeId} loading={busy} onPress={() => void respond(p, 'accept')}/>{p.kind === 'visit' && !c.assigneeId && <Notice>El equipo debe asignar un responsable antes de confirmar la visita.</Notice>}<Button secondary label={external?(buyerResponse?'Registrar rechazo del interesado':'Rechazar como agencia'):'Rechazar propuesta'} disabled={!!attempt.current || busy} onPress={() => void respond(p, 'decline')}/><Button secondary label={p.kind === 'visit' ? 'Proponer otra fecha' : 'Hacer contraoferta'} disabled={!editable} onPress={() => { setParent(p); setKind(p.kind); setAmount(String(p.amountUsd ?? '')); if (p.visitAt) {
                 const wall = havanaDateTime(new Date(p.visitAt));
                 setDate(wall.date);

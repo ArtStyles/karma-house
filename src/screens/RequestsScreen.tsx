@@ -22,7 +22,7 @@ export default function RequestsScreen(){
   const auth=useAuth(),workspace=useAgencyWorkspace();
   return <SafeAreaView edges={['top','left','right','bottom']} style={styles.safe}><View style={styles.shell}>
     <View style={styles.header}><PageTitle title="Solicitudes" subtitle="Tus visitas y ofertas, en un lugar." back/></View>
-    {auth.session&&!auth.suspended&&workspace.enabled&&<View style={styles.header}><Button label="Autorizaciones de mis viviendas" secondary onPress={()=>router.push({pathname:'/agency-property-requests',params:{personal:'1'}})}/>{auth.isOwner&&<Button label="Revisar viviendas duplicadas" secondary onPress={()=>router.push('/agency-duplicate-reviews')}/>}</View>}
+    {auth.session&&!auth.suspended&&workspace.enabled&&<View style={styles.header}><Button label="Cierres de mis viviendas" secondary onPress={()=>router.push({pathname:'/agency-closures',params:{personal:'1'}})}/><Button label="Autorizaciones de mis viviendas" secondary onPress={()=>router.push({pathname:'/agency-property-requests',params:{personal:'1'}})}/>{auth.isOwner&&<Button label="Revisar viviendas duplicadas" secondary onPress={()=>router.push('/agency-duplicate-reviews')}/>}</View>}
     {!auth.ready?<ActivityIndicator color={colors.primary} style={styles.loading}/>:!isSupabaseConfigured?<View style={styles.header}><EmptyState icon="calendar-outline" title="Tu próximo paso, organizado" description="Las visitas y ofertas estarán disponibles cuando conectes una cuenta."/></View>:!auth.user?<View style={styles.header}><AccountPrompt returnTo="/requests" title="Organiza tu próximo paso" description="Inicia sesión para consultar tus visitas y ofertas de compra."/></View>:<RequestsBody key={auth.user.id} userId={auth.user.id}/>}
   </View></SafeAreaView>;
 }

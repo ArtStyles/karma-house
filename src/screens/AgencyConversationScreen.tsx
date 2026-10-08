@@ -1,4 +1,4 @@
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -132,7 +132,7 @@ export default function AgencyConversationScreen() {
             return; const page = await repo.history(id, visible.messages[0]?.seq ?? null, ctx); ctx.checkpoint(); setState(old => ({ ...old, messages: mergeAgencyMessages(old.messages, page.items), hasMore: page.hasMore })); })}/>}
    {visible?.messages.map(m => <View key={m.id} style={s.card}><Text style={s.meta}>{m.senderId === null ? 'Cuenta eliminada' : m.senderId === auth.user?.id ? 'Tú' : m.senderId === c?.buyerId ? 'Comprador' : `Equipo · participante ${counterparts.indexOf(m.senderId)+1}`} · {new Date(m.createdAt).toLocaleString('es', { timeZone: 'America/Havana' })}</Text><Text selectable style={s.body}>{m.body}</Text></View>)}
    {c && !c.canSend && <Notice>{c.closedReason ? 'Este expediente está cerrado. El historial se conserva.' : 'El envío no está disponible. Puede requerir asignación, autorización vigente o resolver un bloqueo.'}</Notice>}
-   {c && <AgencyProposalPanel key={scope} conversation={c} actorId={auth.user.id} staff={!!agencyId} capture={capture} onChanged={load}/>}
+   {c && <AgencyProposalPanel onRequestClosure={agencyId&&c&&!c.closedReason?()=>router.push({pathname:'/agency-closures',params:{dealId:c.dealId}}):undefined} key={scope} conversation={c} actorId={auth.user.id} staff={!!agencyId} capture={capture} onChanged={load}/>}
    <TextInput accessibilityLabel="Mensaje a la inmobiliaria" style={s.input} multiline maxLength={2000} value={visible ? body : ''} editable={!!c?.canSend && !busy && !pending.current} onChangeText={setBody} placeholder="Escribe un mensaje" placeholderTextColor={colors.muted}/>
    <Button label={pending.current ? 'Reintentar el mismo mensaje' : 'Enviar mensaje'} disabled={!c?.canSend || !body.trim()} loading={busy} onPress={() => void send()}/>
    {pending.current && <Button label="Descartar intento" secondary disabled={busy} onPress={() => { pending.current = null; setBody(''); setState(old => ({ ...old, error: '' })); }}/>}
