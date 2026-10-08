@@ -169,6 +169,9 @@ create function public.kh_record_agency_visit_outcome(p_actor_id uuid,p_agency_i
  perform kh_private.agency_require_enabled();
  if p_agency_id is null or coalesce(v_outcome,'') not in('performed','no_show','cancelled') or p_payload-array['proposalId','outcome','expectedVersion','clientRequestId']<>'{}'::jsonb then raise exception 'KH_AGENCY_INVALID';end if;
  select * into p from kh_private.agency_proposals where id=(p_payload->>'proposalId')::uuid;d:=kh_private.agency_scheduling_deal(p_actor_id,p_agency_id,p.deal_id);
+ -- Historical visibility is not permission to add a fact while suspended.
+ -- The scheduling helper has already taken the common ordered locks.
+ perform kh_private.agency_actor(p_actor_id,p_agency_id,'manager');
  r:=kh_private.agency_receipt(p_actor_id,d.agency_id,'visit_outcome',p_payload);if r is not null then select * into s from kh_private.property_visit_slots where proposal_id=p.id;return kh_private.agency_visit_json(s);end if;
  select * into s from kh_private.property_visit_slots where proposal_id=p.id for update;
  if s.id is null or s.version is distinct from (p_payload->>'expectedVersion')::integer then raise exception 'KH_NEG_VERSION_CONFLICT';end if;

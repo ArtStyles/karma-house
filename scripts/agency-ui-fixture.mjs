@@ -12,7 +12,7 @@ import {createAgencyLocaleClone} from './local-sql/agency-locale-clone.mjs';
 
 const SOURCE='postgresql://agency_test@127.0.0.1:55487/kh_agency_test_suites_20261007';
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const task=process.env.KH_AGENCY_UI_TASK??'14';assert.ok(['14','15'].includes(task),'Unknown fixture owner');
+const task=process.env.KH_AGENCY_UI_TASK??'14';assert.ok(['14','15','final'].includes(task),'Unknown fixture owner');
 const RECEIPT=resolve(ROOT,`.superpowers/sdd/2026-10-07-agency-closure-release/task-${task}-fixture-receipt.json`);
 const ENV=resolve(ROOT,'.env.local'),ORIGIN='http://127.0.0.1:56434';
 const config=`EXPO_PUBLIC_SUPABASE_URL=${ORIGIN}\nEXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=synthetic-local-agency-fixture-only\n`;

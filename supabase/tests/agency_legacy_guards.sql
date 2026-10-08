@@ -20,7 +20,7 @@ do $$ declare a uuid:=pg_temp.kh_agency_signup(9);actor uuid:='45000000-0000-400
 end $$;
 
 -- A transfer offered before authorization must be invalidated at acceptance.
-do $$ declare a uuid:=pg_temp.kh_agency_signup(10);actor uuid:='45000000-0000-4000-8000-000000000010';owner uuid:='45000000-0000-4000-8000-000000000001';collab uuid:=gen_random_uuid();pid uuid;r jsonb;decision jsonb;corporate boolean;begin
+do $$ declare a uuid:=pg_temp.kh_agency_signup(10);actor uuid:='45000000-0000-4000-8000-000000000010';owner uuid:='45000000-0000-4000-8000-000000000001';collab uuid:=gen_random_uuid();pid uuid;r jsonb;body jsonb;decision jsonb;corporate boolean;begin
  perform pg_temp.kh_agency_approve(a);perform pg_temp.kh_as(owner);
  update kh_private.assisted_listing_settings set official_publisher_id=owner,transfers_enabled=true;
  insert into kh_private.assisted_collaborators(id,kind,private_name,private_contact,contact_channel,account_id,link_evidence_reference,link_confirmed_at,link_confirmed_by)values(collab,'agency','Colaboradora de prueba','Contacto privado','manual',actor,'Identidad comprobada',now(),owner);
@@ -41,7 +41,9 @@ do $$ declare a uuid:=pg_temp.kh_agency_signup(10);actor uuid:='45000000-0000-40
  update auth.users set raw_user_meta_data=raw_user_meta_data||'{"verified":true,"agency_verified":true}'::jsonb where id=actor;
  perform pg_temp.kh_assert(not(kh_private.agency_summary(a)->>'verified')::boolean,'personal_profile_verification_cannot_verify_agency');
  perform pg_temp.kh_as(actor);pid:=gen_random_uuid();insert into storage.objects(bucket_id,name)values('property-photos',actor||'/'||pid||'/photo.jpg');
- r:=public.kh_agency_save_property(actor,a,jsonb_build_object('clientRequestId',pid,'sourceReference','PERSONAL-VERIFIED','consentReference','Consentimiento','publicationIntent','submit','draft',jsonb_build_object('title','Envío empresarial sin sello','location','Vedado','province','La Habana','type','Casa','price',30000,'bedrooms',2,'bathrooms',1,'description','La verificación personal no evita revisión.','photoPaths',jsonb_build_array(actor||'/'||pid||'/photo.jpg'))));
+ body:=jsonb_build_object('clientRequestId',pid,'sourceReference','PERSONAL-VERIFIED','consentReference','Consentimiento','publicationIntent','submit','draft',jsonb_build_object('title','Envío empresarial sin sello','location','Vedado','province','La Habana','type','Casa','price',30000,'bedrooms',2,'bathrooms',1,'description','La verificación personal no evita revisión.','photoPaths',jsonb_build_array(actor||'/'||pid||'/photo.jpg')));
+ body:=body||jsonb_build_object('duplicateDecision',public.kh_find_agency_property_matches(actor,a,body)->'review');
+ r:=public.kh_agency_save_property(actor,a,body);
  perform pg_temp.kh_assert(r#>>'{property,moderation}'='pending','personal_verification_cannot_publish_agency_directly');
  perform pg_temp.kh_as('45000000-0000-4000-8000-000000000002');
  perform pg_temp.kh_error(format('select public.kh_start_conversation(%L,%L)',r#>>'{property,id}',auth.uid()),'KH_AGENCY_CONTEXT_REQUIRED');

@@ -252,3 +252,66 @@ create function public.kh_agency_review_detail(p_actor_id uuid,p_agency_id uuid,
 end$$;
 revoke all on function public.kh_agency_review_detail(uuid,uuid,uuid) from public;
 grant execute on function public.kh_agency_review_detail(uuid,uuid,uuid) to authenticated;
+
+-- Commercial maintenance is distinct from the immutable reviewed application.
+alter table kh_private.agencies add column commercial_profile jsonb;
+create function kh_private.agency_profile_input(a uuid) returns jsonb language sql stable security definer set search_path='' as $$
+ select coalesce(q.commercial_profile,r.input-array['responsibleFullName','evidenceReferences']) from kh_private.agencies q join kh_private.agency_applications r on r.agency_id=q.id where q.id=a
+$$;
+create function public.kh_get_agency_profile(p_actor_id uuid,p_agency_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$begin
+ perform kh_private.agency_reader(p_actor_id,p_agency_id,'admin');
+ return (select jsonb_build_object('agencyId',id,'version',version,'logoPath',logo_path,'input',kh_private.agency_profile_input(id)) from kh_private.agencies where id=p_agency_id);
+end$$;
+create function public.kh_public_agency_profile(p_agency_id uuid) returns jsonb language sql stable security definer set search_path='' as $$
+ select jsonb_build_object('agencyId',a.id,'tradeName',a.trade_name,'businessPhone',v->>'businessPhone','province',v->>'province','municipality',v->>'municipality','serviceAreas',v->'serviceAreas','description',v->>'description','logoPath',a.logo_path,'verified',coalesce((select active from kh_private.agency_verifications where agency_id=a.id),false))
+ ||case when (v->>'publishOfficeAddress')::boolean then jsonb_build_object('officeAddress',v->>'officeAddress') else '{}'::jsonb end
+ from kh_private.agencies a cross join lateral(select kh_private.agency_profile_input(a.id) v) q where a.id=p_agency_id and a.state='approved' and (select enabled from kh_private.agency_settings where singleton)
+$$;
+create function public.kh_update_agency_profile(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
+declare input jsonb:=p_payload->'input';r jsonb;path text;begin
+ perform kh_private.agency_require_enabled();perform kh_private.agency_lock_accounts(p_actor_id,null);perform kh_private.agency_actor(p_actor_id,p_agency_id,'admin');
+ r:=kh_private.agency_receipt(p_actor_id,p_agency_id,'update_profile',p_payload);if r is not null then return public.kh_get_agency_profile(p_actor_id,p_agency_id);end if;
+ if p_payload-array['input','logoPath','expectedVersion','clientRequestId']<>'{}'::jsonb or input ?| array['responsibleFullName','evidenceReferences'] then raise exception 'KH_AGENCY_INVALID';end if;
+ input:=kh_private.agency_validate_application(input||jsonb_build_object('responsibleFullName','Validación comercial','evidenceReferences','[]'::jsonb))-array['responsibleFullName','evidenceReferences'];
+ if not exists(select 1 from kh_private.agencies where id=p_agency_id and version=(p_payload->>'expectedVersion')::integer) then raise exception 'KH_AGENCY_VERSION_CONFLICT';end if;
+ if p_payload ? 'logoPath' and p_payload->'logoPath'<>'null'::jsonb then
+  path:=p_payload->>'logoPath';
+  if kh_private.agency_logo_scope(path) is distinct from p_agency_id then raise exception 'KH_AGENCY_LOGO_INVALID';end if;
+  perform 1 from storage.objects where bucket_id='agency-assets' and name=path and metadata->>'mimetype'='image/jpeg' and (metadata->>'size')::bigint between 1 and 1048576;
+  if not found then raise exception 'KH_AGENCY_LOGO_INVALID';end if;
+ end if;
+ update kh_private.agencies set commercial_profile=input,trade_name=input->>'tradeName',logo_path=case when p_payload ? 'logoPath' then path else logo_path end,version=version+1,updated_at=now() where id=p_agency_id;
+ insert into kh_private.agency_events(agency_id,actor_id,kind)values(p_agency_id,p_actor_id,'commercial_profile_updated');
+ return kh_private.agency_remember(p_actor_id,p_agency_id,'update_profile',p_payload,public.kh_get_agency_profile(p_actor_id,p_agency_id));
+end$$;
+create or replace function kh_private.agency_asset_write(p_path text) returns boolean language sql stable security definer set search_path='' as $$
+ select (select enabled from kh_private.agency_settings where singleton) and exists(select 1 from kh_private.agencies a join auth.users u on u.id=auth.uid() where a.id=kh_private.agency_logo_scope(p_path) and u.email_confirmed_at is not null and not kh_private.is_suspended(u.id) and not kh_private.is_deleting(u.id) and (
+ (a.state in('pending','needs_changes','rejected') and exists(select 1 from kh_private.agency_applications r where r.agency_id=a.id and r.responsible_id=u.id)) or
+ (a.state='approved' and exists(select 1 from kh_private.agency_memberships m where m.agency_id=a.id and m.user_id=u.id and m.state='active' and m.role='admin'))))
+$$;
+create or replace function kh_private.agency_asset_read(p_path text) returns boolean language sql stable security definer set search_path='' as $$
+ select exists(select 1 from kh_private.agencies a where a.id=kh_private.agency_logo_scope(p_path) and ((a.state='approved' and a.logo_path=p_path) or
+ (auth.uid() is not null and not kh_private.is_suspended(auth.uid()) and not kh_private.is_deleting(auth.uid()) and (exists(select 1 from kh_private.platform_owner o where o.singleton and o.user_id=auth.uid()) or kh_private.agency_asset_write(p_path)))))
+$$;
+revoke all on function kh_private.agency_profile_input(uuid),public.kh_get_agency_profile(uuid,uuid),public.kh_public_agency_profile(uuid),public.kh_update_agency_profile(uuid,uuid,jsonb) from public,anon,authenticated;
+grant execute on function public.kh_get_agency_profile(uuid,uuid),public.kh_update_agency_profile(uuid,uuid,jsonb) to authenticated;
+grant execute on function public.kh_public_agency_profile(uuid) to anon,authenticated;
+
+-- A DELETE may have passed its RLS snapshot before a concurrent attachment.
+-- Recheck under the same agency mutex. Attachment never waits for the object
+-- row, so DELETE's existing row lock cannot invert the lock order.
+create function kh_private.agency_logo_delete_guard() returns trigger language plpgsql security definer set search_path='' as $$begin
+ if old.bucket_id<>'agency-assets' then return old;end if;
+ -- Privileged Storage cleanup has no user subject; RLS still decides who can
+ -- reach DELETE. It must also serialize and may never delete a referenced logo.
+ if auth.uid() is null then
+  perform kh_private.agency_lock(kh_private.agency_logo_scope(old.name));
+  if not kh_private.agency_asset_unreferenced(old.name) then raise exception 'KH_AGENCY_LOGO_REFERENCED';end if;
+  return old;
+ end if;
+ perform kh_private.agency_require_enabled();perform kh_private.agency_lock_accounts(auth.uid(),null);perform kh_private.agency_lock(kh_private.agency_logo_scope(old.name));
+ if not kh_private.agency_asset_write(old.name) or not kh_private.agency_asset_unreferenced(old.name) then raise exception 'KH_AGENCY_LOGO_REFERENCED';end if;
+ return old;
+end$$;
+revoke all on function kh_private.agency_logo_delete_guard() from public,anon,authenticated;
+create trigger kh_agency_logo_delete_guard before delete on storage.objects for each row execute function kh_private.agency_logo_delete_guard();

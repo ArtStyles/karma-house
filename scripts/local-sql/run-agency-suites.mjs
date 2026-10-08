@@ -28,7 +28,7 @@ await db.connect();
 try{
  if((await db.query("select to_regclass('kh_private.agency_settings') t")).rows[0].t)throw Error('Serial suites require the pre-agency baseline; use a fresh fixture database');
  sourceBefore=await inventory(sourceDb);
- if(args[0]==='--all'||args[0]==='--historical'){
+ {
   clone=await createAgencyLocaleClone(parsed);db=new Client({connectionString:clone.url.href});await db.connect();
   assert.equal((await db.query("select lower(U&'\\00c1') value")).rows[0].value,'á','ICU accented lowercase prerequisite');
   assert.deepEqual(await inventory(db),sourceBefore,'dump/restore preserves exact baseline data');

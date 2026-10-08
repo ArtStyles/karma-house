@@ -93,11 +93,29 @@ begin
 end $$;
 create trigger kh_agency_property_guard before update or delete on public.properties for each row execute function kh_private.guard_agency_property_write();
 
+-- Similarity is only a bounded public warning, never authority to merge.
+create function kh_private.agency_property_matches(payload jsonb) returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare input jsonb;items jsonb;begin
+ input:=jsonb_build_object('province',lower(btrim(payload#>>'{draft,province}')),'location',lower(btrim(payload#>>'{draft,location}')),'type',lower(btrim(payload#>>'{draft,type}')),'bedrooms',(payload#>>'{draft,bedrooms}')::integer);
+ select coalesce(jsonb_agg(jsonb_build_object('id',p.id,'title',p.title,'province',p.province,'location',p.location,'type',p.type,'bedrooms',p.bedrooms,'version',p.version) order by p.id),'[]') into items from (
+ select p.* from public.properties p where p.id is distinct from (payload->>'propertyId')::uuid and p.moderation='approved' and p.availability='active' and p.operation='sale'
+ and lower(btrim(p.province))=input->>'province' and lower(btrim(p.location))=input->>'location' and lower(btrim(p.type))=input->>'type' and p.bedrooms=(input->>'bedrooms')::integer
+ and not exists(select 1 from kh_private.agency_property_origins o join kh_private.agencies a on a.id=o.origin_agency_id where o.property_id=p.id and a.state<>'approved') order by p.id limit 20) p;
+ return jsonb_build_object('items',items,'review',jsonb_build_object('decision','different_home','input',input,'candidates',(select coalesce(jsonb_agg(jsonb_build_object('id',v->>'id','version',v->'version') order by v->>'id'),'[]') from jsonb_array_elements(items)v),'clientRequestId',payload->>'clientRequestId','propertyId',payload->>'propertyId'));
+end$$;
+create function public.kh_find_agency_property_matches(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$begin
+ perform kh_private.agency_require_enabled();perform kh_private.agency_actor(p_actor_id,p_agency_id,'admin');
+ if (p_payload->>'clientRequestId')::uuid is null or jsonb_typeof(p_payload->'draft') is distinct from 'object' then raise exception 'KH_AGENCY_INVALID';end if;
+ return kh_private.agency_property_matches(p_payload);
+end$$;
+revoke all on function kh_private.agency_property_matches(jsonb),public.kh_find_agency_property_matches(uuid,uuid,jsonb) from public,anon,authenticated;
+grant execute on function public.kh_find_agency_property_matches(uuid,uuid,jsonb) to authenticated;
 create function public.kh_agency_save_property(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
 #variable_conflict use_variable
-declare source uuid;id uuid:=(p_payload->>'propertyId')::uuid;receipt jsonb;result jsonb;custodian uuid;old public.properties%rowtype;draft jsonb;policy text;intent text:=p_payload->>'publicationIntent';begin
+declare source uuid;id uuid:=(p_payload->>'propertyId')::uuid;receipt jsonb;result jsonb;matches jsonb;custodian uuid;old public.properties%rowtype;draft jsonb;policy text;intent text:=p_payload->>'publicationIntent';begin
  perform kh_private.agency_require_enabled();
  perform kh_private.agency_account(p_actor_id);
+ perform pg_advisory_xact_lock(hashtextextended('kh:agency:duplicate-intake',0));
  select origin_agency_id into source from kh_private.agency_property_origins where property_id=id;
  perform kh_private.agency_lock_many(array[p_agency_id,source]);
  perform kh_private.agency_actor(p_actor_id,p_agency_id,'admin');
@@ -110,6 +128,10 @@ declare source uuid;id uuid:=(p_payload->>'propertyId')::uuid;receipt jsonb;resu
  if receipt is not null then
   id:=(receipt->>'propertyId')::uuid;perform kh_private.agency_property_access(p_actor_id,p_agency_id,id,true);
   return kh_private.agency_property_json(p_actor_id,p_agency_id,id);
+ end if;
+ if id is null or intent='submit' then
+  matches:=kh_private.agency_property_matches(p_payload);
+  if jsonb_array_length(matches->'items')>0 and p_payload->'duplicateDecision' is distinct from matches->'review' then raise exception 'KH_AGENCY_DUPLICATE_REVIEW_REQUIRED';end if;
  end if;
  select user_id into custodian from kh_private.platform_owner where singleton;
  if custodian is null then raise exception 'KH_PLATFORM_OWNER_REQUIRED';end if;
@@ -137,7 +159,7 @@ declare source uuid;id uuid:=(p_payload->>'propertyId')::uuid;receipt jsonb;resu
   from kh_private.agencies a join kh_private.agency_verifications v on v.agency_id=a.id where a.id=p_agency_id;
   if old.moderation is distinct from 'approved' then perform kh_private.alert_on_approval(p) from public.properties p where p.id=id and p.availability='active';end if;
  end if;
- insert into kh_private.agency_events(agency_id,actor_id,kind,subject_id,payload)values(p_agency_id,p_actor_id,'property_saved',id,jsonb_build_object('intent',intent,'consentReference',p_payload->>'consentReference'));
+ insert into kh_private.agency_events(agency_id,actor_id,kind,subject_id,payload)values(p_agency_id,p_actor_id,'property_saved',id,jsonb_build_object('intent',intent,'consentReference',p_payload->>'consentReference','duplicateDecision',p_payload->'duplicateDecision'));
  perform kh_private.agency_remember(p_actor_id,p_agency_id,'save_property',p_payload,jsonb_build_object('propertyId',id));
  delete from kh_private.agency_property_write_permits where transaction_id=txid_current() and property_id=id;
  return kh_private.agency_property_json(p_actor_id,p_agency_id,id);
@@ -581,6 +603,18 @@ begin
   end if;
   return new;
 end $$;
+-- Both conversation channels call this only for genuinely new contacts, while
+-- holding the common account/chat actor mutex. The staged upgrade also works
+-- before migration 006 introduces business conversations.
+create function kh_private.agency_check_contact_budget(actor uuid) returns void language plpgsql security definer set search_path='' as $$
+declare total bigint;extra bigint:=0;begin
+ select count(*) into total from public.kh_conversations where buyer_id=actor and created_at>=clock_timestamp()-interval '24 hours';
+ if to_regclass('kh_private.agency_conversations') is not null then
+  select count(*) into extra from kh_private.agency_conversations c join kh_private.agency_deals d on d.id=c.deal_id where d.buyer_id=actor and c.created_at>=clock_timestamp()-interval '24 hours';
+ end if;
+ if total+extra>=20 then raise exception 'KH_CHAT_CONVERSATION_LIMIT';end if;
+end $$;
+revoke all on function kh_private.agency_check_contact_budget(uuid) from public,anon,authenticated;
 create or replace function kh_private.start_conversation_for_manager(p_property_id uuid,p_actor_id uuid,p_expected_manager_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$
 declare a uuid:=kh_private.chat_actor(p_actor_id);p public.properties%rowtype;manager_id uuid;conversation_id uuid;
 begin
@@ -603,7 +637,7 @@ begin
  select id into conversation_id from public.kh_conversations where property_id=p_property_id and buyer_id=a and seller_id=manager_id;
  if found then return kh_private.chat_conversation_json(conversation_id,a);end if;
  if exists(select 1 from public.kh_user_blocks where blocker_id=a and blocked_id=manager_id or blocker_id=manager_id and blocked_id=a) then raise exception 'KH_CHAT_BLOCKED';end if;
- if (select count(*) from public.kh_conversations where buyer_id=a and created_at>=clock_timestamp()-interval '24 hours')>=20 then raise exception 'KH_CHAT_CONVERSATION_LIMIT';end if;
+ perform kh_private.agency_check_contact_budget(a);
  insert into public.kh_conversations(property_id,property_title,property_location,buyer_id,seller_id) values(p.id,p.title,concat_ws(', ',p.location,p.province),a,manager_id) returning id into conversation_id;
  insert into public.kh_conversation_reads(conversation_id,user_id) values(conversation_id,a),(conversation_id,manager_id);
  return kh_private.chat_conversation_json(conversation_id,a);

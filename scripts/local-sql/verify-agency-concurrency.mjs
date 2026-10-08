@@ -4,6 +4,7 @@ import {readFile,readdir} from 'node:fs/promises';
 import {setTimeout as delay} from 'node:timers/promises';
 import {Client} from 'pg';
 import {fixtureDatabaseUrl} from './agency-env.mjs';
+import {createAgencyLocaleClone} from './agency-locale-clone.mjs';
 
 const source=fixtureDatabaseUrl(),sourceName=source.pathname.slice(1);
 assert.equal(source.href,'postgresql://agency_test@127.0.0.1:55487/kh_agency_test_suites_20261007');
@@ -17,19 +18,16 @@ async function inventory(db){
  return result;
 }
 async function sourceState(){const db=new Client({connectionString:source.href});await db.connect();try{assert.equal((await sql(db,"select to_regclass('kh_private.agency_settings') t")).t,null);return await inventory(db)}finally{await db.end()}}
-const before=await sourceState();
+let before;
 async function as(db,actor){await db.query("select set_config('request.jwt.claim.sub',$1,true),set_config('request.jwt.claims',jsonb_build_object('sub',$1::text,'role','authenticated','session_id',md5($1::text||':session')::uuid)::text,true)",[actor]);}
 const operation=(actor,query,params=[],role='authenticated')=>({actor,query,params,role});
 async function invoke(db,op){await as(db,op.actor);await db.query(`set local role ${op.role}`);return (await db.query(op.query,op.params)).rows[0]?.value;}
 function success(result){if(result.error)throw result.error;return result.value;}
 function rejection(result,pattern){assert.ok(result.error,'expected endpoint rejection');assert.doesNotMatch(result.error.message,/timeout|deadlock/i);assert.match(result.error.message,pattern);}
 async function runCase(name,body){
- const scratch=`kh_agency_test_race_${randomUUID().replaceAll('-','')}`,admin=new Client({connectionString:new URL('/postgres',source).href});
- await admin.connect();const clients=[],pending=[];let created=false;
+ const clone=await createAgencyLocaleClone(source),scratch=clone.url.pathname.slice(1);
+ const clients=[],pending=[];
  try{
-  assert.equal((await admin.query('select 1 from pg_database where datname=$1',[scratch])).rowCount,0);
-  await admin.query(`create database ${quote(scratch)} template ${quote(sourceName)}`);created=true;
-  assert.equal((await sql(admin,'select pg_get_userbyid(datdba)=current_user owned from pg_database where datname=$1',[scratch])).owned,true);
   async function client(){const db=new Client({connectionString:new URL(`/${scratch}`,source).href});await db.connect();clients.push(db);await db.query("set lock_timeout='7s';set statement_timeout='11s'");return db;}
   const db=await client(),left=await client(),right=await client();
   const root=new URL('../../supabase/migrations/',import.meta.url);
@@ -57,8 +55,7 @@ async function runCase(name,body){
   console.log(`PASS ${name}`);
  }finally{
   await Promise.allSettled(clients.map(db=>db.query('rollback')));await Promise.allSettled(pending);await Promise.allSettled(clients.map(db=>db.end()));
-  if(created){assert.match(scratch,/^kh_agency_test_race_[a-f0-9]{32}$/);assert.equal((await sql(admin,'select pg_get_userbyid(datdba)=current_user owned from pg_database where datname=$1',[scratch])).owned,true);await admin.query(`drop database ${quote(scratch)}`);assert.equal((await admin.query('select 1 from pg_database where datname=$1',[scratch])).rowCount,0)}
-  await admin.end();assert.deepEqual(await sourceState(),before);console.log(`CLEANUP ${name}: ownedScratchDropped:true, inventoryUnchanged:true`);
+  await clone.cleanup();assert.deepEqual(await sourceState(),before);console.log(`CLEANUP ${name}: ownedScratchDropped:true, inventoryUnchanged:true`);
  }
 }
 async function sale(ctx,f=ctx.f){const r=(await ctx.setup('select pg_temp.race_sale_request($1) r',[f])).r;const decision=(await sql(ctx.db,'select pg_temp.race_decision($1) d',[r])).d;return operation(f.source??f.actor,f.source?'select public.kh_decide_personal_sale($1,$2) value':'select public.kh_decide_agency_sale($1,$2,$3) value',f.source?[f.source,decision]:[f.actor,f.agency,decision]);}
@@ -120,7 +117,10 @@ for(const kind of ['visit_vs_visit_other_agency','same_manager_other_property'])
 async function verification(c,decision){const versions=await sql(c.db,'select version,verification_version from kh_private.agencies where id=$1',[c.f.agency]);return operation(owner,'select public.kh_review_agency_verification($1,$2) value',[owner,{agencyId:c.f.agency,decision,note:'Identidad revisada en carrera',expectedAgencyVersion:versions.version,expectedVerificationVersion:versions.verification_version,clientRequestId:randomUUID()}]);}
 async function submit(c){
  const request=randomUUID(),path=`${c.f.actor}/${request}/photo.jpg`;await c.setup("insert into storage.objects(bucket_id,name)values('property-photos',$1)",[path]);
- return operation(c.f.actor,'select public.kh_agency_save_property($1,$2,$3) value',[c.f.actor,c.f.agency,{clientRequestId:request,publicationIntent:'submit',sourceReference:request,consentReference:'Consentimiento comprobado',draft:{title:'Casa nueva de carrera',location:'Vedado',province:'La Habana',type:'Casa',price:30000,bedrooms:2,bathrooms:1,description:'Casa para verificar publicación concurrente.',photoPaths:[path]}}]);
+ const payload={clientRequestId:request,publicationIntent:'submit',sourceReference:request,consentReference:'Consentimiento comprobado',draft:{title:'Casa nueva de carrera',location:'Vedado',province:'La Habana',type:'Casa',price:30000,bedrooms:2,bathrooms:1,description:'Casa para verificar publicación concurrente.',photoPaths:[path]}};
+ const matches=(await c.setup('select public.kh_find_agency_property_matches($1,$2,$3) value',[c.f.actor,c.f.agency,payload],c.f.actor)).value;
+ if(matches.items.length)payload.duplicateDecision=matches.review;
+ return operation(c.f.actor,'select public.kh_agency_save_property($1,$2,$3) value',[c.f.actor,c.f.agency,payload]);
 }
 async function commitOp(c,op){await c.left.query('begin');try{const r=await invoke(c.left,op);await c.left.query('commit');return r}catch(e){await c.left.query('rollback');throw e}}
 for(const decision of ['grant','revoke'])for(const first of ['verification','submit'])add(`verification_${decision}_vs_submit_${first}_first`,async c=>{
@@ -141,7 +141,9 @@ add('verified_publish_response_lost_then_revoke_replay',async c=>{
  const s=await submit(c),first=await commitOp(c,s);assert.equal(first.property.moderation,'approved');
  const [x,y]=await c.race(await verification(c,'revoke'),s);success(x);const replay=success(y);assert.equal(replay.property.id,first.property.id);assert.equal(replay.property.version,first.property.version);assert.equal(replay.property.moderation,'approved');
  assert.equal((await sql(c.db,"select count(*)::int n from kh_private.notifications where property_id=$1 and category='alert'",[first.property.id])).n,1);
- const next=structuredClone(s);next.params[2]={...next.params[2],propertyId:first.property.id,expectedVersion:first.property.version,clientRequestId:randomUUID()};assert.equal((await commitOp(c,next)).property.moderation,'pending');
+ const next=structuredClone(s);next.params[2]={...next.params[2],propertyId:first.property.id,expectedVersion:first.property.version,clientRequestId:randomUUID()};
+ const current=(await c.setup('select public.kh_find_agency_property_matches($1,$2,$3) value',[c.f.actor,c.f.agency,next.params[2]],c.f.actor)).value;next.params[2].duplicateDecision=current.review;
+ assert.equal((await commitOp(c,next)).property.moderation,'pending');
 });
 
 for(const entry of ['public','auth'])for(const first of ['delete','schedule'])add(`source_personal_delete_vs_external_agency_scheduling_${entry}_${first}_first`,async c=>{
@@ -276,6 +278,40 @@ add('direct_sql_security_roles',async c=>{
  rejection(await attempt(c.f.actor,'select public.kh_create_agency_deal($1,$2,$3) value',[c.f.actor,c.f.agency,{propertyId:c.f.property,assigneeId:c.f.actor,externalContact:{name:'Disabled',consentReference:'Disabled'},clientRequestId:randomUUID()}]),/KH_AGENCY_DISABLED/);
 });
 
+for(const channel of ['agency','personal'])for(const first of ['agency','other'])add(`contact_budget_${channel}_${first}_first`,async c=>{
+ const buyerId=buyer;
+ await c.setup(`do $$declare pid uuid;begin for n in 1..19 loop pid:=gen_random_uuid();
+ insert into public.properties(id,client_request_id,owner_id,title,location,province,type,price,bedrooms,bathrooms,description,moderation,availability)values(pid,pid::text,$1,'Contacto previo','Vedado','La Habana','Casa',30000,2,1,'Descripción sintética de presupuesto','draft','active');
+ insert into public.kh_conversations(property_id,property_title,property_location,buyer_id,seller_id)values(pid,'Contacto previo','Vedado',$3,$1);end loop;end$$;`.replaceAll('$1',`'${c.f.actor}'`).replaceAll('$2',`'${c.f.property}'`).replaceAll('$3',`'${buyerId}'`));
+ const a=operation(buyerId,'select public.kh_start_agency_conversation($1,$2,$3) value',[buyerId,c.f.agency,{propertyId:c.f.property,clientRequestId:randomUUID()}]);
+ let b;
+ if(channel==='agency'){
+  const other=(await c.setup('select pg_temp.kh_agency_signup(1981) a')).a;await c.setup('select pg_temp.kh_agency_approve($1)',[other]);
+  await c.setup("insert into kh_private.agency_mandates(property_id,agency_id,reference)values($1,$2,'shared race')",[c.f.property,other]);
+  b=operation(buyerId,'select public.kh_start_agency_conversation($1,$2,$3) value',[buyerId,other,{propertyId:c.f.property,clientRequestId:randomUUID()}]);
+ }else{
+  const pid=randomUUID();await c.setup("insert into storage.objects(bucket_id,name)values('property-photos',$1)",[`${c.f.actor}/${pid}/photo.jpg`]);await c.setup(`insert into public.properties(id,client_request_id,owner_id,title,location,province,type,price,bedrooms,bathrooms,description,photo_paths,moderation,availability)select $1::uuid,$1::uuid::text,$2::uuid,title,location,province,type,price,bedrooms,bathrooms,description,array[$2::uuid::text||'/'||$1::uuid::text||'/photo.jpg'],'approved','active' from public.properties where id=$3`,[pid,c.f.actor,c.f.property]);
+  b=operation(buyerId,'select public.kh_start_conversation_for_manager($1,$2,$3) value',[pid,buyerId,c.f.actor]);
+ }
+ const [x,y]=await c.race(first==='agency'?a:b,first==='agency'?b:a);success(x);rejection(y,/KH_CHAT_CONVERSATION_LIMIT/);
+ assert.equal((await sql(c.db,'select (select count(*) from public.kh_conversations where buyer_id=$1)+(select count(*) from kh_private.agency_conversations ac join kh_private.agency_deals d on d.id=ac.deal_id where d.buyer_id=$1) n',[buyerId])).n,'20');
+});
+
+for(const first of ['attach','delete'])add(`approved_logo_${first}_first`,async c=>{
+ const path=`${c.f.agency}/logos/${randomUUID()}.jpg`;
+ await c.setup("insert into storage.objects(bucket_id,name,metadata)values('agency-assets',$1,'{\"mimetype\":\"image/jpeg\",\"size\":99}')",[path]);
+ const profile=(await c.setup('select public.kh_get_agency_profile($1,$2) value',[c.f.actor,c.f.agency],c.f.actor)).value;
+ const attach=operation(c.f.actor,'select public.kh_update_agency_profile($1,$2,$3) value',[c.f.actor,c.f.agency,{input:profile.input,logoPath:path,expectedVersion:profile.version,clientRequestId:randomUUID()}]);
+ const remove=operation(c.f.actor,"delete from storage.objects where bucket_id='agency-assets' and name=$1 returning name value",[path]);
+ const [x,y]=await c.race(first==='attach'?attach:remove,first==='attach'?remove:attach);success(x);rejection(y,first==='attach'?/KH_AGENCY_LOGO_REFERENCED/:/KH_AGENCY_LOGO_INVALID/);
+ const object=(await sql(c.db,"select count(*)::int n from storage.objects where bucket_id='agency-assets' and name=$1",[path])).n;
+ const logo=(await sql(c.db,'select logo_path from kh_private.agencies where id=$1',[c.f.agency])).logo_path;
+ assert.equal(object,first==='attach'?1:0);assert.equal(logo,first==='attach'?path:null);
+});
+
 const selected=process.argv.slice(2);let failed=false;
-for(const [name,body] of cases.filter(([name])=>!selected.length||selected.some(filter=>name.includes(filter)))){try{await runCase(name,body)}catch(error){failed=true;console.error(`FAIL ${name}: ${error.message}\n${error.where??''}`)}}
+const matching=cases.filter(([name])=>!selected.length||selected.some(filter=>name.includes(filter)));
+if(selected.length&&!matching.length)throw Error(`No concurrency cases match: ${selected.join(', ')}`);
+before=await sourceState();
+for(const [name,body] of matching){try{await runCase(name,body)}catch(error){failed=true;console.error(`FAIL ${name}: ${error.message}\n${error.where??''}`)}}
 if(failed)process.exitCode=1;

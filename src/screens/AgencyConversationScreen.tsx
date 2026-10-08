@@ -1,5 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
@@ -16,6 +16,8 @@ import { Button, Notice, PageTitle } from '../components/ui';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { ReportConversationSheet } from '../components/messaging/ReportConversationSheet';
 import { AgencyProposalPanel } from '../components/agencies/AgencyProposalPanel';
+import {useMessagingActivity} from '../components/messaging/useMessagingActivity';
+import {startAgencyPoll,readIncomingAgencyMessages} from '../agencies/messaging/live';
 import { createThemedStyles } from '../theme';
 export default function AgencyConversationScreen() {
     const { id, agencyId } = useLocalSearchParams<{
@@ -28,7 +30,8 @@ export default function AgencyConversationScreen() {
     const scope = `${auth.user?.id}:${auth.session?.access_token}:${id}:${agencyId ?? 'buyer'}:${agencyId ? w.generation : ''}`;
     const current = useRef(scope);
     current.current = scope;
-    const epoch = useRef(0), busyRef = useRef(false);
+    const epoch = useRef(0), busyRef = useRef(false), readTicket=useRef(0);
+    const active=useMessagingActivity();
     const [state, setState] = useState<{
         scope: string;
         conversation: AgencyConversation | null;
@@ -43,6 +46,7 @@ export default function AgencyConversationScreen() {
         body: string;
     } | null>(null);
     const visible = state.scope === scope ? state : null, c = visible?.conversation;
+    const latestState=useRef(visible);latestState.current=visible;
     const capture = useCallback((write=false): CapturedAccountContext | CapturedAgencyContext => {
         if (!isUuid(id) || (agencyId && !isUuid(agencyId)))
             throw Error('Enlace de conversación inválido.');
@@ -55,19 +59,22 @@ export default function AgencyConversationScreen() {
     const load = useCallback(async () => {
         if (!repo || !auth.user)
             return;
+        const ticket=++readTicket.current;
         let ctx: ReturnType<typeof capture> | undefined;
         try {
             ctx = capture();
             const conversation = await repo.get(id, ctx);
-            const page = await repo.history(id, null, ctx);
+            const previous=latestState.current;
+            const page = await readIncomingAgencyMessages(repo,id,previous?.messages??[],previous?.hasMore??false,ctx);
             ctx.checkpoint();
-            setState({ scope, conversation, messages: page.items, hasMore: page.hasMore, error: '' });
+            if(ticket!==readTicket.current)return;
+            setState(old=>({ scope, conversation, messages: mergeAgencyMessages(old.scope===scope?old.messages:[],page.items), hasMore: old.scope===scope&&old.messages.length?old.hasMore:page.hasMore, error: '' }));
             await repo.markRead(id, conversation.lastSeq, ctx);
         }
         catch (e) {
             try {
                 ctx?.checkpoint();
-                if (current.current === scope)
+                if (current.current === scope && ticket===readTicket.current)
                     setState({ scope, conversation: null, messages: [], hasMore: false, error: agencyError(e) });
             }
             catch { }
@@ -87,6 +94,7 @@ export default function AgencyConversationScreen() {
         void load();
         return () => { epoch.current++; busyRef.current = false; };
     }, [load,scope]));
+    useEffect(()=>{if(!active||!auth.user||(agencyId&&w.activeAgencyId!==agencyId))return;return startAgencyPoll(load);},[active,load,auth.user?.id,agencyId,w.activeAgencyId]);
     async function act(work:(ctx:ReturnType<typeof capture>)=>Promise<void>,write=false) {
         if(busyRef.current) return;
         busyRef.current=true;

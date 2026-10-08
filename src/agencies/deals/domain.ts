@@ -60,5 +60,5 @@ export function decodeAgencyDeal(value: unknown, agencyId: string): AgencyDeal {
     const buyerId = nullableUuid(v.buyerId), privateContact = v.privateContact === null ? null : normalizeExternalContact(v.privateContact);
     if (v.contactKind === 'account' ? privateContact !== null : buyerId !== null || privateContact === null)
         throw invalidAgencyData();
-    return { id: uuid(v.id), agencyId: uuid(v.agencyId), propertyId: uuid(v.propertyId), cycleId: uuid(v.cycleId), buyerId, contactKind: v.contactKind as AgencyDeal['contactKind'], privateContact, assigneeId: nullableUuid(v.assigneeId), stage: v.stage as AgencyDeal['stage'], version: integer(v.version, 1), closedReason: nullableText(v.closedReason) };
+    return { id: uuid(v.id), agencyId: uuid(v.agencyId), propertyId: uuid(v.propertyId), canonicalPropertyId: uuid(v.canonicalPropertyId), propertyTitle: text(v.propertyTitle), buyerName: text(v.buyerName), cycleId: uuid(v.cycleId), buyerId, contactKind: v.contactKind as AgencyDeal['contactKind'], privateContact, assigneeId: nullableUuid(v.assigneeId), stage: v.stage as AgencyDeal['stage'], version: integer(v.version, 1), closedReason: nullableText(v.closedReason) };
 }

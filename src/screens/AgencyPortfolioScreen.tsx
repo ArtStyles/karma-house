@@ -1,3 +1,4 @@
+import {AgencyShareButton} from '../components/agencies/AgencyShareButton';
 import {router,useFocusEffect} from 'expo-router';
 import {useCallback,useRef,useState} from 'react';
 import {ScrollView,Text,View} from 'react-native';
@@ -31,7 +32,7 @@ function Portfolio(){
  {w.enabled&&w.activeAgency?.state==='approved'&&w.membership?.role==='admin'&&<Button label="Añadir vivienda en venta" onPress={()=>router.push('/agency-property/new')}/>}
  {w.membership?.role==='admin'&&<Button label="Autorizaciones y cambios compartidos" secondary onPress={()=>router.push('/agency-property-requests')}/>}
  {!busy&&!items.length&&<Notice>Esta inmobiliaria todavía no tiene viviendas autorizadas.</Notice>}
- {items.map(item=><View key={item.property.id} style={s.card}><Text style={s.title}>{item.property.title}</Text><Text style={s.copy}>{item.property.location} · {item.mandate.reference}</Text><Text style={s.copy}>{item.property.moderationStatus==='draft'?'Borrador':item.property.moderationStatus==='pending'?'En revisión':item.property.moderationStatus==='approved'?'Aprobada':'Rechazada'} · {item.canEditCommon?'Origen de esta inmobiliaria':'Cartera autorizada'}</Text><Button label="Ver interesados y expediente privado" onPress={()=>router.push({pathname:'/agency-deals',params:{propertyId:item.property.id}})}/><Button label="Abrir vivienda" secondary onPress={()=>router.push({pathname:'/agency-property/[id]',params:{id:item.property.id}})}/></View>)}
+ {items.map(item=><View key={item.property.id} style={s.card}><Text style={s.title}>{item.property.title}</Text><Text style={s.copy}>{item.property.location} · {item.mandate.reference}</Text><Text style={s.copy}>{item.property.moderationStatus==='draft'?'Borrador':item.property.moderationStatus==='pending'?'En revisión':item.property.moderationStatus==='approved'?'Aprobada':'Rechazada'} · {item.canEditCommon?'Origen de esta inmobiliaria':'Cartera autorizada'}</Text><Button label="Ver interesados y expediente privado" onPress={()=>router.push({pathname:'/agency-deals',params:{propertyId:item.property.id}})}/>{item.property.moderationStatus==='approved'&&item.property.status==='active'&&<AgencyShareButton propertyId={item.property.id} title={item.property.title}/>}<Button label="Abrir vivienda" secondary onPress={()=>router.push({pathname:'/agency-property/[id]',params:{id:item.property.id}})}/></View>)}
  {more&&<Button label="Cargar más viviendas" secondary disabled={busy} onPress={()=>void load(true)}/>}
  </>}</ScrollView></SafeAreaView>;
 }

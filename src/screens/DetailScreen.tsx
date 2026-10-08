@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NavigationMaterial } from '../components/NavigationMaterial';
 import { PropertyImage } from '../components/PropertyImage';
@@ -20,7 +20,7 @@ import { supabase } from '../lib/supabase';
 import { UserAvatar } from '../components/account/UserAvatar';
 import { levelLabel } from '../profiles/domain';
 import { usePublicProfile } from '../profiles/usePublicProfile';
-import { listingShareUrl } from '../lib/publicSite';
+import { PUBLIC_PAGES_URL, listingShareUrl } from '../lib/publicSite';
 import { listingOperation, minStayText, operationBadge, priceLabel, priceSuffix, shareText, swapBalanceText, typeLabel, wantedOperationsText } from '../domain/operations';
 import {useListingManagement} from '../transfers/useListingManagement';
 import { listingPresentation } from '../catalog/presentation';
@@ -33,6 +33,7 @@ import type {PublicPropertyContact,PublicAgencyContact} from '../agencies/messag
 import {AgencyVerifiedBadge} from '../components/agencies/AgencyVerifiedBadge';
 import {createMessageId,isUuid} from '../messaging/domain';
 
+import {validatePublicAgencyShare,agencyShareUrl} from '../agencies/share';
 const NEEDS_CONNECTION = 'Necesitas conexión para esto.';
 
 export default function DetailScreen() {
@@ -153,8 +154,8 @@ export default function DetailScreen() {
   }
   async function share() {
     if (!listing) return;
-    const message = shareText(listing, listingShareUrl(listing.id));
-    try { await Share.share({ title: listing.title, message, url: listingShareUrl(listing.id) }); } catch { /* Dismissed, or this browser has no share target. */ }
+    try { let url=listingShareUrl(listing.id);if(supabase&&preferred){const destination=await validatePublicAgencyShare(supabase,listing.id,preferred.agencyId,preferred.managerId);if(destination)url=agencyShareUrl(destination);else{setPreferred(null);setError('El contacto del enlace ya no está autorizado. Se comparte la ficha general.');}}
+    const message = shareText(listing,url);await Share.share({ title: listing.title, message, url }); } catch { /* Dismissed, or this browser has no share target. */ }
   }
   function openReport() {
     if (!listing) return;
@@ -189,7 +190,7 @@ export default function DetailScreen() {
         </View>}
       </View>
       <View style={styles.body}>
-        {contactOptions?.agencies.map(agency=><View key={agency.agencyId} style={styles.group}><View style={styles.sellerBadges}><Text style={styles.sellerTitle}>{agency.tradeName}</Text><AgencyVerifiedBadge verified={agency.verified} agencyName={agency.tradeName}/></View><Text style={styles.sellerText}>Consulta privada con esta inmobiliaria.</Text><Button label={`Contactar con ${agency.tradeName}`} secondary disabled={!agency.contactAvailable||contactBusy} onPress={()=>{setPreferred(null);setAgencyChoice(true)}}/></View>)}
+        {contactOptions?.agencies.map(agency=><View key={agency.agencyId} style={styles.group}><View style={styles.sellerBadges}><Text style={styles.sellerTitle}>{agency.tradeName}</Text><AgencyVerifiedBadge verified={agency.verified} agencyName={agency.tradeName}/></View><Button label="Ver perfil comercial" secondary onPress={()=>void Linking.openURL(`${PUBLIC_PAGES_URL}agency/${agency.agencyId}`)}/><Text style={styles.sellerText}>Consulta privada con esta inmobiliaria.</Text><Button label={`Contactar con ${agency.tradeName}`} secondary disabled={!agency.contactAvailable||contactBusy} onPress={()=>{setPreferred(null);setAgencyChoice(true)}}/></View>)}
         {contactOptions&&!contactOptions.personalContact&&contactOptions.agencies.length===0&&<Notice>El contacto de esta inmobiliaria no está disponible ahora.</Notice>}
         {Boolean(heart.error)&&<Notice error>{heart.error}</Notice>}
         {management.value?.assistedByKarmaHouse&&<Notice>Publicado con asistencia de KarmaHouse. {own ? 'Ahora tú gestionas este anuncio.' : sellerProfile?.displayName?`La gestión actual corresponde a ${sellerProfile.displayName}.`:'Las consultas nuevas se dirigen al responsable vigente.'}</Notice>}

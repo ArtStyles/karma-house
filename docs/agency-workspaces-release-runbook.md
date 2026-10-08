@@ -105,7 +105,7 @@ Exact existing Vercel project: `prj_EhIWL2JlbfKsdbksCcYCIPYT3oN1`, scope `frank-
 & $taskNode $vercelCli deploy --prod --skip-domain --project prj_EhIWL2JlbfKsdbksCcYCIPYT3oN1 --scope frank-james-hernandezs-projects --non-interactive --no-color
 ```
 
-The dry list must contain only `web/` source/assets, `web/api/p.ts`, `web/vercel.json`, package/lock and prerender inputs. Reject `.superpowers`, PG, artifacts, infra, credentials, mobile, `.env*`, node_modules, built dist and `web/tsconfig.json`. Preserve hashes/full file list. The allowlist was actually exercised locally; do not assume nested ignore semantics. Test the resulting production-environment URL before `vercel promote <newURL> --scope ...`; confirm landing version/download links, public `/p/<real approved ID>` identity/contact/privacy, aliases and the agency-specific circular accessible badge. Do not create a fake public property. Web rollback uses `vercel rollback <previousURL> --scope ...`; retain backend schema and turn agency module OFF if client compatibility fails. Preparation's local Vite build is not Vercel API/runtime verification.
+The dry list must contain only `web/` source/assets, `web/api/p.ts`, `web/api/agency.ts`, `web/lib/public-agency-profile.ts`, `web/vercel.json`, package/lock and prerender inputs. Reject `.superpowers`, PG, artifacts, infra, credentials, mobile, `.env*`, node_modules, built dist and `web/tsconfig.json`. Preserve hashes/full file list. The allowlist was actually exercised locally; do not assume nested ignore semantics. Test the resulting production-environment URL before `vercel promote <newURL> --scope ...`; confirm landing version/download links, public `/p/<real approved ID>` identity/contact/privacy, aliases and the agency-specific circular accessible badge. Do not create a fake public property. Web rollback uses `vercel rollback <previousURL> --scope ...`; retain backend schema and turn agency module OFF if client compatibility fails. Preparation's local Vite build is not Vercel API/runtime verification.
 
 ## Real hosted smoke: receipt, JWTs and asynchronous worker pause
 
@@ -147,10 +147,10 @@ Execute and journal, always taking **current returned versions** and fresh `clie
 |---|---|---|
 | Applicant submit | `kh_submit_agency_application {p_payload:{input,clientRequestId,expectedVersion}}` | pending, still unverified |
 | Applicant attempts review | `kh_review_agency {p_payload:{agencyId,decision:'approve',note,expectedVersion,clientRequestId}}` | owner-only denial, no change |
-| Applicant logo Storage BEFORE approval | POST `/storage/v1/object/agency-assets/<agency>/logos/<asset UUID>.jpg`, valid JPEG, `x-upsert:false`; POST `/storage/v1/object/sign/agency-assets/<path>` `{expiresIn:300}` | upload/read signed bytes; anon/foreign signing denied; leave logo **unattached** and delete it through Storage while still pending. Agency-asset write policy does not permit approved applicants. |
+| Applicant logo Storage BEFORE approval | POST `/storage/v1/object/agency-assets/<agency>/logos/<asset UUID>.jpg`, valid JPEG, `x-upsert:false`; POST `/storage/v1/object/sign/agency-assets/<path>` `{expiresIn:300}` | upload/read signed bytes; anon/foreign signing denied; leave logo **unattached** and delete it through Storage while still pending. After approval, asset writes belong to current approved admins (including a replacement admin), not to registration provenance alone. Use the commercial-profile contract below for approved logos. |
 | Protected owner approval | same review body with owner JWT | approved, admin membership, **verified:false** |
 | Admin invite / invitee accept | `kh_invite_agency_member {p_agency_id,p_payload:{userId,role:'manager',clientRequestId}}`; `kh_decide_agency_invitation {p_payload:{invitationId,accept:true,expectedVersion,clientRequestId}}` | acceptance only by actual recipient |
-| Admin draft | `kh_agency_save_property {p_agency_id,p_payload:{draft,publicationIntent:'draft',sourceReference,consentReference,clientRequestId}}` | draft, source immutable, policy requires_review, absent from anon catalogue/public page |
+| Admin draft (preflight below) | `kh_agency_save_property {p_agency_id,p_payload:{draft,publicationIntent:'draft',sourceReference,consentReference,clientRequestId}}` | draft, source immutable, policy requires_review, absent from anon catalogue/public page |
 | Verification | `kh_request_agency_verification {p_agency_id,p_payload:{input:{message,evidenceReferences},clientRequestId}}`; owner `kh_review_agency_verification {p_payload:{agencyId,requestId,decision:'grant',note,expectedAgencyVersion,expectedVerificationVersion,expectedRequestVersion,clientRequestId}}` | request does not grant; only owner grants; draft stays draft |
 | Current/foreign/removed | `kh_agency_property {p_agency_id,p_property_id}`; `kh_remove_agency_member {p_agency_id,p_payload:{userId,expectedVersion,clientRequestId}}` | current staff permitted; foreign and removed denied; old JWT cannot restore membership |
 | Commercial draft guard | `kh_create_agency_deal {p_agency_id,p_payload:{propertyId,buyerId:foreignFixtureActorId,assigneeId:adminFixtureActorId,clientRequestId}}` | `KH_AGENCY_PROPERTY_CLOSED` and no deal/chat/visit/sale rows; never set approved/active to manufacture success |
@@ -167,7 +167,73 @@ const offSubmit={p_actor_id:personal.id,p_payload:{input,clientRequestId:offSubm
 const offInvite={p_actor_id:personal.id,p_agency_id:offAgencyId,p_payload:{userId:invitee.id,role:'manager',clientRequestId:offInviteId}};
 ```
 
+## Final-wave profile, duplicate and share contracts
+
+All actor parameters below are the normal JWT subject. The original application `input`, responsible account and evidence remain immutable and private; commercial maintenance does not grant approval or verification. These APIs add no table or FK. They add `agencies.commercial_profile`, `commercial_profile_updated` events and `agency_write_receipts.operation='update_profile'`; record each exact request tuple in the existing receipt. Existing save receipts/events retain the explicit duplicate decision when one was needed.
+
+- `kh_get_agency_profile(p_actor_id uuid,p_agency_id uuid)` returns `{agencyId,version,logoPath,input}` for a current admin (accepted OFF history). `input` contains exactly tradeName, businessPhone, province, municipality, serviceAreas, description, officeAddress and publishOfficeAddress; it excludes responsibleFullName/evidenceReferences.
+- `kh_update_agency_profile(p_actor_id uuid,p_agency_id uuid,p_payload jsonb)` takes `{input,expectedVersion,clientRequestId,logoPath?}`. Use the returned current agency version. Omit logoPath to keep it, supply a scoped existing JPEG path to attach, or null to detach. Replay rechecks current approved-admin authority. Test manager/foreign/removed denial and unchanged original application. Profile changes never grant verification. A lost-response retry uses the exact payload/request; a changed payload uses a fresh request.
+- `kh_public_agency_profile(p_agency_id uuid)` is anon/authenticated, returns null while OFF or agency unapproved/suspended. Approved output contains agencyId, tradeName, businessPhone, province, municipality, serviceAreas, description, logoPath, verified and officeAddress **only when explicitly opted in**. No private address bytes are returned otherwise. Real published route is `/agency/<agency UUID>` via `web/api/agency.ts`; it can be tested using the temporary approved agency without publishing a home. The public parser and all runtime dependencies live inside `web/**`; the WEB-only deployment allowlist is unchanged. Verify HTTP content and logo bytes with anon, not only the admin editor.
+- For this hosted smoke, attach an approved logo only after the exact empty draft ID/source/request are saved in the receipt; this keeps both success and OFF-failure cleanup within the reviewed one-agency/one-empty-draft contract.
+- Approved logo: POST valid JPEG <=1 MiB to `/storage/v1/object/agency-assets/<agency>/logos/<asset UUID>.jpg` with current admin JWT and `x-upsert:false`; attach using update_profile, then anonymous signing uses `/storage/v1/object/sign/agency-assets/<path>` with `{expiresIn:300}`. A replacement admin can maintain logos. Original departed applicants have no maintenance authority. Concurrent attach/delete serializes at the agency lock; the DELETE trigger rechecks current authority/reference and refuses `KH_AGENCY_LOGO_REFERENCED`. Privileged Storage cleanup without a user subject also locks/rechecks the reference, but does not require a current membership. Before cleanup, detach through update_profile while the admin is still active/approved, then delete exact objects through Storage API. Record both update_profile receipt tuples and every uploaded path, including a failed/discarded upload; confirm agencies.logo_path null before deleting the agency. Never delete referenced Storage metadata by SQL.
+- `kh_find_agency_property_matches(p_actor_id uuid,p_agency_id uuid,p_payload jsonb)` requires enabled/current approved admin. Payload: `{draft:{province,location,type,bedrooms},clientRequestId,propertyId?}`. Supply the same request and current draft fields as the subsequent save; propertyId is only for editing. Returns at most20 public active sale candidates `{id,title,province,location,type,bedrooms,version}` and `review`. No match means save proceeds normally. If candidates exist, choose an existing canonical mandate request or explicitly record a different home. Do not silently attach review just to make a smoke pass: the controlled unpublished fixture should have zero matches; otherwise stop and inspect the bounded safe candidates.
+- Different-home choice sends the returned `review` verbatim as `kh_agency_save_property.p_payload.duplicateDecision`, using the same clientRequestId/propertyId/current matching input. Review shape: `{decision:'different_home',input:{province,location,type,bedrooms},candidates:[{id,version}],clientRequestId,propertyId}`; province/location/type are trimmed/lowercase, bedrooms numeric, absent propertyId is null. The server recomputes it before creating a new draft or submitting, including verified direct publication. Changed candidate/version/input/request yields `KH_AGENCY_DUPLICATE_REVIEW_REQUIRED`. Similarity never merges or transfers origin. Discovery is read-only; save uses the existing save_property receipt and property_saved event.
+- Existing candidate alternative: authenticated `kh_resolve_agency_mandate_property(p_actor_id,p_property_id)`, then `kh_request_agency_mandate(p_actor_id,p_agency_id,p_payload:{propertyId:resolved.propertyId,internalReference,clientRequestId})`. This is an actual business request and is **not part of the one-agency/empty-draft hosted smoke**; do not call it against real homes. The controlled teardown still requires zero mandate requests. If a separate authorized fixture ever exercises it, exact mandate-request rows and request_mandate receipts must be added to that fixture's approved cleanup before execution, not removed by broad cascade.
+- Member share producer: `kh_agency_share_context(p_actor_id uuid,p_agency_id uuid,p_property_id uuid,p_manager_id uuid default null)`, current approved manager/coordinator/admin plus live canonical authorized sale. Client uses p_manager_id=current actor. Returns `{propertyId:<canonical UUID>,agencyId,managerId}` for `https://karmahouse.vercel.app/p/<canonical>?agencyId=<agency>&managerId=<manager>`. Optional null manager makes an agency-only link. No write, receipt, commission or sale attribution. Anonymous `kh_public_agency_share_context(p_property_id uuid,p_agency_id uuid,p_manager_id uuid default null)` revalidates received links; null means share the general property link. Removed/suspended destinations cannot persist as an authorized contact. A draft must be denied by the producer; do not publish the hosted draft to manufacture success.
+
+The shared new-contact budget is20/account/24h across personal and agency conversations. Existing or replayed conversations do not consume a slot. Foreground business inbox/chat refreshes every3 seconds after a completed read, immediately on recovery, and stops with lost focus/scope/authority. Local two-browser proof is distinct from native/provider push evidence; no push-category expansion is included.
+
 ## Exact cleanup and OFF on failure
+
+**Failure with an attached fixture logo:** disable immediately using the same paused-worker connection; do not delay OFF to make update_profile available. OFF correctly rejects that writer and ordinary user Storage writes. Before Auth cleanup, use this explicitly privileged teardown (never business proof) for each exact receipt-owned attached path. The receipt must prove the agency was created by this run, its application responsible_id is the fixture publisher, all memberships are receipt-owned actors, it owns only the exact empty draft described below, no deals/sales/visits/foreign mandates/requests/common changes exist, and the logo path was uploaded by this run. Apply the same empty-business preconditions as the full teardown. If any identity, count or predicate differs, rollback and retain OFF; never widen the cleanup.
+
+```js
+// receiptAgencyId / receiptLogoPath / fixturePublisherId / fixtureActorIds
+// receiptDraftId / receiptSourceReference / receiptSaveRequest
+// are copied from the exclusive receipt, not inferred from a prefix.
+await pauseDb.query('begin');
+try {
+  await pauseDb.query("select pg_advisory_xact_lock(hashtextextended('kh:agency:module',0))");
+  await pauseDb.query('select kh_private.agency_lock($1)',[receiptAgencyId]);
+  assert.equal((await pauseDb.query('select enabled from kh_private.agency_settings where singleton')).rows[0].enabled,false);
+  const a=(await pauseDb.query('select id,logo_path,version from kh_private.agencies where id=$1 for update',[receiptAgencyId])).rows[0];
+  assert.equal(a?.logo_path,receiptLogoPath);
+  assert.equal((await pauseDb.query('select responsible_id from kh_private.agency_applications where agency_id=$1',[receiptAgencyId])).rows[0]?.responsible_id,fixturePublisherId);
+  assert.equal((await pauseDb.query('select count(*)::int n from kh_private.agency_memberships where agency_id=$1 and not(user_id=any($2::uuid[]))',[receiptAgencyId,fixtureActorIds])).rows[0].n,0);
+  assert.equal((await pauseDb.query('select count(*)::int n from kh_private.agencies where logo_path=$1 and id<>$2',[receiptLogoPath,receiptAgencyId])).rows[0].n,0);
+  assert.equal((await pauseDb.query('select kh_private.agency_logo_scope($1) id',[receiptLogoPath])).rows[0].id,receiptAgencyId);
+  const owned=(await pauseDb.query(`select p.id from public.properties p
+    join kh_private.agency_property_origins o on o.property_id=p.id
+    where p.id=$1 and o.origin_agency_id=$2 and o.publisher_id=$3 and o.source_reference=$4
+    and p.client_request_id=$5 and p.moderation='draft' and p.availability<>'sold'
+    and cardinality(p.photo_paths)=0 and p.cover_thumb_path is null for update of p`,[receiptDraftId,receiptAgencyId,fixturePublisherId,receiptSourceReference,receiptSaveRequest])).rows;
+  assert.equal(owned.length,1,'exact owned unpublished empty draft');
+  const forbidden=(await pauseDb.query(`select
+    exists(select 1 from kh_private.agency_mandates where property_id=$1 and agency_id<>$2)
+    or exists(select 1 from kh_private.agency_property_origins where origin_agency_id=$2 and property_id<>$1)
+    or exists(select 1 from kh_private.agency_deals where property_id=$1 or agency_id=$2)
+    or exists(select 1 from kh_private.agency_sale_requests where property_id=$1 or origin_agency_id=$2 or executing_agency_id=$2)
+    or exists(select 1 from kh_private.property_sale_closures where property_id=$1 or origin_agency_id=$2 or executing_agency_id=$2)
+    or exists(select 1 from kh_private.property_visit_slots where property_id=$1 or agency_id=$2)
+    or exists(select 1 from kh_private.property_reservations where property_id=$1 or agency_id=$2)
+    or exists(select 1 from kh_private.agency_mandate_requests where property_id=$1 or agency_id=$2)
+    or exists(select 1 from kh_private.agency_property_changes where property_id=$1 or agency_id=$2)
+    or exists(select 1 from kh_private.property_aliases where property_id=$1 or canonical_id=$1)
+    or exists(select 1 from kh_private.agency_property_moderation_holds where property_id=$1)
+    or exists(select 1 from kh_private.assisted_agency_links where agency_id=$2)
+    blocked`,[receiptDraftId,receiptAgencyId])).rows[0].blocked;
+  assert.equal(forbidden,false,'no live/foreign/business/media dependency');
+  const detached=await pauseDb.query('update kh_private.agencies set logo_path=null,version=version+1,updated_at=now() where id=$1 and logo_path=$2 and version=$3 returning id,version',[receiptAgencyId,receiptLogoPath,a.version]);
+  assert.equal(detached.rowCount,1);
+  // Journal previous/new version, exact path and privileged OFF-detach reason.
+  await pauseDb.query('commit');
+} catch(error) { await pauseDb.query('rollback'); throw error; }
+// Now remove ONLY receiptLogoPath through Storage using explicitly labeled
+// service cleanup (no user subject), verify info/sign/read absent, then Auth cleanup.
+// Keep the worker paused and module OFF throughout this failure path.
+```
+
+The Storage DELETE trigger also rejects referenced logos for privileged cleanup and serializes at the agency lock. It allows unreferenced service cleanup without requiring a member JWT or switching ON. No trigger disabling, broad SQL deletion or application-provenance change is involved. Normal success can detach via update_profile before Storage remove; both paths record exact affected counts. The local regression `I3 failure OFF rejects referenced logo and permits exact privileged detach cleanup` proves the trigger/SQL ordering; root still verifies actual hosted Storage bytes and transport.
 
 While worker remains paused, first delete all receipt-owned unattached Storage objects via Storage `remove([exactPath])` with the owning authorized JWT (or explicitly labeled service cleanup). Verify info/sign/read absent, including public URL where applicable. Never SQL-delete `storage.objects` metadata. Sign out only newly created sessions; delete fixture Auth users by exact recorded IDs through Auth Admin (never protected owner). Auth deletion may create agency suspension/audit events; therefore final SQL cleanup follows Auth cleanup. Capture those exact event IDs by receipt-owned agency/subject/actor IDs. Keep root owner approval request IDs in the receipt.
 

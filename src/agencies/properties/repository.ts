@@ -93,6 +93,12 @@ export function createAgencyPropertyRepository(client: SupabaseClient, media?: A
         return item;
     }
     return {
+        async findMatches(input,c){
+            uuid(input.clientRequestId);
+            const raw=object(await rpc('kh_find_agency_property_matches',{p_agency_id:uuid(c.agencyId),p_payload:{draft:{province:input.draft.province,location:input.draft.location,type:input.draft.type,bedrooms:input.draft.bedrooms},clientRequestId:input.clientRequestId,...(input.propertyId?{propertyId:uuid(input.propertyId)}:{})}},c));
+            if(!Array.isArray(raw.items)||raw.items.length>20)throw invalid();
+            return {items:raw.items.map(decodeDuplicateCandidate),review:object(raw.review)};
+        },
         listAuthorizations:(offset,c)=>page('kh_list_current_agency_mandates',offset,uuid(c.agencyId),c,decodeCurrentMandate),
         listPersonalAuthorizations:(offset,c)=>page('kh_list_current_agency_mandates',offset,null,c,decodeCurrentMandate),
         listMandates: (offset, c) => page('kh_list_agency_mandate_requests', offset, uuid(c.agencyId), c, decodeMandate),
@@ -191,6 +197,7 @@ export function createAgencyPropertyRepository(client: SupabaseClient, media?: A
                     sourceReference: input.sourceReference.trim(),
                     consentReference: input.consentReference.trim(),
                     clientRequestId: request,
+                    ...(input.duplicateDecision?{duplicateDecision:input.duplicateDecision}:{}),
                     ...(input.propertyId ? { propertyId: input.propertyId, expectedVersion: version(input.expectedVersion) } : {}),
                 },
             }, context), context);

@@ -17,7 +17,9 @@ export interface AgencyProperty {
     publicationPolicy: AgencyPublicationPolicy;
     moderationHold: boolean;
 }
+export interface AgencyPropertyMatches {items:DuplicateCandidate[];review:Record<string,unknown>}
 export interface AgencyPropertySaveInput {
+    duplicateDecision?:Record<string,unknown>;
     draft: ListingDraft;
     publicationIntent: 'draft' | 'submit';
     propertyId?: string;
@@ -78,6 +80,7 @@ export interface MergePropertyDuplicates {
     clientRequestId: string;
 }
 export interface AgencyPropertyRepository {
+    findMatches(input:{draft:ListingDraft;propertyId?:string;clientRequestId:string},context:AgencyRequestContext):Promise<AgencyPropertyMatches>;
     listAuthorizations(offset:number,context:AgencyRequestContext):Promise<Page<CurrentAgencyMandate>>;
     listPersonalAuthorizations(offset:number,context:MessagingRequestContext):Promise<Page<CurrentAgencyMandate>>;
     list(offset: number, context: AgencyRequestContext): Promise<Page<AgencyProperty>>;

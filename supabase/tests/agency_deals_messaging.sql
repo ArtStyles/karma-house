@@ -1,7 +1,9 @@
 create function pg_temp.kh_business_fixture(a uuid,actor uuid) returns uuid language plpgsql as $$
-declare r uuid:=gen_random_uuid();x jsonb;begin
+declare r uuid:=gen_random_uuid();x jsonb;body jsonb;begin
  perform pg_temp.kh_as(actor);insert into storage.objects(bucket_id,name)values('property-photos',actor||'/'||r||'/photo.jpg');
- x:=public.kh_agency_save_property(actor,a,jsonb_build_object('clientRequestId',r,'sourceReference',r,'consentReference','Consentimiento comprobado','publicationIntent','submit','draft',jsonb_build_object('title','Casa de conversaciones','location','Vedado','province','La Habana','type','Casa','price',30000,'bedrooms',2,'bathrooms',1,'description','Vivienda sintética para los mensajes privados.','photoPaths',jsonb_build_array(actor||'/'||r||'/photo.jpg'))));return (x#>>'{property,id}')::uuid;end $$;
+ body:=jsonb_build_object('clientRequestId',r,'sourceReference',r,'consentReference','Consentimiento comprobado','publicationIntent','submit','draft',jsonb_build_object('title','Casa de conversaciones','location','Vedado','province','La Habana','type','Casa','price',30000,'bedrooms',2,'bathrooms',1,'description','Vivienda sintética para los mensajes privados.','photoPaths',jsonb_build_array(actor||'/'||r||'/photo.jpg')));
+ body:=body||jsonb_build_object('duplicateDecision',public.kh_find_agency_property_matches(actor,a,body)->'review');
+ x:=public.kh_agency_save_property(actor,a,body);return (x#>>'{property,id}')::uuid;end $$;
 do $$ declare a uuid:=pg_temp.kh_agency_signup(20);b uuid:=pg_temp.kh_agency_signup(21);
  aa uuid:='45000000-0000-4000-8000-000000000020';bb uuid:='45000000-0000-4000-8000-000000000021';buyer uuid:='45000000-0000-4000-8000-000000000002';manager uuid:='45000000-0000-4000-8000-000000000004';other_manager uuid:='45000000-0000-4000-8000-000000000005';owner uuid:='45000000-0000-4000-8000-000000000001';pid uuid;other_pid uuid;q jsonb;c jsonb;c2 jsonb;c3 jsonb;d jsonb;message jsonb;payload jsonb;request uuid:=gen_random_uuid();before_users integer;begin
  perform pg_temp.kh_agency_approve(a);perform pg_temp.kh_agency_approve(b);pid:=pg_temp.kh_business_fixture(a,aa);

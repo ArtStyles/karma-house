@@ -92,7 +92,10 @@ create function kh_private.agency_deal_access(actor uuid,agency uuid,deal uuid) 
 create function kh_private.agency_prepare_deal(actor uuid,agency uuid,deal uuid) returns kh_private.agency_deals language plpgsql security definer set search_path='' as $$
  declare d kh_private.agency_deals;begin perform kh_private.agency_prepare_account(actor);select * into d from kh_private.agency_deals where id=deal;
  if d.id is null or not coalesce(kh_private.agency_deal_visible(actor,agency,d),false) then raise exception 'KH_AGENCY_DEAL_NOT_FOUND' using errcode='42501';end if;return d;end $$;
-create function kh_private.agency_deal_json(d kh_private.agency_deals) returns jsonb language sql stable set search_path='' as $$select jsonb_build_object('id',d.id,'agencyId',d.agency_id,'propertyId',d.property_id,'cycleId',d.cycle_id,'buyerId',d.buyer_id,'contactKind',d.contact_kind,'privateContact',d.private_contact,'assigneeId',d.assignee_id,'stage',d.stage,'version',d.version,'closedReason',d.closed_reason)$$;
+create function kh_private.agency_deal_json(d kh_private.agency_deals) returns jsonb language sql stable set search_path='' as $$select jsonb_build_object('id',d.id,'agencyId',d.agency_id,'propertyId',d.property_id,'cycleId',d.cycle_id,'buyerId',d.buyer_id,'contactKind',d.contact_kind,'privateContact',d.private_contact,'assigneeId',d.assignee_id,'stage',d.stage,'version',d.version,'closedReason',d.closed_reason,
+ 'buyerName',coalesce(d.private_contact->>'name',(select nullif(btrim(display_name),'') from public.profiles where id=d.buyer_id),case when d.buyer_id is null then 'Cuenta eliminada' else 'Interesado con cuenta' end),
+ 'canonicalPropertyId',kh_private.agency_effective_property(d.property_id),
+ 'propertyTitle',coalesce((select title from public.properties where id=kh_private.agency_effective_property(d.property_id)),(select title from kh_private.agency_property_identities where property_id=d.property_id),'Vivienda retirada'))$$;
 create function kh_private.agency_message_json(m kh_private.agency_messages) returns jsonb language sql stable set search_path='' as $$select jsonb_build_object('id',m.id,'conversationId',m.conversation_id,'seq',m.seq,'clientMessageId',m.client_message_id,'senderId',m.sender_id,'body',m.body,'createdAt',m.created_at)$$;
 -- A prior successful block proves this actor really encountered this target in
 -- this conversation. It permits only removal of an existing own block; it does
@@ -164,6 +167,7 @@ create function public.kh_start_agency_conversation(p_actor_id uuid,p_agency_id 
  r:=kh_private.agency_receipt(p_actor_id,p_agency_id,'start_conversation',p_payload);
  if r is not null then select * into c from kh_private.agency_conversations where id=(r->>'id')::uuid;return kh_private.agency_conversation_json(p_actor_id,null,c);end if;
  d:=kh_private.agency_make_deal(p_actor_id,p_agency_id,p_payload,true);
+ if not exists(select 1 from kh_private.agency_conversations where deal_id=d.id) then perform kh_private.agency_check_contact_budget(p_actor_id);end if;
  insert into kh_private.agency_conversations(deal_id)values(d.id)on conflict(deal_id) do nothing;select * into c from kh_private.agency_conversations where deal_id=d.id;
  return kh_private.agency_remember(p_actor_id,p_agency_id,'start_conversation',p_payload,kh_private.agency_conversation_json(p_actor_id,null,c));end $$;
 create function public.kh_assign_agency_deal(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
@@ -304,3 +308,18 @@ do $$declare t text;f record;begin
  execute format('revoke all on function %s from public,anon,authenticated',f.signature);if f.nspname='public' then execute format('grant execute on function %s to authenticated',f.signature);end if;end loop;
 end $$;
 grant execute on function public.kh_public_property_contact(uuid) to anon;
+
+-- Share metadata is a current contact destination, never a sales attribution.
+create function public.kh_public_agency_share_context(p_property_id uuid,p_agency_id uuid,p_manager_id uuid default null) returns jsonb language sql stable security definer set search_path='' as $$
+ select jsonb_build_object('propertyId',p.id,'agencyId',p_agency_id,'managerId',p_manager_id) from public.properties p
+ where p.id=kh_private.agency_effective_property(p_property_id) and kh_private.agency_flow_live(p_agency_id,p.id)
+ and (p_manager_id is null or kh_private.agency_contact_member(p_agency_id,p_manager_id))
+$$;
+create function public.kh_agency_share_context(p_actor_id uuid,p_agency_id uuid,p_property_id uuid,p_manager_id uuid default null) returns jsonb language plpgsql security definer set search_path='' as $$
+declare r jsonb;begin
+ perform kh_private.agency_require_enabled();perform kh_private.agency_flow_locks(p_actor_id,p_agency_id,p_property_id,array[p_manager_id]);perform kh_private.agency_actor(p_actor_id,p_agency_id,'manager');
+ r:=public.kh_public_agency_share_context(p_property_id,p_agency_id,p_manager_id);if r is null then raise exception 'KH_AGENCY_PROPERTY_CLOSED';end if;return r;
+end$$;
+revoke all on function public.kh_public_agency_share_context(uuid,uuid,uuid),public.kh_agency_share_context(uuid,uuid,uuid,uuid) from public,anon,authenticated;
+grant execute on function public.kh_public_agency_share_context(uuid,uuid,uuid) to anon,authenticated;
+grant execute on function public.kh_agency_share_context(uuid,uuid,uuid,uuid) to authenticated;

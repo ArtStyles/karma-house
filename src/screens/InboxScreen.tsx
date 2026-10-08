@@ -10,6 +10,7 @@ import {agencyError} from '../agencies/domain';
 import {createAgencyMessagingRepository} from '../agencies/messaging/repository';
 import type {AgencyConversation} from '../agencies/messaging/types';
 import {supabase} from '../lib/supabase';
+import {startAgencyPoll} from '../agencies/messaging/live';
 import { useMessagingActivity } from '../components/messaging/useMessagingActivity';
 import { useMessaging } from '../messaging/MessagingProvider';
 import type { Conversation } from '../messaging/types';
@@ -61,12 +62,14 @@ function AgencyInbox(){
  const current=useRef(scope);current.current=scope;const epoch=useRef(0),loading=useRef(false);
  const[state,setState]=useState<{scope:string;items:AgencyConversation[];hasMore:boolean;error:string}>({scope,items:[],hasMore:false,error:''});
  const visible=state.scope===scope?state:null;
+ const active=useMessagingActivity();
  const load=useCallback(async(append=false)=>{if(!repo||!auth.user||loading.current)return;loading.current=true;const version=epoch.current;let ctx:ReturnType<typeof w.captureAccountContext>|undefined;
-  try{ctx=staff?w.captureAgencyReadContext():w.captureAccountContext();const page=await repo.list(append&&state.scope===scope?state.items.length:0,ctx);ctx.checkpoint();if(version===epoch.current&&current.current===scope)setState(old=>({scope,items:append?[...(old.scope===scope?old.items:[]),...page.items.filter(x=>!old.items.some(y=>x.id===y.id))]:page.items,hasMore:page.hasMore,error:''}))}
+  try{ctx=staff?w.captureAgencyReadContext():w.captureAccountContext();const offset=append&&state.scope===scope?state.items.length:0;let page=await repo.list(offset,ctx);if(!append&&state.scope===scope){const target=state.items.length;while(page.hasMore&&page.items.length<target){const next=await repo.list(page.items.length,ctx);page={items:[...page.items,...next.items],hasMore:next.hasMore};}}ctx.checkpoint();if(version===epoch.current&&current.current===scope)setState(old=>({scope,items:append?[...(old.scope===scope?old.items:[]),...page.items.filter(x=>!old.items.some(y=>x.id===y.id))]:page.items,hasMore:page.hasMore,error:''}))}
   catch(e){if(version===epoch.current&&current.current===scope)setState({scope,items:[],hasMore:false,error:agencyError(e)})}finally{ctx?.release();if(version===epoch.current)loading.current=false}
  },[repo,auth.user?.id,staff,w.captureAccountContext,w.captureAgencyReadContext,scope,state.scope,state.items.length]);
  const latest=useRef(load);latest.current=load;
  useFocusEffect(useCallback(()=>{epoch.current++;loading.current=false;setState({scope,items:[],hasMore:false,error:''});void latest.current();return()=>{epoch.current++;loading.current=false}},[scope]));
+ useEffect(()=>{if(!active||!auth.user||(staff&&!w.activeAgencyId))return;return startAgencyPoll(()=>latest.current());},[active,scope,auth.user?.id,staff,w.activeAgencyId]);
  if(!auth.user)return null;
  return <View style={{gap:10,paddingBottom:20}}><Text style={s.name}>Conversaciones con inmobiliarias</Text><View style={s.line}><Pill label="Como comprador" active={!staff} onPress={()=>setStaff(false)}/>{w.activeAgencyId&&<Pill label="Equipo de mi agencia" active={staff} onPress={()=>setStaff(true)}/>}</View>
   {visible?.error&&<Notice error>{visible.error}</Notice>}{visible?.items.map(c=><Pressable key={c.id} accessibilityRole="button" style={s.card} onPress={()=>router.push({pathname:'/agency-conversation/[id]',params:{id:c.id,...(staff?{agencyId:c.agencyId}:{})}})}><View style={s.copy}><Text style={s.name}>{c.agencyName}</Text><Text style={s.property}>{c.propertyTitle}</Text><Text style={s.preview}>{c.unreadCount} sin leer · {c.closedReason?'Expediente cerrado':c.assigneeId?'Con responsable':'Cola de la agencia'}</Text></View></Pressable>)}

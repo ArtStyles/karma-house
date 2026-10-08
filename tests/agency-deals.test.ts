@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { decodeAgencyDeal, normalizeExternalContact } from '../src/agencies/deals/domain.ts';
 import { createAgencyDealRepository } from '../src/agencies/deals/repository.ts';
 const id = (n: number) => `45000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
-const deal = { id: id(1), agencyId: id(2), propertyId: id(3), cycleId: id(4), buyerId: id(5), contactKind: 'account', privateContact: null, assigneeId: null, stage: 'inquiry', version: 1, closedReason: null };
+const deal = { id: id(1), agencyId: id(2), propertyId: id(3), canonicalPropertyId: id(3), propertyTitle: 'Casa', buyerName: 'Ana', cycleId: id(4), buyerId: id(5), contactKind: 'account', privateContact: null, assigneeId: null, stage: 'inquiry', version: 1, closedReason: null };
 const context = { userId: id(6), agencyId: id(2), generation: 1, accessToken: 'pinned', signal: new AbortController().signal, checkpoint() { } };
 test('external contact requires consent and validates optional phone', () => {
     assert.deepEqual(normalizeExternalContact({ name: ' Ana Pérez ', phone: null, consentReference: ' Autorización verbal 1 ' }), { name: 'Ana Pérez', phone: null, consentReference: 'Autorización verbal 1' });

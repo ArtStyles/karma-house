@@ -9,17 +9,17 @@
     {
       "file": "20261007000200_agency_registration_memberships.sql",
       "version": "20261007000200",
-      "sha256": "04b05b5e24827be17a087cdeac22fa35534a5d23c836b3d404b481b3af116025"
+      "sha256": "293ce0423339bf63b3ec64d63624a50ec87938a1c0b2060b41e9a0ce555b06fc"
     },
     {
       "file": "20261007000300_agency_property_origins.sql",
       "version": "20261007000300",
-      "sha256": "3649344551c2513044ccad14de6d313d96d09709f476d1a97316e7fc8515e350"
+      "sha256": "4418f34a323c4bc25a17b35a2b4538af7e27986c10fac499f471f1329ecaad20"
     },
     {
       "file": "20261007000400_agency_mandates_aliases.sql",
       "version": "20261007000400",
-      "sha256": "5a5d0c254effb5ba6210832c717ce6293a76f4137e31a6bf30fdd7eb2555770a"
+      "sha256": "5b59e8486688867fa334fd24ae31748d835514d3274a11f0e84ce4aceb6854f2"
     },
     {
       "file": "20261007000500_agency_lifecycle_guards.sql",
@@ -29,12 +29,12 @@
     {
       "file": "20261007000600_agency_deals_messaging.sql",
       "version": "20261007000600",
-      "sha256": "908121cd4d2b16aa591eaa2118310f271b8f6893fab69766cc6a00bfa5acb59f"
+      "sha256": "414406e3b58799634ec4f323292359f7818c7a0a4e81b13acd96d10a5937d35e"
     },
     {
       "file": "20261007000700_agency_proposals_scheduling.sql",
       "version": "20261007000700",
-      "sha256": "6480576f687500530a43e430eef91de382febe1ea004889413b750d5dfde33a2"
+      "sha256": "b6fcf8e3bbac26920b4818371845bf1d6cc521242fdf221b4671e756178d6838"
     },
     {
       "file": "20261007000800_agency_followups.sql",
@@ -62,6 +62,7 @@
       "kh_private.agency_asset_write",
       "kh_private.agency_before_auth_delete",
       "kh_private.agency_change_member",
+      "kh_private.agency_check_contact_budget",
       "kh_private.agency_check_occupancy",
       "kh_private.agency_common_flow_mutex",
       "kh_private.agency_contact_member",
@@ -83,6 +84,7 @@
       "kh_private.agency_lock",
       "kh_private.agency_lock_accounts",
       "kh_private.agency_lock_many",
+      "kh_private.agency_logo_delete_guard",
       "kh_private.agency_logo_scope",
       "kh_private.agency_make_deal",
       "kh_private.agency_media_read",
@@ -98,8 +100,10 @@
       "kh_private.agency_personal_slot_delete",
       "kh_private.agency_prepare_account",
       "kh_private.agency_prepare_deal",
+      "kh_private.agency_profile_input",
       "kh_private.agency_property_access",
       "kh_private.agency_property_json",
+      "kh_private.agency_property_matches",
       "kh_private.agency_proposal_event",
       "kh_private.agency_proposal_json",
       "kh_private.agency_publication_policy",
@@ -199,6 +203,7 @@
       "public.kh_agency_registration_available",
       "public.kh_agency_review_detail",
       "public.kh_agency_save_property",
+      "public.kh_agency_share_context",
       "public.kh_agency_verification_request",
       "public.kh_assign_agency_deal",
       "public.kh_assign_agency_deal_pre_followups",
@@ -213,10 +218,12 @@
       "public.kh_decide_agency_property_change",
       "public.kh_decide_agency_sale",
       "public.kh_decide_personal_sale",
+      "public.kh_find_agency_property_matches",
       "public.kh_finish_agency_task",
       "public.kh_get_agency_conversation",
       "public.kh_get_agency_deal",
       "public.kh_get_agency_deal_conversation_id",
+      "public.kh_get_agency_profile",
       "public.kh_get_agency_reservation",
       "public.kh_get_listing_management",
       "public.kh_invite_agency_member",
@@ -246,6 +253,8 @@
       "public.kh_property_visit_occupancy",
       "public.kh_propose_agency_property_change",
       "public.kh_public_agency_context",
+      "public.kh_public_agency_profile",
+      "public.kh_public_agency_share_context",
       "public.kh_public_property_contact",
       "public.kh_read_agency_conversation",
       "public.kh_read_notification",
@@ -282,6 +291,7 @@
       "public.kh_start_agency_conversation",
       "public.kh_submit_agency_application",
       "public.kh_submit_property",
+      "public.kh_update_agency_profile",
       "public.kh_withdraw_agency_mandate"
     ],
     "tables": [
@@ -355,6 +365,11 @@
       },
       {
         "table": "storage.objects",
+        "kind": "trigger",
+        "name": "kh_agency_logo_delete_guard"
+      },
+      {
+        "table": "storage.objects",
         "kind": "policy",
         "name": "kh_agency_photo_read"
       }
@@ -388,7 +403,7 @@
         "anon": true,
         "authenticated": true,
         "service_role": false,
-        "sha256": "7d32b0c6df0a51dd406aca40a15c077b1081ef83e86aef78d5fc4a7b5bcbefe0"
+        "sha256": "c923ccdb7eacdb4254ca9ba68c3e659e53ae307ab8b03ffa53d734b751cf7810"
       },
       {
         "signature": "kh_private.agency_asset_unreferenced(p_path text)",
@@ -402,7 +417,7 @@
         "anon": false,
         "authenticated": true,
         "service_role": false,
-        "sha256": "a8ff8ef24ee95de07654700e75ce1bab94cea3c810b7669cc19ec1b298e6e408"
+        "sha256": "a16cb6e32dafcfef53a4035c43560b8439e57f0a4bf53861129d1977c030969b"
       },
       {
         "signature": "kh_private.agency_before_auth_delete()",
@@ -417,6 +432,13 @@
         "authenticated": false,
         "service_role": false,
         "sha256": "c2a80ce6e0e94e0dad8b123df7fd00511cc62adef9463d83644e6c44b1aa6b12"
+      },
+      {
+        "signature": "kh_private.agency_check_contact_budget(actor uuid)",
+        "anon": false,
+        "authenticated": false,
+        "service_role": false,
+        "sha256": "b0593f1ac92a5e2f97ef63f35df653996444c8a7f5e1435f6cc95e5bfe4405d6"
       },
       {
         "signature": "kh_private.agency_check_occupancy(pid uuid, manager uuid, starts timestamp with time zone, ends timestamp with time zone, joint uuid)",
@@ -458,7 +480,7 @@
         "anon": false,
         "authenticated": false,
         "service_role": false,
-        "sha256": "e204f5ed27339f400a40446200e7291eb257302d90753bd77a515aaa73467f59"
+        "sha256": "422426988d574bfcb0eef0b899dca8bf8f09dd1491f321ac83605356cd65fadb"
       },
       {
         "signature": "kh_private.agency_deal_visible(actor uuid, agency uuid, d kh_private.agency_deals)",
@@ -566,6 +588,13 @@
         "sha256": "e6e6b5cf66f8af3513ba52480aa12c9e4722ac82b964575528d2e8a73ea868ad"
       },
       {
+        "signature": "kh_private.agency_logo_delete_guard()",
+        "anon": false,
+        "authenticated": false,
+        "service_role": false,
+        "sha256": "dbdb9359b0914a7590b5c65efa6f518dd622327e8081d0c0173972f2fb3e9eca"
+      },
+      {
         "signature": "kh_private.agency_logo_scope(p_path text)",
         "anon": false,
         "authenticated": false,
@@ -671,6 +700,13 @@
         "sha256": "4d51fe3745b42eac0a213e6bba387e6d6b601718cc52b18c638def0951ed97c2"
       },
       {
+        "signature": "kh_private.agency_profile_input(a uuid)",
+        "anon": false,
+        "authenticated": false,
+        "service_role": false,
+        "sha256": "eca5ad525b5b61e6fc953f6766862f44d51d1e8294d35933f7f257bc5c062785"
+      },
+      {
         "signature": "kh_private.agency_property_access(p_actor uuid, p_agency uuid, p_property uuid, p_edit boolean)",
         "anon": false,
         "authenticated": false,
@@ -683,6 +719,13 @@
         "authenticated": false,
         "service_role": false,
         "sha256": "a6fa329ab21e242d2a510ed704d11ca95a23cd58ad1a46b20f4af8d6cebec0c1"
+      },
+      {
+        "signature": "kh_private.agency_property_matches(payload jsonb)",
+        "anon": false,
+        "authenticated": false,
+        "service_role": false,
+        "sha256": "231eb36ba3718fce6fc6beea7c32624a9e1772b1f45f5b2cf6a5bcec0c24dc50"
       },
       {
         "signature": "kh_private.agency_proposal_event(p kh_private.agency_proposals, actor uuid, party text, action text, external_response jsonb)",
@@ -1214,7 +1257,7 @@
         "anon": false,
         "authenticated": false,
         "service_role": false,
-        "sha256": "b3cd919b6fd3640339a73e2c0f31d98ae92ea3ebddf8d98009793936c8ca8625"
+        "sha256": "d189ed248e5cac220f112ea69aaac5d170f14a12a8d8f46a4a5f06b9f12a8534"
       },
       {
         "signature": "kh_private.terminate_agency_member_flows(p_agency_id uuid, p_user_id uuid, p_reason text)",
@@ -1389,7 +1432,14 @@
         "anon": false,
         "authenticated": true,
         "service_role": false,
-        "sha256": "33bd16945d4bb40776ab4861c5f0c7d742a1ab3a3b965461dcb0bab0d6002684"
+        "sha256": "716aa75ada82731a1cd30fa3a0f21e1fabbb2fc62e330a7cb3a5121a829f3b99"
+      },
+      {
+        "signature": "public.kh_agency_share_context(p_actor_id uuid, p_agency_id uuid, p_property_id uuid, p_manager_id uuid)",
+        "anon": false,
+        "authenticated": true,
+        "service_role": false,
+        "sha256": "ba5dd1290b9ec9f57e38a079e72f02a4c272a1f2084d36ed65c19d62ce7b91b8"
       },
       {
         "signature": "public.kh_agency_verification_request(p_actor_id uuid, p_agency_id uuid)",
@@ -1483,6 +1533,13 @@
         "sha256": "c50c451d8eb5312b676efd5925b211e5450a9967b115c249f5efb00a83548d54"
       },
       {
+        "signature": "public.kh_find_agency_property_matches(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+        "anon": false,
+        "authenticated": true,
+        "service_role": false,
+        "sha256": "3d386d84898c45c6593dc1c8091b9f4cea99bbd71567eaa73f77fea60e6affad"
+      },
+      {
         "signature": "public.kh_finish_agency_task(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
         "anon": false,
         "authenticated": true,
@@ -1509,6 +1566,13 @@
         "authenticated": true,
         "service_role": false,
         "sha256": "053d2fec672d12a1957f191f57571485fb1656c0be27e72613506e800324a228"
+      },
+      {
+        "signature": "public.kh_get_agency_profile(p_actor_id uuid, p_agency_id uuid)",
+        "anon": false,
+        "authenticated": true,
+        "service_role": false,
+        "sha256": "cd2cf7e33aefa46ae26cfb4bdb50f82d3681447a8b8ba2c27a8fe6145d7f9e82"
       },
       {
         "signature": "public.kh_get_agency_reservation(p_actor_id uuid, p_agency_id uuid, p_property_id uuid)",
@@ -1711,7 +1775,21 @@
         "anon": true,
         "authenticated": true,
         "service_role": false,
-        "sha256": "cd762de0d9d0a0e21993ef16a485d1501cd7398fc86e9f01724730151a750706"
+        "sha256": "3eb505c546d921fcec938068c107cd7736c77a2a49dae597396daa0c2a78053e"
+      },
+      {
+        "signature": "public.kh_public_agency_profile(p_agency_id uuid)",
+        "anon": true,
+        "authenticated": true,
+        "service_role": false,
+        "sha256": "a6c5631daddc01941522e492b3c830224ba311c264b275c0c940578a359a3ddd"
+      },
+      {
+        "signature": "public.kh_public_agency_share_context(p_property_id uuid, p_agency_id uuid, p_manager_id uuid)",
+        "anon": true,
+        "authenticated": true,
+        "service_role": false,
+        "sha256": "75df2745fad10749cb92f1bba249016df480e482989eb58ff5aa117e9967a4d4"
       },
       {
         "signature": "public.kh_public_property_contact(p_property_id uuid)",
@@ -1746,7 +1824,7 @@
         "anon": false,
         "authenticated": true,
         "service_role": false,
-        "sha256": "7eec2f5c1c347fe878a07653f930e46a14e214080d3e967ac335cd88d24d088a"
+        "sha256": "33f80a9641bf17878b76429a8e92bee12e41fda92125bb1e690be8a2d500613c"
       },
       {
         "signature": "public.kh_register_push_device(p_actor_id uuid, p_payload jsonb)",
@@ -1935,7 +2013,7 @@
         "anon": false,
         "authenticated": true,
         "service_role": false,
-        "sha256": "84375a76104c147caf8ffcd283b2d043cb20bc2b10b12e88c42cb121750f4fb5"
+        "sha256": "64dbb7e2163b4fcfa97ba3c1290c2b5b0a7b9d3ae1c8563771b4ee3a706debef"
       },
       {
         "signature": "public.kh_submit_agency_application(p_actor_id uuid, p_payload jsonb)",
@@ -1952,6 +2030,13 @@
         "sha256": "1b1e1806e4554f42759c19cc3f4c0c1b6bb6767302977223da2de6d76e4b10bb"
       },
       {
+        "signature": "public.kh_update_agency_profile(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+        "anon": false,
+        "authenticated": true,
+        "service_role": false,
+        "sha256": "421c6b2a13ef28917e575ca2deb0b22789109875557a636b29694a3fb24c147b"
+      },
+      {
         "signature": "public.kh_withdraw_agency_mandate(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
         "anon": false,
         "authenticated": true,
@@ -1962,7 +2047,7 @@
     "tables": [
       {
         "name": "kh_private.agencies",
-        "sha256": "0b564f9eb2fa2102de6d98e23d0e249a0754937112390829059d070ca0f2e1a6",
+        "sha256": "8dfe2acfee8df2a20c226a243501b97666956588c52dbe3e6ab5217758d2d58f",
         "grants": [
           {
             "r": "anon",
@@ -2070,7 +2155,7 @@
             "allowed": true
           }
         ],
-        "columnGrantsSha256": "128f048618a45c22952803639dc32f394280cdc84f3a13261d788333d3d46103"
+        "columnGrantsSha256": "50329d74741a6e6a51f43a34a2a2c0862dc4343ef8f25676396caf7269878f30"
       },
       {
         "name": "kh_private.agency_applications",
@@ -6583,6 +6668,12 @@
         "kind": "policy",
         "name": "kh_agency_assets_read",
         "sha256": "ec9f5047581fdff311e616d3b9e82b5e457be33c6385ff3420cb15c98682ae80"
+      },
+      {
+        "table": "storage.objects",
+        "kind": "trigger",
+        "name": "kh_agency_logo_delete_guard",
+        "sha256": "de6a8eba04e671cb41bbd69fd6228f6cd7690573b5f6dc476149d4acc479917f"
       },
       {
         "table": "storage.objects",

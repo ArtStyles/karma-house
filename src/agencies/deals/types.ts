@@ -9,6 +9,9 @@ export interface AgencyDeal {
     id: string;
     agencyId: string;
     propertyId: string;
+    canonicalPropertyId: string;
+    propertyTitle: string;
+    buyerName: string;
     cycleId: string;
     buyerId: string | null;
     contactKind: 'account' | 'external';
