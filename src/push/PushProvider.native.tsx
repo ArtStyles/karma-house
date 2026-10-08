@@ -34,7 +34,7 @@ function AndroidPushProvider({ children }: PropsWithChildren) {
   const controller = useMemo(() => createPushController({
     store: nativeInstallationStore, adapter: nativePushAdapter, projectId: pushProjectId,
     repository: createPushRepository(process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() ?? '', process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ?? '', createDeadlineFetch()),
-    navigate: target => navigator.current(target),
+    navigate: (target,checkpoint) => navigator.current(target,checkpoint),
     refreshSummary: () => summary.current(),
   }), []);
   const state = useSyncExternalStore(controller.subscribe, controller.getState, controller.getState);

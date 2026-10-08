@@ -18,14 +18,14 @@ function workspace(){
 }
 test('account invitations and buyer history clear staff context without selecting a fictitious membership',async()=>{
  const {w,adapter}=workspace();await w.refreshAgencies();await w.setActiveAgency(agency);const old=w.captureAgencyContext();
- assert.equal(await prepareAgencyNotificationTarget({route:'team',agencyId:null,dealId:null},adapter),'/agency-team');assert.throws(()=>old.checkpoint());assert.equal(w.getSnapshot().activeAgencyId,null);
- assert.equal(await prepareAgencyNotificationTarget({route:'buyer_conversation',agencyId:null,dealId:agency},adapter),`/agency-conversation/${agency}`);
- assert.equal(await prepareAgencyNotificationTarget({route:'account_notice',agencyId:null,dealId:null},adapter),'/notifications');
+ assert.equal(await preparedPath({route:'team',agencyId:null,dealId:null},adapter),'/agency-team');assert.throws(()=>old.checkpoint());assert.equal(w.getSnapshot().activeAgencyId,null);
+ assert.equal(await preparedPath({route:'buyer_conversation',agencyId:null,dealId:agency},adapter),`/agency-conversation/${agency}`);
+ assert.equal(await preparedPath({route:'account_notice',agencyId:null,dealId:null},adapter),'/notifications');
  w.setSession(null);await assert.rejects(prepareAgencyNotificationTarget({route:'reviews',agencyId:null,dealId:null},adapter),/SESSION/);
 });
 test('staff notification opens only after a fresh membership validation and aborts prior context',async()=>{
  const {w,adapter,repository}=workspace();await w.refreshAgencies();await w.setActiveAgency(agency);const old=w.captureAgencyContext();
- assert.equal(await prepareAgencyNotificationTarget({route:'deal',agencyId:agency,dealId:user},adapter),`/agency-deal/${user}`);assert.throws(()=>old.checkpoint());
+ assert.equal(await preparedPath({route:'deal',agencyId:agency,dealId:user},adapter),`/agency-deal/${user}`);assert.throws(()=>old.checkpoint());
  repository.membership=async()=>null;await assert.rejects(prepareAgencyNotificationTarget({route:'verification',agencyId:agency,dealId:null},adapter));assert.equal(w.getSnapshot().activeAgencyId,null);
 });
 test('an account switch during membership validation cannot navigate using a stale response',async()=>{
@@ -33,3 +33,35 @@ test('an account switch during membership validation cannot navigate using a sta
  repository.membership=async()=>{w.setSession({userId:agency,accessToken:'other'});return {agencyId:agency,userId:user,state:'active',role:'admin',version:1}};
  await assert.rejects(prepareAgencyNotificationTarget({route:'deal',agencyId:agency,dealId:user},adapter));assert.equal(w.getSnapshot().activeAgencyId,null);
 });
+
+// The legacy path branch models the old hook's unguarded router.push after await.
+// A prepared dispatch must retain authorization through this exact final handoff.
+function dispatchPrepared(prepared:any,routes:string[],outer?:()=>void){
+ if(typeof prepared==='string')routes.push(prepared);
+ else prepared.dispatch((path:string)=>routes.push(path),outer);
+}
+test('sign-out in the microtask after preparation prevents final agency navigation',async()=>{
+ const {w,adapter}=workspace(),routes:string[]=[];
+ const prepared=await prepareAgencyNotificationTarget({route:'deal',agencyId:agency,dealId:user},adapter);
+ queueMicrotask(()=>w.setSession(null));await Promise.resolve();
+ assert.equal(w.getSessionUserId(),null);
+ assert.throws(()=>dispatchPrepared(prepared,routes),/CONTEXT_CHANGED/);assert.deepEqual(routes,[]);
+});
+test('a staff generation change after preparation prevents final navigation even for the same account',async()=>{
+ const {w,adapter}=workspace(),routes:string[]=[];
+ const prepared=await prepareAgencyNotificationTarget({route:'deal',agencyId:agency,dealId:user},adapter);
+ await new Promise<void>((resolve,reject)=>queueMicrotask(()=>{w.setActiveAgency(agency).then(resolve,reject)}));
+ assert.equal(w.getSnapshot().activeAgencyId,agency);
+ assert.equal(w.getSessionUserId(),user);
+ assert.throws(()=>dispatchPrepared(prepared,routes),/CONTEXT_CHANGED/);assert.deepEqual(routes,[]);
+});
+test('inbox resolution guard is checked inside the final synchronous dispatch before routing',async()=>{
+ const {adapter}=workspace(),routes:string[]=[];
+ const prepared=await prepareAgencyNotificationTarget({route:'team',agencyId:null,dealId:null},adapter);
+ let current=true;queueMicrotask(()=>{current=false});await Promise.resolve();
+ assert.throws(()=>dispatchPrepared(prepared,routes,()=>{if(!current)throw Error('KH_ACCOUNT_CHANGED')}),/ACCOUNT_CHANGED/);
+ assert.deepEqual(routes,[]);
+});
+async function preparedPath(...args:Parameters<typeof prepareAgencyNotificationTarget>){
+ let path='';const prepared=await prepareAgencyNotificationTarget(...args);prepared.dispatch(value=>{path=value});return path;
+}

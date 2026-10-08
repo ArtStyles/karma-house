@@ -12,7 +12,7 @@ const session = (userId = actor): PushSession => ({ userId, sessionId, accessTok
 const payload = (recipientId = actor) => ({ kind: 'karmahouse.notification', notificationId: noticeId, recipientId });
 function deferred<T>() { let resolve!: (value: T) => void; return { promise: new Promise<T>(r => { resolve = r; }), resolve }; }
 const tick = () => new Promise<void>(resolve => setImmediate(resolve));
-function fixture(overrides: Partial<PushRepository> = {}, native: Partial<PushAdapter> = {}) {
+function fixture(overrides: Partial<PushRepository> = {}, native: Partial<PushAdapter> = {}, navigation?: Parameters<typeof createPushController>[0]['navigate']) {
   let saved: string | null = null, prompts = 0, clears = 0, summaries = 0;
   const clearedResponses: string[] = [];
   const calls: { kind: string; revision: number; userId?: string }[] = [], routes: unknown[] = [];
@@ -24,7 +24,7 @@ function fixture(overrides: Partial<PushRepository> = {}, native: Partial<PushAd
     resolve: async (id, context) => ({ notificationId: id, recipientId: context.userId, conversationId, propertyId: null }), ...overrides,
   };
   const adapter: PushAdapter = { ensureChannel: async () => {}, getPermission: async () => ({ permission: 'granted', canAskAgain: true }), requestPermission: async () => { prompts++; return { permission: 'granted', canAskAgain: true }; }, getToken: async () => 'fcm-test-token-000000000000000000000000000000000000000000000000000000000000', clearLastResponse: async id => { clears++; clearedResponses.push(id); }, openSettings: async () => {}, ...native };
-  const controller = createPushController({ store, repository, adapter, projectId, navigate: target => { routes.push(target); }, refreshSummary: async () => { summaries++; } });
+  const controller = createPushController({ store, repository, adapter, projectId, navigate: navigation ?? (target => { routes.push(target); }), refreshSummary: async () => { summaries++; } });
   return { controller, store, storage, calls, routes, clearedResponses, prompts: () => prompts, clears: () => clears, summaries: () => summaries };
 }
 
@@ -225,4 +225,15 @@ test('agency capability upgrade persists a new revision and retries it consisten
  await f.store.change(s=>({...s,revision:7,intent:{enabled:true,userId:actor,sessionId,fcmToken:token,confirmed:true,wasEnabled:true}}));
  await f.controller.refresh();assert.equal(f.calls.at(-1)?.revision,8);
  await f.controller.refresh();assert.equal(f.calls.at(-1)?.revision,8);
+});
+
+
+test('push response keeps its final guard and acknowledgement pending until navigation finishes',async()=>{
+ const release=deferred<void>();let reached=false;
+ const f=fixture({}, {}, async (_target,checkpoint)=>{reached=true;await release.promise;checkpoint?.()});
+ await f.controller.setSession(session());f.controller.setNavigationReady(true);
+ f.controller.receiveResponse('guarded-route',payload());await tick();
+ assert.equal(reached,true);assert.equal(f.clears(),0,'do not acknowledge or release a still-pending navigation');
+ await f.controller.setSession(null);release.resolve();await tick();
+ assert.equal(f.clears(),1,'invalidated route is caught and acknowledged once');
 });

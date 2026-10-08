@@ -87,8 +87,9 @@ function PreferencesForm({ userId, preferences }: { userId: string; preferences:
       <PreferenceRow label="Visitas" description="Propuestas de visita y cambios en su estado." icon="calendar-outline" value={draft.visits} disabled={busy} onChange={value => change('visits', value)} />
       <PreferenceRow label="Ofertas" description="Ofertas de compra y novedades de la negociación." icon="pricetag-outline" value={draft.offers} disabled={busy} onChange={value => change('offers', value)} />
       <PreferenceRow label="Alertas de búsqueda" description="Cuando se publique una vivienda que encaje con tus búsquedas guardadas o tu busco, y cuando alguien busque lo que publicas." icon="search-outline" value={draft.alerts} disabled={busy} onChange={value => change('alerts', value)} />
+      <PreferenceRow label="Agencias" description="Equipo, verificación, cierres y recordatorios de tus agencias." icon="business-outline" value={draft.agencies} disabled={busy} onChange={value => change('agencies', value)} last />
     </View>
-    <Text style={styles.footnote}>Desactivar una categoría evita sus próximos avisos. Tu bandeja recoge visitas, ofertas y alertas; los mensajes se consultan en el chat.</Text>
+    <Text style={styles.footnote}>Desactivar una categoría evita sus próximos avisos. Tu bandeja recoge visitas, ofertas, alertas de búsqueda y avisos de agencias; los mensajes se consultan en el chat.</Text>
     {!!(issue || store.preferencesError) && <Notice error>{issue || store.preferencesError}</Notice>}
     {saved && <View accessibilityLiveRegion="polite" style={styles.success}><Icon name="checkmark-circle" color={colors.green} size={19} /><Text style={styles.successText}>Preferencias guardadas.</Text></View>}
     <Button label="Guardar preferencias" onPress={() => void save()} loading={store.savingPreferences} disabled={busy || !changed} />

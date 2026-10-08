@@ -48,7 +48,7 @@ insert into kh_private.agency_events(id,agency_id,kind,subject_id)
 -- It reads current rows only; it acquires no locks, so callers can use it after the worker lock prefix.
 create function kh_private.agency_notice_candidates(e kh_private.agency_events)
 returns table(recipient uuid,agency uuid,deal uuid,sale uuid,verification uuid,event_kind text,target jsonb)
-language plpgsql stable security definer set search_path='' as $$
+language plpgsql volatile security definer set search_path='' as $$
 declare d kh_private.agency_deals;r kh_private.agency_sale_requests;t kh_private.commercial_termination_events;m kh_private.agency_reminders;task kh_private.agency_tasks;k text;begin
  if e.kind in('agency_verification_requested','agency_application_submitted') then
   return query select o.user_id,e.agency_id,null::uuid,null::uuid,case when e.kind='agency_verification_requested' then e.subject_id end,
@@ -65,7 +65,7 @@ declare d kh_private.agency_deals;r kh_private.agency_sale_requests;t kh_private
  elsif e.kind='team_invitation' then
   return query select i.recipient_id,i.agency_id,null::uuid,null::uuid,null::uuid,'team_invitation'::text,jsonb_build_object('route','team','agencyId',null,'dealId',null)
    from kh_private.agency_invitations i join kh_private.agencies a on a.id=i.agency_id and a.state='approved'
-   where i.id=e.subject_id and i.state='pending' and i.expires_at>statement_timestamp();
+   where i.id=e.subject_id and i.state='pending' and i.expires_at>clock_timestamp();
  elsif e.kind='sale_request' then
   select * into r from kh_private.agency_sale_requests where id=e.subject_id;
   return query select x.user_id,x.agency_id,null::uuid,r.id,null::uuid,'sale_request'::text,jsonb_build_object('route','closures','agencyId',x.agency_id,'dealId',null)
@@ -95,7 +95,7 @@ declare d kh_private.agency_deals;r kh_private.agency_sale_requests;t kh_private
    select * into d from kh_private.agency_deals where id=m.deal_id;
    if d.closed_reason is not null or not coalesce(kh_private.agency_flow_live(d.agency_id,d.property_id),false) or m.recipient_id is distinct from d.assignee_id then return;end if;
    if e.kind='task_reminder' and not exists(select 1 from kh_private.agency_tasks x where x.id=m.subject_id and x.state='open' and x.assignee_id=m.recipient_id and x.due_at=m.due_at) then return;end if;
-   if e.kind='visit_reminder' and not exists(select 1 from kh_private.property_visit_slots s join kh_private.agency_proposals p on p.id=s.proposal_id where p.id=m.subject_id and p.status='accepted' and s.outcome='unrecorded' and s.starts_at>statement_timestamp() and s.assignee_id=m.recipient_id and m.due_at=s.starts_at-case m.kind when 'visit_24h' then interval '24 hours' else interval '2 hours' end)then return;end if;
+   if e.kind='visit_reminder' and not exists(select 1 from kh_private.property_visit_slots s join kh_private.agency_proposals p on p.id=s.proposal_id where p.id=m.subject_id and p.status='accepted' and s.outcome='unrecorded' and s.starts_at>clock_timestamp() and s.assignee_id=m.recipient_id and m.due_at=s.starts_at-case m.kind when 'visit_24h' then interval '24 hours' else interval '2 hours' end)then return;end if;
   end if;
   if not exists(select 1 from kh_private.agencies where id=d.agency_id and state='approved') then return;end if;
   if e.kind='manual_cancellation_notice' and task.assignee_id is null then
@@ -122,7 +122,7 @@ create function kh_private.agency_notice_current(n kh_private.notifications) ret
  when 'personal_conversation' then exists(select 1 from public.kh_conversations c where c.id=(n.agency_target->>'dealId')::uuid and n.recipient_id in(c.buyer_id,c.seller_id) and not kh_private.agency_pair_blocked(c.buyer_id,c.seller_id))
  else false end
 $$;
-create function kh_private.agency_notice_deliverable(n kh_private.notifications) returns boolean language sql stable security definer set search_path='' as $$
+create function kh_private.agency_notice_deliverable(n kh_private.notifications) returns boolean language sql volatile security definer set search_path='' as $$
  select (select enabled from kh_private.agency_settings where singleton) and kh_private.agency_notice_current(n)
  and (n.event_kind='agency_review' or n.agency_id is null or exists(select 1 from kh_private.agencies where id=n.agency_id and state='approved'))
  and exists(select 1 from kh_private.agency_events e cross join lateral kh_private.agency_notice_candidates(e)c where e.id=n.agency_event_id and c.recipient=n.recipient_id and c.target=n.agency_target)
@@ -153,7 +153,7 @@ alter table kh_private.notifications drop constraint notifications_check;
 alter table kh_private.notifications add constraint notifications_distinct_actor check(category='agency' or recipient_id<>actor_id);
 -- Freeze a bounded work set. Its complete participant/property/agency projection is rechecked
 -- after waiting for locks; a changed set is retried next tick, never silently consumed.
-create function kh_private.agency_delivery_plan(events uuid[],jobs uuid[]) returns jsonb language sql stable security definer set search_path='' as $$
+create function kh_private.agency_delivery_plan(events uuid[],jobs uuid[]) returns jsonb language sql volatile security definer set search_path='' as $$
  with es as(select * from kh_private.agency_events where id=any(events) or id in(select n.agency_event_id from kh_private.notifications n join kh_private.push_outbox o on o.notification_id=n.id where o.id=any(jobs))),
  cs as(select e.id event_id,c.* from es e cross join lateral kh_private.agency_notice_candidates(e)c),
  ds as(select d.* from kh_private.agency_deals d where d.id in(select deal from cs) or d.id in(select r.deal_id from kh_private.agency_reminders r join es on es.subject_id=r.id) or d.id in(select t.subject_id from kh_private.commercial_termination_events t join es on es.subject_id=t.id where t.subject_kind='agency_deal')),
