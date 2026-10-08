@@ -5,3 +5,11 @@ insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) select ('
 insert into auth.sessions(id,user_id,not_after) select md5(id::text||':session')::uuid,id,now()+interval '1 day' from auth.users where id::text like '45000000-%';
 insert into kh_private.platform_owner(singleton,user_id) values(true,'45000000-0000-4000-8000-000000000001') on conflict(singleton) do update set user_id=excluded.user_id;
 insert into public.kh_admins(user_id) values('45000000-0000-4000-8000-000000000003');
+create function pg_temp.kh_agency_input() returns jsonb language sql as $$select jsonb_build_object('tradeName','Casas Fixture','responsibleFullName','Responsable Privado','businessPhone','+5351234567','province','La Habana','municipality','Plaza','serviceAreas',jsonb_build_array('Vedado'),'description','Agencia sintética dedicada a las viviendas de prueba.','officeAddress',null,'publishOfficeAddress',false,'evidenceReferences','[]'::jsonb)$$;
+create function pg_temp.kh_agency_signup(n integer default 9,confirmed boolean default true) returns uuid language plpgsql as $$declare actor uuid:=('45000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid;result uuid;begin
+ update kh_private.agency_settings set enabled=true;
+ insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values(actor,'agency-'||n||'@example.invalid',case when confirmed then now() end,jsonb_build_object('display_name','Gestor Fixture','registration_intent','agency','approved',true,'role','admin','verified',true,'agency_application',pg_temp.kh_agency_input()));
+ insert into auth.sessions(id,user_id,not_after)values(md5(actor::text||':session')::uuid,actor,now()+interval '1 day');
+ select agency_id into result from kh_private.agency_applications where responsible_id=actor;return result;
+end$$;
+create function pg_temp.kh_agency_approve(a uuid) returns jsonb language plpgsql as $$begin perform pg_temp.kh_as('45000000-0000-4000-8000-000000000001');return public.kh_review_agency(auth.uid(),jsonb_build_object('agencyId',a,'decision','approve','note','Revisión sintética comprobada','expectedVersion',(select version from kh_private.agencies where id=a),'clientRequestId',gen_random_uuid()));end$$;

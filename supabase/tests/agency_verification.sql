@@ -1,0 +1,32 @@
+do $$declare a uuid;r jsonb;payload jsonb;begin
+ a:=pg_temp.kh_agency_signup();perform pg_temp.kh_agency_approve(a);
+ perform pg_temp.kh_assert(not(kh_private.agency_summary(a)->>'verified')::boolean,'approval_does_not_grant_verification');
+ perform pg_temp.kh_as('45000000-0000-4000-8000-000000000009');
+ r:=public.kh_request_agency_verification(auth.uid(),a,jsonb_build_object('input',jsonb_build_object('message','Solicitamos la revisión de esta inmobiliaria.','evidenceReferences',jsonb_build_array('referencia privada')),'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert(not(kh_private.agency_summary(a)->>'verified')::boolean,'pending_request_does_not_verify');
+ payload:=jsonb_build_object('agencyId',a,'requestId',r->>'id','decision','grant','note','Identidad comprobada por prueba','expectedAgencyVersion',2,'expectedVerificationVersion',1,'expectedRequestVersion',1,'clientRequestId',gen_random_uuid());
+ perform pg_temp.kh_error(format('select public.kh_review_agency_verification(auth.uid(),%L::jsonb)',payload::text),'KH_ADMIN_REQUIRED');
+ perform pg_temp.kh_as('45000000-0000-4000-8000-000000000003');
+ perform pg_temp.kh_error(format('select public.kh_review_agency_verification(auth.uid(),%L::jsonb)',payload::text),'KH_OWNER_REQUIRED');
+ perform pg_temp.kh_as('45000000-0000-4000-8000-000000000001');
+ r:=public.kh_review_agency_verification(auth.uid(),payload);perform pg_temp.kh_assert((r->'agency'->>'verified')::boolean,'owner_can_grant_after_request');
+ perform pg_temp.kh_assert(public.kh_review_agency_verification(auth.uid(),payload)=r,'verification_replay_does_not_duplicate_grant');
+ r:=public.kh_review_agency_verification(auth.uid(),jsonb_build_object('agencyId',a,'decision','revoke','note','Retirada sintética del sello','expectedAgencyVersion',2,'expectedVerificationVersion',2,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert(not(r->'agency'->>'verified')::boolean,'revocation changes effective badge');
+ perform pg_temp.kh_assert((select revoked_by=auth.uid() and revoked_at is not null from kh_private.agency_verifications where agency_id=a),'revocation_records_actor_reason_and_version');
+ r:=public.kh_review_agency_verification(auth.uid(),jsonb_build_object('agencyId',a,'decision','grant','note','Concesión directa de prueba','expectedAgencyVersion',2,'expectedVerificationVersion',3,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert((r->'agency'->>'verified')::boolean,'owner_can_grant_directly');
+end$$;
+do $$declare a uuid;r jsonb;p jsonb;begin
+ a:=pg_temp.kh_agency_signup(11);perform pg_temp.kh_agency_approve(a);
+ insert into kh_private.verified_users(user_id,verified_by,note)values('45000000-0000-4000-8000-000000000011','45000000-0000-4000-8000-000000000001','Verificación personal de prueba');
+ perform pg_temp.kh_assert(not(kh_private.agency_summary(a)->>'verified')::boolean,'personal_verified_user_does_not_verify_agency');
+ perform pg_temp.kh_as('45000000-0000-4000-8000-000000000011');
+ p:=jsonb_build_object('input',jsonb_build_object('message','Solicitamos verificación de nuestra inmobiliaria.','evidenceReferences','[]'::jsonb),'clientRequestId',gen_random_uuid());
+ r:=public.kh_request_agency_verification(auth.uid(),a,p);
+ perform pg_temp.kh_error(format('select public.kh_request_agency_verification(auth.uid(),%L::uuid,%L::jsonb)',a,(p||jsonb_build_object('clientRequestId',gen_random_uuid()))::text),'KH_AGENCY_VERIFICATION_REQUEST_OPEN');
+ perform pg_temp.kh_as('45000000-0000-4000-8000-000000000001');
+ perform public.kh_review_agency(auth.uid(),jsonb_build_object('agencyId',a,'decision','suspend','note','Agencia suspendida en prueba','expectedVersion',2,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert((select state='cancelled' from kh_private.agency_verification_requests where id=(r->>'id')::uuid),'suspension cancels verification requests');
+ perform pg_temp.kh_assert(not(kh_private.agency_summary(a)->>'verified')::boolean,'suspension hides check');
+end$$;
