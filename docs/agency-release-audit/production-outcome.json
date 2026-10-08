@@ -3,18 +3,30 @@
   "sourceCommits": {
     "nativeProduct": "b54abeb01833fdcf218a8669d0537e7fc8cce766",
     "hostedOperator": "3fab84a85633f9b841c505335d8bd8c2f7a0c7d8",
-    "web": "280d75bd3ed849f0a8ed69e6137fa5d907c6284d"
+    "web": "280d75bd3ed849f0a8ed69e6137fa5d907c6284d",
+    "integrationTests": "c013fd82aec9cbf247db3579696438e5b56b5c62"
   },
   "tests": {
     "typecheck": true,
     "passed": 617,
     "failed": 0,
     "skipped": 0,
-    "fullLogSha256": "efa967ca08ba5a566fb997d61fcb012f5fc1cfeb42c454da4e189c960de12be3",
+    "fullLogSha256": "7ae28d847f6358e25514639bba3e2f8d3eafcb82b449f65ae061a917418beb46",
     "localSqlSuites": 43,
     "localConcurrencyCases": 45,
     "observedBarriers": 46,
-    "unchangedBusinessSqlMatricesNotRepeatedForWebFix": true
+    "unchangedBusinessSqlMatricesNotRepeatedForWebFix": true,
+    "ci": {
+      "sourceCommit": "c013fd82aec9cbf247db3579696438e5b56b5c62",
+      "runId": 37827006575,
+      "url": "https://github.com/ArtStyles/karma-house/actions/runs/37827006575",
+      "success": true,
+      "passed": 615,
+      "failed": 0,
+      "skipped": 2,
+      "conditionalSqlHooksCoveredLocally": true,
+      "logSha256": "e699e531121820072f6af651fc80e3776224a19a0446f805c2a2e08622c31e97"
+    }
   },
   "backup": {
     "at": "2026-10-08T17:08:04.589Z",

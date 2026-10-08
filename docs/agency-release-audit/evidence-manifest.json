@@ -1,15 +1,15 @@
 {
-  "at": "2026-10-08T18:38:21.275Z",
+  "at": "2026-10-08T18:50:59.293Z",
   "source": ".superpowers/sdd",
   "privateArchive": "artifacts/agency-release-preparation/sdd-archive",
-  "files": 666,
+  "files": 670,
   "skipped": [
     "2026-10-07-agency-workspaces/node_modules-shared",
     "2026-10-07-agency-workspaces/postgres-data"
   ],
-  "ledgerRulings": 155,
-  "masterRulings": 87,
-  "phaseOccurrences": 68,
+  "ledgerRulings": 157,
+  "masterRulings": 88,
+  "phaseOccurrences": 69,
   "unmatched": 0,
   "entries": [
     {
@@ -26,6 +26,26 @@
       "path": "2026-10-07-agency-workspaces/baseline.log",
       "bytes": 39573,
       "sha256": "708ac1ee92ef21e9c7a7541c6d5136190a530618c384df6fe8115de63196b013"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/ci-portability-brief.md",
+      "bytes": 2616,
+      "sha256": "64a64bf7525bd1084e5367c5364808ef71dafa9fa7a7abec2dd710e9fbe4a8f3"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/ci-portability-report.md",
+      "bytes": 4368,
+      "sha256": "895b50bff75d725d53e50e6d761bf9a286dbca0e12365e6d9d25ff92ed06d43b"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/ci-portability-review-4ebac94..c013fd8.diff",
+      "bytes": 3198,
+      "sha256": "aae39300e8be858c78c318aaad4ab298770cfb6d234cf588b2ab22c3547b34ab"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/ci-portability-review.md",
+      "bytes": 3309,
+      "sha256": "d0fd1101e109e2c137632c375212d34282771d0ea8e770045d072b7ac8e2ea27"
     },
     {
       "path": "2026-10-07-agency-workspaces/dependencies-copy.log",
@@ -219,8 +239,8 @@
     },
     {
       "path": "2026-10-07-agency-workspaces/progress.md",
-      "bytes": 113810,
-      "sha256": "52ff61ea5c8cd3cf3087ef72cbebcdd9f7fe9ba11e1422872eb3bbece49c89b1"
+      "bytes": 116328,
+      "sha256": "8c568544a5d3c0bc040b2ebdc1261210a062f5f26b1de94287a42b9d769e5f7d"
     },
     {
       "path": "2026-10-07-agency-workspaces/prove-platform-parser-red.mjs",
@@ -1234,8 +1254,8 @@
     },
     {
       "path": "2026-10-07-agency-closure-release/progress.md",
-      "bytes": 76433,
-      "sha256": "233b019bb278f0f5437b73ffb23b3105fc7551b928136f9161b509456f9f4f75"
+      "bytes": 78245,
+      "sha256": "10ffc816c4d505add987bae059093a9ce3b337e2d1ad92dfb1df9493dfe1de87"
     },
     {
       "path": "2026-10-07-agency-closure-release/review-023b48a..aec0863.diff",
