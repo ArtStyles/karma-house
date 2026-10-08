@@ -10,7 +10,6 @@ import { createAgencyMessagingRepository, mergeAgencyMessages } from '../agencie
 import { createAgencyDealRepository } from '../agencies/deals/repository';
 import type { AgencyConversation, AgencyMessage } from '../agencies/messaging/types';
 import { createMessageId, isUuid } from '../messaging/domain';
-import { createScopedRpc } from '../transfers/repository';
 import { supabase } from '../lib/supabase';
 import { Button, Notice, PageTitle } from '../components/ui';
 import { AccountPrompt } from '../components/AccountPrompt';
@@ -118,7 +117,10 @@ export default function AgencyConversationScreen() {
             await load();
         });
     }
-    const counterparts = [...new Set((visible?.messages ?? []).map(m => m.senderId).filter((u): u is string => !!u && u !== auth.user?.id && (agencyId ? u === c?.buyerId : u !== c?.buyerId)))];
+    const messageParticipants = (visible?.messages ?? []).map(m => m.senderId);
+    const participates = !agencyId || c?.assigneeId === auth.user?.id || messageParticipants.includes(auth.user?.id ?? null);
+    const counterparts = participates ? [...new Set([...messageParticipants, ...(c?.blockedUserIds ?? []), agencyId ? c?.buyerId : c?.assigneeId].filter((u): u is string => !!u && u !== auth.user?.id && (agencyId ? u === c?.buyerId : u !== c?.buyerId)))] : [];
+    const canBlock = (target: string) => agencyId ? participates && target === c?.buyerId : target === c?.assigneeId || messageParticipants.includes(target);
     return <SafeAreaView style={s.safe}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
   <PageTitle title={c?.agencyName ?? 'Conversación con inmobiliaria'} subtitle={c?.propertyTitle} back/>
   {!auth.user ? <AccountPrompt returnTo={`/agency-conversation/${id}${agencyId ? `?agencyId=${agencyId}` : ''}`}/> : <>
@@ -133,8 +135,8 @@ export default function AgencyConversationScreen() {
    <TextInput accessibilityLabel="Mensaje a la inmobiliaria" style={s.input} multiline maxLength={2000} value={visible ? body : ''} editable={!!c?.canSend && !busy && !pending.current} onChangeText={setBody} placeholder="Escribe un mensaje" placeholderTextColor={colors.muted}/>
    <Button label={pending.current ? 'Reintentar el mismo mensaje' : 'Enviar mensaje'} disabled={!c?.canSend || !body.trim()} loading={busy} onPress={() => void send()}/>
    {pending.current && <Button label="Descartar intento" secondary disabled={busy} onPress={() => { pending.current = null; setBody(''); setState(old => ({ ...old, error: '' })); }}/>}
-   {counterparts.map((target, index) => <View key={target} style={{ gap: 8 }}><Button label={`Reportar ${agencyId ? 'comprador' : `participante ${index + 1}`}`} secondary onPress={() => setReportTarget(target)}/>{[true, false].map(blocked => <Button key={String(blocked)} label={`${blocked ? 'Bloquear' : 'Desbloquear'} ${agencyId ? 'comprador' : `participante ${index + 1}`}`} secondary onPress={() => void act(async (ctx) => { if (!supabase)
-            return; await createScopedRpc(supabase)('kh_set_user_block', { p_other_user_id: target, p_blocked: blocked }, ctx); await load(); })}/>)}</View>)}
+   {counterparts.map((target, index) => <View key={target} style={{ gap: 8 }}>{messageParticipants.includes(target) && <Button label={`Reportar ${agencyId ? 'comprador' : `participante ${index + 1}`}`} secondary onPress={() => setReportTarget(target)}/>}{[true, false].filter(blocked => !blocked || canBlock(target)).map(blocked => <Button key={String(blocked)} label={`${blocked ? 'Bloquear' : 'Desbloquear'} ${agencyId ? 'comprador' : `participante ${index + 1}`}`} secondary onPress={() => void act(async (ctx) => { if (!repo)
+            return; await repo.setBlocked({ conversationId: id, otherUserId: target, blocked, clientRequestId: createMessageId() }, ctx); await load(); })}/>)}</View>)}
   </>}
  </ScrollView><ReportConversationSheet visible={!!reportTarget && state.scope === scope} onClose={() => setReportTarget(null)} onReport={async (reason, details, clientRequestId) => { if (!repo || !reportTarget)
         throw Error('Selecciona un participante.'); const ctx = capture(); try {

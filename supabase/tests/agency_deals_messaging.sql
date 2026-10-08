@@ -3,7 +3,7 @@ declare r uuid:=gen_random_uuid();x jsonb;begin
  perform pg_temp.kh_as(actor);insert into storage.objects(bucket_id,name)values('property-photos',actor||'/'||r||'/photo.jpg');
  x:=public.kh_agency_save_property(actor,a,jsonb_build_object('clientRequestId',r,'sourceReference',r,'consentReference','Consentimiento comprobado','publicationIntent','submit','draft',jsonb_build_object('title','Casa de conversaciones','location','Vedado','province','La Habana','type','Casa','price',30000,'bedrooms',2,'bathrooms',1,'description','Vivienda sintética para los mensajes privados.','photoPaths',jsonb_build_array(actor||'/'||r||'/photo.jpg'))));return (x#>>'{property,id}')::uuid;end $$;
 do $$ declare a uuid:=pg_temp.kh_agency_signup(20);b uuid:=pg_temp.kh_agency_signup(21);
- aa uuid:='45000000-0000-4000-8000-000000000020';bb uuid:='45000000-0000-4000-8000-000000000021';buyer uuid:='45000000-0000-4000-8000-000000000002';manager uuid:='45000000-0000-4000-8000-000000000004';other_manager uuid:='45000000-0000-4000-8000-000000000005';owner uuid:='45000000-0000-4000-8000-000000000001';pid uuid;q jsonb;c jsonb;c2 jsonb;d jsonb;message jsonb;payload jsonb;request uuid:=gen_random_uuid();before_users integer;begin
+ aa uuid:='45000000-0000-4000-8000-000000000020';bb uuid:='45000000-0000-4000-8000-000000000021';buyer uuid:='45000000-0000-4000-8000-000000000002';manager uuid:='45000000-0000-4000-8000-000000000004';other_manager uuid:='45000000-0000-4000-8000-000000000005';owner uuid:='45000000-0000-4000-8000-000000000001';pid uuid;other_pid uuid;q jsonb;c jsonb;c2 jsonb;c3 jsonb;d jsonb;message jsonb;payload jsonb;request uuid:=gen_random_uuid();before_users integer;begin
  perform pg_temp.kh_agency_approve(a);perform pg_temp.kh_agency_approve(b);pid:=pg_temp.kh_business_fixture(a,aa);
  perform pg_temp.kh_as(owner);perform public.kh_review_property(pid,'approved',null,1);
  perform pg_temp.kh_assert(public.kh_get_listing_management(pid)->'canEditPersonal'='false'::jsonb,'corporate_custodian_never_gets_personal_edit');
@@ -24,12 +24,41 @@ do $$ declare a uuid:=pg_temp.kh_agency_signup(20);b uuid:=pg_temp.kh_agency_sig
  perform pg_temp.kh_as(buyer);payload:=jsonb_build_object('conversationId',c->>'id','clientMessageId',gen_random_uuid(),'body','Hola');payload:=payload||jsonb_build_object('clientRequestId',payload->>'clientMessageId');
  message:=public.kh_send_agency_message(buyer,null,payload);perform pg_temp.kh_assert(public.kh_send_agency_message(buyer,null,payload)=message,'message_replay_no_duplicate');
  perform pg_temp.kh_error(format('select public.kh_send_agency_message(%L,null,%L)',buyer,payload||'{"body":"Otro"}'::jsonb),'KH_AGENCY_REQUEST_CONFLICT');
- insert into public.kh_user_blocks(blocker_id,blocked_id)values(buyer,manager);
+ perform pg_temp.kh_assert(not exists(select 1 from public.kh_conversations where buyer_id in(buyer,manager) and seller_id in(buyer,manager)),'agency_block_requires_no_personal_chat');
+ perform pg_temp.kh_error(format('select public.kh_set_user_block(%L,true,%L)',manager,buyer),'KH_CHAT_NOT_FOUND');
+ perform public.kh_set_agency_conversation_block(buyer,null,jsonb_build_object('conversationId',c->>'id','otherUserId',manager,'blocked',true,'clientRequestId',gen_random_uuid()));
  perform pg_temp.kh_error(format('select public.kh_send_agency_message(%L,null,%L)',buyer,payload||jsonb_build_object('clientMessageId',gen_random_uuid(),'clientRequestId',gen_random_uuid())),'KH_CHAT_BLOCKED');
  perform pg_temp.kh_assert(not(public.kh_get_agency_conversation(buyer,null,(c->>'id')::uuid)->>'canSend')::boolean,'blocked_pair_cannot_be_bypassed_with_agency_context');
- delete from public.kh_user_blocks where blocker_id=buyer and blocked_id=manager;
+ perform public.kh_set_agency_conversation_block(buyer,null,jsonb_build_object('conversationId',c->>'id','otherUserId',manager,'blocked',false,'clientRequestId',gen_random_uuid()));
+ perform public.kh_send_agency_message(buyer,null,payload||jsonb_build_object('clientMessageId',gen_random_uuid(),'clientRequestId',gen_random_uuid()));
+ perform public.kh_read_agency_conversation(buyer,null,jsonb_build_object('conversationId',c->>'id','lastSeq',1,'clientRequestId',gen_random_uuid()));
+ perform public.kh_read_agency_conversation(buyer,null,jsonb_build_object('conversationId',c->>'id','lastSeq',0,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert((public.kh_get_agency_conversation(buyer,null,(c->>'id')::uuid)->>'unreadCount')::integer=1,'read_cursor_remains_monotonic_after_lock_preparation');
+ perform pg_temp.kh_assert(not exists(select 1 from public.kh_conversations where buyer_id in(buyer,manager) and seller_id in(buyer,manager)),'agency_block_does_not_create_personal_chat');
+ perform pg_temp.kh_error(format('select public.kh_set_agency_conversation_block(%L,null,%L)',buyer,jsonb_build_object('conversationId',c->>'id','otherUserId',other_manager,'blocked',true,'clientRequestId',gen_random_uuid())),'KH_CHAT_INVALID_BLOCK');
+ perform pg_temp.kh_as(bb);perform pg_temp.kh_error(format('select public.kh_set_agency_conversation_block(%L,%L,%L)',bb,b,jsonb_build_object('conversationId',c->>'id','otherUserId',buyer,'blocked',true,'clientRequestId',gen_random_uuid())),'KH_AGENCY_DEAL_NOT_FOUND');
+ perform pg_temp.kh_as(aa);perform pg_temp.kh_error(format('select public.kh_set_agency_conversation_block(%L,%L,%L)',aa,a,jsonb_build_object('conversationId',c->>'id','otherUserId',buyer,'blocked',true,'clientRequestId',gen_random_uuid())),'KH_CHAT_INVALID_BLOCK');
+ perform pg_temp.kh_error(format('select public.kh_set_agency_conversation_block(%L,%L,%L)',manager,a,jsonb_build_object('conversationId',c->>'id','otherUserId',buyer,'blocked',true,'clientRequestId',gen_random_uuid())),'KH_ACCOUNT_CHANGED');
+ perform pg_temp.kh_as(buyer);perform public.kh_set_agency_conversation_block(buyer,null,jsonb_build_object('conversationId',c->>'id','otherUserId',manager,'blocked',true,'clientRequestId',gen_random_uuid()));
  perform pg_temp.kh_as(aa);d:=public.kh_assign_agency_deal(aa,a,jsonb_build_object('dealId',c->>'dealId','userId',aa,'expectedVersion',2,'clientRequestId',gen_random_uuid()));
  perform pg_temp.kh_assert(d->>'assigneeId'=aa::text,'coordinator_and_admin_can_attend_as_manager');
+ perform pg_temp.kh_as(aa);other_pid:=pg_temp.kh_business_fixture(a,aa);perform pg_temp.kh_as(owner);perform public.kh_review_property(other_pid,'approved',null,1);
+ perform pg_temp.kh_as(buyer);c3:=public.kh_start_agency_conversation(buyer,a,jsonb_build_object('propertyId',other_pid,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert(public.kh_get_agency_conversation(buyer,null,(c3->>'id')::uuid)->'blockedUserIds'='[]'::jsonb,'own_receipt_never_leaks_to_another_conversation');
+ perform pg_temp.kh_error(format('select public.kh_set_agency_conversation_block(%L,null,%L)',buyer,jsonb_build_object('conversationId',c3->>'id','otherUserId',manager,'blocked',false,'clientRequestId',gen_random_uuid())),'KH_CHAT_INVALID_BLOCK');
+ perform pg_temp.kh_error(format('select public.kh_set_agency_conversation_block(%L,null,%L)',buyer,jsonb_build_object('conversationId',c2->>'id','otherUserId',manager,'blocked',false,'clientRequestId',gen_random_uuid())),'KH_CHAT_INVALID_BLOCK');
+ perform pg_temp.kh_assert(not exists(select 1 from kh_private.agency_messages where conversation_id=(c->>'id')::uuid and author_id=manager),'former_assignee_has_no_messages');
+ perform pg_temp.kh_assert(public.kh_get_agency_conversation(buyer,null,(c->>'id')::uuid)->'blockedUserIds'=jsonb_build_array(manager),'own_block_target_survives_reassignment_without_messages');
+ perform public.kh_set_agency_conversation_block(buyer,null,jsonb_build_object('conversationId',c->>'id','otherUserId',manager,'blocked',false,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert(public.kh_get_agency_conversation(buyer,null,(c->>'id')::uuid)->'blockedUserIds'='[]'::jsonb,'unblock_removes_retained_target_without_restoring_assignment');
+ perform pg_temp.kh_as(aa);perform public.kh_assign_agency_deal(aa,a,jsonb_build_object('dealId',c3->>'dealId','userId',manager,'expectedVersion',1,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(buyer);perform public.kh_set_agency_conversation_block(buyer,null,jsonb_build_object('conversationId',c3->>'id','otherUserId',manager,'blocked',true,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(aa);perform public.kh_remove_agency_member(aa,a,jsonb_build_object('userId',manager,'expectedVersion',1,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(buyer);perform pg_temp.kh_assert(public.kh_get_agency_conversation(buyer,null,(c3->>'id')::uuid)->'blockedUserIds'=jsonb_build_array(manager),'own_no_message_block_target_survives_member_removal');
+ payload:=jsonb_build_object('conversationId',c3->>'id','otherUserId',manager,'blocked',false,'clientRequestId',gen_random_uuid());
+ perform public.kh_set_agency_conversation_block(buyer,null,payload);perform public.kh_set_agency_conversation_block(buyer,null,payload);
+ perform pg_temp.kh_assert(public.kh_get_agency_conversation(buyer,null,(c3->>'id')::uuid)->'assigneeId'='null'::jsonb,'unblock_never_restores_removed_assignment');
+ perform pg_temp.kh_as(aa);
  perform public.kh_set_agency_member_role(aa,a,jsonb_build_object('userId',other_manager,'role','coordinator','expectedVersion',1,'clientRequestId',gen_random_uuid()));
  perform pg_temp.kh_as(other_manager);d:=public.kh_assign_agency_deal(other_manager,a,jsonb_build_object('dealId',c->>'dealId','userId',other_manager,'expectedVersion',3,'clientRequestId',gen_random_uuid()));
  perform public.kh_send_agency_message(other_manager,a,jsonb_build_object('conversationId',c->>'id','body','Atendido por coordinador','clientMessageId',gen_random_uuid(),'clientRequestId',gen_random_uuid()));
@@ -43,7 +72,7 @@ do $$ declare a uuid:=pg_temp.kh_agency_signup(20);b uuid:=pg_temp.kh_agency_sig
  perform pg_temp.kh_as(buyer);perform pg_temp.kh_error(format('select public.kh_start_agency_conversation(%L,%L,%L)',buyer,b,jsonb_build_object('propertyId',pid,'preferredManagerId',manager,'clientRequestId',gen_random_uuid())),'KH_AGENCY_MANAGER_CHANGED');
  perform pg_temp.kh_as(aa);perform public.kh_withdraw_agency_mandate(aa,a,jsonb_build_object('propertyId',pid,'requestingAgencyId',b,'expectedVersion',1,'clientRequestId',gen_random_uuid()));
  perform pg_temp.kh_as(bb);perform pg_temp.kh_assert(not(public.kh_get_agency_conversation(bb,b,(c2->>'id')::uuid)->>'canSend')::boolean,'withdrawal_preserves_authorized_closed_history');
- perform pg_temp.kh_as(buyer);perform pg_temp.kh_assert(jsonb_array_length(public.kh_list_agency_messages(buyer,null,(c->>'id')::uuid,null,30)->'items')=2,'ordered_history');
+ perform pg_temp.kh_as(buyer);perform pg_temp.kh_assert(jsonb_array_length(public.kh_list_agency_messages(buyer,null,(c->>'id')::uuid,null,30)->'items')=3,'ordered_history');
  update kh_private.agency_settings set enabled=false;
  perform pg_temp.kh_assert(not(public.kh_public_property_contact(pid)->>'personalContact')::boolean and public.kh_public_property_contact(pid)->'agencies'='[]'::jsonb,'module_off_never_contacts_custodian');
  perform pg_temp.kh_as(owner);perform pg_temp.kh_assert(public.kh_get_listing_management(pid)->'canEditPersonal'='false'::jsonb,'module_off_custodian_has_no_personal_edit');
@@ -67,6 +96,9 @@ do $$declare a uuid:=pg_temp.kh_agency_signup(22);aa uuid:='45000000-0000-4000-8
  perform pg_temp.kh_as(manager);perform pg_temp.kh_assert(public.kh_send_agency_message(manager,a,p)->>'id'=m->>'id','lost_response_ack_current_member_no_duplicate');
  perform pg_temp.kh_as(aa);perform public.kh_remove_agency_member(aa,a,jsonb_build_object('userId',manager,'expectedVersion',1,'clientRequestId',gen_random_uuid()));
  perform pg_temp.kh_as(manager);perform pg_temp.kh_error(format('select public.kh_send_agency_message(%L,%L,%L)',manager,a,p),'KH_AGENCY_DEAL_NOT_FOUND');
+ perform pg_temp.kh_error(format('select public.kh_set_agency_conversation_block(%L,%L,%L)',manager,a,jsonb_build_object('conversationId',c->>'id','otherUserId',buyer,'blocked',true,'clientRequestId',gen_random_uuid())),'KH_AGENCY_DEAL_NOT_FOUND');
+ perform pg_temp.kh_error(format('select public.kh_read_agency_conversation(%L,%L,%L)',manager,a,jsonb_build_object('conversationId',c->>'id','lastSeq',1,'clientRequestId',gen_random_uuid())),'KH_AGENCY_DEAL_NOT_FOUND');
+ perform pg_temp.kh_as(buyer);perform public.kh_set_agency_conversation_block(buyer,null,jsonb_build_object('conversationId',c->>'id','otherUserId',manager,'blocked',false,'clientRequestId',gen_random_uuid()));
  perform pg_temp.kh_as(buyer);perform pg_temp.kh_error(format('select public.kh_start_agency_conversation(%L,%L,%L)',buyer,a,jsonb_build_object('propertyId',pid,'preferredManagerId',manager,'clientRequestId',gen_random_uuid())),'KH_AGENCY_MANAGER_CHANGED');
  perform pg_temp.kh_assert((select assignee_id is null from kh_private.agency_deals where id=(c->>'dealId')::uuid),'retired_manager_link_falls_back_to_agency_choice');
  perform pg_temp.kh_as(aa);perform public.kh_assign_agency_deal(aa,a,jsonb_build_object('dealId',c->>'dealId','userId',aa,'expectedVersion',2,'clientRequestId',gen_random_uuid()));
@@ -111,4 +143,5 @@ do $$declare a uuid:=pg_temp.kh_agency_signup(24);aa uuid:='45000000-0000-4000-8
  perform pg_temp.kh_as(aa);perform pg_temp.kh_assert(not(public.kh_get_agency_conversation(aa,a,(c->>'id')::uuid)->>'canSend')::boolean and public.kh_get_agency_conversation(aa,a,(c->>'id')::uuid)->>'propertyTitle'='Personal con agencia','deleted_personal_source_preserves_private_history_snapshot');
  perform pg_temp.kh_assert(jsonb_array_length(public.kh_list_agency_messages(aa,a,(c->>'id')::uuid,null,30)->'items')=1,'deleted_source_keeps_messages');
  perform pg_temp.kh_assert(not has_table_privilege('authenticated','kh_private.agency_messages','SELECT') and not has_function_privilege('authenticated','kh_private.agency_deal_access(uuid,uuid,uuid)','EXECUTE'),'business_subjects_private_no_raw_client_access');
+ perform pg_temp.kh_assert(not has_function_privilege('authenticated','kh_private.agency_prepare_account(uuid)','EXECUTE') and not has_function_privilege('authenticated','kh_private.agency_prepare_deal(uuid,uuid,uuid)','EXECUTE') and not has_function_privilege('anon','public.kh_set_agency_conversation_block(uuid,uuid,jsonb)','EXECUTE') and has_function_privilege('authenticated','public.kh_set_agency_conversation_block(uuid,uuid,jsonb)','EXECUTE'),'block_and_preparation_grants_are_scoped');
 end $$;

@@ -15,6 +15,7 @@ export interface AgencyConversation {
     assigneeId: string | null;
     dealVersion: number;
     unreadCount: number;
+    blockedUserIds: string[];
 }
 export interface AgencyMessage {
     id: string;
@@ -52,6 +53,12 @@ export interface AgencyMessagingRepository {
         body: string;
     }, context: AgencyConversationContext): Promise<AgencyMessage>;
     markRead(id: string, lastSeq: number, context: AgencyConversationContext): Promise<void>;
+    setBlocked(input: {
+        conversationId: string;
+        otherUserId: string;
+        blocked: boolean;
+        clientRequestId: string;
+    }, context: AgencyConversationContext): Promise<void>;
     report(input: {
         conversationId: string;
         reportedUserId: string;

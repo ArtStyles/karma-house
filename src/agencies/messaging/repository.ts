@@ -9,7 +9,9 @@ export function decodeAgencyConversation(value: unknown, context: AgencyConversa
     const v = object(value);
     if (typeof v.canSend !== 'boolean' || (agency(context) ? v.agencyId !== agency(context) : v.buyerId !== context.userId))
         throw invalidAgencyData();
-    return { id: uuid(v.id), agencyId: uuid(v.agencyId), dealId: uuid(v.dealId), propertyId: uuid(v.propertyId), buyerId: nullableUuid(v.buyerId), canSend: v.canSend, closedReason: nullableText(v.closedReason), lastSeq: integer(v.lastSeq), agencyName: text(v.agencyName), propertyTitle: text(v.propertyTitle), assigneeId: nullableUuid(v.assigneeId), dealVersion: integer(v.dealVersion, 1), unreadCount: integer(v.unreadCount) };
+    if (!Array.isArray(v.blockedUserIds) || new Set(v.blockedUserIds).size !== v.blockedUserIds.length) throw invalidAgencyData();
+    const blockedUserIds = v.blockedUserIds.map(uuid);
+    return { blockedUserIds, id: uuid(v.id), agencyId: uuid(v.agencyId), dealId: uuid(v.dealId), propertyId: uuid(v.propertyId), buyerId: nullableUuid(v.buyerId), canSend: v.canSend, closedReason: nullableText(v.closedReason), lastSeq: integer(v.lastSeq), agencyName: text(v.agencyName), propertyTitle: text(v.propertyTitle), assigneeId: nullableUuid(v.assigneeId), dealVersion: integer(v.dealVersion, 1), unreadCount: integer(v.unreadCount) };
 }
 export function decodeAgencyMessage(value: unknown, conversationId: string): AgencyMessage {
     const v = object(value);
@@ -56,6 +58,8 @@ export function createAgencyMessagingRepository(client: SupabaseClient): AgencyM
             throw invalidAgencyData(); const m = decodeAgencyMessage(await rpc('kh_send_agency_message', { p_agency_id: agency(context), p_payload: { ...input, body, clientRequestId: input.clientMessageId } }, context), input.conversationId); if (m.clientMessageId !== input.clientMessageId || m.senderId !== context.userId || m.body !== body)
             throw invalidAgencyData(); return m; },
         async markRead(id, lastSeq, context) { await rpc('kh_read_agency_conversation', { p_agency_id: agency(context), p_payload: { conversationId: uuid(id), lastSeq: integer(lastSeq), clientRequestId: createMessageId() } }, context); },
+        async setBlocked(input, context) { uuid(input.conversationId); uuid(input.otherUserId); uuid(input.clientRequestId); if (typeof input.blocked !== 'boolean' || input.otherUserId === context.userId)
+            throw invalidAgencyData(); await rpc('kh_set_agency_conversation_block', { p_agency_id: agency(context), p_payload: input }, context); },
         async report(input, context) { uuid(input.conversationId); uuid(input.reportedUserId); uuid(input.clientRequestId); if (!['spam', 'fraud', 'harassment', 'other'].includes(input.reason) || input.details.length > 1000)
             throw invalidAgencyData(); await rpc('kh_report_agency_conversation', { p_agency_id: agency(context), p_payload: input }, context); },
     };

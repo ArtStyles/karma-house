@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createAgencyMessagingRepository, mergeAgencyMessages, decodePublicContact } from '../src/agencies/messaging/repository.ts';
+import { createAgencyMessagingRepository, mergeAgencyMessages, decodePublicContact, decodeAgencyConversation } from '../src/agencies/messaging/repository.ts';
 import { pendingIntentDestination, createPendingIntentStore } from '../src/auth/pendingIntent.ts';
 import { safeReturnTo } from '../src/auth/callback.ts';
 import { renderListing, handle } from '../web/api/p.ts';
@@ -8,6 +8,24 @@ import { createReportModerationRepository } from '../src/messaging/reportModerat
 const id = (n: number) => `45000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const context = { userId: id(1), accessToken: 'buyer', signal: new AbortController().signal, checkpoint() { } };
 const msg = (seq: number) => ({ id: id(seq + 10), conversationId: id(2), seq, clientMessageId: id(seq + 20), senderId: id(1), body: 'Hola', createdAt: '2026-10-08T12:00:00Z' });
+test('conversation retains only validated own blocked target IDs for former-assignee unblock', () => {
+    const row = { id: id(2), agencyId: id(3), dealId: id(4), propertyId: id(5), buyerId: id(1), canSend: true, closedReason: null, lastSeq: 0, agencyName: 'Agencia', propertyTitle: 'Casa', assigneeId: null, dealVersion: 2, unreadCount: 0, blockedUserIds: [id(8)] };
+    assert.deepEqual(decodeAgencyConversation({ ...row, receipt: { secret: true } }, context).blockedUserIds, [id(8)]);
+    assert.equal('receipt' in decodeAgencyConversation(row, context), false);
+    assert.throws(() => decodeAgencyConversation({ ...row, blockedUserIds: ['bad'] }, context));
+    assert.throws(() => decodeAgencyConversation({ ...row, blockedUserIds: [id(8), id(8)] }, context));
+});
+test('agency block/unblock uses conversation scope and pinned actor without a personal chat', async () => {
+    const calls: any[] = [];
+    const client = { rpc(name: string, args: any) { calls.push({ name, args }); return { setHeader(k: string, v: string) { assert.equal(k, 'Authorization'); assert.equal(v, 'Bearer buyer'); return this; }, async abortSignal() { return { data: null, error: null }; } }; } };
+    const repo = createAgencyMessagingRepository(client as any);
+    for (const blocked of [true, false]) await repo.setBlocked({ conversationId: id(2), otherUserId: id(4), blocked, clientRequestId: id(blocked ? 31 : 32) }, context);
+    assert.deepEqual(calls.map(c => c.name), ['kh_set_agency_conversation_block', 'kh_set_agency_conversation_block']);
+    assert.deepEqual(calls.map(c => c.args.p_payload.blocked), [true, false]);
+    assert.ok(calls.every(c => c.args.p_actor_id === context.userId && c.args.p_agency_id === null && c.args.p_payload.conversationId === id(2)));
+    await assert.rejects(repo.setBlocked({ conversationId: id(2), otherUserId: id(4), blocked: true, clientRequestId: id(33) }, { ...context, checkpoint() { throw Error('KH_ACCOUNT_CHANGED'); } }));
+    assert.equal(calls.length, 2);
+});
 test('history orders sequence and merges replay once', async () => {
     const calls: any[] = [];
     const client = { rpc(n: string, a: any) { calls.push([n, a]); return { setHeader() { return this; }, async abortSignal() { return { data: { items: [msg(2), msg(1)], hasMore: true }, error: null }; } }; } };

@@ -60,11 +60,25 @@ create function kh_private.agency_flow_live(agency uuid,pid uuid) returns boolea
  where p.id=kh_private.agency_effective_property(pid) and p.moderation='approved' and p.availability='active'
  and not exists(select 1 from kh_private.agency_property_origins o join kh_private.agencies source on source.id=o.origin_agency_id where o.property_id=p.id and source.state<>'approved'))
 $$;
--- Accounts, sorted agency UUIDs (including aliases), then sorted property UUIDs.
+-- Preparation never acquires an account lock. Mutations lock their entire
+-- participant set first, including the platform owner, then recheck access.
+create function kh_private.agency_prepare_account(actor uuid) returns void language plpgsql security definer set search_path='' as $$begin
+ if auth.uid() is null or auth.uid() is distinct from actor then raise exception 'KH_ACCOUNT_CHANGED' using errcode='42501';end if;
+end $$;
+-- Accounts, actual chat actor/pairs, aliases, sorted agencies, sorted properties.
+-- Chat locks precede properties just as they do in personal send/start RPCs.
 create function kh_private.agency_flow_locks(actor uuid,agency uuid,pid uuid,people uuid[]) returns void language plpgsql security definer set search_path='' as $$
- declare u uuid;canonical uuid;begin
+ declare u uuid;pair record;canonical uuid;begin
+ perform kh_private.agency_prepare_account(actor);
  for u in select distinct unnest(array_append(people,actor)) order by 1 loop if u is not null then perform pg_advisory_xact_lock(hashtextextended('kh:account:'||u::text,0));end if;end loop;
  perform kh_private.agency_account(actor);
+ perform pg_advisory_xact_lock(hashtextextended('kh:chat:actor:'||actor::text,0));
+ -- At most the actor, buyer, current assignee and explicit target. Include
+ -- every pair from this prepared set so later checks cannot add a late lock.
+ for pair in with participants as(select distinct unnest(array_append(people,actor)) id)
+ select a.id a,b.id b from participants a join participants b on a.id<b.id order by a.id,b.id loop
+  perform kh_private.chat_pair_lock(pair.a,pair.b);
+ end loop;
  perform pg_advisory_xact_lock(hashtextextended('kh:property-aliases',0));canonical:=kh_private.agency_effective_property(pid);
  perform kh_private.agency_lock_many(kh_private.agency_lifecycle_lock_set(array[agency],array[pid,canonical]));
  perform 1 from public.properties where id=canonical or id=pid or id in(select property_id from kh_private.property_aliases where canonical_id=canonical) order by id for update;
@@ -75,8 +89,19 @@ $$;
 create function kh_private.agency_deal_access(actor uuid,agency uuid,deal uuid) returns kh_private.agency_deals language plpgsql security definer set search_path='' as $$
  declare d kh_private.agency_deals;begin perform kh_private.agency_account(actor);select * into d from kh_private.agency_deals where id=deal;
  if d.id is null or not coalesce(kh_private.agency_deal_visible(actor,agency,d),false) then raise exception 'KH_AGENCY_DEAL_NOT_FOUND' using errcode='42501';end if;return d;end $$;
+create function kh_private.agency_prepare_deal(actor uuid,agency uuid,deal uuid) returns kh_private.agency_deals language plpgsql security definer set search_path='' as $$
+ declare d kh_private.agency_deals;begin perform kh_private.agency_prepare_account(actor);select * into d from kh_private.agency_deals where id=deal;
+ if d.id is null or not coalesce(kh_private.agency_deal_visible(actor,agency,d),false) then raise exception 'KH_AGENCY_DEAL_NOT_FOUND' using errcode='42501';end if;return d;end $$;
 create function kh_private.agency_deal_json(d kh_private.agency_deals) returns jsonb language sql stable set search_path='' as $$select jsonb_build_object('id',d.id,'agencyId',d.agency_id,'propertyId',d.property_id,'cycleId',d.cycle_id,'buyerId',d.buyer_id,'contactKind',d.contact_kind,'privateContact',d.private_contact,'assigneeId',d.assignee_id,'stage',d.stage,'version',d.version,'closedReason',d.closed_reason)$$;
 create function kh_private.agency_message_json(m kh_private.agency_messages) returns jsonb language sql stable set search_path='' as $$select jsonb_build_object('id',m.id,'conversationId',m.conversation_id,'seq',m.seq,'clientMessageId',m.client_message_id,'senderId',m.sender_id,'body',m.body,'createdAt',m.created_at)$$;
+-- A prior successful block proves this actor really encountered this target in
+-- this conversation. It permits only removal of an existing own block; it does
+-- not grant conversation access, assignment, or a new block on a former target.
+create function kh_private.agency_retained_block(actor uuid,agency uuid,conversation uuid,target uuid) returns boolean language sql stable security definer set search_path='' as $$
+ select exists(select 1 from public.kh_user_blocks b join kh_private.agency_write_receipts r on r.actor_id=b.blocker_id
+ where b.blocker_id=actor and b.blocked_id=target and r.scope_id=agency and r.operation='set_agency_conversation_block' and r.result='{}'::jsonb
+ and r.payload @> jsonb_build_object('conversationId',conversation,'otherUserId',target,'blocked',true,'clientRequestId',r.request_id))
+$$;
 create function kh_private.agency_conversation_json(actor uuid,agency uuid,c kh_private.agency_conversations) returns jsonb language plpgsql security definer set search_path='' as $$
  declare d kh_private.agency_deals:=kh_private.agency_deal_access(actor,agency,c.deal_id);begin
  return jsonb_build_object('id',c.id,'agencyId',d.agency_id,'dealId',d.id,'propertyId',d.property_id,'buyerId',d.buyer_id,'assigneeId',d.assignee_id,'dealVersion',d.version,
@@ -84,7 +109,8 @@ create function kh_private.agency_conversation_json(actor uuid,agency uuid,c kh_
  'canSend',d.closed_reason is null and d.buyer_id is not null and not kh_private.is_suspended(d.buyer_id) and not kh_private.is_deleting(d.buyer_id) and kh_private.agency_flow_live(d.agency_id,d.property_id)
  and (agency is null or d.assignee_id=actor) and (d.assignee_id is null or kh_private.agency_contact_member(d.agency_id,d.assignee_id))
  and not kh_private.agency_pair_blocked(d.buyer_id,d.assignee_id) and not kh_private.agency_pair_blocked(actor,d.buyer_id),
- 'closedReason',d.closed_reason,'lastSeq',c.last_seq,'unreadCount',greatest(0,c.last_seq-coalesce((select last_seq from kh_private.agency_message_reads where conversation_id=c.id and user_id=actor),0)));
+ 'closedReason',d.closed_reason,'lastSeq',c.last_seq,'unreadCount',greatest(0,c.last_seq-coalesce((select last_seq from kh_private.agency_message_reads where conversation_id=c.id and user_id=actor),0)),
+ 'blockedUserIds',(select coalesce(jsonb_agg(b.blocked_id order by b.blocked_id),'[]'::jsonb) from public.kh_user_blocks b where b.blocker_id=actor and kh_private.agency_retained_block(actor,d.agency_id,c.id,b.blocked_id)));
 end $$;
 create function public.kh_get_agency_deal(p_actor_id uuid,p_agency_id uuid,p_deal_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$begin return kh_private.agency_deal_json(kh_private.agency_deal_access(p_actor_id,p_agency_id,p_deal_id));end$$;
 create function public.kh_list_agency_deals(p_actor_id uuid,p_agency_id uuid,p_offset integer default 0,p_limit integer default 30) returns jsonb language plpgsql security definer set search_path='' as $$
@@ -108,7 +134,6 @@ create function kh_private.agency_make_deal(actor uuid,agency uuid,payload jsonb
   if (buyer is null)=(payload->'externalContact' is null or payload->'externalContact'='null'::jsonb) then raise exception 'KH_AGENCY_INVALID_CONTACT';end if;
  end if;
  if manager=buyer then raise exception 'KH_AGENCY_INVALID';end if;
- if buyer is not null and manager is not null then perform kh_private.chat_pair_lock(buyer,manager);end if;
  if kh_private.agency_pair_blocked(buyer,manager) then raise exception 'KH_CHAT_BLOCKED';end if;
  if buyer is null then
   phone:=payload#>>'{externalContact,phone}';if phone is not null and phone!~'^\+?[0-9][0-9 ()-]{6,23}$' then raise exception 'KH_AGENCY_INVALID_CONTACT';end if;
@@ -141,14 +166,14 @@ create function public.kh_start_agency_conversation(p_actor_id uuid,p_agency_id 
  return kh_private.agency_remember(p_actor_id,p_agency_id,'start_conversation',p_payload,kh_private.agency_conversation_json(p_actor_id,null,c));end $$;
 create function public.kh_assign_agency_deal(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare d kh_private.agency_deals;prior uuid;target uuid:=(p_payload->>'userId')::uuid;r jsonb;begin
- d:=kh_private.agency_deal_access(p_actor_id,p_agency_id,(p_payload->>'dealId')::uuid);prior:=d.assignee_id;
+ d:=kh_private.agency_prepare_deal(p_actor_id,p_agency_id,(p_payload->>'dealId')::uuid);prior:=d.assignee_id;
  perform kh_private.agency_flow_locks(p_actor_id,p_agency_id,d.property_id,array[d.buyer_id,d.assignee_id,target]);perform kh_private.agency_actor(p_actor_id,p_agency_id,'coordinator');
  d:=kh_private.agency_deal_access(p_actor_id,p_agency_id,d.id);
  r:=kh_private.agency_receipt(p_actor_id,p_agency_id,'assign_deal',p_payload);if r is not null then return kh_private.agency_deal_json(d);end if;
  if d.version is distinct from (p_payload->>'expectedVersion')::integer or prior is distinct from d.assignee_id then raise exception 'KH_VERSION_CONFLICT';end if;
  if d.closed_reason is not null or not kh_private.agency_flow_live(p_agency_id,d.property_id) then raise exception 'KH_AGENCY_PROPERTY_CLOSED';end if;
  if target is null or not kh_private.agency_contact_member(p_agency_id,target) or target=d.buyer_id then raise exception 'KH_AGENCY_MANAGER_CHANGED';end if;
- perform kh_private.chat_pair_lock(d.buyer_id,target);if kh_private.agency_pair_blocked(d.buyer_id,target) then raise exception 'KH_CHAT_BLOCKED';end if;
+ if kh_private.agency_pair_blocked(d.buyer_id,target) then raise exception 'KH_CHAT_BLOCKED';end if;
  update kh_private.agency_deals set assignee_id=target,version=version+1 where id=d.id returning * into d;
  insert into kh_private.agency_events(agency_id,actor_id,kind,subject_id,payload)values(p_agency_id,p_actor_id,'deal_assigned',d.id,jsonb_build_object('previousAssigneeId',prior,'assigneeId',target));
  return kh_private.agency_remember(p_actor_id,p_agency_id,'assign_deal',p_payload,kh_private.agency_deal_json(d));end $$;
@@ -165,12 +190,10 @@ create function public.kh_list_agency_messages(p_actor_id uuid,p_agency_id uuid,
  return jsonb_build_object('items',case when jsonb_array_length(items)>p_limit then items-p_limit else items end,'hasMore',jsonb_array_length(items)>p_limit);end $$;
 create function public.kh_send_agency_message(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare c kh_private.agency_conversations;d kh_private.agency_deals;prior uuid;r jsonb;m kh_private.agency_messages;body text:=btrim(p_payload->>'body');stamp timestamptz:=clock_timestamp();begin
- select * into c from kh_private.agency_conversations where id=(p_payload->>'conversationId')::uuid;d:=kh_private.agency_deal_access(p_actor_id,p_agency_id,c.deal_id);prior:=d.assignee_id;
+ select * into c from kh_private.agency_conversations where id=(p_payload->>'conversationId')::uuid;d:=kh_private.agency_prepare_deal(p_actor_id,p_agency_id,c.deal_id);prior:=d.assignee_id;
  if body is null or char_length(body) not between 1 and 2000 or body~'^[[:space:]]*$' or (p_payload->>'clientMessageId')::uuid is null then raise exception 'KH_CHAT_INVALID_MESSAGE';end if;
  perform kh_private.agency_flow_locks(p_actor_id,d.agency_id,d.property_id,array[d.buyer_id,d.assignee_id]);
  d:=kh_private.agency_deal_access(p_actor_id,p_agency_id,d.id);if prior is distinct from d.assignee_id then raise exception 'KH_AGENCY_ASSIGNMENT_CHANGED';end if;
- perform pg_advisory_xact_lock(hashtextextended('kh:chat:actor:'||p_actor_id::text,0));
- perform kh_private.chat_pair_lock(d.buyer_id,d.assignee_id);if p_actor_id is distinct from d.assignee_id then perform kh_private.chat_pair_lock(d.buyer_id,p_actor_id);end if;
  select * into c from kh_private.agency_conversations where id=c.id for update;
  r:=kh_private.agency_receipt(p_actor_id,d.agency_id,'send_agency_message',p_payload);
  if r is not null then select * into m from kh_private.agency_messages where id=(r->>'id')::uuid;return kh_private.agency_message_json(m);end if;
@@ -187,9 +210,10 @@ create function public.kh_send_agency_message(p_actor_id uuid,p_agency_id uuid,p
  update kh_private.agency_conversations set last_seq=m.seq where id=c.id;
  return kh_private.agency_remember(p_actor_id,d.agency_id,'send_agency_message',p_payload,kh_private.agency_message_json(m));end $$;
 create function public.kh_read_agency_conversation(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns void language plpgsql security definer set search_path='' as $$
- declare c jsonb;seq integer:=(p_payload->>'lastSeq')::integer;r jsonb;begin
- c:=public.kh_get_agency_conversation(p_actor_id,p_agency_id,(p_payload->>'conversationId')::uuid);
- perform kh_private.agency_flow_locks(p_actor_id,(c->>'agencyId')::uuid,(c->>'propertyId')::uuid,array[(c->>'buyerId')::uuid,(c->>'assigneeId')::uuid]);
+ declare c jsonb;d kh_private.agency_deals;prior uuid;seq integer:=(p_payload->>'lastSeq')::integer;r jsonb;begin
+ d:=kh_private.agency_prepare_deal(p_actor_id,p_agency_id,(select deal_id from kh_private.agency_conversations where id=(p_payload->>'conversationId')::uuid));prior:=d.assignee_id;
+ perform kh_private.agency_flow_locks(p_actor_id,d.agency_id,d.property_id,array[d.buyer_id,d.assignee_id]);
+ d:=kh_private.agency_deal_access(p_actor_id,p_agency_id,d.id);if prior is distinct from d.assignee_id then raise exception 'KH_AGENCY_ASSIGNMENT_CHANGED';end if;
  c:=public.kh_get_agency_conversation(p_actor_id,p_agency_id,(p_payload->>'conversationId')::uuid);
  if seq is null or seq<0 or seq>(c->>'lastSeq')::integer then raise exception 'KH_CHAT_INVALID_CURSOR';end if;
  r:=kh_private.agency_receipt(p_actor_id,(c->>'agencyId')::uuid,'read_agency_conversation',p_payload);if r is not null then return;end if;
@@ -218,9 +242,10 @@ create or replace function public.kh_get_listing_management(p_property_id uuid) 
 $$;
 
 create function public.kh_report_agency_conversation(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
- declare c kh_private.agency_conversations;d kh_private.agency_deals;r jsonb;rid uuid;target uuid:=(p_payload->>'reportedUserId')::uuid;ctx jsonb;reason text:=p_payload->>'reason';details text:=btrim(coalesce(p_payload->>'details',''));begin
- select * into c from kh_private.agency_conversations where id=(p_payload->>'conversationId')::uuid;d:=kh_private.agency_deal_access(p_actor_id,p_agency_id,c.deal_id);
- perform kh_private.agency_flow_locks(p_actor_id,d.agency_id,d.property_id,array[d.buyer_id,target]);d:=kh_private.agency_deal_access(p_actor_id,p_agency_id,d.id);
+ declare c kh_private.agency_conversations;d kh_private.agency_deals;prior uuid;r jsonb;rid uuid;target uuid:=(p_payload->>'reportedUserId')::uuid;ctx jsonb;reason text:=p_payload->>'reason';details text:=btrim(coalesce(p_payload->>'details',''));begin
+ select * into c from kh_private.agency_conversations where id=(p_payload->>'conversationId')::uuid;d:=kh_private.agency_prepare_deal(p_actor_id,p_agency_id,c.deal_id);prior:=d.assignee_id;
+ perform kh_private.agency_flow_locks(p_actor_id,d.agency_id,d.property_id,array[d.buyer_id,d.assignee_id,target]);d:=kh_private.agency_deal_access(p_actor_id,p_agency_id,d.id);
+ if prior is distinct from d.assignee_id then raise exception 'KH_AGENCY_ASSIGNMENT_CHANGED';end if;
  if target is null or target=p_actor_id or reason is null or reason not in('spam','fraud','harassment','other') or char_length(details)>1000 then raise exception 'KH_CHAT_INVALID_REPORT';end if;
  if not exists(select 1 from kh_private.agency_messages where conversation_id=c.id and author_id=target) then raise exception 'KH_CHAT_INVALID_REPORT';end if;
  if (p_agency_id is null and target=d.buyer_id) or (p_agency_id is not null and target is distinct from d.buyer_id) then raise exception 'KH_CHAT_INVALID_REPORT';end if;
@@ -229,6 +254,30 @@ create function public.kh_report_agency_conversation(p_actor_id uuid,p_agency_id
  select coalesce(jsonb_agg(kh_private.agency_message_json(x) order by x.seq),'[]') into ctx from(select * from kh_private.agency_messages where conversation_id=c.id order by seq desc limit 30)x;
  insert into kh_private.agency_message_reports(agency_id,conversation_id,reporter_id,reported_user_id,reason,details,context,property_title)values(d.agency_id,c.id,p_actor_id,target,reason,details,ctx,kh_private.agency_conversation_json(p_actor_id,p_agency_id,c)->>'propertyTitle')returning id into rid;
  return kh_private.agency_remember(p_actor_id,d.agency_id,'report_agency_conversation',p_payload,jsonb_build_object('id',rid));end $$;
+-- Agency-only participants do not need (and never create) a personal chat.
+-- This changes only the caller's block relation, using current private access.
+create function public.kh_set_agency_conversation_block(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns void language plpgsql security definer set search_path='' as $$
+ declare c kh_private.agency_conversations;d kh_private.agency_deals;prior uuid;target uuid:=(p_payload->>'otherUserId')::uuid;blocked boolean;r jsonb;begin
+ select * into c from kh_private.agency_conversations where id=(p_payload->>'conversationId')::uuid;
+ d:=kh_private.agency_prepare_deal(p_actor_id,p_agency_id,c.deal_id);prior:=d.assignee_id;
+ perform kh_private.agency_flow_locks(p_actor_id,d.agency_id,d.property_id,array[d.buyer_id,d.assignee_id,target]);
+ d:=kh_private.agency_deal_access(p_actor_id,p_agency_id,d.id);
+ if prior is distinct from d.assignee_id then raise exception 'KH_AGENCY_ASSIGNMENT_CHANGED';end if;
+ if target is null or target=p_actor_id or jsonb_typeof(p_payload->'blocked') is distinct from 'boolean' then raise exception 'KH_CHAT_INVALID_BLOCK';end if;
+ r:=kh_private.agency_receipt(p_actor_id,d.agency_id,'set_agency_conversation_block',p_payload);if r is not null then return;end if;
+ blocked:=(p_payload->>'blocked')::boolean;
+ if p_agency_id is null then
+  if target is distinct from d.assignee_id and not exists(select 1 from kh_private.agency_messages where conversation_id=c.id and author_id=target and author_id<>p_actor_id)
+   and (blocked or not kh_private.agency_retained_block(p_actor_id,d.agency_id,c.id,target)) then raise exception 'KH_CHAT_INVALID_BLOCK';end if;
+ else
+  if target is distinct from d.buyer_id or (p_actor_id is distinct from d.assignee_id and not exists(select 1 from kh_private.agency_messages where conversation_id=c.id and author_id=p_actor_id)) then raise exception 'KH_CHAT_INVALID_BLOCK';end if;
+ end if;
+ if blocked then
+  if not exists(select 1 from auth.users where id=target) then raise exception 'KH_CHAT_INVALID_BLOCK';end if;
+  insert into public.kh_user_blocks(blocker_id,blocked_id)values(p_actor_id,target)on conflict do nothing;
+ else delete from public.kh_user_blocks where blocker_id=p_actor_id and blocked_id=target;end if;
+ perform kh_private.agency_remember(p_actor_id,d.agency_id,'set_agency_conversation_block',p_payload,'{}');
+end $$;
 create function public.kh_list_agency_message_reports(p_actor_id uuid,p_status text default 'open',p_offset integer default 0,p_limit integer default 30) returns jsonb language plpgsql security definer set search_path='' as $$
  declare items jsonb;begin perform kh_private.agency_account(p_actor_id);if not public.kh_is_admin() then raise exception 'KH_ADMIN_REQUIRED';end if;
  if p_status is null or p_status not in('open','reviewed') or p_offset is null or p_offset<0 or p_limit is null or p_limit not between 1 and 50 then raise exception 'KH_AGENCY_INVALID';end if;
@@ -246,7 +295,7 @@ create function public.kh_review_agency_message_report(p_actor_id uuid,p_agency_
 do $$declare t text;f record;begin
  foreach t in array array['agency_deals','agency_conversations','agency_messages','agency_message_reads','agency_message_reports']loop
  execute format('alter table kh_private.%I enable row level security',t);execute format('revoke all on kh_private.%I from public,anon,authenticated',t);execute format('grant all on kh_private.%I to service_role',t);end loop;
- for f in select p.oid::regprocedure signature,n.nspname,p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where (n.nspname='kh_private' and p.proname=any(array['agency_effective_property','agency_pair_blocked','agency_contact_member','agency_flow_live','agency_flow_locks','agency_deal_visible','agency_deal_access','agency_deal_json','agency_message_json','agency_conversation_json','agency_make_deal'])) or(n.nspname='public' and p.proname=any(array['kh_get_agency_deal','kh_list_agency_deals','kh_create_agency_deal','kh_assign_agency_deal','kh_start_agency_conversation','kh_get_agency_conversation','kh_list_agency_conversations','kh_list_agency_messages','kh_send_agency_message','kh_read_agency_conversation','kh_public_property_contact','kh_report_agency_conversation','kh_list_agency_message_reports','kh_review_agency_message_report']))loop
+ for f in select p.oid::regprocedure signature,n.nspname,p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where (n.nspname='kh_private' and p.proname=any(array['agency_effective_property','agency_pair_blocked','agency_contact_member','agency_flow_live','agency_flow_locks','agency_prepare_account','agency_prepare_deal','agency_retained_block','agency_deal_visible','agency_deal_access','agency_deal_json','agency_message_json','agency_conversation_json','agency_make_deal'])) or(n.nspname='public' and p.proname=any(array['kh_get_agency_deal','kh_list_agency_deals','kh_create_agency_deal','kh_assign_agency_deal','kh_start_agency_conversation','kh_get_agency_conversation','kh_list_agency_conversations','kh_list_agency_messages','kh_send_agency_message','kh_read_agency_conversation','kh_set_agency_conversation_block','kh_public_property_contact','kh_report_agency_conversation','kh_list_agency_message_reports','kh_review_agency_message_report']))loop
  execute format('revoke all on function %s from public,anon,authenticated',f.signature);if f.nspname='public' then execute format('grant execute on function %s to authenticated',f.signature);end if;end loop;
 end $$;
 grant execute on function public.kh_public_property_contact(uuid) to anon;
