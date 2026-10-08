@@ -26,3 +26,26 @@ test('changing a business cover cannot silently lose its prepared thumbnail',asy
  const r=createAgencyPropertyRepository(client,{sign:async()=>new Map(),photos:()=>({upload:async()=>{},exists:async()=>true,getUploadId:async()=>id,readLocal:async()=>{throw Error('unreadable')}})});
  await assert.rejects(r.save({draft:{...emptyDraft,photos:[{uri:'',storagePath:paths[1],thumbUri:'file:///broken.jpg',uploadId:id}]},propertyId:id,expectedVersion:1,publicationIntent:'draft',sourceReference:'CASA-1',consentReference:'Consentimiento',clientRequestId:id},context),/miniatura/);assert.equal(writes,0);
 });
+
+test('photo existence probes accept Storage missing-object variants and preserve other failures',async()=>{
+ const path=`${actor}/${id}/new.jpg`;
+ for(const response of [new Response('',{status:404}),new Response(JSON.stringify({statusCode:'404',error:'not_found',message:'Object not found'}),{status:400}),new Response(JSON.stringify({message:'Object not found'}),{status:400})]){
+  let calls=0;
+  const media=createAgencyPropertyMedia('https://fixture.invalid','key',async(_url,init)=>{
+   assert.equal(new Headers(init?.headers).get('authorization'),'Bearer pinned');assert.equal(init?.signal,context.signal);calls++;
+   return init?.method==='POST'?new Response('{}',{status:200}):response;
+  });
+  const port=media.photos(context);
+  assert.equal(await port.exists(path),false);
+  await port.upload(path,new Uint8Array([255,216,255]).buffer,'image/jpeg');
+  assert.equal(calls,2);
+ }
+ for(const [status,body] of [[401,{message:'Object not found'}],[403,{statusCode:'404'}],[400,{statusCode:'403',message:'permission denied'}],[500,{message:'Storage failed'}],[400,{error:'invalid_request'}]] as const){
+  const media=createAgencyPropertyMedia('https://fixture.invalid','key',async()=>new Response(JSON.stringify(body),{status}));
+  await assert.rejects(media.photos(context).exists(path),/fotografías/);
+ }
+ const network=createAgencyPropertyMedia('https://fixture.invalid','key',async()=>{throw Error('network unavailable')});
+ await assert.rejects(network.photos(context).exists(path),/network unavailable/);
+ let changed=false;const stale=createAgencyPropertyMedia('https://fixture.invalid','key',async()=>{changed=true;return new Response('{"statusCode":"404"}',{status:400})});
+ await assert.rejects(stale.photos({...context,checkpoint(){if(changed)throw Error('KH_AGENCY_CONTEXT_CHANGED')}}).exists(path),/KH_AGENCY_CONTEXT_CHANGED/);
+});

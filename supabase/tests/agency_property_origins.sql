@@ -1,5 +1,16 @@
 -- Real transactional behavior. The runner supplies the Auth/Storage fixture only.
 -- Missing private grants would let a client mint its own transaction authority.
+create function pg_temp.kh_task5_assisted(n integer) returns jsonb language plpgsql as $$
+declare a uuid:=pg_temp.kh_agency_signup(n);owner uuid:='45000000-0000-4000-8000-000000000001';c uuid:=gen_random_uuid();request text:=gen_random_uuid()::text;p jsonb;begin
+ perform pg_temp.kh_agency_approve(a);perform pg_temp.kh_as(owner);
+ update kh_private.assisted_listing_settings set official_publisher_id=owner;
+ insert into storage.objects(bucket_id,name)values('property-photos',owner||'/'||request||'/photo.jpg');
+ p:=public.kh_save_property(jsonb_build_object('ownerId',owner,'clientRequestId',request,'title','Asistida para regresión','location','Vedado','province','La Habana','type','Casa','price',30000,'bedrooms',2,'bathrooms',1,'description','Vivienda asistida con material y autorización comprobada.','moderation','pending','photoPaths',jsonb_build_array(owner||'/'||request||'/photo.jpg')));
+ insert into kh_private.assisted_collaborators(id,kind,private_name,private_contact,contact_channel)values(c,'agency','Agencia de prueba','contacto privado','email');
+ insert into kh_private.assisted_listing_records(property_id,collaborator_id,collaborator_reference,source_channel,source_reference,received_at,consent_text,consent_version,consent_at,evidence_reference,recorded_by,last_confirmed_at,confirmed_price,confirmed_availability)
+ values((p->>'id')::uuid,c,'CASA','email','Mensaje original',now(),'Consentimiento explícito sobre esta vivienda.','1',now(),'Evidencia conservada',owner,now(),30000,'active');
+ return jsonb_build_object('agencyId',a,'propertyId',p->>'id','collaboratorId',c,'expectedCollaboratorVersion',1,'expectedPropertyVersion',1,'sourceReference','CASA','consentReference','Permiso comprobado','evidenceReference','Vínculo confirmado','clientRequestId',gen_random_uuid());
+end $$;
 do $$ declare op text;body jsonb;x jsonb;actor uuid:='45000000-0000-4000-8000-000000000007';begin
  perform pg_temp.kh_as(actor);
  foreach op in array array['sale','rent','swap','wanted'] loop
@@ -10,6 +21,59 @@ do $$ declare op text;body jsonb;x jsonb;actor uuid:='45000000-0000-4000-8000-00
   perform pg_temp.kh_assert(public.kh_save_property(body)->>'id'=x->>'id','personal replay retains identity');
   x:=public.kh_save_property(body||jsonb_build_object('id',x->>'id','expectedVersion',1,'title','Personal editada'));
   perform pg_temp.kh_assert(x->>'title'='Personal editada' and (x->>'version')::integer=2,'personal edit version');
+ end loop;
+end $$;
+
+do $$ declare body jsonb:=pg_temp.kh_task5_assisted(20);other uuid:=pg_temp.kh_agency_signup(21);owner uuid:='45000000-0000-4000-8000-000000000001';cid uuid:=(body->>'collaboratorId')::uuid;pid uuid:=(body->>'propertyId')::uuid;actor uuid:='45000000-0000-4000-8000-000000000020';transfer jsonb;begin
+ perform pg_temp.kh_agency_approve(other);perform pg_temp.kh_as(owner);
+ perform pg_temp.kh_error(format('select public.kh_admin_link_assisted_agency(%L,%L)',owner,body||'{"expectedCollaboratorVersion":2}'),'KH_VERSION_CONFLICT');
+ perform pg_temp.kh_error(format('select public.kh_admin_link_assisted_agency(%L,%L)',owner,body||'{"expectedPropertyVersion":2}'),'KH_VERSION_CONFLICT');
+ update kh_private.assisted_listing_records set consent_revoked_at=now() where property_id=pid;
+ perform pg_temp.kh_error(format('select public.kh_admin_link_assisted_agency(%L,%L)',owner,body),'KH_AGENCY_ASSISTED_LINK_REQUIRED');
+ update kh_private.assisted_listing_records set consent_revoked_at=null where property_id=pid;
+ update kh_private.assisted_collaborators set account_id='45000000-0000-4000-8000-000000000008',link_confirmed_at=now() where id=cid;
+ perform pg_temp.kh_error(format('select public.kh_admin_link_assisted_agency(%L,%L)',owner,body),'KH_AGENCY_ASSISTED_LINK_REQUIRED');
+ update kh_private.assisted_collaborators set account_id=actor where id=cid;
+ update kh_private.agency_memberships set state='removed' where user_id=actor;
+ perform pg_temp.kh_error(format('select public.kh_admin_link_assisted_agency(%L,%L)',owner,body),'KH_AGENCY_ASSISTED_LINK_REQUIRED');
+ update kh_private.agency_memberships set state='active',role='manager' where user_id=actor;
+ perform pg_temp.kh_error(format('select public.kh_admin_link_assisted_agency(%L,%L)',owner,body),'KH_AGENCY_ASSISTED_LINK_REQUIRED');
+ update kh_private.agency_memberships set role='admin' where user_id=actor;
+ update auth.users set email_confirmed_at=null where id=actor;
+ perform pg_temp.kh_error(format('select public.kh_admin_link_assisted_agency(%L,%L)',owner,body),'KH_AGENCY_ASSISTED_LINK_REQUIRED');
+ update auth.users set email_confirmed_at=now() where id=actor;
+ insert into kh_private.assisted_agency_links(collaborator_id,agency_id,evidence_reference,confirmed_by)values(cid,other,'Asociación previa',owner);
+ perform pg_temp.kh_error(format('select public.kh_admin_link_assisted_agency(%L,%L)',owner,body),'KH_AGENCY_ASSISTED_LINK_REQUIRED');
+ delete from kh_private.assisted_agency_links where collaborator_id=cid;
+ insert into kh_private.agency_property_origins(property_id,origin_agency_id,publisher_id,source_reference,consent_reference)values(pid,other,owner,'OTRA','Permiso');
+ perform pg_temp.kh_error(format('select public.kh_admin_link_assisted_agency(%L,%L)',owner,body),'KH_AGENCY_ASSISTED_LINK_REQUIRED');
+ delete from kh_private.agency_property_origins where property_id=pid;
+ update kh_private.assisted_listing_settings set transfers_enabled=true;
+ transfer:=public.kh_offer_listing_transfer(owner,jsonb_build_object('clientRequestId',gen_random_uuid(),'collaboratorId',cid,'expectedCollaboratorVersion',1,'recipientId',actor,'items',jsonb_build_array(jsonb_build_object('propertyId',pid,'expectedVersion',1,'expectedProvenanceVersion',1))));
+ perform pg_temp.kh_as(actor);
+ perform public.kh_decide_listing_transfer(actor,jsonb_build_object('requestId',transfer->>'id','expectedRequestVersion',1,'clientRequestId',gen_random_uuid(),'decision','accept'));
+ perform pg_temp.kh_as(owner);
+ perform pg_temp.kh_error(format('select public.kh_admin_link_assisted_agency(%L,%L)',owner,body),'KH_AGENCY_ASSISTED_LINK_REQUIRED');
+ perform pg_temp.kh_assert(not exists(select 1 from kh_private.agency_property_origins where property_id=pid),'rejected provenance attempts never assign origin');
+end $$;
+
+do $$ declare body jsonb;mode text;pid uuid;a uuid;actor uuid;owner uuid:='45000000-0000-4000-8000-000000000001';moderator uuid:='45000000-0000-4000-8000-000000000003';reviewer uuid;result jsonb;draft jsonb;n integer:=22;begin
+ foreach mode in array array['unpublish','reject'] loop
+  body:=pg_temp.kh_task5_assisted(n);pid:=(body->>'propertyId')::uuid;a:=(body->>'agencyId')::uuid;actor:=('45000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid;n:=n+1;
+  if mode='unpublish' then reviewer:=owner;perform public.kh_admin_unpublish(owner,pid,1,'Retirada original conservada');
+  else
+   reviewer:=moderator;perform pg_temp.kh_as(moderator);update public.properties set moderation='pending' where id=pid;
+   perform public.kh_review_property(pid,'rejected','Rechazo original conservado',1);
+  end if;
+  perform pg_temp.kh_as(owner);
+  perform public.kh_review_agency_verification(owner,jsonb_build_object('agencyId',a,'decision','grant','note','Agencia verificada con evidencia','expectedAgencyVersion',(select version from kh_private.agencies where id=a),'expectedVerificationVersion',(select verification_version from kh_private.agencies where id=a),'clientRequestId',gen_random_uuid()));
+  body:=body||jsonb_build_object('expectedPropertyVersion',(select version from public.properties where id=pid));
+  perform public.kh_admin_link_assisted_agency(owner,body);
+  perform pg_temp.kh_assert(exists(select 1 from kh_private.agency_property_moderation_holds where property_id=pid and active and actor_id=reviewer and reason=case when mode='unpublish' then 'Retirada original conservada' else 'Rechazo original conservado' end),'pre-link '||mode||' retains original moderator and reason');
+  select jsonb_build_object('title',p.title,'location',p.location,'province',p.province,'type',p.type,'price',p.price,'bedrooms',p.bedrooms,'bathrooms',p.bathrooms,'description',p.description,'photoPaths',to_jsonb(p.photo_paths)) into draft from public.properties p where p.id=pid;
+  perform pg_temp.kh_as(actor);
+  result:=public.kh_agency_save_property(actor,a,jsonb_build_object('propertyId',pid,'expectedVersion',(select version from public.properties where id=pid),'draft',draft,'publicationIntent','submit','sourceReference','CASA','consentReference','Nuevo envío explícito','clientRequestId',gen_random_uuid()));
+  perform pg_temp.kh_assert(result#>>'{property,moderation}'='pending' and result->>'publicationPolicy'='requires_review' and (result->>'moderationHold')::boolean,'verified submission cannot lift pre-link '||mode);
  end loop;
 end $$;
 

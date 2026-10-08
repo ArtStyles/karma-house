@@ -595,6 +595,9 @@ begin
  perform kh_private.chat_pair_lock(a,manager_id);
  select * into p from public.properties where id=p_property_id for share;
  if not found or p.moderation<>'approved' or p.availability<>'active' then raise exception 'KH_CHAT_PROPERTY_UNAVAILABLE';end if;
+ -- Assisted attribution takes this row FOR UPDATE without changing custody or availability.
+ -- Re-evaluate origin after that writer commits, before returning or creating a personal chat.
+ if exists(select 1 from kh_private.agency_property_origins where property_id=p_property_id) then raise exception 'KH_AGENCY_CONTEXT_REQUIRED';end if;
  if p.owner_id<>manager_id then raise exception 'KH_CHAT_MANAGER_CHANGED';end if;
  select id into conversation_id from public.kh_conversations where property_id=p_property_id and buyer_id=a and seller_id=manager_id;
  if found then return kh_private.chat_conversation_json(conversation_id,a);end if;
@@ -622,7 +625,7 @@ create policy kh_agency_photo_read on storage.objects for select to authenticate
 -- Confirm proven assisted provenance without changing identity, publication or personal ownership.
 create function public.kh_admin_link_assisted_agency(p_actor_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
 declare a uuid:=(p_payload->>'agencyId')::uuid;pid uuid:=(p_payload->>'propertyId')::uuid;cid uuid:=(p_payload->>'collaboratorId')::uuid;
- c kh_private.assisted_collaborators%rowtype;p public.properties%rowtype;r kh_private.assisted_listing_records%rowtype;receipt jsonb;v_result jsonb;linked uuid;
+ c kh_private.assisted_collaborators%rowtype;p public.properties%rowtype;r kh_private.assisted_listing_records%rowtype;receipt jsonb;v_result jsonb;linked uuid;prior_review kh_private.admin_audit%rowtype;
 begin
  perform kh_private.agency_account(p_actor_id);
  if not kh_private.is_owner(p_actor_id) then raise exception 'KH_OWNER_REQUIRED';end if;
@@ -650,6 +653,18 @@ begin
  insert into kh_private.assisted_agency_links(collaborator_id,agency_id,evidence_reference,confirmed_by)values(cid,a,btrim(p_payload->>'evidenceReference'),p_actor_id)
  on conflict(collaborator_id) do update set version=assisted_agency_links.version+1,evidence_reference=excluded.evidence_reference,confirmed_by=excluded.confirmed_by,confirmed_at=now();
  insert into kh_private.agency_property_origins(property_id,origin_agency_id,publisher_id,source_reference,consent_reference)values(pid,a,p_actor_id,btrim(p_payload->>'sourceReference'),btrim(p_payload->>'consentReference'));
+ -- Attribution cannot turn an existing KarmaHouse rejection into direct-publication authority.
+ -- Keep the original moderation evidence when it exists; otherwise the attributing owner
+ -- records the inherited restriction, which still requires a separate authorized review.
+ if p.moderation='rejected' then
+  select * into prior_review from kh_private.admin_audit
+   where target_id=pid and action like 'property_rejected_%' order by id desc limit 1;
+  insert into kh_private.agency_property_moderation_holds(property_id,actor_id,reason,created_at)
+   values(pid,coalesce(prior_review.actor_id,p_actor_id),coalesce(nullif(p.review_note,''),prior_review.reason,'Rechazo previo a la atribución empresarial; requiere revisión de KarmaHouse.'),coalesce(prior_review.created_at,p.updated_at))
+   on conflict(property_id) do nothing;
+  insert into kh_private.agency_events(agency_id,actor_id,kind,subject_id,payload)
+   values(a,p_actor_id,'property_moderation_hold_inherited',pid,jsonb_build_object('priorAuditId',prior_review.id,'priorActorId',prior_review.actor_id,'priorModeration','rejected','reason',p.review_note));
+ end if;
  insert into kh_private.agency_mandates(property_id,agency_id,reference)values(pid,a,btrim(p_payload->>'sourceReference'));
  insert into kh_private.commercial_cycles(property_id)values(pid);
  insert into kh_private.agency_events(agency_id,actor_id,kind,subject_id,payload)values(a,p_actor_id,'assisted_origin_confirmed',pid,p_payload-'clientRequestId');
