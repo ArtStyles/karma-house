@@ -68,17 +68,17 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
         if (mounted.current)
             setBusy(false);
     } }
-    async function save() { await run(async (ctx) => { if (!repository)
+    async function save() { if (!c.canSend) return; await run(async (ctx) => { if (!repository)
         return; if (!attempt.current)
         attempt.current = { kind: 'create', payload: validateAgencyProposal({ dealId: c.dealId, kind, note, clientRequestId: createMessageId(), ...(kind === 'offer' ? { amountUsd: amount } : { visitDate: date, visitTime: time, durationMinutes: duration }), ...(parent ? { replacesId: parent.id, expectedVersion: parent.version } : {}),...(external&&manualBuyer?{externalResponse:manualResponse()}: {}) }) }; await submitAttempt(ctx); }); }
-    async function submitAttempt(ctx: ReturnType<typeof capture>) { if (!repository || !attempt.current)
+    async function submitAttempt(ctx: ReturnType<typeof capture>) { if (!c.canSend || !repository || !attempt.current)
         return; const a = attempt.current; if (a.kind === 'create')
         await repository.create(a.payload, ctx);
     else
         await repository.respond(a.payload, ctx); ctx.checkpoint(); if (!mounted.current)
         return; attempt.current = null; setParent(null); setNote(''); setEvents([]); setEventTarget(null); await load(); await onChanged(); }
     function manualResponse():ExternalResponse {const trimmed=reference.trim();if(trimmed.length<2||trimmed.length>500)throw Error('Revisa la referencia de la respuesta del interesado.');return {channel,reference:trimmed};}
-    async function respond(p: AgencyProposal, action: RespondAgencyProposal['action']) { await run(async (ctx) => { attempt.current = { kind: 'respond', payload: { proposalId: p.id, expectedVersion: p.version, action, clientRequestId: createMessageId(), ...(action === 'accept' && p.kind === 'visit' && jointToken.trim() ? { jointVisitToken: jointToken.trim() } : {}),...(external&&buyerResponse?{externalResponse:manualResponse()}: {}) } }; await submitAttempt(ctx); }); }
+    async function respond(p: AgencyProposal, action: RespondAgencyProposal['action']) { if (!c.canSend) return; await run(async (ctx) => { attempt.current = { kind: 'respond', payload: { proposalId: p.id, expectedVersion: p.version, action, clientRequestId: createMessageId(), ...(action === 'accept' && p.kind === 'visit' && jointToken.trim() ? { jointVisitToken: jointToken.trim() } : {}),...(external&&buyerResponse?{externalResponse:manualResponse()}: {}) } }; await submitAttempt(ctx); }); }
     const editable = c.canSend && !busy && !attempt.current;
     return <View style={s.card}><Text style={s.title}>Visitas y ofertas</Text><Notice>Las horas se muestran en Cuba. Una visita pasada sigue pendiente de resultado hasta que el equipo lo registre.</Notice>
  {error ? <Notice error>{error}</Notice> : null}
@@ -96,7 +96,7 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
                 setTime(wall.time);
                 setDuration(p.durationMinutes ?? 60);
             } }}/></>}
- {(p.status === 'accepted' || p.status === 'pending' && ownSide) && <Button secondary label={p.kind === 'visit' ? 'Cancelar visita' : 'Retirar oferta'} disabled={busy || !!attempt.current} onPress={() => void respond(p, 'cancel')}/>}
+ {(p.status === 'accepted' || p.status === 'pending' && ownSide) && <Button secondary label={p.kind === 'visit' ? 'Cancelar visita' : 'Retirar oferta'} disabled={!editable} onPress={() => void respond(p, 'cancel')}/>}
  <Button secondary label="Ver historial de la propuesta" disabled={busy} onPress={() => void run(async (ctx) => { if (!repository)
                 return; const page = await repository.events(p.id, 0, ctx); ctx.checkpoint(); if (mounted.current) {
                 setEvents(page.items);
@@ -116,7 +116,7 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
         setEvents(old => [...old, ...page.items]);
         setMoreEvents(page.hasMore);
     } })}/>}
- {attempt.current ? <><Notice>Conservamos el envío para reintentarlo con el mismo contenido.</Notice><Button label="Reintentar propuesta" loading={busy} onPress={() => void run(submitAttempt)}/><Button secondary label="Descartar intento" disabled={busy} onPress={() => { attempt.current = null; setError(''); }}/></> : <>
+ {attempt.current ? <><Notice>Conservamos el envío para reintentarlo con el mismo contenido.</Notice><Button label="Reintentar propuesta" disabled={!c.canSend} loading={busy} onPress={() => void run(submitAttempt)}/><Button secondary label="Descartar intento" disabled={busy} onPress={() => { attempt.current = null; setError(''); }}/></> : <>
  <Text style={s.title}>{parent ? 'Preparar alternativa' : 'Preparar propuesta'}</Text><View style={s.wrap}>{(['visit', 'offer'] as const).map(k => <Pill key={k} label={k === 'visit' ? 'Visita' : 'Oferta'} active={kind === k} onPress={() => { if (editable) {
             setKind(k);
             setParent(null);
@@ -125,7 +125,7 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
  {kind === 'visit' ? <><VisitDateTimeFields date={date} time={time} disabled={!editable} onDate={setDate} onTime={setTime}/><View style={s.wrap}>{[30, 60, 90, 120].map(n => <Pill key={n} label={`${n} min`} active={duration === n} onPress={() => { if (editable)
             setDuration(n); }}/>)}</View></> : <TextInput style={s.input} accessibilityLabel="Oferta en USD" keyboardType="decimal-pad" placeholder="Importe en USD" placeholderTextColor={colors.muted} value={amount} editable={editable} onChangeText={setAmount}/>}
  <TextInput style={s.input} accessibilityLabel="Nota de la propuesta" value={note} editable={editable} multiline maxLength={500} placeholder="Nota opcional" placeholderTextColor={colors.muted} onChangeText={setNote}/>
- <TextInput style={s.input} accessibilityLabel="Código de visita conjunta" value={jointToken} editable={!busy} autoCapitalize="none" placeholder="Código de visita conjunta (si corresponde)" placeholderTextColor={colors.muted} onChangeText={setJointToken}/>
+ <TextInput style={s.input} accessibilityLabel="Código de visita conjunta" value={jointToken} editable={editable} autoCapitalize="none" placeholder="Código de visita conjunta (si corresponde)" placeholderTextColor={colors.muted} onChangeText={setJointToken}/>
  <Button label={parent ? 'Enviar alternativa' : 'Enviar propuesta'} disabled={!editable} onPress={() => void save()}/>{parent && <Button secondary label="Descartar alternativa" disabled={busy} onPress={() => setParent(null)}/>}
  </>}
  </View>;

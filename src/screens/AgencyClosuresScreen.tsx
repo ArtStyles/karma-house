@@ -1,3 +1,4 @@
+import {saleOccurredAt} from '../agencies/closures/domain';
 import {router, useFocusEffect, useLocalSearchParams} from 'expo-router';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {AppState, ScrollView, Text, TextInput, View} from 'react-native';
@@ -12,7 +13,7 @@ import type {SaleRequest, DecideSale, RequestSale, SalePreparation} from '../age
 import {createAgencyDealRepository} from '../agencies/deals/repository';
 import type {AgencyDeal} from '../agencies/deals/types';
 import {createMessageId, isUuid} from '../messaging/domain';
-import {havanaDateTime, havanaVisitInstant, NEGOTIATION_TIME_ZONE} from '../negotiations/domain';
+import {havanaDateTime, NEGOTIATION_TIME_ZONE} from '../negotiations/domain';
 import {supabase} from '../lib/supabase';
 import {Button, Notice, PageTitle, Pill} from '../components/ui';
 import {useAgencyFormStyles} from '../components/agencies/AgencyRegistrationFields';
@@ -217,7 +218,7 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
                     winningDealId: deal.id,
                     executingManagerId: manager,
                     amountUsd: Number(amount),
-                    occurredAt: havanaVisitInstant(date, time),
+                    occurredAt: saleOccurredAt(date, time),
                     expectedPropertyVersion: property.expectedPropertyVersion,
                     expectedAuthorityVersion: property.expectedAuthorityVersion,
                     clientRequestId: createMessageId(),
@@ -265,8 +266,8 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
                 subtitle={personal ? 'Solicitudes para tu confirmación personal' : w.activeAgency?.tradeName}
                 back fallback={personal ? '/requests' : '/agency-workspace'}/>
             {!allowed ? <Notice>Inicia sesión y selecciona un espacio autorizado para consultar los cierres.</Notice> : <>
-                {issue && <Notice error>{issue}</Notice>}
-                {feedback && <Notice>{feedback}</Notice>}
+                {Boolean(issue) && <Notice error>{issue}</Notice>}
+                {Boolean(feedback) && <Notice>{feedback}</Notice>}
                 {pending.current && <>
                     <Notice>El intento conserva su contenido e identificador originales.</Notice>
                     <Button label="Reintentar" loading={busy} onPress={() => void execute(pending.current!)}/>
@@ -295,7 +296,7 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
                     <TextInput accessibilityLabel="Importe final en USD" placeholder="Importe final en USD"
                         placeholderTextColor={colors.muted} style={s.input} keyboardType="decimal-pad"
                         value={amount} onChangeText={setAmount} editable={!disabled}/>
-                    <VisitDateTimeFields date={date} time={time} disabled={disabled} onDate={setDate} onTime={setTime}/>
+                    <VisitDateTimeFields purpose="sale" date={date} time={time} disabled={disabled} onDate={setDate} onTime={setTime}/>
                     <Button label="Enviar solicitud de venta al origen" disabled={disabled || !manager || !amount} onPress={request}/>
                 </View>}
                 {review ? <View style={s.card}>

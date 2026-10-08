@@ -96,6 +96,7 @@ header{display:flex;align-items:center;gap:10px;margin-bottom:16px}header a{colo
 h1{font-size:28px;line-height:1.2;margin:16px 0 4px;letter-spacing:-0.02em}
 .price{font-size:26px;font-weight:700;margin:0}.price small{font-size:14px;font-weight:400;color:var(--muted)}
 .muted{color:var(--muted);font-size:14px}
+.agency-verified{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin-left:6px;border-radius:50%;background:#16813c;color:#fff;font-size:14px;line-height:1;vertical-align:middle}
 section.card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:16px 20px;margin:16px 0}
 h2{font-size:18px;margin:0 0 8px}dl{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;margin:0}dt{color:var(--muted)}dd{margin:0}
 ul{margin:0;padding-left:20px}
@@ -135,7 +136,7 @@ export function renderListing(row: PublicListingRow, photoUrls: string[], siteUr
   const self = escapeHtml(selfUrl);
   const destinationQuery=destination&&UUID.test(destination.agencyId)&&(!destination.managerId||UUID.test(destination.managerId))?`?agencyId=${destination.agencyId}${destination.managerId?`&managerId=${destination.managerId}`:''}`:'';
   const deepLink = escapeHtml(`karmahouse://property/${row.id}${destinationQuery}`);
-  const agencies=contact?.agencies.map(a=>`<section class="card"><h2>${escapeHtml(a.tradeName)}${a.verified?' <span style="color:#16813c" aria-label="Inmobiliaria verificada">✓ Inmobiliaria verificada</span>':''}</h2><p class="muted">Conversación privada con esta inmobiliaria.</p>${a.contactAvailable?`<a href="${escapeHtml(`karmahouse://property/${row.id}?agencyId=${a.agencyId}${destination?.agencyId===a.agencyId&&destination.managerId&&UUID.test(destination.managerId)?`&managerId=${destination.managerId}`:''}`)}">Elegir ${escapeHtml(a.tradeName)}</a>`:'<p>Contacto no disponible</p>'}</section>`).join('')??'';
+  const agencies=contact?.agencies.map(a=>`<section class="card"><h2>${escapeHtml(a.tradeName)}${a.verified?` <span class="agency-verified" role="img" aria-label="Inmobiliaria verificada por KarmaHouse: ${escapeHtml(a.tradeName)}"><span aria-hidden="true">✓</span></span>`:''}</h2><p class="muted">Conversación privada con esta inmobiliaria.</p>${a.contactAvailable?`<a href="${escapeHtml(`karmahouse://property/${row.id}?agencyId=${a.agencyId}${destination?.agencyId===a.agencyId&&destination.managerId&&UUID.test(destination.managerId)?`&managerId=${destination.managerId}`:''}`)}">Elegir ${escapeHtml(a.tradeName)}</a>`:'<p>Contacto no disponible</p>'}</section>`).join('')??'';
   const head = [
     `<meta name="description" content="${description}">`,
     `<link rel="canonical" href="${self}">`,

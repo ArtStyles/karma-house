@@ -5,7 +5,7 @@ import {PROVINCES} from '../../domain/listingOptions';
 import {Pill} from '../ui';
 import {createThemedStyles} from '../../theme';
 export function AgencyTextField({label,error,...props}:TextInputProps&{label:string;error?:string}){
- const {colors,styles:s}=useAgencyFormStyles();return <View style={s.field}><Text style={s.label}>{label}</Text><TextInput {...props} accessibilityLabel={label} placeholderTextColor={colors.muted} style={[s.input,props.multiline&&s.multiline,error&&{borderColor:colors.danger}]} />{error&&<Text accessibilityRole="alert" style={s.error}>{error}</Text>}</View>;
+ const {colors,styles:s}=useAgencyFormStyles();return <View style={s.field}><Text style={s.label}>{label}</Text><TextInput {...props} accessibilityLabel={label} placeholderTextColor={colors.muted} style={[s.input,props.multiline&&s.multiline,error&&{borderColor:colors.danger}]} />{Boolean(error)&&<Text accessibilityRole="alert" style={s.error}>{error}</Text>}</View>;
 }
 export function AgencyRegistrationFields({value,onChange,disabled,errors={}}:{value:AgencyApplicationInput;onChange:(value:AgencyApplicationInput)=>void;disabled:boolean;errors?:AgencyFieldErrors}){
  const {styles:s}=useAgencyFormStyles();const set=<K extends keyof AgencyApplicationInput>(key:K,next:AgencyApplicationInput[K])=>onChange({...value,[key]:next});

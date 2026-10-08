@@ -3,7 +3,7 @@ import {scopedAdminRequest} from '../admin/request.ts';import {decodeTransferDec
 export function createScopedRpc(client:SupabaseClient){return async(name:string,args:Record<string,unknown>,context:MessagingRequestContext):Promise<unknown>=>scopedAdminRequest(async()=>{
  if(context.signal.aborted)throw Error('KH_ACCOUNT_CHANGED');
  const {data,error}=await client.rpc(name,{...args,p_actor_id:context.userId}).setHeader('Authorization',`Bearer ${context.accessToken}`).abortSignal(context.signal);
- context.checkpoint();if(context.signal.aborted)throw Error('KH_ACCOUNT_CHANGED');if(error)throw error;return data;
+ context.checkpoint();if(context.signal.aborted)throw Error('KH_ACCOUNT_CHANGED');if(error){context.onAuthorizationError?.(error);throw error;}return data;
 },context.checkpoint);}
 export function createListingTransferRepository(client:SupabaseClient):ListingTransferRepository {
  const rpc=createScopedRpc(client);

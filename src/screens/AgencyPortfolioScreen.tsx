@@ -26,7 +26,7 @@ function Portfolio(){
  useFocusEffect(useCallback(()=>{focused.current=true;setItems([]);setIssue('');setBusy(false);void load();return()=>{focused.current=false;sequence.current++}},[load]));
  return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView contentContainerStyle={s.content}><PageTitle title="Cartera" subtitle={w.activeAgency?.tradeName??'Elige una inmobiliaria para consultar su cartera.'} back fallback="/agency-workspace"/>
  {!allowed?<Notice>Selecciona una inmobiliaria aprobada con una membresía activa para consultar su cartera.</Notice>:<>
- {issue&&<Notice error>{issue}</Notice>}<Button label="Actualizar cartera" secondary loading={busy} onPress={()=>void load()}/>
+ {Boolean(issue)&&<Notice error>{issue}</Notice>}<Button label="Actualizar cartera" secondary loading={busy} onPress={()=>void load()}/>
  {w.membership?.role==='admin'&&<Button label="Añadir vivienda en venta" onPress={()=>router.push('/agency-property/new')}/>}
  {w.membership?.role==='admin'&&<Button label="Autorizaciones y cambios compartidos" secondary onPress={()=>router.push('/agency-property-requests')}/>}
  {!busy&&!items.length&&<Notice>Esta inmobiliaria todavía no tiene viviendas autorizadas.</Notice>}

@@ -152,7 +152,7 @@ function Property({ id }: {
                     subtitle={w.activeAgency?.tradeName ?? 'Cartera empresarial'}
                     back fallback="/agency-portfolio"
                 />
-                {issue && <Notice error>{issue}</Notice>}
+                {Boolean(issue) && <Notice error>{issue}</Notice>}
                 {!allowed && <Notice>Selecciona una inmobiliaria aprobada para continuar.</Notice>}
                 {item?.moderationHold && (
                     <Notice error>{item.property.reviewNote ?? 'KarmaHouse retiró esta ficha. Corregirla y enviarla de nuevo requiere revisión.'}</Notice>

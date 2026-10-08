@@ -25,6 +25,13 @@ export function createAgencyController(repository:AgencyRepository|null){
   const base=captureAccountContext(),generation=state.generation,agencyId=state.activeAgencyId,controller=new AbortController();agencyRequests.add(controller);
   return {...base,agencyId,generation,signal:controller.signal,
    checkpoint(){base.checkpoint();if(controller.signal.aborted||generation!==state.generation||state.activeAgencyId!==agencyId)throw Error('KH_AGENCY_CONTEXT_CHANGED')},
+   onAuthorizationError(error:unknown){
+    const rejection=error as {code?:unknown;message?:unknown}|null;
+    if(rejection?.code!=='42501'||typeof rejection.message!=='string'||!/^KH_(AGENCY_(MEMBERSHIP_REQUIRED|ROLE_REQUIRED|DEAL_NOT_FOUND|NOT_APPROVED)|ACCOUNT_(CHANGED|DELETING|SUSPENDED)|EMAIL_UNCONFIRMED)$/.test(rejection.message))return;
+    // An old denial must never invalidate a newly selected account or agency.
+    try{base.checkpoint();if(controller.signal.aborted||generation!==state.generation||state.activeAgencyId!==agencyId)return;}catch{return}
+    invalidateAgency();publish({error:agencyError(error)});
+   },
    release(){base.release();agencyRequests.delete(controller)}};
  }
  function setSession(next:AgencySession|null){

@@ -30,3 +30,23 @@ test('late transport success and error both fail after switching the selected ag
  await f.controller.setActiveAgency(b);ok.resolve('private details from old agency');failed.reject(Error('private server error from old agency'));
  await assert.rejects(success,/CONTEXT_CHANGED/);await assert.rejects(error,/CONTEXT_CHANGED/);first.release();second.release();
 });
+
+test('definitive access rejection invalidates the captured agency immediately, not network errors',async()=>{
+ const {createScopedRpc}=await import('../src/transfers/repository.ts');
+ const f=fixture();await f.controller.refreshAgencies();await f.controller.setActiveAgency(a);
+ let error:any={message:'Failed to fetch',code:''};
+ const client={rpc(){return {setHeader(){return this},async abortSignal(){return {data:null,error}}}}};
+ const rpc=createScopedRpc(client as any),c=f.controller.captureAgencyContext();
+ await assert.rejects(rpc('kh_save_agency_task',{},c));assert.equal(f.controller.getSnapshot().activeAgencyId,a);
+ for(const message of ['KH_AGENCY_INVALID','KH_AGENCY_DISABLED']){error={message,code:'P0001'};await assert.rejects(rpc('kh_save_agency_task',{},c));assert.equal(f.controller.getSnapshot().activeAgencyId,a);}
+ error={message:'KH_AGENCY_DEAL_NOT_FOUND',code:'42501'};
+ await assert.rejects(rpc('kh_save_agency_task',{},c));assert.equal(f.controller.getSnapshot().activeAgencyId,null);assert.equal(c.signal.aborted,true);c.release();
+});
+test('late authorization denial from an old captured scope cannot clear the new agency',async()=>{
+ const {createScopedRpc}=await import('../src/transfers/repository.ts');const f=fixture();await f.controller.refreshAgencies();await f.controller.setActiveAgency(a);
+ const c=f.controller.captureAgencyContext(),late=deferred<any>();
+ const client={rpc(){return {setHeader(){return this},abortSignal(){return late.promise}}}};
+ const response=createScopedRpc(client as any)('kh_save_agency_task',{},c);
+ await f.controller.setActiveAgency(b);late.resolve({data:null,error:{message:'KH_AGENCY_DEAL_NOT_FOUND',code:'42501'}});
+ await assert.rejects(response,/CONTEXT_CHANGED/);assert.equal(f.controller.getSnapshot().activeAgencyId,b);c.release();
+});

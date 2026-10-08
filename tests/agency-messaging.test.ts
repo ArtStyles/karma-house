@@ -74,7 +74,9 @@ test('web public agency badges and manager links never label the technical selle
     const row = { id: id(3), title: 'Casa', location: 'Vedado', province: 'La Habana', type: 'Casa', description: 'Casa', price: 1, area: null, bedrooms: 1, bathrooms: 1, amenities: [], condition: null, floor: null, price_negotiable: null };
     const html = renderListing(row, [], 'https://example.com', `https://example.com/p/${id(3)}`, { name: 'Custodio', level: 'trusted', verified: true }, { propertyId: id(3), personalContact: false, agencies: [{ agencyId: id(4), tradeName: 'Uno', verified: true, contactAvailable: true }, { agencyId: id(5), tradeName: 'Dos', verified: false, contactAvailable: true }] }, { agencyId: id(4), managerId: id(5) });
     assert.ok(!html.includes('Custodio'));
-    assert.equal((html.match(/aria-label="Inmobiliaria verificada"/g) ?? []).length, 1);
+    assert.equal((html.match(/aria-label="Inmobiliaria verificada por KarmaHouse: Uno"/g) ?? []).length, 1);
+    assert.ok(html.includes('class="agency-verified" role="img"'));
+    assert.ok(html.includes('border-radius:50%'));
     assert.ok(html.includes(`agencyId=${id(4)}&amp;managerId=${id(5)}`));
 });
 test('moderator agency queue only consumes reported snapshot and uses scoped review RPC', async () => {
