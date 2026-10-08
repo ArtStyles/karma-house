@@ -1,6 +1,6 @@
 # Preserved chronological agency rulings
 
-Snapshot 2026-10-08, Task16 local preparation. The master ledger supplies chronology; exact repeated phase entries are attached to the same ruling, retaining every source occurrence. The four phase shorthand variants are attached to their full master decision/cost. Within each source, line order is preserved; no invented timestamps. All five source ledgers (including foundation, with no Ruling lines) are archived byte-for-byte privately and listed in the manifest. Historical authorizations are interpreted together with later rulings and the current root-owned production gate.
+Snapshot 2026-10-08, accepted final product review and root release execution. The master ledger supplies chronology; exact repeated phase entries are attached to the same ruling, retaining every source occurrence. The four phase shorthand variants are attached to their full master decision/cost. Within each source, line order is preserved; no invented timestamps. All five source ledgers (including foundation, with no Ruling lines) are archived byte-for-byte privately and listed in the manifest. Historical authorizations are interpreted together with later rulings and the current root-owned production gate.
 
 ## R01 — 2026-10-07-agency-workspaces:16
 
@@ -405,3 +405,107 @@ Ruling: Use a short root-owned same-session kh:push:worker advisory pause around
 Phase occurrence 2026-10-07-agency-closure-release:98:
 
 Ruling: Use a short root-owned same-session kh:push:worker advisory pause around the controlled production Auth/REST/Storage fixture, with strict manifest-verified enable and emergency disable acquiring the module lock on that same connection. Hold no account/agency/property/recipient locks during HTTP; remove only receipt-owned fixture events and subjects before releasing the worker. If the connection is lost, immediately disable through the ordinary explicit operator and report no-send assurance interrupted — the reviewed push_tick returns busy before reminders/subjects/provider under this exact mutex, while a second configure connection would wait on the paused worker — cost if wrong: unrelated asynchronous push processing is delayed briefly and a lost connection can permit fixture processing until shutdown; preserve pre-existing jobs, never erase provider evidence, require no fixture devices/attempts and exact cleanup, and do not claim real provider or physical delivery.
+
+## R60 — 2026-10-07-agency-workspaces:204
+
+Ruling: Supersede only R18's deferred distinct commercial-profile assumption: preserve immutable original applicant/registration evidence, and deliver the design-required approved-admin commercial-profile maintenance and separate explicitly safe public profile in the final fix wave — the full independent review I3 and design sections3/4 show this was a required current capability, not an approved future waiver — cost if wrong: added profile/version/asset/public-render integration and regression work; no self-approval, seal assignment, replacement of registration provenance or exposure of responsible/email/evidence is permitted.
+
+Phase occurrence 2026-10-07-agency-closure-release:104:
+
+Ruling: Supersede only R18's deferred distinct commercial-profile assumption: preserve immutable original applicant/registration evidence, and deliver the design-required approved-admin commercial-profile maintenance and separate explicitly safe public profile in the final fix wave — the full independent review I3 and design sections3/4 show this was a required current capability, not an approved future waiver — cost if wrong: added profile/version/asset/public-render integration and regression work; no self-approval, seal assignment, replacement of registration provenance or exposure of responsible/email/evidence is permitted.
+
+## R61 — 2026-10-07-agency-workspaces:205
+
+Ruling: Implement I6 as bounded server-backed privacy-safe pre-creation/submission match discovery, integrated warnings and existing-canonical mandate choice, plus explicit recorded different-home acknowledgment when matches remain; verified direct publication retains that guard, while similarity never merges or transfers origin automatically — the design's central prevention requirement precedes creation and manual post-creation consolidation cannot repair conflicting established origins — cost if wrong: legitimate similar homes need one explicit extra decision and heuristic matches can be imperfect; reveal only public/currently authorized display fields, keep canonical/source authority immutable and do not treat acknowledgment as proof of legal title.
+
+Phase occurrence 2026-10-07-agency-closure-release:105:
+
+Ruling: Implement I6 as bounded server-backed privacy-safe pre-creation/submission match discovery, integrated warnings and existing-canonical mandate choice, plus explicit recorded different-home acknowledgment when matches remain; verified direct publication retains that guard, while similarity never merges or transfers origin automatically — the design's central prevention requirement precedes creation and manual post-creation consolidation cannot repair conflicting established origins — cost if wrong: legitimate similar homes need one explicit extra decision and heuristic matches can be imperfect; reveal only public/currently authorized display fields, keep canonical/source authority immutable and do not treat acknowledgment as proof of legal title.
+
+## R62 — 2026-10-07-agency-workspaces:206
+
+Ruling: Decline automated commission calculation/payment/financial settlement in this release and retain only explicitly confirmed executor attribution/private conditions — design section9 excludes payments and attribution from sharing is not a sale — cost if wrong: agencies settle commissions through their existing process; no payment automation or inferred percentage is promised.
+
+Phase occurrence 2026-10-07-agency-closure-release:106:
+
+Ruling: Decline automated commission calculation/payment/financial settlement in this release and retain only explicitly confirmed executor attribution/private conditions — design section9 excludes payments and attribution from sharing is not a sale — cost if wrong: agencies settle commissions through their existing process; no payment automation or inferred percentage is promised.
+
+## R63 — 2026-10-07-agency-workspaces:207
+
+Ruling: Decline legal adjudication of property title or business representation in this code/release gate — approved verification controls application permissions and presentation and the design disclaims ownership proof — cost if wrong: legal sufficiency still requires its own human process; this module never claims to certify title or invent a legal business requirement.
+
+Phase occurrence 2026-10-07-agency-closure-release:107:
+
+Ruling: Decline legal adjudication of property title or business representation in this code/release gate — approved verification controls application permissions and presentation and the design disclaims ownership proof — cost if wrong: legal sufficiency still requires its own human process; this module never claims to certify title or invent a legal business requirement.
+
+## R64 — 2026-10-07-agency-workspaces:208
+
+Ruling: Decline automatic WhatsApp/SMS/email outreach to external contacts; retain explicit manual communication tasks and recorded actor/channel/reference — the approved design keeps external contacts outside Auth/in-app chat and excludes WhatsApp integration — cost if wrong: a responsible person must communicate cancellations through the established external channel; no unproven external delivery is asserted.
+
+Phase occurrence 2026-10-07-agency-closure-release:108:
+
+Ruling: Decline automatic WhatsApp/SMS/email outreach to external contacts; retain explicit manual communication tasks and recorded actor/channel/reference — the approved design keeps external contacts outside Auth/in-app chat and excludes WhatsApp integration — cost if wrong: a responsible person must communicate cancellations through the established external channel; no unproven external delivery is asserted.
+
+## R65 — 2026-10-07-agency-workspaces:209
+
+Ruling: Decline automatic similarity-based merging and transfer of conflicting established origins; preserve reviewed manual consolidation/current authority while fixing the required pre-creation prevention in I6 — the design excludes auto-merging and initial origin transfer, and aliases must not mix private negotiations — cost if wrong: contradictory-source cases need KarmaHouse review and cannot be resolved by an automatic first-upload rule.
+
+Phase occurrence 2026-10-07-agency-closure-release:109:
+
+Ruling: Decline automatic similarity-based merging and transfer of conflicting established origins; preserve reviewed manual consolidation/current authority while fixing the required pre-creation prevention in I6 — the design excludes auto-merging and initial origin transfer, and aliases must not mix private negotiations — cost if wrong: contradictory-source cases need KarmaHouse review and cannot be resolved by an automatic first-upload rule.
+
+## R66 — 2026-10-07-agency-workspaces:210
+
+Ruling: Decline a new enterprise rental/swap settlement lifecycle in this sale release and preserve existing personal non-sale behavior — the approved closure scope is operation sale and Task13 compatibility covers the existing personal routes — cost if wrong: enterprise rental/swap lifecycle remains a separate product delivery; no rental close is silently treated as a sale.
+
+Phase occurrence 2026-10-07-agency-closure-release:110:
+
+Ruling: Decline a new enterprise rental/swap settlement lifecycle in this sale release and preserve existing personal non-sale behavior — the approved closure scope is operation sale and Task13 compatibility covers the existing personal routes — cost if wrong: enterprise rental/swap lifecycle remains a separate product delivery; no rental close is silently treated as a sale.
+
+## R67 — 2026-10-07-agency-workspaces:211
+
+Ruling: Decline a Gradle10 migration/general upstream modernization during this pinned release, retaining M3 diagnostics and the obligation to revisit them before an upgrade — the current successful native toolchain is not Gradle10 and warnings do not demonstrate a current build failure — cost if wrong: future toolchain upgrades carry known compatibility work; no warning suppression or current-runtime success is invented.
+
+Phase occurrence 2026-10-07-agency-closure-release:111:
+
+Ruling: Decline a Gradle10 migration/general upstream modernization during this pinned release, retaining M3 diagnostics and the obligation to revisit them before an upgrade — the current successful native toolchain is not Gradle10 and warnings do not demonstrate a current build failure — cost if wrong: future toolchain upgrades carry known compatibility work; no warning suppression or current-runtime success is invented.
+
+## R68 — 2026-10-07-agency-workspaces:212
+
+Ruling: Decline platform redesign, CRM analytics and aesthetic restyling outside the final findings, while fixing I2/I5/I6/I7 as essential current usage — design section9 excludes advanced analytics and the review distinguishes missing usable behavior from polish — cost if wrong: broader styling/reporting remains deferred; required identification, live replies, duplicate prevention and scoped sharing are still delivered now.
+
+Phase occurrence 2026-10-07-agency-closure-release:112:
+
+Ruling: Decline platform redesign, CRM analytics and aesthetic restyling outside the final findings, while fixing I2/I5/I6/I7 as essential current usage — design section9 excludes advanced analytics and the review distinguishes missing usable behavior from polish — cost if wrong: broader styling/reporting remains deferred; required identification, live replies, duplicate prevention and scoped sharing are still delivered now.
+
+## R69 — 2026-10-07-agency-workspaces:220
+
+Ruling: Extend the final-fix cap once for the independently demonstrated I5 release blocker only, using one fresh implementer and one narrowly scoped independent review; do not reopen I1-I4/I6-I7/M1 or repeat unchanged SQL/native/browser matrices. Preserve current authorized data on transient chat/inbox refresh and retain definitive permission/scope clearing. This is an explicit exception to the SDD one-final-wave limit, not a relabeled original wave — the user explicitly authorized completing all recommended work/testing/commit/push and production activation, and the higher-priority autonomy instruction requires completing the approved outcome; parking a demonstrated loss of proposal draft/attempt state would leave that outcome unfinished — cost if wrong: one additional small implementation/review round and covering client checks; production remains untouched until the defect is independently resolved.
+
+Phase occurrence 2026-10-07-agency-closure-release:120:
+
+Ruling: Extend the final-fix cap once for the independently demonstrated I5 release blocker only, using one fresh implementer and one narrowly scoped independent review; do not reopen I1-I4/I6-I7/M1 or repeat unchanged SQL/native/browser matrices. Preserve current authorized data on transient chat/inbox refresh and retain definitive permission/scope clearing. This is an explicit exception to the SDD one-final-wave limit, not a relabeled original wave — the user explicitly authorized completing all recommended work/testing/commit/push and production activation, and the higher-priority autonomy instruction requires completing the approved outcome; parking a demonstrated loss of proposal draft/attempt state would leave that outcome unfinished — cost if wrong: one additional small implementation/review round and covering client checks; production remains untouched until the defect is independently resolved.
+
+## R70 — 2026-10-07-agency-workspaces:221
+
+Ruling: Add exact fixture publication-key cleanup to the root release teardown after observing the actual historical FK is ON DELETE SET NULL: require the sole key to match the receipt publisher/client request/exact unpublished draft before deletion, then delete only that exact now-null fixture tombstone and record its count; preserve all nonfixture keys — the reviewed draft path creates this retained retry key, so deleting the property alone would leave a synthetic identifier in production — cost if wrong: stricter cleanup can abort and retain OFF for investigation; no broad historical-key deletion is authorized.
+
+Phase occurrence 2026-10-07-agency-closure-release:121:
+
+Ruling: Add exact fixture publication-key cleanup to the root release teardown after observing the actual historical FK is ON DELETE SET NULL: require the sole key to match the receipt publisher/client request/exact unpublished draft before deletion, then delete only that exact now-null fixture tombstone and record its count; preserve all nonfixture keys — the reviewed draft path creates this retained retry key, so deleting the property alone would leave a synthetic identifier in production — cost if wrong: stricter cleanup can abort and retain OFF for investigation; no broad historical-key deletion is authorized.
+
+## R71 — 2026-10-07-agency-workspaces:224
+
+Ruling: Push the independently reviewed feature branch and create its main-targeted PR as a draft while actual production/client/cleanup receipts are pending; mark it ready only after those gates pass, without merging main — the user already authorized tested commit/push and deployment, but remaining remote execution must not be represented as finished review evidence — cost if wrong: reviewers may wait briefly for readiness; no automatic main integration or untested activation occurs.
+
+Phase occurrence 2026-10-07-agency-closure-release:124:
+
+Ruling: Push the independently reviewed feature branch and create its main-targeted PR as a draft while actual production/client/cleanup receipts are pending; mark it ready only after those gates pass, without merging main — the user already authorized tested commit/push and deployment, but remaining remote execution must not be represented as finished review evidence — cost if wrong: reviewers may wait briefly for readiness; no automatic main integration or untested activation occurs.
+
+## R72 — 2026-10-07-agency-workspaces:225
+
+Ruling: Retain the single Browser Use URL-policy-blocked tab as an explicit UI cleanup residue and do not bypass the policy; its saved parsed document is the initial loopback ERR_CONNECTION_REFUSED page, and authentication occurred only in the successfully closed tabs2/4 — the independent final scoped review found no evidence of retained private app content in tab1 and accepted exact database/process/config cleanup — cost if wrong: one error tab remains visible until normal user closure; no claim of complete tab cleanup or automatic-approval rejection is made.
+
+Phase occurrence 2026-10-07-agency-closure-release:125:
+
+Ruling: Retain the single Browser Use URL-policy-blocked tab as an explicit UI cleanup residue and do not bypass the policy; its saved parsed document is the initial loopback ERR_CONNECTION_REFUSED page, and authentication occurred only in the successfully closed tabs2/4 — the independent final scoped review found no evidence of retained private app content in tab1 and accepted exact database/process/config cleanup — cost if wrong: one error tab remains visible until normal user closure; no claim of complete tab cleanup or automatic-approval rejection is made.
