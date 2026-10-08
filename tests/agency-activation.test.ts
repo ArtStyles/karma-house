@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
+import {randomUUID} from 'node:crypto';
 const run=(args:string[])=>spawnSync(process.execPath,['scripts/configure-agencies.mjs',...args],{encoding:'utf8',env:{PATH:process.env.PATH}});
 test('default_command_does_not_enable',()=>{const r=run([]);assert.notEqual(r.status,0);assert.match(r.stderr,/Explicit --target and exactly one action/);assert.doesNotMatch(r.stdout,/enabled.*true/)});
 test('requires_explicit_target_and_action',()=>{for(const args of [['--enable'],['--target','local'],['--target','other','--status'],['--target','local','--status','--enable'],['--target','local','--enable'],['--target','local','--disable','--reason',' ']]){const r=run(args);assert.notEqual(r.status,0);assert.match(r.stderr,/Invalid agency command/);assert.doesNotMatch(r.stderr,/password|ENOTFOUND|ECONNREFUSED|pg\//)}});
@@ -30,10 +31,13 @@ test('unknown_targets_and_profiles_reject_before_configuration_or_queries',async
 test('rename_then_move_inventory_uses_final_private_identity_without_ghost_public_names',async()=>{const {inventoryNames,migrationArtifacts}=await import('../scripts/agency-activation.mjs');const names=inventoryNames(await migrationArtifacts());for(const name of ['kh_review_agency_before_lifecycle','kh_create_negotiation_pre_scheduling','kh_respond_negotiation_pre_scheduling']){assert.ok(names.functions.includes(`kh_private.${name}`));assert.ok(!names.functions.includes(`public.${name}`));}});
 test('platform_remediation_requires_explicit_hosted_profile_before_queries',async()=>{const {remediateAgencyPlatform}=await import('../scripts/agency-platform-remediation.mjs');for(const profile of [undefined,'local','other'])await assert.rejects(remediateAgencyPlatform({query:()=>{throw Error('unexpected database query')}},profile),/Explicit hosted remediation profile/);});
 test('administration native proof requires its owned fixture before connection without exposing rejected URLs',()=>{
- for(const value of [undefined,'postgresql://agency_test@127.0.0.1:55491/other','postgresql://private:secret-proof@remote.invalid/business']){
+ const rejectedRemote=new URL('postgresql://remote.invalid/business');
+ rejectedRemote.username='fixture_actor';rejectedRemote.password=randomUUID();
+ for(const value of [undefined,'postgresql://agency_test@127.0.0.1:55491/other',rejectedRemote.toString()]){
   const env={...process.env};delete env.KH_ADMIN_MANIFEST_TEST_DATABASE_URL;if(value)env.KH_ADMIN_MANIFEST_TEST_DATABASE_URL=value;
   const r=spawnSync(process.execPath,['scripts/local-sql/verify-agency-administration.mjs','--profile','local'],{encoding:'utf8',env,timeout:10000});
-  assert.notEqual(r.status,0);assert.match(r.stderr,/Explicit owned administration inventory fixture required/);assert.doesNotMatch(r.stdout+r.stderr,/secret-proof|remote.invalid|ENOTFOUND|ECONNREFUSED/);
+  assert.ok(!(r.stdout+r.stderr).includes(rejectedRemote.password),'Rejected connection exposed its synthetic password');
+  assert.notEqual(r.status,0);assert.match(r.stderr,/Explicit owned administration inventory fixture required/);assert.doesNotMatch(r.stdout+r.stderr,/remote.invalid|ENOTFOUND|ECONNREFUSED/);
  }
 });
 test('hosted_platform_profile_and_atomic_remediation',{skip:!process.env.KH_LOCAL_DATABASE_URL},()=>{const r=spawnSync(process.execPath,['scripts/local-sql/verify-agency-platform.mjs'],{encoding:'utf8',env:process.env,timeout:60000});assert.equal(r.status,0,r.stdout+r.stderr);assert.match(r.stdout,/strict hosted profile accepts 241 functions/);assert.match(r.stdout,/atomic two-revoke remediation/);assert.match(r.stdout,/all migration bytes and source inventory unchanged; owned clone dropped/);});
