@@ -24,9 +24,17 @@ try{
   const through=`20261007${String(manifest[suite][0]*100).padStart(6,'0')}`;
   await db.query('begin');
   try{
-   for(const file of files.filter(f=>f.slice(0,14)<=through))await db.query(await readFile(new URL(file,root),'utf8'));
+   let fixtureLoaded=false;
+   for(const file of files.filter(f=>f.slice(0,14)<=through)){
+    if(suite==='scheduling'&&file.startsWith('20261007000700')){
+     await db.query(await readFile(new URL('../../supabase/tests/helpers/agency_fixture.sql',import.meta.url),'utf8'));fixtureLoaded=true;
+     await db.query(await readFile(new URL('../../supabase/tests/helpers/agency_scheduling_legacy_fixture.sql',import.meta.url),'utf8'));
+    }
+    await db.query(await readFile(new URL(file,root),'utf8'));
+   }
    const last=files.find(f=>f.startsWith(through));if(!last)throw Error(`Missing migration ${through}`);
-   await db.query(await readFile(new URL('../../supabase/tests/helpers/agency_fixture.sql',import.meta.url),'utf8'));
+   if(!fixtureLoaded)await db.query(await readFile(new URL('../../supabase/tests/helpers/agency_fixture.sql',import.meta.url),'utf8'));
+   if(['proposals','scheduling'].includes(suite))await db.query(await readFile(new URL('../../supabase/tests/helpers/agency_scheduling_fixture.sql',import.meta.url),'utf8'));
    await db.query(await readFile(new URL(`../../supabase/tests/agency_${names[suite]??suite.replaceAll('-','_')}.sql`,import.meta.url),'utf8'));
    await db.query('rollback');assert.deepEqual(await inventory(),before);console.log(`PASS ${suite} (rollback, inventoryUnchanged:true)`);
   }catch(error){await db.query('rollback');throw error;}
@@ -45,4 +53,3 @@ try{
  }
 }catch(error){await db.query('rollback').catch(()=>{});console.error(error.message,error.where??'',error.detail??'');process.exitCode=1;}
 finally{await db.end()}
-

@@ -174,6 +174,7 @@ function Property({ id }: {
                         </>}
                     </>
                 )}
+                {item&&<Button label="Agenda y ocupación" secondary onPress={()=>router.push({pathname:'/agency-agenda',params:{propertyId:item.property.id}})}/>}
                 {item&&w.membership?.role==='admin'&&<Button label="Ver autorizaciones y cambios" secondary onPress={()=>router.push('/agency-property-requests')}/>}
                 {!loaded && allowed && <Button label="Volver a cargar" secondary loading={busy} onPress={() => void load()} />}
             </View>

@@ -1,0 +1,20 @@
+do $$declare f jsonb:=pg_temp.schedule_fixture(30);a uuid:=(f->>'agency')::uuid;u uuid:=(f->>'actor')::uuid;d uuid:=(f->>'deal')::uuid;p jsonb;r jsonb;body jsonb;begin
+ body:=jsonb_build_object('dealId',d,'kind','offer','amountUsd','25000.25','note','Oferta','clientRequestId',gen_random_uuid());
+ p:=public.kh_create_agency_proposal(u,a,body);
+ perform pg_temp.kh_assert(public.kh_create_agency_proposal(u,a,body)=p,'proposal_receipt');
+ perform pg_temp.kh_error(format('select public.kh_create_agency_proposal(%L,%L,%L)',u,a,body||jsonb_build_object('clientRequestId',gen_random_uuid())),'KH_NEG_PENDING_EXISTS');
+ perform pg_temp.kh_assert((select count(*) from kh_private.agency_proposals where deal_id=d and status='pending')=1,'one_pending_proposal_per_kind_per_deal');
+ body:=jsonb_build_object('proposalId',p->>'id','expectedVersion',1,'action','accept','clientRequestId',gen_random_uuid());
+ perform pg_temp.kh_error(format('select public.kh_respond_agency_proposal(%L,%L,%L)',u,a,body),'KH_NEG_NOT_YOUR_TURN');
+ r:=public.kh_respond_agency_proposal(u,a,body||jsonb_build_object('externalResponse',jsonb_build_object('channel','phone','reference','Llamada confirmada 30')));
+ perform pg_temp.kh_assert(r->>'status'='accepted' and (select availability from public.properties where id=(f->>'property')::uuid)='active' and not exists(select 1 from kh_private.property_reservations),'offers_preserve_history_and_do_not_sell');
+ perform pg_temp.kh_assert(exists(select 1 from kh_private.agency_proposal_events where proposal_id=(p->>'id')::uuid and actor_id=u and party='buyer' and response_source='manual' and external_response->>'reference'='Llamada confirmada 30'),'external_acceptance_is_labeled_manual_with_actor_and_reference');
+ perform pg_temp.kh_assert(public.kh_list_agency_proposal_events(u,a,(p->>'id')::uuid,0,30)#>>'{items,0,responseSource}'='manual','manual_response_history_has_typed_private_projection');
+ p:=public.kh_create_agency_proposal(u,a,jsonb_build_object('dealId',d,'kind','offer','amountUsd','24000','note','','clientRequestId',gen_random_uuid()));
+ r:=public.kh_create_agency_proposal(u,a,jsonb_build_object('dealId',d,'kind','offer','amountUsd','24500','note','Alternativa','replacesId',p->>'id','expectedVersion',1,'externalResponse',jsonb_build_object('channel','in_person','reference','Respuesta presencial'),'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert(r->>'parentId'=p->>'id' and (select status from kh_private.agency_proposals where id=(p->>'id')::uuid)='superseded','counteroffer_is_atomic_and_preserves_parent');
+ perform pg_temp.kh_error(format('select public.kh_create_agency_proposal(%L,%L,%L)',u,a,jsonb_build_object('dealId',d,'kind','offer','amountUsd','1.001','note','','clientRequestId',gen_random_uuid())),'KH_NEG_INVALID_AMOUNT');
+ update kh_private.agency_proposals set expires_at=clock_timestamp()-interval '1 minute' where id=(r->>'id')::uuid;
+ perform kh_private.terminate_mandate_flows((f->>'property')::uuid,a,'authorization_withdrawn');
+ perform pg_temp.kh_assert((select status from kh_private.agency_proposals where id=(r->>'id')::uuid)<>'cancelled','expired_proposals_remain_expired_on_lifecycle_termination');
+end $$;

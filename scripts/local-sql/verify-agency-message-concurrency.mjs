@@ -39,9 +39,9 @@ try{
  async function client(){const c=new Client({connectionString:new URL(`/${scratchName}`,source).href});await c.connect();clients.push(c);await c.query("set statement_timeout='12s';set deadlock_timeout='100ms'");c.pid=(await c.query('select pg_backend_pid() id')).rows[0].id;return c}
  const setup=await client(),left=await client(),right=await client();
  const migrations=new URL('../../supabase/migrations/',import.meta.url);
- for(const file of(await readdir(migrations)).filter(f=>/^20261007000[1-6]00_.*\.sql$/.test(f)).sort()){
+ for(const file of(await readdir(migrations)).filter(f=>/^20261007000[1-7]00_.*\.sql$/.test(f)&&(!reviewBase||!f.startsWith('20261007000700'))).sort()){
   const sql=reviewBase&&file.startsWith('20261007000600')?execFileSync('git',['show',`935912a66ae479c981e4af0ee3a3f9323856e1cb:supabase/migrations/${file}`],{encoding:'utf8'}):await readFile(new URL(file,migrations),'utf8');
-  await setup.query(sql);
+  await setup.query(sql);console.log(`INSTALLED ${file}`);
  }
  if(reviewBase)console.log('REPRODUCTION review base 935912a (Task8 migration in scratch only)');
  await setup.query('begin');await setup.query(await readFile(new URL('../../supabase/tests/helpers/agency_fixture.sql',import.meta.url),'utf8'));

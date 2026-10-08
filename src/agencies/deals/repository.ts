@@ -3,9 +3,11 @@ import { createScopedRpc } from '../../transfers/repository.ts';
 import { decodeAgencyPage } from '../repository.ts';
 import { decodeAgencyDeal, normalizeExternalContact, integer, uuid, invalidAgencyData } from './domain.ts';
 import type { AgencyDealRepository } from './types.ts';
+import { createAgencySchedulingRepository } from '../scheduling/repository.ts';
 export function createAgencyDealRepository(client: SupabaseClient): AgencyDealRepository {
     const rpc = createScopedRpc(client);
     return {
+        scheduling: createAgencySchedulingRepository(client),
         async list(offset, context) { return decodeAgencyPage(await rpc('kh_list_agency_deals', { p_agency_id: uuid(context.agencyId), p_offset: integer(offset), p_limit: 30 }, context), v => decodeAgencyDeal(v, context.agencyId)); },
         async get(id, context) { const d = decodeAgencyDeal(await rpc('kh_get_agency_deal', { p_agency_id: uuid(context.agencyId), p_deal_id: uuid(id) }, context), context.agencyId); if (d.id !== id)
             throw invalidAgencyData(); return d; },

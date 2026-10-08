@@ -1,4 +1,5 @@
 import type { AgencyRequestContext, DealStage, Page } from '../types';
+import type { AgencySchedulingRepository } from '../scheduling/types';
 export interface ExternalContact {
     name: string;
     phone: string | null;
@@ -31,6 +32,7 @@ export interface AssignAgencyDeal {
     clientRequestId: string;
 }
 export interface AgencyDealRepository {
+    scheduling: AgencySchedulingRepository;
     list(offset: number, context: AgencyRequestContext): Promise<Page<AgencyDeal>>;
     get(id: string, context: AgencyRequestContext): Promise<AgencyDeal>;
     create(input: CreateAgencyDeal, context: AgencyRequestContext): Promise<AgencyDeal>;
