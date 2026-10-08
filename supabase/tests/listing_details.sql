@@ -50,10 +50,10 @@ select pg_temp.details_error('select public.kh_save_property(payload || ''{"owne
 select set_config('request.jwt.claim.sub','24000000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claims','{"sub":"24000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 select pg_temp.details_assert(not exists(select 1 from public.properties where id=(select property_id from kh_details_context)), 'pending details stay private');
-select pg_temp.details_error('select public.kh_save_property(payload || jsonb_build_object(''id'',property_id,''expectedVersion'',1)) from kh_details_context','KH_PROPERTY_NOT_FOUND');
+select pg_temp.details_error('select public.kh_save_property(payload || jsonb_build_object(''id'',property_id,''expectedVersion'',1)) from kh_details_context','KH_PROPERTY_MANAGEMENT_CHANGED');
 select set_config('request.jwt.claim.sub','24000000-0000-4000-8000-000000000003',true);
 select set_config('request.jwt.claims','{"sub":"24000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
-select pg_temp.details_error('select public.kh_save_property(payload || jsonb_build_object(''id'',property_id,''expectedVersion'',1)) from kh_details_context','KH_PROPERTY_NOT_FOUND');
+select pg_temp.details_error('select public.kh_save_property(payload || jsonb_build_object(''id'',property_id,''expectedVersion'',1)) from kh_details_context','KH_PROPERTY_MANAGEMENT_CHANGED');
 select public.kh_review_property(property_id,'approved',null,1) from kh_details_context;
 reset role;
 set local role anon;

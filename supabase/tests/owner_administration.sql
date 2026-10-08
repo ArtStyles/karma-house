@@ -89,7 +89,8 @@ select public.kh_save_property(pg_temp.wanted_payload('owner-sale') || '{"operat
 select public.kh_save_property(pg_temp.wanted_payload('owner-sale') || '{"operation":"sale","type":"Casa","area":100,"bathrooms":1,"photoPaths":["42000000-0000-4000-8000-000000000001/owner-sale/photo.jpg"]}'::jsonb);
 reset role;
 select pg_temp.owner_assert((select count(*)=1 from kh_private.notifications n join public.properties p on p.id=n.property_id where n.recipient_id='42000000-0000-4000-8000-000000000003' and p.client_request_id='owner-sale' and n.category='alert'),'owner publication alerts once despite retry');
-select pg_temp.owner_error($q$delete from auth.users where id='42000000-0000-4000-8000-000000000001'$q$,'platform_owner');
+select pg_temp.owner_error($q$delete from auth.users where id='42000000-0000-4000-8000-000000000001'$q$,case when to_regclass('kh_private.agency_settings') is null then 'platform_owner' else 'KH_OWNER_PROTECTED' end);
+select pg_temp.owner_assert(exists(select 1 from auth.users where id='42000000-0000-4000-8000-000000000001'),'protected owner survives rejected Auth deletion');
 set local role anon;
 select pg_temp.owner_as(null);
 select pg_temp.owner_assert((select array_agg(k order by k) from jsonb_object_keys(public.kh_public_profile('42000000-0000-4000-8000-000000000001')) k)=array['avatarUrlPath','displayName','id','identityOnly'],'owner public identity only');

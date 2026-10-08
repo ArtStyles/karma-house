@@ -147,7 +147,7 @@ set local role authenticated;
 -- 6. alerts=false stops new alerts; a 0.1.7 client that omits `alerts` keeps it off.
 select pg_temp.ops_as('28000000-0000-4000-8000-000000000002');
 select pg_temp.ops_assert(public.kh_save_notification_preferences('28000000-0000-4000-8000-000000000002',
-  '{"messages":true,"visits":true,"offers":true,"alerts":false,"expectedVersion":0}')='{"messages":true,"visits":true,"offers":true,"alerts":false,"version":1}','alerts can be turned off');
+  '{"messages":true,"visits":true,"offers":true,"alerts":false,"expectedVersion":0}')-'agencies'='{"messages":true,"visits":true,"offers":true,"alerts":false,"version":1}','alerts can be turned off');
 select pg_temp.ops_as('28000000-0000-4000-8000-000000000001');
 update sa_context set a3=pg_temp.sa_sale('28000000-0000-4000-8000-000000000001','alert-sale-3',72000,2);
 select pg_temp.ops_as('28000000-0000-4000-8000-000000000003');
@@ -155,7 +155,8 @@ select public.kh_review_property(a3,'approved',null,1) from sa_context;
 select pg_temp.ops_assert(jsonb_array_length(pg_temp.sa_alerts('28000000-0000-4000-8000-000000000002'))=7,'a muted recipient gets no alert');
 select pg_temp.ops_as('28000000-0000-4000-8000-000000000002');
 select pg_temp.ops_assert(public.kh_save_notification_preferences('28000000-0000-4000-8000-000000000002',
-  '{"messages":true,"visits":false,"offers":true,"expectedVersion":1}')='{"messages":true,"visits":false,"offers":true,"alerts":false,"version":2}','an old client keeps alerts off');
+  '{"messages":true,"visits":false,"offers":true,"expectedVersion":1}')-'agencies'='{"messages":true,"visits":false,"offers":true,"alerts":false,"version":2}','an old client keeps alerts off');
+select pg_temp.ops_assert(to_regclass('kh_private.agency_settings') is null or public.kh_get_notification_preferences('28000000-0000-4000-8000-000000000002')->>'agencies'='true','old client omission preserves the added agency preference');
 select pg_temp.ops_assert(public.kh_save_notification_preferences('28000000-0000-4000-8000-000000000002',
   '{"messages":true,"visits":false,"offers":true,"expectedVersion":1}')->>'version'='2','an old client replay is idempotent');
 select pg_temp.ops_error($q$select public.kh_save_notification_preferences('28000000-0000-4000-8000-000000000002','{"messages":true,"visits":true,"offers":true,"alerts":null,"expectedVersion":2}')$q$,'KH_NOTIFICATION_INVALID');

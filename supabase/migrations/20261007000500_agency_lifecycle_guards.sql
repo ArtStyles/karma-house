@@ -60,10 +60,18 @@ declare a uuid;begin
  if not kh_private.property_has_business_history(old.id) then
   delete from kh_private.agency_property_identities where property_id=old.id;return old;
  end if;
- perform kh_private.agency_lock_many((select array_agg(agency_id) from(
+ -- PostgreSQL already owns the source row at this BEFORE DELETE hook. The
+ -- public/Auth prefix normally owns these agency locks, but a new mandate can
+ -- commit while that prepared prefix waits. Maintenance DELETE may have no
+ -- prefix at all. Never wait for a new agency while retaining the property row.
+ for a in select agency_id from(
  select agency_id from kh_private.agency_mandates where property_id=old.id union
  select agency_id from kh_private.agency_mandate_requests where property_id=old.id union
- select agency_id from kh_private.agency_property_changes where property_id=old.id)x));
+ select agency_id from kh_private.agency_property_changes where property_id=old.id)x order by agency_id loop
+  if not pg_try_advisory_xact_lock(hashtextextended('kh:agency:'||a::text,0)) then
+   raise exception 'KH_AGENCY_LIFECYCLE_RETRY' using errcode='40001';
+  end if;
+ end loop;
  for a in select agency_id from kh_private.agency_mandates where property_id=old.id union
  select agency_id from kh_private.agency_mandate_requests where property_id=old.id union
  select agency_id from kh_private.agency_property_changes where property_id=old.id loop
