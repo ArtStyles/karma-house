@@ -112,12 +112,24 @@
     "oldLedgerRows": 12,
     "managedWorktreeRetainedForPr": true
   },
+  "localCleanup": {
+    "ownedPostgresStopped": true,
+    "localPostgresBackupVerified": true,
+    "sddScratchRemoved": false,
+    "dependencyJunctionRemoved": false,
+    "retainedSddDirectories": 5,
+    "executionPolicyBlockedBeforeExecution": true,
+    "alternativeDeletionAttempted": false,
+    "primaryDependencyTargetPreserved": true,
+    "evidenceArchiveHashesVerified": true
+  },
   "limits": [
     "No production positive chat/offer/visit/sale was exercised: unpublished-draft commercial denials were verified; positive business flows retain local SQL/render/native fixture evidence.",
     "Production database archive was fully decoded; a restoration rehearsal was not performed.",
     "Official APK update and activity launch were checked; existing session/data preservation and final native commercial/provider delivery were not independently proven.",
     "Nonfatal Vercel default-library/process type diagnostics and existing upstream toolchain diagnostics remain visible.",
     "Execution policy blocked recursive removal of C:/kh-agency-release-20261008; four exact private input files were removed and retained Android caches contain zero exact signing-value matches.",
-    "One initial Browser Use error tab remains due URL policy; it contained no authenticated fixture session."
+    "One initial Browser Use error tab remains due URL policy; it contained no authenticated fixture session.",
+    "Execution policy also rejected the guarded nonrecursive dependency-junction unlink before execution. Five plan-owned SDD directories remain; the owned PostgreSQL server is stopped and the archive/base backup are verified. No alternate deletion was attempted."
   ]
 }

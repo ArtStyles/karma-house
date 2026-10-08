@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-08T18:30:44.329Z",
+  "at": "2026-10-08T18:38:21.275Z",
   "source": ".superpowers/sdd",
   "privateArchive": "artifacts/agency-release-preparation/sdd-archive",
   "files": 666,
@@ -7,9 +7,9 @@
     "2026-10-07-agency-workspaces/node_modules-shared",
     "2026-10-07-agency-workspaces/postgres-data"
   ],
-  "ledgerRulings": 153,
-  "masterRulings": 86,
-  "phaseOccurrences": 67,
+  "ledgerRulings": 155,
+  "masterRulings": 87,
+  "phaseOccurrences": 68,
   "unmatched": 0,
   "entries": [
     {
@@ -219,8 +219,8 @@
     },
     {
       "path": "2026-10-07-agency-workspaces/progress.md",
-      "bytes": 111775,
-      "sha256": "7b79d9abdeef91667555be8d2b6edbab09e275936cea0ae77b7e8268cc0791e6"
+      "bytes": 113810,
+      "sha256": "52ff61ea5c8cd3cf3087ef72cbebcdd9f7fe9ba11e1422872eb3bbece49c89b1"
     },
     {
       "path": "2026-10-07-agency-workspaces/prove-platform-parser-red.mjs",
@@ -1234,8 +1234,8 @@
     },
     {
       "path": "2026-10-07-agency-closure-release/progress.md",
-      "bytes": 74704,
-      "sha256": "318d489c8c5260a409826c9a31e5a412e1c7016c62f010f3641974863c282dcd"
+      "bytes": 76433,
+      "sha256": "233b019bb278f0f5437b73ffb23b3105fc7551b928136f9161b509456f9f4f75"
     },
     {
       "path": "2026-10-07-agency-closure-release/review-023b48a..aec0863.diff",
