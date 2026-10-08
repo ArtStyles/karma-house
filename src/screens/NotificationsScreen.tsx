@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {useConsultationRefresh} from '../lib/useConsultationRefresh';
 import {useNotificationNavigation} from '../notifications/useNotificationNavigation';
 import {notificationErrorMessage} from '../notifications/domain';
 import { router } from 'expo-router';
@@ -29,6 +30,8 @@ function NotificationsBody() {
   const { colors, styles } = useStyles();
   const store = useNotificationCenter();
   const { list } = store;
+  const auth = useAuth();
+  const reload = useConsultationRefresh(`${auth.user?.id}:${auth.session?.access_token}:${list.unreadOnly}`, store.refreshList, !!store.marking || list.loading || list.loadingMore);
   const navigation=useNotificationNavigation(),[openingError,setOpeningError]=useState('');
   const open=(id:string)=>{setOpeningError('');void navigation.open(id).catch(e=>setOpeningError(notificationErrorMessage(e)))};
   const issue = openingError || store.mutationError || list.error || store.summaryError;
@@ -41,23 +44,22 @@ function NotificationsBody() {
     <View style={styles.filters}>
       <View style={styles.filterOptions}><Pill label="Todas" active={!list.unreadOnly} onPress={() => { if (!store.marking) store.setUnreadOnly(false); }} />
       <Pill label="Sin leer" active={list.unreadOnly} onPress={() => { if (!store.marking) store.setUnreadOnly(true); }} /></View>
-      <IconButton name="refresh-outline" label="Actualizar avisos" onPress={() => { if (!store.marking) void store.refreshList().catch(() => {}); }} />
     </View>
     <FlatList data={list.items} keyExtractor={item => item.id} contentContainerStyle={styles.list}
-      refreshControl={<RefreshControl refreshing={list.loading && list.ready} onRefresh={() => void store.refreshList().catch(() => {})} tintColor={colors.primary} />}
+      alwaysBounceVertical refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!store.marking && !list.loadingMore} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}
       ListHeaderComponent={<View style={styles.listHeader}>
         <View style={styles.summary}>
           <Text style={styles.count}>{store.summaryReady && !store.summaryError ? `${store.unreadCount} ${store.unreadCount === 1 ? 'aviso sin leer' : 'avisos sin leer'}` : 'Tus novedades'}</Text>
           <Text style={styles.hint}>Abrir una conversación no marca este aviso como leído.</Text>
         </View>
         {store.unreadCount > 0 && <Button label="Marcar todos como leídos" secondary icon="checkmark-done-outline" disabled={!!store.marking || store.readThrough === '0'} loading={store.marking === 'all'} onPress={markAll} />}
-        {!!issue && <Notice error>{issue}</Notice>}
+        {!!issue && <Notice error>{issue} Desliza hacia abajo para reintentar la consulta.</Notice>}
       </View>}
       renderItem={({ item }) => <NotificationCard item={item} busy={!!store.marking} marking={store.marking === item.id} onRead={() => void store.markRead(item.id).catch(() => {})} onOpen={() => open(item.id)} />}
       ListEmptyComponent={!list.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} />
         : list.error ? null
         : list.nextCursor ? <Notice>Has revisado esta página. Carga más avisos para seguir consultando los anteriores.</Notice>
-        : list.unreadOnly && store.unreadCount > 0 ? <EmptyState icon="notifications-outline" title="Hay novedades por consultar" description="Actualiza la bandeja para ver los avisos que llegaron después de esta página." action={<Button label="Actualizar avisos" secondary loading={list.loading} onPress={() => void store.refreshList().catch(() => {})} />} />
+        : list.unreadOnly && store.unreadCount > 0 ? <EmptyState icon="notifications-outline" title="Hay novedades por consultar" description="Desliza hacia abajo para ver los avisos que llegaron después de esta página." />
         : <EmptyState icon={list.unreadOnly ? 'checkmark-done-outline' : 'notifications-outline'} title={list.unreadOnly ? 'Estás al día' : 'Aquí llegan tus novedades'} description={list.unreadOnly ? 'No tienes avisos sin leer. Puedes consultar los anteriores en Todas.' : 'Cuando recibas novedades sobre visitas, ofertas o alertas de búsqueda, las encontrarás aquí. Los mensajes se consultan en el chat.'} action={<Button label={list.unreadOnly ? 'Ver todos los avisos' : 'Ir a mensajes'} secondary onPress={() => list.unreadOnly ? store.setUnreadOnly(false) : router.push('/messages')} />} />}
       ListFooterComponent={<View style={styles.footer}>{list.nextCursor && <Button label="Cargar más avisos" secondary disabled={!!store.marking} loading={list.loadingMore} onPress={() => void store.loadMore().catch(() => {})} />}<Text style={styles.hint}>El contenido de tus conversaciones se consulta dentro del chat.</Text></View>}
     />

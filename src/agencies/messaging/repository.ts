@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createScopedRpc } from '../../transfers/repository.ts';
 import { createMessageId } from '../../messaging/domain.ts';
 import { decodeAgencyPage } from '../repository.ts';
+import {decodePrincipalStatus} from '../principal.ts';
 import { object, uuid, integer, text, nullableUuid, nullableText, invalidAgencyData } from '../deals/domain.ts';
 import type { AgencyConversation, AgencyConversationContext, AgencyMessage, AgencyMessagingRepository, PublicPropertyContact } from './types.ts';
 const agency = (c: AgencyConversationContext) => 'agencyId' in c ? uuid(c.agencyId) : null;
@@ -26,7 +27,7 @@ export function decodePublicContact(value: unknown): PublicPropertyContact {
     if (typeof v.personalContact !== 'boolean' || !Array.isArray(v.agencies) || v.agencies.length > 100)
         throw invalidAgencyData();
     return { propertyId: uuid(v.propertyId), personalContact: v.personalContact, agencies: v.agencies.map(value => { const a = object(value); if (typeof a.verified !== 'boolean' || typeof a.contactAvailable !== 'boolean')
-            throw invalidAgencyData(); return { agencyId: uuid(a.agencyId), tradeName: text(a.tradeName), verified: a.verified, contactAvailable: a.contactAvailable }; }) };
+            throw invalidAgencyData(); return { agencyId: uuid(a.agencyId), tradeName: text(a.tradeName), verified: a.verified, isPrincipal:decodePrincipalStatus(a.isPrincipal,a.verified), contactAvailable: a.contactAvailable }; }) };
 }
 export async function readPublicPropertyContact(client: SupabaseClient, propertyId: string, signal: AbortSignal): Promise<PublicPropertyContact | null> { const { data, error } = await client.rpc('kh_public_property_contact', { p_property_id: uuid(propertyId) }).abortSignal(signal); if (error)
     throw error; if (signal.aborted)

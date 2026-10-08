@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
@@ -31,14 +32,16 @@ function RequestsBody({userId}:{userId:string}){
   const drafts=useProposalDrafts();
   const [pendingOnly,setPendingOnly]=useState(true),[counter,setCounter]=useState<Negotiation|null>(null),[counterOpen,setCounterOpen]=useState(false);
   const store=useNegotiations({pendingOnly}),messaging=useMessaging();
+  const auth=useAuth();
+  const reload=useConsultationRefresh(`${userId}:${auth.session?.access_token}:${pendingOnly}`,store.refresh,store.loading||store.loadingMore||store.mutating||counterOpen);
   const mutations=useNegotiationMutations(userId,store,async item=>{await Promise.all([messaging.refresh(),messaging.openConversation(item.conversationId)])});
   const selected=counter?store.items.find(item=>item.id===counter.id):null;
   const target=counter?{conversationId:counter.conversationId,kind:counter.kind,previous:counter}:null;
   return <>
     <View style={styles.tabs}><Pill label="Pendientes" active={pendingOnly} onPress={()=>{if(!store.mutating){setPendingOnly(true);mutations.clearFeedback()}}}/><Pill label="Todas" active={!pendingOnly} onPress={()=>{if(!store.mutating){setPendingOnly(false);mutations.clearFeedback()}}}/></View>
-    <FlatList data={store.items} keyExtractor={item=>item.id} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={store.loading&&store.ready} onRefresh={()=>void store.refresh()} tintColor={colors.primary}/>}
-      ListHeaderComponent={<>{(store.error||mutations.issue)&&<View style={styles.message}><Notice error>{mutations.issue||store.error}</Notice><Button label="Actualizar solicitudes" secondary onPress={()=>void store.refresh()} disabled={store.mutating} loading={store.loading}/></View>}{!!mutations.feedback&&<Text accessibilityLiveRegion="polite" style={styles.feedback}>{mutations.feedback}</Text>}</>}
-      renderItem={({item})=><NegotiationCard item={item} userId={userId} busy={store.mutating} managementChanged={messaging.conversations.find(c=>c.id===item.conversationId)?.managementChanged} onRespond={(value,action)=>void mutations.respond(value,action)} onCounter={item=>{setCounter(item);setCounterOpen(true)}} onOpenConversation={()=>router.push(`/messages/${item.conversationId}`)}/>}
+    <FlatList data={store.items} keyExtractor={item=>item.id} alwaysBounceVertical contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!store.mutating&&!counterOpen} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}
+      ListHeaderComponent={<>{(store.error||mutations.issue)&&<View style={styles.message}><Notice error>{mutations.issue||store.error} Desliza hacia abajo para volver a consultar.</Notice></View>}{!!mutations.feedback&&<Text accessibilityLiveRegion="polite" style={styles.feedback}>{mutations.feedback}</Text>}</>}
+      renderItem={({item})=><NegotiationCard item={item} userId={userId} busy={store.mutating||reload.refreshing} managementChanged={messaging.conversations.find(c=>c.id===item.conversationId)?.managementChanged} onRespond={(value,action)=>{if(!reload.isRefreshing())void mutations.respond(value,action);}} onCounter={item=>{setCounter(item);setCounterOpen(true)}} onOpenConversation={()=>router.push(`/messages/${item.conversationId}`)}/>}
       ListEmptyComponent={!store.ready?<ActivityIndicator color={colors.primary} style={styles.loading}/>:!store.error?<EmptyState icon="calendar-outline" title={pendingOnly?'Todo al día':'Tus acuerdos empiezan conversando'} description={pendingOnly?'No tienes propuestas pendientes. En Todas puedes consultar visitas confirmadas y el historial.':'Abre una conversación para proponer una visita o hacer una oferta por una vivienda.'} action={<Button label={pendingOnly?'Ver todas las solicitudes':'Ir a mensajes'} secondary onPress={()=>pendingOnly?setPendingOnly(false):router.push('/messages')}/>}/>:null}
       ListFooterComponent={<View style={styles.footer}>{store.hasMore&&<Button label="Cargar más solicitudes" secondary loading={store.loadingMore} disabled={store.mutating} onPress={()=>void store.loadMore()}/>}<Text style={styles.hint}>Las visitas se muestran en hora de Cuba. Aceptar una oferta registra la negociación, sin pago ni reserva.</Text></View>}
     />

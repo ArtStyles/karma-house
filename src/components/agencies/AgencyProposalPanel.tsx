@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, type RefObject } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Text, TextInput, View } from 'react-native';
 import type { CapturedAccountContext, CapturedAgencyContext } from '../../agencies/controller';
@@ -14,7 +14,7 @@ import { useAgencyFormStyles } from './AgencyRegistrationFields';
 import { VisitDateTimeFields } from '../negotiations/VisitDateTimeFields';
 const repository = supabase ? createAgencySchedulingRepository(supabase) : null;
 const statusLabel = { pending: 'Pendiente', accepted: 'Aceptada', declined: 'Rechazada', cancelled: 'Cancelada', superseded: 'Sustituida', expired: 'Caducada' };
-export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, onChanged, onRequestClosure, external=false }: {
+export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, onChanged, onRequestClosure, external=false, consultation }: {
     conversation: Pick<AgencyConversation,'dealId'|'buyerId'|'assigneeId'|'canSend'>;
     actorId: string;
     staff: boolean;
@@ -22,6 +22,7 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
     onChanged: () => Promise<void>;
     external?: boolean;
     onRequestClosure?: () => void;
+    consultation?: { refresh: RefObject<() => Promise<void>>; blocked: RefObject<boolean>; refreshing(): boolean };
 }) {
     const { styles: s, colors } = useAgencyFormStyles();
     const [items, setItems] = useState<AgencyProposal[]>([]), [events, setEvents] = useState<AgencyProposalEvent[]>([]), [eventTarget, setEventTarget] = useState<string | null>(null), [moreEvents, setMoreEvents] = useState(false), [hasMore, setHasMore] = useState(false), [error, setError] = useState(''), [busy, setBusy] = useState(false);
@@ -46,10 +47,11 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
     finally {
         ctx.release();
     } }, [c.dealId, capture]);
+    if (consultation) { consultation.refresh.current = load; consultation.blocked.current = lock.current; }
     useFocusEffect(useCallback(() => { mounted.current = true; void load().catch(e => { if (mounted.current)
         setError(schedulingError(e)); }); return () => { mounted.current = false; }; }, [load]));
-    async function run(work: (ctx: ReturnType<typeof capture>) => Promise<void>,write=false) { if (lock.current)
-        return; lock.current = true; setBusy(true); setError(''); let ctx: ReturnType<typeof capture> | undefined; try {
+    async function run(work: (ctx: ReturnType<typeof capture>) => Promise<void>,write=false) { if (lock.current || consultation?.refreshing())
+        return; lock.current = true; if(consultation)consultation.blocked.current=true; setBusy(true); setError(''); let ctx: ReturnType<typeof capture> | undefined; try {
         ctx = capture(write);
         await work(ctx);
         ctx.checkpoint();
@@ -65,6 +67,7 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
     finally {
         ctx?.release();
         lock.current = false;
+        if(consultation)consultation.blocked.current=false;
         if (mounted.current)
             setBusy(false);
     } }
@@ -83,7 +86,7 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
     return <View style={s.card}><Text style={s.title}>Visitas y ofertas</Text><Notice>Las horas se muestran en Cuba. Una visita pasada sigue pendiente de resultado hasta que el equipo lo registre.</Notice>
  {error ? <Notice error>{error}</Notice> : null}
  {external&&c.canSend&&<><Notice>Selecciona quién respondió según la propuesta registrada. La aceptación o el rechazo corresponden a la otra parte; consulta el historial si tienes dudas.</Notice><View style={s.wrap}><Pill label="Respuesta del interesado" active={buyerResponse} onPress={()=>{if(!busy&&!attempt.current)setBuyerResponse(true);}}/><Pill label="Decisión de la agencia" active={!buyerResponse} onPress={()=>{if(!busy&&!attempt.current)setBuyerResponse(false);}}/></View><Notice>Las respuestas del interesado conservan tu autoría, el canal y la referencia recibida.</Notice><View style={s.wrap}>{(['phone','in_person','whatsapp','other'] as const).map(ch=><Pill key={ch} label={{phone:'Teléfono',in_person:'En persona',whatsapp:'WhatsApp',other:'Otro'}[ch]} active={channel===ch} onPress={()=>{if(!busy&&!attempt.current)setChannel(ch);}}/>)}</View><TextInput style={s.input} accessibilityLabel="Referencia de respuesta externa" value={reference} onChangeText={setReference} maxLength={500} editable={!busy&&!attempt.current} placeholder="Cuándo y cómo respondió el interesado" placeholderTextColor={colors.muted}/></>}
- <Button secondary label="Actualizar propuestas" disabled={busy} onPress={() => void run(async () => { await load(); await onChanged(); })}/>
+ {!consultation&&<Button secondary label="Actualizar propuestas" disabled={busy} onPress={() => void run(async () => { await load(); await onChanged(); })}/>}
  {items.map(p => {
             const ownSide = staff ? p.createdBy !== c.buyerId : p.createdBy === actorId;
             const respondable = p.status === 'pending' && (external||!ownSide) && c.canSend;

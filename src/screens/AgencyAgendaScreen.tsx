@@ -1,6 +1,7 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, TextInput, View } from 'react-native';
+import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { useAgencyWorkspace } from '../agencies/AgencyProvider';
@@ -26,6 +27,7 @@ function Agenda({ propertyId }: {
     const [date, setDate] = useState(havanaDateTime().date), [range, setRange] = useState(havanaDateTime().date), [items, setItems] = useState<AgencyCalendarVisit[]>([]), [more, setMore] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
     const [occupancy, setOccupancy] = useState<BusyInterval[]>([]), [originAdmin, setOriginAdmin] = useState(false), [reservation, setReservation] = useState<AgencyReservation | null>(null), [joint, setJoint] = useState<JointVisitSlot | null>(null);
     const [actionDate, setActionDate] = useState(havanaDateTime().date), [actionTime, setActionTime] = useState('18:00'), [duration, setDuration] = useState(60);
+    const reading = useRef<number|null>(null);
     const focused = useRef(false), epoch = useRef(0), locked = useRef(false), pending = useRef<{
         key: string;
         id: string;
@@ -34,8 +36,8 @@ function Agenda({ propertyId }: {
     const capture = useCallback((write=false) => { const c = write?w.captureAgencyContext():w.captureAgencyReadContext(), version = epoch.current; return { ...c, checkpoint() { c.checkpoint(); if (!focused.current || version !== epoch.current)
             throw Error('KH_AGENCY_CONTEXT_CHANGED'); } }; }, [w.captureAgencyContext,w.captureAgencyReadContext]);
     const bounds = useCallback(() => havanaAgendaRange(range), [range]);
-    const load = useCallback(async () => { if (!repository || !allowed)
-        return; let c: ReturnType<typeof capture> | undefined; try {
+    const load = useCallback(async () => { if (!repository || !allowed || reading.current===epoch.current)
+        return; const readEpoch=epoch.current;reading.current = readEpoch; let c: ReturnType<typeof capture> | undefined; try {
         c = capture();
         const { from, to } = bounds(), page = await repository.calendar(from, to, 0, c);
         let intervals: BusyInterval[] = [], canReserve = false, current: AgencyReservation | null = null;
@@ -67,10 +69,12 @@ function Agenda({ propertyId }: {
         catch { }
     }
     finally {
+        if(reading.current===readEpoch)reading.current = null;
         c?.release();
     } }, [allowed, capture, bounds, propertyId,w.enabled,w.activeAgency?.state, w.membership?.role]);
+    const reload=useConsultationRefresh(`${w.activeAgencyId}:${w.generation}:${range}:${propertyId}`,load,()=>locked.current||reading.current===epoch.current||!!pending.current||!allowed);
     useFocusEffect(useCallback(() => { focused.current = true; epoch.current++; setItems([]); setOccupancy([]); setOriginAdmin(false); setReservation(null); setJoint(null); pending.current = null; void load(); return () => { focused.current = false; epoch.current++; }; }, [load]));
-    async function act(key: string, work: (c: ReturnType<typeof capture>, request: string) => Promise<void>, refresh = true) { if (locked.current)
+    async function act(key: string, work: (c: ReturnType<typeof capture>, request: string) => Promise<void>, refresh = true) { if (locked.current || reload.isRefreshing())
         return; locked.current = true; setBusy(true); let c: ReturnType<typeof capture> | undefined; try {
         c = capture(key!=='page');
         if (pending.current?.key !== key)
@@ -95,7 +99,7 @@ function Agenda({ propertyId }: {
         if (focused.current)
             setBusy(false);
     } }
-    return <SafeAreaView style={s.safe}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}><PageTitle title="Agenda" subtitle={w.activeAgency?.tradeName ?? 'Selecciona una inmobiliaria'} back/>
+    return <SafeAreaView style={s.safe}><ScrollView alwaysBounceVertical keyboardShouldPersistTaps="handled" contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!busy&&allowed} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}><PageTitle title="Agenda" subtitle={w.activeAgency?.tradeName ?? 'Selecciona una inmobiliaria'} back/>
  {!allowed ? <Notice>Selecciona una inmobiliaria aprobada para consultar su agenda.</Notice> : <>
  <Notice>Horario de Cuba · America/Havana. El resultado de una visita se registra expresamente, aunque su hora ya haya pasado.</Notice>{error ? <Notice error>{error}</Notice> : null}
  <TextInput style={s.input} accessibilityLabel="Fecha inicial de agenda" value={date} editable={!busy} onChangeText={setDate} placeholder="AAAA-MM-DD" placeholderTextColor={colors.muted}/><Button label="Consultar semana" loading={busy} onPress={() => { try {

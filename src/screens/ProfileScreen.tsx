@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Icon, IconButton, Notice, PageTitle, type IconName } from '../components/ui';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
@@ -13,28 +14,35 @@ import { useNotifications } from '../notifications/NotificationsProvider';
 import { AccountMenu } from '../components/account/AccountMenu';
 import { useSavedSearches } from '../searches/useSavedSearches';
 import { setDataSaver, useDataSaver } from '../settings/useDataSaver';
+import {AgencyVerifiedBadge} from '../components/agencies/AgencyVerifiedBadge';
 import {useAgencyWorkspace} from '../agencies/useAgencyWorkspace';
 import {useIncomingTransferCount} from '../transfers/useIncomingTransferCount';
 
 export default function ProfileScreen() {
   const { colors, styles } = useStyles();
-  const { favoriteIds, ownListings: own, mode } = useMarketplace();
-  const { user, displayName, isAdmin, isOwner, suspended, suspensionReason, signOut, error: authError, refreshProfile } = useAuth();
-  const { unreadCount } = useMessaging();
-  const { unreadCount: notificationUnreadCount } = useNotifications();
+  const { favoriteIds, ownListings: own, mode, refresh: refreshListings } = useMarketplace();
+  const { user, session, displayName, isAdmin, isOwner, suspended, suspensionReason, signOut, error: authError, refreshProfile } = useAuth();
+  const { unreadCount, refresh: refreshMessages } = useMessaging();
+  const { unreadCount: notificationUnreadCount, refreshSummary, marking } = useNotifications();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const savedSearches = useSavedSearches();
   const dataSaver = useDataSaver();
   const transfers=useIncomingTransferCount();
   const agencies=useAgencyWorkspace();
+  const reload = useConsultationRefresh(`${user?.id}:${session?.access_token}`, async () => {
+    setError('');
+    const outcomes = await Promise.allSettled([refreshProfile(), refreshListings(), refreshMessages(), refreshSummary(), savedSearches.refresh(), agencies.refreshAgencies(), transfers.refresh()]);
+    const failed = outcomes.find(result => result.status === 'rejected');
+    if (failed?.status === 'rejected') throw failed.reason;
+  }, busy || !!marking || !user || mode !== 'cloud', () => setError('No pudimos actualizar toda tu actividad. Desliza hacia abajo para volver a intentarlo.'));
   // Tabs stay mounted: recount alerts saved or removed elsewhere when Mi espacio comes back into view.
   const refreshSearches = savedSearches.refresh;
   const seen = useRef(false);
   useFocusEffect(useCallback(() => { if (seen.current) void refreshSearches(); seen.current = true; }, [refreshSearches]));
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!busy && !!user && mode === 'cloud'} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}>
       <PageTitle title="Mi espacio" right={<IconButton name="settings-outline" label="Ajustes de cuenta" onPress={() => router.push('/account-settings')} />} />
 
       <View style={styles.identity}>
@@ -46,6 +54,9 @@ export default function ProfileScreen() {
           <Text style={styles.identityDescription}>{mode === 'demo' ? 'Demostración local' : user?.email ?? 'Tu próximo comienzo, contigo.'}</Text>
         </View>
       </View>
+
+      {user&&agencies.principalAgency&&<Pressable accessibilityRole="button" accessibilityLabel="Abrir inmobiliaria principal" onPress={()=>router.push({pathname:'/agency-workspace',params:{agencyId:agencies.principalAgency!.id}})} style={styles.principalCard}><View style={styles.rowIcon}><Icon name="business-outline" color={colors.amber}/></View><View style={styles.identityText}><Text style={styles.rowTitle}>{agencies.principalAgency.tradeName}</Text><AgencyVerifiedBadge agencyName={agencies.principalAgency.tradeName} verified={agencies.principalAgency.verified} principal={agencies.principalAgency.isPrincipal} labelled/><Text style={styles.rowDescription}>Gestiona tu perfil comercial, cartera y equipo.</Text></View><Icon name="chevron-forward" color={colors.amber}/></Pressable>}
+      {isAdmin&&<Pressable accessibilityRole="button" accessibilityLabel="Administración" onPress={()=>router.push('/administration')} style={styles.adminCard}><View style={styles.rowIcon}><Icon name="shield-checkmark-outline" color={colors.primary}/></View><View style={styles.identityText}><Text style={styles.rowTitle}>Administración</Text><Text style={styles.rowDescription}>Revisiones, reportes y gestión de la comunidad.</Text></View><Icon name="chevron-forward" color={colors.primary}/></Pressable>}
 
       {/* Device preference remains accessible before any account or activity actions. */}
       <Text style={styles.sectionLabel}>Preferencias</Text>
@@ -63,7 +74,7 @@ export default function ProfileScreen() {
       {suspended && <Notice error>Tu cuenta está suspendida. No puedes publicar ni enviar mensajes. {suspensionReason}</Notice>}
       {isOwner && <Notice>Tu información de cuenta es privada. Los demás solo ven tu nombre y foto de perfil.</Notice>}
       {(user || mode === 'demo') && <><Text style={styles.sectionLabel}>Tu actividad</Text>
-      {user&&(agencies.enabled||agencies.agencies.length>0)&&<Button secondary icon="business-outline" label="Mi inmobiliaria e invitaciones" onPress={()=>router.push('/agency-workspace')}/>}
+      {user&&!agencies.principalAgency&&(agencies.enabled||agencies.agencies.length>0)&&<Button secondary icon="business-outline" label="Mi inmobiliaria e invitaciones" onPress={()=>router.push('/agency-workspace')}/>}
       {user&&!isOwner&&<Button secondary icon="swap-horizontal-outline" label={`Anuncios por aceptar${transfers.count===null?'':` · ${transfers.count}`}`} onPress={()=>router.push('/listing-transfers')}/>}
       <View style={styles.group}>
         <Pressable accessibilityRole="button" accessibilityLabel={`Notificaciones, ${notificationUnreadCount} sin leer`} onPress={() => router.push('/notifications')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
@@ -137,7 +148,6 @@ export default function ProfileScreen() {
         </View>
       </>}
 
-      {isAdmin && <View style={{ marginTop: 18 }}><Button label="Administración" secondary icon="shield-checkmark-outline" onPress={() => router.push('/administration')} /></View>}
       <Text style={styles.demoNote}>{mode === 'demo' ? 'Tus cambios se guardan en este dispositivo. Esta demo no incluye cuentas, mensajes ni publicaciones públicas.' : 'Conversa sobre cada vivienda sin publicar tu teléfono. Tus anuncios se revisan antes de aparecer en el catálogo.'}</Text>
       <View style={styles.legal}>
         <Pressable accessibilityRole="link" style={styles.legalLink} onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.legalText}>Privacidad</Text></Pressable>
@@ -145,7 +155,7 @@ export default function ProfileScreen() {
         <Pressable accessibilityRole="link" style={styles.legalLink} onPress={() => void Linking.openURL(TERMS_URL)}><Text style={styles.legalText}>Términos de uso</Text></Pressable>
       </View>
       {error || authError ? <Notice error>{error || authError}</Notice> : null}
-      {authError && user && <Button label="Volver a cargar perfil" secondary onPress={() => void refreshProfile()} />}
+      {authError && user && <Text style={styles.demoNote}>Desliza hacia abajo para volver a cargar tu perfil y actividad.</Text>}
     </ScrollView>
   </SafeAreaView>;
 }
@@ -162,6 +172,8 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper },
   content: { width: '100%', maxWidth: 700, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: layout.tabContentBottom },
   identity: { flexDirection: 'row', alignItems: 'center', gap: 15, backgroundColor: colors.softBlue, borderRadius: 26, padding: 22, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  principalCard:{marginTop:14,padding:18,borderWidth:1,borderColor:colors.amber,borderRadius:20,backgroundColor:colors.softAmber,flexDirection:'row',alignItems:'center',gap:12},
+  adminCard:{marginTop:14,padding:18,borderWidth:1,borderColor:colors.border,borderRadius:20,backgroundColor:colors.surface,flexDirection:'row',alignItems:'center',gap:12},
   identityRing: { position: 'absolute', right: -72, top: -73, width: 195, height: 195, borderRadius: 100, borderWidth: 30, borderColor: colors.border },
   avatar: { width: 62, height: 62, backgroundColor: colors.surface, borderRadius: 22, borderWidth: 4, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 12px rgba(51, 87, 137, 0.05)' },
   initials: { color: colors.primary, fontSize: 22, fontWeight: '600', letterSpacing: -0.5 },

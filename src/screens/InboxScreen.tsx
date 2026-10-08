@@ -1,5 +1,6 @@
 import { router,useFocusEffect } from 'expo-router';
-import { useCallback,useEffect,useMemo, useRef, useState } from 'react';
+import { useCallback,useEffect,useMemo, useRef, useState, type RefObject } from 'react';
+import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
@@ -23,15 +24,13 @@ export default function InboxScreen() {
   const active = useMessagingActivity();
   const latestRefresh = useRef(messaging.refresh);
   latestRefresh.current = messaging.refresh;
-  const [refreshing, setRefreshing] = useState(false);
+  const agencyRefresh = useRef<() => Promise<unknown>>(async () => {});
+  const reload = useConsultationRefresh(`${auth.user?.id}:${auth.session?.access_token}`, async () => {
+    await Promise.allSettled([latestRefresh.current(), agencyRefresh.current()]);
+  }, !auth.user || messaging.userId !== auth.user.id);
   useEffect(() => {
     if (active && messaging.available && auth.user && messaging.userId === auth.user.id) void latestRefresh.current().catch(() => undefined);
   }, [active, messaging.available, messaging.userId, auth.user?.id]);
-  async function refresh() {
-    setRefreshing(true);
-    try { await latestRefresh.current(); } catch { /* The provider keeps the synchronization error. */ }
-    finally { setRefreshing(false); }
-  }
   const authorized = !!auth.user && messaging.userId === auth.user.id;
 
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
@@ -43,10 +42,10 @@ export default function InboxScreen() {
         <Icon name="chevron-forward" size={17} color={colors.primary} />
       </Pressable>}
       {!auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : !messaging.available ? <EmptyState icon="chatbubbles-outline" title="Tus conversaciones, aquí." description="Los mensajes estarán disponibles al conectar una cuenta. La demostración no envía mensajes." /> : !auth.user ? <View style={styles.header}><AccountPrompt returnTo="/messages" title="Conversa sobre tu próxima vivienda" description="Inicia sesión para hablar con propietarios y compradores sin publicar tu teléfono." /></View> : !authorized || (!messaging.ready && !messaging.error) ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : <>
-        {messaging.error && <View style={styles.sync}><Notice error>{messaging.error}</Notice><Button label="Reintentar actualización" secondary loading={refreshing} onPress={refresh} /></View>}
-        <FlatList data={messaging.conversations} keyExtractor={item => item.id} contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />}
+        {messaging.error && <View style={styles.sync}><Notice error>{messaging.error} Desliza hacia abajo para reintentar.</Notice></View>}
+        <FlatList data={messaging.conversations} keyExtractor={item => item.id} alwaysBounceVertical contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={reload.refreshing} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}
           renderItem={({ item }) => <ConversationCard conversation={item} />}
-          ListHeaderComponent={<AgencyInbox/>}
+          ListHeaderComponent={<AgencyInbox refreshRef={agencyRefresh}/>}
           ListEmptyComponent={<EmptyState icon="chatbubbles-outline" title="Empieza una conversación" description="Abre una vivienda y toca Contactar para hablar con su propietario. Tus conversaciones aparecerán aquí." action={<Button label="Explorar viviendas" onPress={() => router.replace('/')} />} />}
           ListFooterComponent={messaging.conversations.length ? <Text style={styles.footer}>Se actualiza mientras KarmaHouse está abierta.</Text> : null}
         />
@@ -55,7 +54,7 @@ export default function InboxScreen() {
   </SafeAreaView>;
 }
 
-function AgencyInbox(){
+function AgencyInbox({refreshRef}:{refreshRef:RefObject<() => Promise<unknown>>}){
  const auth=useAuth(),w=useAgencyWorkspace();const{styles:s}=useStyles();const[staff,setStaff]=useState(false);
  const repo=useMemo(()=>supabase?createAgencyMessagingRepository(supabase):null,[]);
  const scope=`${auth.user?.id}:${auth.session?.access_token}:${staff?w.activeAgencyId:'buyer'}:${staff?w.generation:''}`;
@@ -76,12 +75,13 @@ function AgencyInbox(){
   }finally{ctx?.release();if(version===epoch.current)loading.current=false}
  },[repo,auth.user?.id,staff,w.captureAccountContext,w.captureAgencyReadContext,scope,state.scope,state.items.length]);
  const latest=useRef(load);latest.current=load;
+ refreshRef.current=()=>latest.current();
  useFocusEffect(useCallback(()=>{epoch.current++;loading.current=false;setState({scope,items:[],hasMore:false,error:''});void latest.current();return()=>{epoch.current++;loading.current=false;setState({scope,items:[],hasMore:false,error:''})}},[scope]));
  useEffect(()=>{if(!active||!auth.user||(staff&&!w.activeAgencyId))return;return startAgencyPoll(()=>latest.current());},[active,scope,auth.user?.id,staff,w.activeAgencyId]);
  if(!auth.user)return null;
  return <View style={{gap:10,paddingBottom:20}}><Text style={s.name}>Conversaciones con inmobiliarias</Text><View style={s.line}><Pill label="Como comprador" active={!staff} onPress={()=>setStaff(false)}/>{w.activeAgencyId&&<Pill label="Equipo de mi agencia" active={staff} onPress={()=>setStaff(true)}/>}</View>
   {visible?.error&&<Notice error>{visible.error}</Notice>}{visible?.items.map(c=><Pressable key={c.id} accessibilityRole="button" style={s.card} onPress={()=>router.push({pathname:'/agency-conversation/[id]',params:{id:c.id,...(staff?{agencyId:c.agencyId}:{})}})}><View style={s.copy}><Text style={s.name}>{c.agencyName}</Text><Text style={s.property}>{c.propertyTitle}</Text><Text style={s.preview}>{c.unreadCount} sin leer · {c.closedReason?'Expediente cerrado':c.assigneeId?'Con responsable':'Cola de la agencia'}</Text></View></Pressable>)}
-  <Button label="Actualizar conversaciones de agencia" secondary onPress={()=>void load()}/>{visible?.hasMore&&<Button label="Más conversaciones de agencia" secondary onPress={()=>void load(true)}/>}<Text style={s.name}>Conversaciones personales</Text>
+  {visible?.hasMore&&<Button label="Más conversaciones de agencia" secondary onPress={()=>void load(true)}/>}<Text style={s.name}>Conversaciones personales</Text>
  </View>;
 }
 function ConversationCard({ conversation: item }: { conversation: Conversation }) {

@@ -1,10 +1,10 @@
 import { useEffect, type ReactNode } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createThemedStyles } from '../../theme';
 import { IconButton } from '../ui';
 
-export function NegotiationSheet({ visible, title = 'Visitas y ofertas', busy = false, onClose, children }: { visible:boolean; title?:string; busy?:boolean; onClose():void; children:ReactNode }) {
+export function NegotiationSheet({ visible, title = 'Visitas y ofertas', busy = false, onClose, children, refreshControl }: { visible:boolean; title?:string; busy?:boolean; onClose():void; children:ReactNode;refreshControl?:ScrollViewProps['refreshControl'] }) {
   const { styles } = useStyles();
   const insets=useSafeAreaInsets();
   useEffect(()=>{
@@ -18,7 +18,7 @@ export function NegotiationSheet({ visible, title = 'Visitas y ofertas', busy = 
         <Pressable accessibilityRole="button" accessibilityLabel="Cerrar panel de solicitudes" disabled={busy} onPress={onClose} style={StyleSheet.absoluteFill}/>
         <View accessibilityViewIsModal style={styles.sheet}>
           <View style={styles.header}><Text accessibilityRole="header" style={styles.title}>{title}</Text><View pointerEvents={busy?'none':'auto'}><IconButton name="close" label="Cerrar visitas y ofertas" onPress={onClose} style={styles.close}/></View></View>
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>{children}</ScrollView>
+          <ScrollView alwaysBounceVertical refreshControl={refreshControl} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>{children}</ScrollView>
         </View>
       </View>
     </KeyboardAvoidingView>

@@ -75,12 +75,13 @@ export function createAgencyController(repository:AgencyRepository|null){
   }
   return setActiveAgencyForRead(id);
  }
- async function setActiveAgencyForRead(id:string|null){
+ async function setActiveAgencyForRead(id:string|null,isCurrent:()=>boolean=()=>true){
+  if(!isCurrent())return;
   if(id===null){invalidateAgency();return}
   if(!repository||!session)throw Error('KH_SESSION_REQUIRED');
   if(!state.agencies.some(a=>a.id===id))throw Error('KH_AGENCY_MEMBERSHIP_REQUIRED');
   invalidateAgency();const generation=state.generation,context=captureAccountContext();
-  const current=()=>{context.checkpoint();if(generation!==state.generation)throw Error('KH_AGENCY_CONTEXT_CHANGED')};
+  const current=()=>{context.checkpoint();if(!isCurrent()||generation!==state.generation)throw Error('KH_AGENCY_CONTEXT_CHANGED')};
   try{
    const membership=await repository.membership(id,context);current();
    if(membership?.state!=='active')throw Error('KH_AGENCY_MEMBERSHIP_REQUIRED');

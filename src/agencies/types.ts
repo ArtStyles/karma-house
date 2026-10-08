@@ -9,7 +9,7 @@ export interface Page<T>{items:T[];hasMore:boolean}
 export interface AgencyRequestContext extends MessagingRequestContext {agencyId:string;generation:number}
 export interface AgencyApplicationInput {tradeName:string;responsibleFullName:string;businessPhone:string;province:string;municipality:string;serviceAreas:string[];description:string;officeAddress:string|null;publishOfficeAddress:boolean;evidenceReferences:string[]}
 export interface AgencyVerificationRequestInput {message:string;evidenceReferences:string[]}
-export interface AgencySummary {id:string;tradeName:string;state:AgencyState;version:number;logoPath:string|null;verified:boolean;verificationVersion:number}
+export interface AgencySummary {id:string;tradeName:string;state:AgencyState;version:number;logoPath:string|null;verified:boolean;verificationVersion:number;isPrincipal?:boolean}
 export interface AgencyApplication {agency:AgencySummary;input:AgencyApplicationInput;reviewNote:string|null;emailConfirmed:boolean}
 export interface AgencyMembership {displayName?:string;agencyId:string;userId:string;role:AgencyRole;state:'active'|'removed';version:number}
 export interface AgencyInvitation {agencyName?:string;id:string;agencyId:string;recipientId:string;role:AgencyRole;state:'pending'|'accepted'|'declined'|'cancelled'|'expired';version:number;expiresAt:string}

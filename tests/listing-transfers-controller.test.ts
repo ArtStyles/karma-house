@@ -22,3 +22,34 @@ test('a late refresh never exposes requests or error under a changed actor',asyn
  let release!:(value:unknown)=>void;const pending=new Promise(r=>release=r);const repo={list:async()=>await pending,get:async()=>transferRow} as ListingTransferRepository;
  const c=createListingTransferController(repo,storage(),()=>requestId);c.activate({userId:recipient,accessToken:'a'});const read=c.refresh();c.activate({userId:requestId,accessToken:'b'});release({items:[transferRow],hasMore:false});await read;assert.deepEqual(c.getState().items,[]);assert.equal(c.getState().error,null);
 });
+
+test('refreshing an opened transfer retains its snapshot through a transient failure',async()=>{
+ let failure=false,release!:()=>void;
+ const wait=new Promise<void>(done=>release=done);
+ const repo={get:async()=>{if(failure){await wait;throw Error('network timeout');}return transferRow;}} as ListingTransferRepository;
+ const c=createListingTransferController(repo,storage(),()=>requestId);c.activate({userId:recipient,accessToken:'token'});
+ await c.open(requestId);failure=true;const refreshing=c.open(requestId);
+ assert.equal(c.getState().opened?.id,requestId);
+ assert.equal(c.getState().loading,true);
+ release();await refreshing;
+ assert.equal(c.getState().opened?.id,requestId);
+ assert.equal(c.getState().loading,false);
+ assert.ok(c.getState().error);
+});
+
+test('a revoked transfer clears its private snapshot while a different route never shows the old one',async()=>{
+ let target=requestId,denied=false;
+ const repo={get:async(id:string)=>{if(denied)throw Error('KH_TRANSFER_NOT_FOUND');return {...transferRow,id};}} as ListingTransferRepository;
+ const c=createListingTransferController(repo,storage(),()=>requestId);c.activate({userId:recipient,accessToken:'token'});
+ await c.open(requestId);denied=true;await c.open(requestId);assert.equal(c.getState().opened,null);
+ denied=false;await c.open(requestId);target='64000000-0000-4000-8000-000000000001';const next=c.open(target);
+ assert.equal(c.getState().opened,null);await next;assert.equal(c.getState().opened?.id,target);
+});
+
+test('simultaneous transfer gestures share one read, including initial focus',async()=>{
+ let calls=0,release!:()=>void;const wait=new Promise<void>(done=>release=done);
+ const repo={get:async()=>{calls++;await wait;return transferRow;}} as ListingTransferRepository;
+ const c=createListingTransferController(repo,storage(),()=>requestId);c.activate({userId:recipient,accessToken:'token'});
+ const first=c.open(requestId),second=c.open(requestId);assert.equal(calls,1);release();await Promise.all([first,second]);
+ assert.equal(c.getState().opened?.id,requestId);
+});

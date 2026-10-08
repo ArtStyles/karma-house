@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View, type ViewToken } from 'react-native';
+import { ActivityIndicator, FlatList, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type ViewToken } from 'react-native';
+import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { AccountPrompt } from '../components/AccountPrompt';
@@ -79,6 +80,7 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
     await latest.current.openConversation(id);
     if (mounted.current) setReadAttempt(value => value + 1);
   });
+  const reload=useConsultationRefresh(`${userId}:${auth.session?.access_token}:${id}`,async()=>{await refreshNow();await negotiations.refresh();},()=>actionLock.current||negotiations.mutating||!!history?.loading||!!sheet||report||!!discard);
 
   useEffect(() => {
     if (!active) return;
@@ -144,7 +146,7 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
     finally { requestAnimationFrame(() => { prepend.current = null; }); }
   }
   async function perform(name: string, action: () => Promise<void>) {
-    if (actionLock.current) return;
+    if (actionLock.current || reload.isRefreshing()) return;
     actionLock.current = true; setBusy(name); setIssue(''); setNotice('');
     try { await action(); }
     catch (failure) { if (mounted.current) setIssue(message(failure, 'No pudimos completar la acción. Reintenta.')); }
@@ -161,10 +163,10 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
     });
   }
 
-  if (!conversation) return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}><View style={styles.shell}><View style={styles.padding}>
+  if (!conversation) return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}><View style={styles.shell}><ScrollView alwaysBounceVertical contentContainerStyle={[styles.padding,{flexGrow:1}]} refreshControl={<RefreshControl refreshing={reload.refreshing} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}>
     <PageTitle title="Conversación" back />
-    {opening ? <ActivityIndicator style={styles.loading} color={colors.primary} /> : <><Notice error>{issue || syncIssue || messaging.error || 'Esta conversación no está disponible para tu cuenta.'}</Notice><Button label="Volver a intentar" secondary onPress={refreshNow} /><Button label="Ir a mensajes" onPress={() => router.replace('/messages')} style={{ marginTop: 12 }} /></>}
-  </View></View></SafeAreaView>;
+    {opening ? <ActivityIndicator style={styles.loading} color={colors.primary} /> : <><Notice error>{issue || syncIssue || messaging.error || 'Esta conversación no está disponible para tu cuenta.'} Desliza hacia abajo para volver a consultar.</Notice><Button label="Ir a mensajes" onPress={() => router.replace('/messages')} style={{ marginTop: 12 }} /></>}
+  </ScrollView></View></SafeAreaView>;
 
   const lastOwnKey = [...rows].reverse().find(row => !row.message?.negotiation && (row.message ?? row.pending).senderId === userId)?.key;
   const disabledReason = conversation.blockedByMe ? 'Has bloqueado a esta persona. Puedes leer el historial y desbloquearla desde las opciones.' : conversation.blockedByOther ? 'No puedes enviar mensajes a esta persona. El historial sigue disponible.' : conversation.managementChanged ? 'La gestión del anuncio cambió. Esta conversación conserva su historial y sus acuerdos con los participantes anteriores.' : !conversation.propertyAvailable ? 'Esta vivienda ya no está disponible para nuevas conversaciones. Puedes consultar el historial.' : !conversation.canSend ? 'No se pueden enviar mensajes en esta conversación.' : '';
@@ -189,12 +191,12 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
           <IconButton name="ellipsis-horizontal" label="Opciones de conversación" onPress={() => { Keyboard.dismiss(); setMenu(true); }} />
         </View>
         <ConversationNegotiations conversation={conversation} userId={userId} store={negotiations} mutations={negotiationMutations} request={sheet} onClose={() => setSheet(null)} />
-        {(issue || syncError) && <View style={styles.sync}><Text accessibilityRole="alert" style={styles.syncText}>{issue || syncError}</Text><Pressable accessibilityRole="button" onPress={refreshNow} style={styles.retryLink}><Text style={styles.link}>Reintentar</Text></Pressable></View>}
+        {(issue || syncError) && <View style={styles.sync}><Text accessibilityRole="alert" style={styles.syncText}>{issue || syncError} Desliza hacia abajo para volver a consultar.</Text></View>}
         {!!negotiationMutations.issue && !sheet && <View style={styles.sync}><Text accessibilityRole="alert" style={styles.syncText}>{negotiationMutations.issue}</Text><Pressable accessibilityRole="button" onPress={negotiationMutations.clearFeedback} style={styles.retryLink}><Text style={styles.link}>Cerrar</Text></Pressable></View>}
         {!!notice && <Text accessibilityLiveRegion="polite" style={styles.notice}>{notice}</Text>}
         {readError && <View style={styles.sync}><Text style={styles.syncText}>No pudimos actualizar los mensajes leídos.</Text><Pressable accessibilityRole="button" onPress={() => setReadAttempt(value => value + 1)} style={styles.retryLink}><Text style={styles.link}>Reintentar</Text></Pressable></View>}
         <View style={styles.flex}>
-        <FlatList ref={list} data={rows} keyExtractor={item => item.key} style={styles.flex} contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        <FlatList ref={list} data={rows} keyExtractor={item => item.key} style={styles.flex} alwaysBounceVertical refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!busy&&!negotiations.mutating&&!sheet} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>} contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           viewabilityConfig={viewabilityConfig.current} onViewableItemsChanged={onViewableItemsChanged.current}
           onLayout={event => {
             metrics.current.height = event.nativeEvent.layout.height;
@@ -221,8 +223,8 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
             const time = new Date((item.message ?? item.pending).createdAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
             return <View>{date !== previousDate && <Text style={styles.day}>{date}</Text>}{proposal && item.message
               ? proposal.action === 'created'
-                ? <ProposalCard proposal={proposal} live={liveProposals.get(proposal.id)} userId={userId} time={time} busy={negotiations.mutating} managementChanged={conversation.managementChanged}
-                    onRespond={(target, action) => void negotiationMutations.respond(target, action)} onCounter={target => setSheet({ compose: { kind: target.kind, previous: target } })} onCancelAgreement={setCancelTarget} />
+                ? <ProposalCard proposal={proposal} live={liveProposals.get(proposal.id)} userId={userId} time={time} busy={negotiations.mutating||reload.refreshing} managementChanged={conversation.managementChanged}
+                    onRespond={(target, action) => {if(!reload.isRefreshing())void negotiationMutations.respond(target, action);}} onCounter={target => setSheet({ compose: { kind: target.kind, previous: target } })} onCancelAgreement={setCancelTarget} />
                 : <NegotiationNotice answer={proposal} actorId={item.message.senderId} userId={userId} otherName={conversation.otherName} time={time} />
               : <MessageBubble row={item} own={(item.message ?? item.pending).senderId === userId} showStatus={item.key === lastOwnKey} canRetry={conversation.canSend} busy={!!busy} onRetry={() => item.pending && void perform(item.pending.clientMessageId, () => latest.current.retryMessage(item.pending!.clientMessageId))} onDiscard={() => item.pending && setDiscard(item.pending.clientMessageId)} />}</View>;
           }}

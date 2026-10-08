@@ -1,8 +1,10 @@
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { router,useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
+import {useAdminQuery} from '../admin/useAdminQuery';
+import {AdminPagination,AdminStatus,AdminToolbar,options} from '../components/admin/AdminControls';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { Button, EmptyState, Icon, Notice, PageTitle, Pill } from '../components/ui';
 import { createPropertyReportRepository, PROPERTY_REPORT_REASONS, type PropertyReport } from '../data/propertyReports';
@@ -18,63 +20,52 @@ export default function PropertyReportsScreen() {
   const owner = isAdmin ? user?.id ?? '' : '';
   const repository = useMemo(() => supabase && owner && session?.access_token ? createPropertyReportRepository(supabase, { actorId: owner, accessToken: session.access_token }) : null, [owner, session?.access_token]);
   const [status, setStatus] = useState<'open' | 'reviewed'>('open');
-  const [reports, setReports] = useState<PropertyReport[]>([]);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [selected, setSelected] = useState<{ report: PropertyReport; note: string; error: string } | null>(null);
+  const [query,setQuery]=useState(''),[filters,setFilters]=useState<Record<string,string>>({}),[sort,setSort]=useState<'newest'|'oldest'>('newest');
+  const list=useAdminQuery('propertyReports',query,{...filters,status},sort);
+  const reports=list.items as PropertyReport[],loading=list.loading,error=list.error;
+  const [selection, setSelected] = useState<{ scope:string;report: PropertyReport; note: string; error: string } | null>(null);
   const [busy, setBusy] = useState<'withdraw' | 'dismiss' | null>(null);
-  const request = useRef<AbortController | null>(null);
-  const reportsRef = useRef(reports); reportsRef.current = reports;
-
-  // Each load aborts the one before it, so a slow page for the old tab never lands on the new one.
-  const load = useCallback(async (append = false) => {
-    if (!repository) return;
-    request.current?.abort();
-    const controller = new AbortController(); request.current = controller;
-    setLoading(true); setError('');
-    if (!append) setReports([]);
-    try {
-      const page = await repository.list(status, append ? reportsRef.current.length : 0, controller.signal);
-      if (controller.signal.aborted) return;
-      setReports(old => append ? [...old, ...page.filter(item => !old.some(existing => existing.id === item.id))] : page);
-      setHasMore(page.length === 50);
-    } catch (failure) {
-      if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'No pudimos cargar los reportes.');
-    } finally { if (request.current === controller) setLoading(false); }
-  }, [repository, status]);
-
-  useFocusEffect(useCallback(() => { void load(); return () => { request.current?.abort(); setSelected(null); }; }, [load]));
+  const scope=JSON.stringify([owner,session?.access_token,status,query,filters,sort]);
+  const current=useRef(scope);current.current=scope;
+  const selected=selection?.scope===scope&&owner?selection:null;
+  const focused=useRef(false);
+  useFocusEffect(useCallback(()=>{focused.current=true;return()=>{focused.current=false;setSelected(null);};},[]));
+  const saving=useRef(false);
+  useEffect(()=>{setSelected(null);setBusy(null);saving.current=false;},[scope]);
+  const load=list.reload;
 
   async function review(unpublish: boolean) {
-    if (!selected || !repository || busy) return;
+    if (!selected || !repository || saving.current || loading) return;
+    const captured=scope;saving.current=true;
     const saved = selected;
     setBusy(unpublish ? 'withdraw' : 'dismiss'); setSelected({ ...saved, error: '' });
     try {
       await repository.review(saved.report.id, saved.note, unpublish);
+      if(!focused.current||current.current!==captured)return;
       setSelected(null);
       await load();
     } catch (failure) {
-      setSelected({ ...saved, error: failure instanceof Error ? failure.message : 'No se pudo guardar la revisión.' });
-    } finally { setBusy(null); }
+      if(focused.current&&current.current===captured)setSelected({ ...saved, error: failure instanceof Error ? failure.message : 'No se pudo guardar la revisión.' });
+    } finally { if(focused.current&&current.current===captured){saving.current=false;setBusy(null);} }
   }
 
   const own = selected && (selected.report.reporterId === owner || selected.report.ownerId === owner);
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={list.refreshing} enabled={!!repository&&!busy} onRefresh={()=>{if(!saving.current)void list.refresh();}} tintColor={colors.primary}/>}>
       <PageTitle title="Reportes de anuncios" subtitle="Viviendas que alguien señaló como problemáticas." back />
       {!user ? <AccountPrompt returnTo="/property-reports" /> : !repository ? <EmptyState icon="lock-closed-outline" title="Acceso reservado" description="Solo las cuentas administradoras pueden revisar reportes." /> : <>
         <View style={styles.filters}><Pill label="Pendientes" active={status === 'open'} onPress={() => setStatus('open')} /><Pill label="Revisados" active={status === 'reviewed'} onPress={() => setStatus('reviewed')} /></View>
-        <Button label="Actualizar reportes" secondary icon="refresh-outline" loading={loading} onPress={() => void load()} />
+        <AdminToolbar query={query} onSearch={setQuery} filters={filters} onFilters={setFilters} fields={[{key:'reason',label:'Motivo',options:PROPERTY_REPORT_REASONS},{key:'from',label:'Desde',kind:'date'},{key:'to',label:'Hasta',kind:'date'}]} sort={sort} onSort={value=>setSort(value as typeof sort)} allowName={false} disabled={!!busy}/>
+
         {error ? <Notice error>{error}</Notice> : null}
         {loading && reports.length === 0 ? <ActivityIndicator color={colors.primary} style={{ margin: 40 }} /> : !error && reports.length === 0 ? <EmptyState icon="shield-checkmark-outline" title={status === 'open' ? 'Sin reportes pendientes' : 'Aún no hay revisiones'} description={status === 'open' ? 'Aquí aparecerán los anuncios que necesiten atención.' : 'Los reportes revisados se conservarán aquí.'} /> : null}
-        {reports.map(report => <Pressable key={report.id} accessibilityRole="button" accessibilityLabel={`Revisar reporte: ${reasonLabel(report.reason)}, ${report.propertyTitle}`} style={({ pressed }) => [styles.card, pressed && { opacity: .75 }]} onPress={() => setSelected({ report, note: '', error: '' })}>
+        {reports.map(report => <Pressable key={report.id} accessibilityRole="button" accessibilityLabel={`Revisar reporte: ${reasonLabel(report.reason)}, ${report.propertyTitle}`} style={({ pressed }) => [styles.card, pressed && { opacity: .75 }]} onPress={() => setSelected({ scope,report, note: '', error: '' })}>
           <View style={styles.row}><View style={styles.flag}><Icon name="flag-outline" color={colors.primary} /></View><View style={{ flex: 1, gap: 4 }}><Text style={styles.title}>{reasonLabel(report.reason)}</Text><Text style={styles.meta}>{dateLabel(report.createdAt)}</Text></View><Icon name="chevron-forward" color={colors.muted} size={18} /></View>
           <Text style={styles.property}>{report.propertyTitle}</Text>
           {report.details ? <Text numberOfLines={3} style={styles.body}>{report.details}</Text> : null}
-          <Text style={styles.meta}>{report.status === 'reviewed' ? report.unpublished ? 'Anuncio retirado' : 'Reporte descartado' : report.propertyLive ? 'Anuncio publicado' : 'El anuncio ya no está publicado'}</Text>
+          <AdminStatus label={report.status==='open'?'Pendiente':report.unpublished?'Anuncio retirado':'Descartado'} tone={report.status==='open'?'amber':'neutral'}/>
         </Pressable>)}
-        {hasMore && <Button label="Cargar más reportes" secondary loading={loading} onPress={() => void load(true)} />}
+        <AdminPagination {...list} loading={loading||!!busy}/>
       </>}
     </ScrollView>
     <Modal visible={Boolean(selected)} transparent animationType="fade" onRequestClose={() => !busy && setSelected(null)}>
@@ -107,7 +98,7 @@ export default function PropertyReportsScreen() {
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: 28, gap: 14 },
   filters: { flexDirection: 'row', gap: 10 }, meta: { color: colors.muted, fontSize: 13, lineHeight: 20 },
-  card: { backgroundColor: colors.surface, borderRadius: 24, padding: 20, gap: 14 }, row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  card: { backgroundColor: colors.surface, borderRadius: 20, borderWidth:1,borderColor:colors.border, padding: 18, gap: 12 }, row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   flag: { width: 44, height: 44, backgroundColor: colors.softBlue, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 18, fontWeight: '600', color: colors.ink }, property: { fontSize: 16, fontWeight: '600', lineHeight: 23, color: colors.ink },
   body: { fontSize: 15, lineHeight: 23, color: colors.ink }, label: { fontSize: 14, lineHeight: 20, color: colors.ink, fontWeight: '600' },

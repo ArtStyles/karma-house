@@ -1,8 +1,10 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
+import {useAdminQuery} from '../admin/useAdminQuery';
+import {AdminPagination,AdminStatus,AdminToolbar,options} from '../components/admin/AdminControls';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { Button, EmptyState, Icon, Notice, PageTitle, Pill } from '../components/ui';
 import { supabase } from '../lib/supabase';
@@ -20,12 +22,13 @@ export default function MessageReportsScreen() {
   const { user, session, isAdmin } = useAuth();
   const owner = isAdmin ? user?.id ?? '' : '';
   const [source,setSource]=useState<'personal'|'agency'>('personal');
-  const queueOwner=`${owner}:${source}`;
+  const queueOwner=`${owner}:${session?.access_token}:${source}`;
   const [status, setStatus] = useState<'open' | 'reviewed'>('open');
-  const [state, setState] = useState<QueueState>(initial);
+  const [query,setQuery]=useState(''),[filters,setFilters]=useState<Record<string,string>>({}),[sort,setSort]=useState<'newest'|'oldest'>('newest');
+  const list=useAdminQuery('messageReports',query,{...filters,status,source},sort);
   const [selection, setSelection] = useState<{ owner: string; report: ChatReport; note: string; error: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const scope = `${queueOwner}:${status}`;
+  const scope = JSON.stringify([queueOwner,status,query,filters,sort]);
   const currentScope = useRef(scope); currentScope.current = scope;
   const requestId = useRef(0);
   const loadingRef = useRef(false);
@@ -33,42 +36,15 @@ export default function MessageReportsScreen() {
   const focused = useRef(false);
   const requests = useRef(new Set<AbortController>());
   const repository = useMemo(() => supabase && owner && session?.access_token ? createReportModerationRepository(supabase, { actorId: owner, accessToken: session.access_token },source) : null, [owner, session?.access_token,source]);
-  const visible = state.owner === queueOwner && state.status === status ? state : initial(queueOwner, status);
+  const visible={reports:list.items as ChatReport[],loading:list.loading,error:list.error,hasMore:list.hasMore};
+  loadingRef.current=list.loading;
   const selected = selection?.owner === queueOwner && owner ? selection : null;
-  const visibleRef = useRef(visible); visibleRef.current = visible;
-
   useLayoutEffect(() => {
     requests.current.forEach(request => request.abort()); requests.current.clear();
-    requestId.current++; loadingRef.current = false; busyRef.current = false;
-    setState(initial(queueOwner, status)); setSelection(null); setBusy(false);
-  }, [queueOwner, status]);
-
-  const load = useCallback(async (append = false) => {
-    if (!repository || !focused.current || loadingRef.current) return;
-    loadingRef.current = true;
-    const version = ++requestId.current;
-    const request = new AbortController(); requests.current.add(request);
-    const offset = append ? visibleRef.current.reports.length : 0;
-    setState(old => ({ ...(old.owner === queueOwner && old.status === status ? old : initial(queueOwner, status)), loading: true, error: '' }));
-    try {
-      const page = await repository.list(status, offset, request.signal);
-      if (focused.current && currentScope.current === scope && version === requestId.current) setState(old => ({ owner:queueOwner, status, loading: false, error: '', reports: append ? [...old.reports, ...page.filter(item => !old.reports.some(existing => existing.id === item.id))] : page, hasMore: page.length === (source==='agency'?30:50) }));
-    } catch (error) {
-      if (focused.current && currentScope.current === scope && version === requestId.current) setState(old => ({ ...old, loading: false, error: error instanceof Error ? error.message : 'No pudimos cargar los reportes.' }));
-    } finally {
-      requests.current.delete(request);
-      if (currentScope.current === scope && version === requestId.current) loadingRef.current = false;
-    }
-  }, [repository, queueOwner,source, status, scope]);
-
-  useFocusEffect(useCallback(() => {
-    focused.current = true; void load();
-    return () => {
-      focused.current = false; requestId.current++; loadingRef.current = false;
-      requests.current.forEach(request => request.abort()); requests.current.clear();
-      setSelection(null); busyRef.current = false; setBusy(false);
-    };
-  }, [load]));
+    busyRef.current = false;setSelection(null);setBusy(false);
+  }, [scope]);
+  const load=list.reload;
+  useFocusEffect(useCallback(() => {focused.current=true;return ()=>{focused.current=false;requests.current.forEach(request=>request.abort());requests.current.clear();setSelection(null);};},[]));
 
   async function review() {
     if (!selected || !repository || busyRef.current || loadingRef.current || selected.report.reporterId === owner || selected.report.reportedUserId === owner) return;
@@ -91,22 +67,22 @@ export default function MessageReportsScreen() {
   }
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={list.refreshing} enabled={!!repository&&!busy} onRefresh={()=>{if(!busyRef.current)void list.refresh();}} tintColor={colors.primary}/>}>
       <PageTitle title="Reportes" subtitle="Cuida las conversaciones de KarmaHouse." back />
       <View style={styles.filters}><Pill label="Personales" active={source==='personal'} onPress={()=>setSource('personal')}/><Pill label="Inmobiliarias" active={source==='agency'} onPress={()=>setSource('agency')}/></View>
       {!user ? <AccountPrompt returnTo="/message-reports" /> : !owner || !repository ? <EmptyState icon="lock-closed-outline" title="Acceso reservado" description="Solo las cuentas administradoras pueden revisar reportes." /> : <>
         <View style={styles.filters}><Pill label="Pendientes" active={status === 'open'} onPress={() => setStatus('open')} /><Pill label="Revisados" active={status === 'reviewed'} onPress={() => setStatus('reviewed')} /></View>
         <Text style={styles.meta}>Cada reporte incluye el contexto de la conversación en el momento de enviarlo.</Text>
-        <Button label="Actualizar reportes" secondary icon="refresh-outline" loading={visible.loading} disabled={busy} onPress={() => void load()} />
+        <AdminToolbar query={query} onSearch={setQuery} filters={filters} onFilters={setFilters} fields={[{key:'reason',label:'Motivo',options:options(reasonLabels)},{key:'from',label:'Desde',kind:'date'},{key:'to',label:'Hasta',kind:'date'}]} sort={sort} onSort={value=>setSort(value as typeof sort)} allowName={false} disabled={busy}/>
         {visible.error ? <Notice error>{visible.error}</Notice> : null}
         {visible.loading && visible.reports.length === 0 ? <ActivityIndicator color={colors.primary} style={{ margin: 40 }} /> : !visible.error && visible.reports.length === 0 ? <EmptyState icon="shield-checkmark-outline" title={status === 'open' ? 'Sin reportes pendientes' : 'Aún no hay revisiones'} description={status === 'open' ? 'Aquí aparecerán las conversaciones que necesiten atención.' : 'Los reportes revisados se conservarán aquí.'} /> : null}
         {visible.reports.map(report => <Pressable key={report.id} accessibilityRole="button" accessibilityLabel={`Revisar reporte: ${reasonLabels[report.reason]}, ${report.propertyTitle}`} style={({ pressed }) => [styles.card, pressed && { opacity: .75 }]} onPress={() => setSelection({ owner:queueOwner, report, note: '', error: '' })}>
           <View style={styles.row}><View style={styles.flag}><Icon name="flag-outline" color={colors.primary} /></View><View style={{ flex: 1, gap: 4 }}><Text style={styles.title}>{reasonLabels[report.reason]}</Text><Text style={styles.meta}>{dateLabel(report.createdAt)}</Text></View><Icon name="chevron-forward" color={colors.muted} size={18} /></View>
           <Text style={styles.property}>{report.propertyTitle}</Text>
           {report.details ? <Text numberOfLines={3} style={styles.body}>{report.details}</Text> : null}
-          <Text style={styles.meta}>{report.context.length} mensajes de contexto · {report.status === 'open' ? 'Pendiente' : 'Revisado'}</Text>
+          <View style={styles.row}><AdminStatus label={report.status==='open'?'Pendiente':'Revisado'} tone={report.status==='open'?'amber':'neutral'}/><Text style={styles.meta}>{report.context.length} mensajes de contexto</Text></View>
         </Pressable>)}
-        {visible.hasMore && <Button label="Cargar más reportes" secondary loading={visible.loading} onPress={() => void load(true)} />}
+        <AdminPagination {...list} loading={list.loading||busy}/>
       </>}
     </ScrollView>
     <Modal visible={Boolean(selected)} transparent animationType="fade" onRequestClose={() => !busy && setSelection(null)}>
@@ -129,7 +105,7 @@ export default function MessageReportsScreen() {
               <TextInput accessibilityLabel="Nota de revisión del reporte" value={selected?.note ?? ''} onChangeText={note => setSelection(old => old ? { ...old, note } : null)} multiline maxLength={1000} editable={!busy} placeholder="Deja constancia de lo revisado." placeholderTextColor={colors.muted} style={styles.input} />
               <Text style={styles.meta}>Marcar como revisado conserva el contexto. No bloquea ni suspende cuentas automáticamente.</Text>
               {selected?.error ? <Notice error>{selected.error}</Notice> : null}
-              <Button label="Marcar como revisado" icon="checkmark-outline" loading={busy} disabled={visible.loading} onPress={() => void review()} />
+              <Button label="Marcar como revisado" icon="checkmark-outline" loading={busy} disabled={visible.loading||(source==='agency'&&!selected?.note.trim())} onPress={() => void review()} />
             </>}
             <Button label="Cerrar reporte" secondary disabled={busy} onPress={() => setSelection(null)} />
           </ScrollView>
@@ -142,7 +118,7 @@ export default function MessageReportsScreen() {
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: 28, gap: 14 },
   filters: { flexDirection: 'row', gap: 10 }, meta: { color: colors.muted, fontSize: 13, lineHeight: 20 },
-  card: { backgroundColor: colors.surface, borderRadius: 24, padding: 20, gap: 14 }, row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  card: { backgroundColor: colors.surface, borderRadius: 20, borderWidth:1,borderColor:colors.border, padding: 18, gap: 12 }, row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   flag: { width: 44, height: 44, backgroundColor: colors.softBlue, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 18, fontWeight: '600', color: colors.ink }, property: { fontSize: 16, fontWeight: '600', lineHeight: 23, color: colors.ink },
   body: { fontSize: 15, lineHeight: 23, color: colors.ink }, label: { fontSize: 14, lineHeight: 20, color: colors.ink, fontWeight: '600' },

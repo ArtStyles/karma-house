@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useConsultationRefresh } from '../../lib/useConsultationRefresh';
 import { useAuth } from '../../auth/AuthProvider';
 import type { Conversation } from '../../messaging/types';
 import type { useNegotiations } from '../../negotiations/useNegotiations';
@@ -32,6 +33,7 @@ function ConversationNegotiationsBody({conversation,userId,store,mutations,reque
   // Each opening decides where the sheet starts: a card asking for a counterproposal skips the history.
   useEffect(()=>{if(!request)return;if(request.compose)compose(request.compose.kind,request.compose.previous);else setShowComposer(false)},[request]);
   const authorized=auth.user?.id===userId&&store.userId===userId;
+  const reload=useConsultationRefresh(`${userId}:${auth.session?.access_token}:${conversation.id}`,store.refresh,!authorized||!open||showComposer||store.mutating||store.loading||store.loadingMore);
   const canSend=authorized&&conversation.canSend;
   const previous=target?.previous?store.items.find(item=>item.id===target.previous?.id):undefined;
   const staleAlternative=!!target?.previous&&(previous?previous.status!=='pending'||!previous.canAct:store.ready&&!store.loading);
@@ -44,18 +46,18 @@ function ConversationNegotiationsBody({conversation,userId,store,mutations,reque
   }
   const pending=(kind:NegotiationKind)=>store.items.some(item=>item.kind===kind&&item.status==='pending');
   return <>
-    <NegotiationSheet visible={open} busy={store.mutating} onClose={close}>
+    <NegotiationSheet visible={open} busy={store.mutating} onClose={close} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={open&&!showComposer&&!store.mutating} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}>
       {target&&<View style={!showComposer&&styles.hidden}><NegotiationComposer key={`${target.kind}:${target.previous?.id??'new'}`} target={target} draft={drafts.get(target)} updateDraft={patch=>drafts.update(target,patch)} disabled={!canSend||staleAlternative} disabledReason={staleAlternative?'La propuesta anterior cambió o ya no está en esta lista. Vuelve al historial para elegir una propuesta pendiente.':reason} onCreate={mutations.create} onRefresh={store.refresh} onBack={()=>setShowComposer(false)} onConfirmed={()=>{drafts.discard(target);setTarget(null);setShowComposer(false)}}/></View>}
       {!showComposer&&<>
         <View style={styles.intro}><Text style={styles.property}>{conversation.propertyTitle}</Text><Text style={styles.description}>Las propuestas y sus respuestas quedan juntas en esta conversación.</Text></View>
         {!canSend&&<Notice>{reason}</Notice>}
         <View style={styles.newActions}><Button label="Proponer visita" icon="calendar-outline" disabled={!canSend||store.mutating||pending('visit')} onPress={()=>compose('visit')} style={styles.newAction}/>{conversation.buyerId===userId&&<Button label="Hacer oferta" secondary icon="pricetag-outline" disabled={!canSend||store.mutating||pending('offer')} onPress={()=>compose('offer')} style={styles.newAction}/>}</View>
         {(pending('visit')||pending('offer'))&&<Text style={styles.hint}>Primero responde o retira la propuesta pendiente del mismo tipo.</Text>}
-        <View style={styles.listHeading}><Text style={styles.sectionTitle}>Historial</Text><Pressable accessibilityRole="button" accessibilityLabel="Actualizar solicitudes" disabled={store.loading||store.mutating} onPress={()=>void store.refresh()}><Text style={styles.link}>Actualizar</Text></Pressable></View>
-        {(store.error||mutations.issue)&&<Notice error>{mutations.issue||store.error}</Notice>}
+        <View style={styles.listHeading}><Text style={styles.sectionTitle}>Historial</Text></View>
+        {(store.error||mutations.issue)&&<Notice error>{mutations.issue||store.error} Desliza hacia abajo para volver a consultar.</Notice>}
         {!!mutations.feedback&&<View accessibilityLiveRegion="polite" style={styles.feedback}><Icon name="checkmark-circle-outline" color={colors.green} size={19}/><Text style={styles.feedbackText}>{mutations.feedback}</Text></View>}
         {!store.ready&&store.loading?<ActivityIndicator color={colors.primary} style={styles.loading}/>:!store.items.length&&!store.error?<View style={styles.empty}><Icon name="calendar-clear-outline" color={colors.primary} size={29}/><Text style={styles.emptyTitle}>Dale forma al próximo paso</Text><Text style={styles.description}>Propón una visita o inicia una negociación. Aquí verás cada respuesta.</Text></View>:null}
-        {store.items.map(item=><NegotiationCard key={item.id} item={{...item,canAct:item.canAct&&canSend}} userId={userId} busy={store.mutating||!authorized} onRespond={(value,action)=>void mutations.respond(value,action)} onCounter={item=>compose(item.kind,item)}/>)}
+        {store.items.map(item=><NegotiationCard key={item.id} item={{...item,canAct:item.canAct&&canSend}} userId={userId} busy={store.mutating||reload.refreshing||!authorized} onRespond={(value,action)=>{if(!reload.isRefreshing())void mutations.respond(value,action);}} onCounter={item=>compose(item.kind,item)}/>)}
         {store.hasMore&&<Button label="Cargar más solicitudes" secondary loading={store.loadingMore} disabled={store.mutating} onPress={()=>void store.loadMore()}/>}
         <Text style={styles.hint}>Aceptar una oferta no realiza pagos ni reserva la vivienda. Las visitas se muestran en hora de Cuba.</Text>
       </>}

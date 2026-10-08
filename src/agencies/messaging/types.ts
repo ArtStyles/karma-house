@@ -30,6 +30,7 @@ export interface PublicAgencyContact {
     agencyId: string;
     tradeName: string;
     verified: boolean;
+    isPrincipal?: boolean;
     contactAvailable: boolean;
 }
 export interface PublicPropertyContact {

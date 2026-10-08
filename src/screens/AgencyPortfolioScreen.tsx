@@ -1,7 +1,9 @@
 import {AgencyShareButton} from '../components/agencies/AgencyShareButton';
 import {router,useFocusEffect} from 'expo-router';
 import {useCallback,useRef,useState} from 'react';
-import {ScrollView,Text,View} from 'react-native';
+import {RefreshControl,ScrollView,Text,View} from 'react-native';
+import {useConsultationRefresh} from '../lib/useConsultationRefresh';
+import {isAgencyReadAccessFailure} from '../agencies/messaging/live';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useAuth} from '../auth/AuthProvider';
 import {useAgencyWorkspace} from '../agencies/useAgencyWorkspace';
@@ -12,7 +14,7 @@ import {Button,Notice,PageTitle} from '../components/ui';
 import {useAgencyFormStyles} from '../components/agencies/AgencyRegistrationFields';
 export default function AgencyPortfolioScreen(){const a=useAuth(),w=useAgencyWorkspace();return <Portfolio key={`${a.user?.id}:${w.activeAgencyId}:${w.generation}:${a.suspended}:${Boolean(a.session)}`}/>}
 function Portfolio(){
- const w=useAgencyWorkspace(),auth=useAuth(),{styles:s}=useAgencyFormStyles();
+ const w=useAgencyWorkspace(),auth=useAuth(),{styles:s,colors}=useAgencyFormStyles();
  const [items,setItems]=useState<AgencyProperty[]>([]),[more,setMore]=useState(false),[busy,setBusy]=useState(false),[issue,setIssue]=useState('');
  const focused=useRef(false),sequence=useRef(0),itemsRef=useRef(items);itemsRef.current=items;
  const allowed=w.ready&&!!w.activeAgency&&Boolean(w.membership&&auth.session&&!auth.suspended);
@@ -21,14 +23,15 @@ function Portfolio(){
   const checkpoint=()=>{c?.checkpoint();if(!focused.current||sequence.current!==seq)throw Error('KH_AGENCY_CONTEXT_CHANGED')};
   setBusy(true);setIssue('');
   try{c=w.captureAgencyReadContext();const page=await repository.list(append?itemsRef.current.length:0,c);checkpoint();setItems(old=>append?[...old,...page.items]:page.items);setMore(page.hasMore)}
-  catch(e){try{checkpoint();setItems([]);setMore(false);setIssue(agencyError(e))}catch{}}
+  catch(e){try{checkpoint();if(!c||isAgencyReadAccessFailure(e)){setItems([]);setMore(false);}setIssue(agencyError(e))}catch{}}
   finally{try{checkpoint();setBusy(false)}catch{}c?.release()}
  },[allowed,w.captureAgencyReadContext]);
+ const reload=useConsultationRefresh(`${auth.user?.id}:${auth.session?.access_token}:${w.activeAgencyId}:${w.generation}`,()=>load(),busy||!allowed);
  useFocusEffect(useCallback(()=>{focused.current=true;setItems([]);setIssue('');setBusy(false);void load();return()=>{focused.current=false;sequence.current++}},[load]));
- return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView contentContainerStyle={s.content}><PageTitle title="Cartera" subtitle={w.activeAgency?.tradeName??'Elige una inmobiliaria para consultar su cartera.'} back fallback="/agency-workspace"/>
+ return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView alwaysBounceVertical contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={allowed&&!busy} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}><PageTitle title="Cartera" subtitle={w.activeAgency?.tradeName??'Elige una inmobiliaria para consultar su cartera.'} back fallback="/agency-workspace"/>
  {!allowed?<Notice>Selecciona una inmobiliaria aprobada con una membresía activa para consultar su cartera.</Notice>:<>
  {!w.enabled&&<Notice>Solo lectura: las operaciones empresariales están pausadas.</Notice>}
- {Boolean(issue)&&<Notice error>{issue}</Notice>}<Button label="Actualizar cartera" secondary loading={busy} onPress={()=>void load()}/>
+ {Boolean(issue)&&<Notice error>{issue} Desliza hacia abajo para reintentar.</Notice>}
  {w.enabled&&w.activeAgency?.state==='approved'&&w.membership?.role==='admin'&&<Button label="Añadir vivienda en venta" onPress={()=>router.push('/agency-property/new')}/>}
  {w.membership?.role==='admin'&&<Button label="Autorizaciones y cambios compartidos" secondary onPress={()=>router.push('/agency-property-requests')}/>}
  {!busy&&!items.length&&<Notice>Esta inmobiliaria todavía no tiene viviendas autorizadas.</Notice>}

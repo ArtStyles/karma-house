@@ -15,6 +15,7 @@ import { decodeAccess, type AccountAccess } from '../admin/domain';
 import { pendingIntentStore } from './pendingIntentStorage';
 import type {AgencyApplicationInput} from '../agencies/types';
 import {registrationMetadata} from '../agencies/registration';
+import {retainProfileIdentity} from './profileRefreshRetention';
 
 export type AuthContextValue = {
   ready: boolean;
@@ -133,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(photoError ? 'Tu perfil está disponible, pero no pudimos cargar la foto. Vuelve a actualizarlo.' : null);
     } catch {
       if (mounted.current && request === profileRequest.current && sessionRef.current?.user.id === ownerId) {
-        setProfile(null);
+        setProfile(current=>retainProfileIdentity(current,ownerId));
         setError('No se pudo cargar tu perfil. Comprueba tu conexión.');
       }
     } finally { context.release(); }

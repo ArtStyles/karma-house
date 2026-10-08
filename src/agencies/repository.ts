@@ -3,6 +3,7 @@ import type {MessagingRequestContext} from '../messaging/types.ts';
 import {isUuid} from '../messaging/domain.ts';
 import {createScopedRpc} from '../transfers/repository.ts';
 import {normalizeAgencyApplication,normalizeAgencyVerificationRequest} from './domain.ts';
+import {decodePrincipalStatus,principalCommercialDraft} from './principal.ts';
 import type {AgencyApplication,AgencyApplicationInput,AgencyInvitation,AgencyMembership,AgencyRequestContext,AgencyRole,AgencyState,AgencySummary,AgencyVerificationRequest,AgencyVerificationRequestInput,AgencyVerificationRequestState,Page} from './types.ts';
 const invalid=()=>Error('No se pudieron interpretar los datos de la inmobiliaria.');
 function object(v:unknown):Record<string,unknown>{if(!v||typeof v!=='object'||Array.isArray(v))throw invalid();return v as Record<string,unknown>}
@@ -14,7 +15,9 @@ function iso(v:unknown):string{const s=str(v);if(!Number.isFinite(Date.parse(s))
 function enumValue<T extends string>(v:unknown,values:readonly T[]):T{if(typeof v!=='string'||!values.includes(v as T))throw invalid();return v as T}
 export function decodeAgencySummary(value:unknown):AgencySummary{
  const v=object(value);if(typeof v.verified!=='boolean')throw invalid();
- return {id:uuid(v.id),tradeName:str(v.tradeName),state:enumValue(v.state,['pending','needs_changes','approved','rejected','suspended']),version:version(v.version),logoPath:nullable(v.logoPath),verified:v.verified,verificationVersion:version(v.verificationVersion)};
+ const isPrincipal=decodePrincipalStatus(v.isPrincipal,v.verified),state=enumValue(v.state,['pending','needs_changes','approved','rejected','suspended']);
+ if(isPrincipal&&state!=='approved')throw invalid();
+ return {id:uuid(v.id),tradeName:str(v.tradeName),state,version:version(v.version),logoPath:nullable(v.logoPath),verified:v.verified,verificationVersion:version(v.verificationVersion),isPrincipal};
 }
 export function decodeAgencyMembership(value:unknown):AgencyMembership{
  const v=object(value);return {...(v.displayName===undefined?{}:{displayName:str(v.displayName)}),agencyId:uuid(v.agencyId),userId:uuid(v.userId),role:enumValue(v.role,['manager','coordinator','admin']),state:enumValue(v.state,['active','removed']),version:version(v.version)};
@@ -23,7 +26,9 @@ export function decodeAgencyInvitation(value:unknown):AgencyInvitation{
  const v=object(value);return {...(v.agencyName===undefined?{}:{agencyName:str(v.agencyName)}),id:uuid(v.id),agencyId:uuid(v.agencyId),recipientId:uuid(v.recipientId),role:enumValue(v.role,['manager','coordinator','admin']),state:enumValue(v.state,['pending','accepted','declined','cancelled','expired']),version:version(v.version),expiresAt:iso(v.expiresAt)};
 }
 export function decodeAgencyApplication(value:unknown):AgencyApplication{
- const v=object(value);if(typeof v.emailConfirmed!=='boolean')throw invalid();return {agency:decodeAgencySummary(v.agency),input:normalizeAgencyApplication(v.input),reviewNote:nullable(v.reviewNote),emailConfirmed:v.emailConfirmed};
+ const v=object(value);if(typeof v.emailConfirmed!=='boolean')throw invalid();const agency=decodeAgencySummary(v.agency);
+ const input=agency.isPrincipal&&Object.keys(object(v.input)).length===0?{...principalCommercialDraft(agency.tradeName),responsibleFullName:'',evidenceReferences:[]}:normalizeAgencyApplication(v.input);
+ return {agency,input,reviewNote:nullable(v.reviewNote),emailConfirmed:v.emailConfirmed};
 }
 export function decodeVerificationRequest(value:unknown):AgencyVerificationRequest{
  const v=object(value);return {id:uuid(v.id),agencyId:uuid(v.agencyId),input:normalizeAgencyVerificationRequest(v.input),state:enumValue(v.state,['pending','needs_changes','approved','rejected','cancelled']),reviewNote:nullable(v.reviewNote),version:version(v.version),createdAt:iso(v.createdAt),reviewedAt:v.reviewedAt===null?null:iso(v.reviewedAt)};

@@ -46,7 +46,7 @@ export interface MarketplaceContextValue {
   setStatus(id: string, status: ListingStatus): Promise<void>;
   submitForReview(id: string): Promise<void>;
   loadModerationQueue(): Promise<void>;
-  reviewListing(id: string, decision: ReviewDecision, note: string, version: number): Promise<void>;
+  reviewListing(id: string, decision: ReviewDecision, note: string, version: number, refreshLegacyQueue?: boolean): Promise<void>;
 }
 
 const MarketplaceContext = createContext<MarketplaceContextValue | null>(null);

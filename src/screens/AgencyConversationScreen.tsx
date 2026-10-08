@@ -1,6 +1,7 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { useAgencyWorkspace } from '../agencies/AgencyProvider';
@@ -31,6 +32,7 @@ export default function AgencyConversationScreen() {
     const current = useRef(scope);
     current.current = scope;
     const epoch = useRef(0), busyRef = useRef(false), readTicket=useRef(0);
+    const proposalRefresh=useRef(async()=>{}),proposalBlocked=useRef(false);
     const active=useMessagingActivity();
     const [state, setState] = useState<{
         scope: string;
@@ -88,6 +90,7 @@ export default function AgencyConversationScreen() {
             ctx?.release();
         }
     }, [repo, auth.user?.id, capture, id, scope]);
+    const reload=useConsultationRefresh(scope,async()=>{await load();await proposalRefresh.current();},()=>busyRef.current||proposalBlocked.current||!auth.user||!!reportTarget);
     useFocusEffect(useCallback(() => {
         epoch.current++;
         busyRef.current = false;
@@ -105,7 +108,7 @@ export default function AgencyConversationScreen() {
     }, [load,scope]));
     useEffect(()=>{if(!active||!auth.user||(agencyId&&w.activeAgencyId!==agencyId))return;return startAgencyPoll(load);},[active,load,auth.user?.id,agencyId,w.activeAgencyId]);
     async function act(work:(ctx:ReturnType<typeof capture>)=>Promise<void>,write=false) {
-        if(busyRef.current) return;
+        if(busyRef.current || reload.isRefreshing()) return;
         busyRef.current=true;
         setBusy(true);
         let ctx:ReturnType<typeof capture>|undefined;
@@ -138,18 +141,18 @@ export default function AgencyConversationScreen() {
     }
     const counterpartActions = agencyConversationCounterparts(c ?? null, (visible?.messages ?? []).map(m => m.senderId), auth.user?.id, !!agencyId);
     const counterparts = counterpartActions.map(target => target.userId);
-    return <SafeAreaView style={s.safe}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
+    return <SafeAreaView style={s.safe}><ScrollView alwaysBounceVertical keyboardShouldPersistTaps="handled" contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!busy&&!!auth.user&&!reportTarget} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}>
   <PageTitle title={c?.agencyName ?? 'Conversación con inmobiliaria'} subtitle={c?.propertyTitle} back/>
   {!auth.user ? <AccountPrompt returnTo={`/agency-conversation/${id}${agencyId ? `?agencyId=${agencyId}` : ''}`}/> : <>
    <Notice>Esta conversación pertenece a {c?.agencyName ?? 'la inmobiliaria elegida'}. Solo tú y su equipo autorizado podéis verla. Las conversaciones personales siguen siendo privadas.</Notice>
-   {visible?.error && <Notice error>{visible.error}</Notice>}<Button label="Actualizar mensajes" secondary loading={busy} onPress={() => void load()}/>
+   {visible?.error && <Notice error>{visible.error} Desliza hacia abajo para reintentar.</Notice>}
    {w.enabled && w.activeAgency?.state==='approved' && c && agencyId && c.assigneeId !== auth.user.id && w.membership?.role !== 'manager' && !c.closedReason && <Button label="Tomar este caso" loading={busy} onPress={() => void act(async (ctx) => { if (!supabase || !('agencyId' in ctx))
             return; await createAgencyDealRepository(supabase).assign({ dealId: c.dealId, userId: ctx.userId, expectedVersion: c.dealVersion, clientRequestId: createMessageId() }, ctx); await load(); },true)}/>}
    {visible?.hasMore && <Button label="Ver mensajes anteriores" secondary loading={busy} onPress={() => void act(async (ctx) => { if (!repo)
             return; const page = await repo.history(id, visible.messages[0]?.seq ?? null, ctx); ctx.checkpoint(); setState(old => ({ ...old, messages: mergeAgencyMessages(old.messages, page.items), hasMore: page.hasMore })); })}/>}
    {visible?.messages.map(m => <View key={m.id} style={s.card}><Text style={s.meta}>{m.senderId === null ? 'Cuenta eliminada' : m.senderId === auth.user?.id ? 'Tú' : m.senderId === c?.buyerId ? 'Comprador' : `Equipo · participante ${counterparts.indexOf(m.senderId)+1}`} · {new Date(m.createdAt).toLocaleString('es', { timeZone: 'America/Havana' })}</Text><Text selectable style={s.body}>{m.body}</Text></View>)}
    {c && !c.canSend && <Notice>{c.closedReason ? 'Este expediente está cerrado. El historial se conserva.' : 'El envío no está disponible. Puede requerir asignación, autorización vigente o resolver un bloqueo.'}</Notice>}
-   {c && <AgencyProposalPanel onRequestClosure={agencyId&&c&&!c.closedReason?()=>router.push({pathname:'/agency-closures',params:{dealId:c.dealId}}):undefined} key={scope} conversation={c} actorId={auth.user.id} staff={!!agencyId} capture={capture} onChanged={load}/>}
+   {c && <AgencyProposalPanel consultation={{refresh:proposalRefresh,blocked:proposalBlocked,refreshing:reload.isRefreshing}} onRequestClosure={agencyId&&c&&!c.closedReason?()=>router.push({pathname:'/agency-closures',params:{dealId:c.dealId}}):undefined} key={scope} conversation={c} actorId={auth.user.id} staff={!!agencyId} capture={capture} onChanged={load}/>}
    <TextInput accessibilityLabel="Mensaje a la inmobiliaria" style={s.input} multiline maxLength={2000} value={visible ? body : ''} editable={!!c?.canSend && !busy && !pending.current} onChangeText={setBody} placeholder="Escribe un mensaje" placeholderTextColor={colors.muted}/>
    <Button label={pending.current ? 'Reintentar el mismo mensaje' : 'Enviar mensaje'} disabled={!c?.canSend || !body.trim()} loading={busy} onPress={() => void send()}/>
    {pending.current && <Button label="Descartar intento" secondary disabled={busy} onPress={() => { pending.current = null; setBody(''); setState(old => ({ ...old, error: '' })); }}/>}

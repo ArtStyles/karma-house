@@ -1,7 +1,9 @@
 import { randomUUID } from 'expo-crypto';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { useConsultationRefresh } from '../lib/useConsultationRefresh';
+import { isAgencyReadAccessFailure } from '../agencies/messaging/live';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { useAgencyWorkspace } from '../agencies/useAgencyWorkspace';
@@ -19,7 +21,8 @@ export default function AgencyPropertyRequestsScreen() { const auth = useAuth(),
 function Requests({ personal }: {
     personal: boolean;
 }) {
-    const auth = useAuth(), w = useAgencyWorkspace(), { styles: s } = useAgencyFormStyles(), scope = useRef(createAgencyScreenRequestScope()).current;
+    const auth = useAuth(), w = useAgencyWorkspace(), { styles: s, colors } = useAgencyFormStyles(), scope = useRef(createAgencyScreenRequestScope()).current;
+    const refreshedOffset=useRef<number|null>(null);
     const [mandates, setMandates] = useState<AgencyMandateRequest[]>([]), [changes, setChanges] = useState<PropertyChangeRequest[]>([]), [offset, setOffset] = useState(0), [more, setMore] = useState(false), [busy, setBusy] = useState(false), [issue, setIssue] = useState(''), [link, setLink] = useState(''), [reference, setReference] = useState('');
     const [authorizations,setAuthorizations]=useState<CurrentAgencyMandate[]>([]);
     const pending = useRef<{
@@ -28,7 +31,7 @@ function Requests({ personal }: {
     } | null>(null);
     const allowed = Boolean(w.ready && auth.session && !auth.suspended && (personal || w.activeAgency && w.membership?.role === 'admin'));
     const operational = w.enabled && (personal || w.activeAgency?.state==='approved');
-    const load = useCallback(async () => {
+    const load = useCallback(async (requestedOffset=offset, resetPage=false) => {
         if (!repository || !allowed)
             return;
         const ticket = scope.begin();
@@ -39,29 +42,29 @@ function Requests({ personal }: {
             let m, ch, current;
             if (personal) {
                 c = w.captureAccountContext();
-                m = await repository.listPersonalMandates(offset, c);
-                ch = await repository.listPersonalChanges(offset, c);
-                current=await repository.listPersonalAuthorizations(offset,c);
+                m = await repository.listPersonalMandates(requestedOffset, c);
+                ch = await repository.listPersonalChanges(requestedOffset, c);
+                current=await repository.listPersonalAuthorizations(requestedOffset,c);
             }
             else {
                 const agency = w.captureAgencyReadContext();
                 c = agency;
-                m = await repository.listMandates(offset, agency);
-                ch = await repository.listChanges(offset, agency);
-                current=await repository.listAuthorizations(offset,agency);
+                m = await repository.listMandates(requestedOffset, agency);
+                ch = await repository.listChanges(requestedOffset, agency);
+                current=await repository.listAuthorizations(requestedOffset,agency);
             }
             ticket.checkpoint(c);
             setMandates(m.items);
             setChanges(ch.items);
             setAuthorizations(current.items);
             setMore(m.hasMore || ch.hasMore || current.hasMore);
+            if(resetPage&&requestedOffset!==offset){refreshedOffset.current=requestedOffset;setOffset(requestedOffset);}
         }
         catch (e) {
             try {
                 ticket.checkpoint(c);
                 setIssue(agencyError(e));
-                setMandates([]);setAuthorizations([]);
-                setChanges([]);
+                if(!c||isAgencyReadAccessFailure(e)){setMandates([]);setAuthorizations([]);setChanges([]);}
             }
             catch { }
         }
@@ -74,9 +77,10 @@ function Requests({ personal }: {
             c?.release();
         }
     }, [allowed, offset, personal, scope, w.captureAccountContext, w.captureAgencyReadContext]);
-    useFocusEffect(useCallback(() => { scope.enter(`${personal}:${offset}`); setMandates([]);setAuthorizations([]); setChanges([]); pending.current = null; void load(); return () => scope.leave(); }, [load, offset, personal, scope]));
+    const reload=useConsultationRefresh(`${auth.user?.id}:${auth.session?.access_token}:${w.activeAgencyId}:${w.generation}:${personal}:${offset}`,()=>load(0,true),busy||!allowed||!!pending.current);
+    useFocusEffect(useCallback(() => { scope.enter(`${personal}:${offset}`); if(refreshedOffset.current===offset){refreshedOffset.current=null;return()=>scope.leave();} setMandates([]);setAuthorizations([]); setChanges([]); pending.current = null; void load(); return () => scope.leave(); }, [load, offset, personal, scope]));
     async function act(action: 'request' | 'accept' | 'reject' | 'withdraw', item?: AgencyMandateRequest | PropertyChangeRequest | CurrentAgencyMandate) {
-        if (!repository || !allowed || busy)
+        if (!repository || !allowed || busy || reload.isRefreshing())
             return;
         const ticket = scope.begin();
         let c: CapturedAccountContext | undefined;
@@ -135,9 +139,9 @@ function Requests({ personal }: {
     }
     const fieldLabels: Record<string, string> = { price: 'Precio (USD)', priceNegotiable: 'Precio negociable', description: 'Descripción', title: 'Título', location: 'Zona', province: 'Provincia', type: 'Tipo', area: 'Superficie', bedrooms: 'Habitaciones', bathrooms: 'Baños', amenities: 'Características', condition: 'Estado', floor: 'Planta', mapLocation: 'Ubicación en mapa' };
     const states = { pending: 'Pendiente', accepted: 'Aceptada', rejected: 'Rechazada', withdrawn: 'Retirada' };
-    return <SafeAreaView style={s.safe} edges={['top', 'bottom', 'left', 'right']}><ScrollView contentContainerStyle={s.content}><PageTitle title="Autorizaciones y cambios" subtitle={personal ? 'Tus viviendas personales' : w.activeAgency?.tradeName ?? 'Inmobiliaria'} back/>
+    return <SafeAreaView style={s.safe} edges={['top', 'bottom', 'left', 'right']}><ScrollView alwaysBounceVertical contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!busy&&allowed} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}><PageTitle title="Autorizaciones y cambios" subtitle={personal ? 'Tus viviendas personales' : w.activeAgency?.tradeName ?? 'Inmobiliaria'} back/>
  {!allowed ? <Notice>Inicia sesión y selecciona el contexto autorizado para revisar estas solicitudes.</Notice> : <>
- {Boolean(issue) && <Notice error>{issue}</Notice>}<Button label="Actualizar solicitudes" secondary loading={busy} onPress={() => void load()}/>
+ {Boolean(issue) && <Notice error>{issue} Desliza hacia abajo para reintentar.</Notice>}
  {operational && !personal && <View style={s.card}><Text style={s.title}>Solicitar una vivienda compartida</Text><AgencyTextField label="Enlace público o UUID de la vivienda" value={link} onChangeText={setLink} editable={!busy}/><AgencyTextField label="Referencia interna de tu inmobiliaria" value={reference} onChangeText={setReference} maxLength={100} editable={!busy}/><Button label="Solicitar autorización al origen" disabled={busy || !link.trim() || !reference.trim()} onPress={() => void act('request')}/></View>}
  {authorizations.map(item=><View key={`${item.propertyId}:${item.agencyId}`} style={s.card}><Text style={s.title}>Autorización vigente · {item.agencyName}</Text><Text selectable style={s.copy}>{item.propertyId}</Text>{item.internalReference&&<Text style={s.copy}>Tu referencia: {item.internalReference}</Text>}<Button label="Ver vivienda autorizada" secondary onPress={()=>router.push(`/property/${item.propertyId}`)}/><Button label="Retirar autorización vigente" secondary disabled={busy||!operational} onPress={()=>void act('withdraw',item)}/></View>)}
  {mandates.map(item => <View key={item.id} style={s.card}><Text style={s.title}>{item.agencyName}</Text><Text style={s.copy}>Autorización · {states[item.state]}</Text><Text selectable style={s.copy}>{item.propertyId}</Text>{item.internalReference && <Text style={s.copy}>Tu referencia: {item.internalReference}</Text>}<Button label="Ver vivienda" secondary onPress={() => router.push(`/property/${item.propertyId}`)}/>{operational && item.canDecide && <><Button label="Autorizar colaboración" disabled={busy} onPress={() => void act('accept', item)}/><Button label="Rechazar solicitud" secondary disabled={busy} onPress={() => void act('reject', item)}/></>}{operational && item.canWithdraw && item.state==='pending' && <Button label="Retirar solicitud pendiente" secondary disabled={busy} onPress={() => void act('withdraw', item)}/>}</View>)}

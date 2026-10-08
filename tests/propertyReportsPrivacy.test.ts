@@ -1,0 +1,15 @@
+// @ts-nocheck -- Actual TSX with injected hooks; this verifies rendering guards, not native pixels.
+import {test} from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import vm from 'node:vm';import ts from 'typescript';import React from 'react';
+test('private report modal is hidden synchronously after account or token changes',()=>{
+ let auth={user:{id:'A'},session:{access_token:'tokenA'},isAdmin:true};const states=[],refs=[];let stateIndex=0,refIndex=0;
+ const report={id:'reportA',propertyId:'homeA',propertyTitle:'PRIVATE_TITLE_A',details:'PRIVATE_REPORT_A',createdAt:'2026-10-08T00:00:00Z',reporterId:'reporter',ownerId:'owner',status:'open',reason:'fraud',propertyLive:false};
+ const context={React,useAuth:()=>auth,useState(initial){const i=stateIndex++;if(!(i in states))states[i]=initial;return [states[i],value=>{states[i]=typeof value==='function'?value(states[i]):value}];},useRef(initial){const i=refIndex++;return refs[i]??(refs[i]={current:initial});},useEffect(){},useFocusEffect(){},useCallback:fn=>fn,useMemo:fn=>fn(),supabase:{},createPropertyReportRepository:()=>({}),createThemedStyles:()=>()=>({colors:{primary:'#00f'},styles:new Proxy({},{get:()=>({})})}),useAdminQuery:()=>({items:auth.user?.id==='A'?[report]:[],total:1,loading:false,error:null,refreshing:false,reload:async()=>{}}),PROPERTY_REPORT_REASONS:[{value:'fraud',label:'Posible fraude'}],router:{push(){}},StyleSheet:{create:x=>x}};
+ for(const name of ['SafeAreaView','ScrollView','RefreshControl','PageTitle','AccountPrompt','EmptyState','View','Pill','AdminToolbar','Notice','ActivityIndicator','Pressable','Text','Icon','AdminStatus','AdminPagination','Modal','KeyboardAvoidingView','Button','TextInput'])context[name]=name;
+ const source=readFileSync('src/screens/PropertyReportsScreen.tsx','utf8').replace(/^import .*;\r?\n/gm,'').replace('export default function','function');
+ vm.createContext(context);vm.runInContext(ts.transpileModule(source,{compilerOptions:{jsx:ts.JsxEmit.React,module:ts.ModuleKind.None,target:ts.ScriptTarget.ES2022}}).outputText+'\nglobalThis.renderTestScreen=PropertyReportsScreen;',context);
+ const render=()=>{stateIndex=0;refIndex=0;return context.renderTestScreen();};
+ const all=tree=>!tree?[]:Array.isArray(tree)?tree.flatMap(all):typeof tree==='object'?[tree,...all(tree.props?.children)]:[];
+ const open=()=>{const row=all(render()).find(e=>e.props?.accessibilityLabel?.startsWith('Revisar reporte:'));assert.ok(row);row.props.onPress();assert.equal(all(render()).find(e=>e.type==='Modal').props.visible,true);};
+ open();auth={user:{id:'B'},session:{access_token:'tokenB'},isAdmin:false};const switched=render();assert.equal(all(switched).find(e=>e.type==='Modal').props.visible,false);assert.ok(!JSON.stringify(switched).includes('PRIVATE_REPORT_A'));
+ auth={user:{id:'A'},session:{access_token:'tokenA'},isAdmin:true};open();auth={...auth,session:{access_token:'rotated'}};assert.equal(all(render()).find(e=>e.type==='Modal').props.visible,false);
+});

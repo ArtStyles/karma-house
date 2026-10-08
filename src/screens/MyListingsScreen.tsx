@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { AccountPrompt } from '../components/AccountPrompt';
@@ -30,11 +31,16 @@ export default function MyListingsScreen() {
     live: { color: colors.green, background: colors.softGreen },
   };
   const { ownListings: own, setStatus, mode, refresh, submitForReview } = useMarketplace();
-  const { user, isOwner } = useAuth();
+  const { user, session, isOwner } = useAuth();
   const transfers=useIncomingTransferCount();
   const [pending, setPending] = useState('');
   const [error, setError] = useState('');
   const [confirm, setConfirm] = useState<{ listing: Listing; next: 'sold' | 'active' } | null>(null);
+  const locked = useRef(false);
+  const reload = useConsultationRefresh(`${user?.id}:${session?.access_token}`, async () => {
+    setError('');
+    await Promise.all([refresh(), transfers.refresh()]);
+  }, () => locked.current || !user || mode !== 'cloud', failure => setError(`${remoteErrorMessage(failure)} Desliza hacia abajo para reintentar.`));
   const effectiveConfirm = confirm && (mode === 'demo' || confirm.listing.ownerId === user?.id) ? confirm : null;
   // iOS keeps the modal mounted through the fade, so the direction has to outlive the state that closed it.
   const lastDirection = useRef<'sold' | 'active'>('sold');
@@ -44,36 +50,30 @@ export default function MyListingsScreen() {
   useEffect(() => { setConfirm(null); setError(''); setPending(''); }, [user?.id]);
 
   async function update(id: string, status: ListingStatus) {
-    if (pending) return;
+    if (locked.current || reload.isRefreshing()) return;
+    locked.current = true;
     setPending(id);
     setError('');
     try { await setStatus(id, status); setConfirm(null); }
     catch (failure) { setError(remoteErrorMessage(failure)); }
-    finally { setPending(''); }
-  }
-
-  async function reload() {
-    if (pending) return;
-    setPending('refresh'); setError('');
-    try { await refresh(); } catch (failure) { setError(remoteErrorMessage(failure)); }
-    finally { setPending(''); }
+    finally { locked.current = false; setPending(''); }
   }
 
   async function submit(id: string) {
-    if (pending) return;
+    if (locked.current || reload.isRefreshing()) return;
+    locked.current = true;
     setPending(id); setError('');
     try { await submitForReview(id); } catch (failure) { setError(remoteErrorMessage(failure)); }
-    finally { setPending(''); }
+    finally { locked.current = false; setPending(''); }
   }
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!pending && !!user && mode === 'cloud'} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}>
       <PageTitle title="Mis anuncios" subtitle="Administra tus viviendas." back fallback="/profile" />
       {user&&!isOwner&&<Button secondary label={`Anuncios por aceptar${transfers.count===null?'':` · ${transfers.count}`}`} onPress={()=>router.push('/listing-transfers')}/>}
       {mode === 'cloud' && !user ? <AccountPrompt returnTo="/my-listings" /> : <>
       <Notice>{mode === 'cloud' ? 'Tus anuncios aparecen en el catálogo cuando están aprobados y activos. Los cambios de contenido se revisan antes de publicarse.' : 'Los anuncios de prueba se guardan en este dispositivo. Los activos aparecen en tu catálogo local.'}</Notice>
       {error ? <Notice error>{error}</Notice> : null}
-      {mode === 'cloud' && <Button label="Actualizar mis anuncios" icon="refresh-outline" secondary loading={pending === 'refresh'} disabled={!!pending} onPress={reload} />}
 
       {own.length ? <View style={styles.list}>
         <Text style={styles.sectionLabel}>{own.length} {own.length === 1 ? 'anuncio' : 'anuncios'}</Text>

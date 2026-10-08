@@ -190,12 +190,12 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
       });
     },
     loadModerationQueue,
-    reviewListing(id: string, decision: ReviewDecision, note: string, version: number) {
+    reviewListing(id: string, decision: ReviewDecision, note: string, version: number, refreshLegacyQueue = true) {
       return enqueue(async (_ownerId, checkpoint) => {
         if (!isAdmin) throw new Error('Necesitas una cuenta administradora para revisar anuncios.');
         if (decision === 'rejected' && !note.trim()) throw new Error('Indica el motivo del rechazo.');
         await repository.review(id, decision, note.trim(), version, checkpoint); checkpoint();
-        await Promise.all([refresh(), loadModerationQueue()]); checkpoint();
+        await Promise.all([refresh(), ...(refreshLegacyQueue ? [loadModerationQueue()] : [])]); checkpoint();
       });
     },
   };

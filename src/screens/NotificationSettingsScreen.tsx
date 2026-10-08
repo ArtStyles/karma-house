@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { AccountPrompt } from '../components/AccountPrompt';
@@ -16,18 +17,21 @@ export default function NotificationSettingsScreen() {
   const { colors, styles } = useStyles();
   const auth = useAuth();
   const store = useNotifications();
+  const formDirty=useRef(false),formLocked=useRef(false);
+  const reload=useConsultationRefresh(`${auth.user?.id}:${auth.session?.access_token}`,store.loadPreferences,()=>formDirty.current||formLocked.current||store.savingPreferences||store.preferencesLoading||!auth.user||!store.available);
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!!auth.user&&!store.savingPreferences&&!formDirty.current} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}>
       <PageTitle title="Tus avisos" subtitle="Tus novedades, a tu manera." back fallback="/notifications" />
       {!auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} />
         : !store.available ? <EmptyState icon="notifications-outline" title="Avisos a tu medida" description="Las preferencias estarán disponibles cuando conectes una cuenta." />
         : !auth.user ? <AccountPrompt returnTo="/notification-settings" title="Avisos a tu medida" description="Inicia sesión para elegir los avisos de mensajes, visitas y ofertas que quieres recibir." />
-        : <View style={styles.form}><PushDeviceCard /><PreferencesBody key={auth.user.id} userId={auth.user.id} /></View>}
+        : <View style={styles.form}><PushDeviceCard /><PreferencesBody key={auth.user.id} userId={auth.user.id} dirty={formDirty} locked={formLocked} refreshing={reload.isRefreshing} /></View>}
     </ScrollView>
   </SafeAreaView>;
 }
 
-function PreferencesBody({ userId }: { userId: string }) {
+type PreferenceRefreshGuard={dirty:RefObject<boolean>;locked:RefObject<boolean>;refreshing():boolean};
+function PreferencesBody({ userId, ...guard }: { userId: string }&PreferenceRefreshGuard) {
   const { colors, styles } = useStyles();
   const store = useNotifications();
   const active = useMessagingActivity();
@@ -35,12 +39,12 @@ function PreferencesBody({ userId }: { userId: string }) {
   useEffect(() => { if (active) void loadPreferences().catch(() => {}); }, [active, loadPreferences]);
   if (!store.preferences) return <View style={styles.form}>
     {store.preferencesLoading ? <ActivityIndicator color={colors.primary} style={styles.loading} />
-      : <><Notice error>{store.preferencesError || 'No se pudieron cargar tus preferencias.'}</Notice><Button label="Volver a cargar preferencias" secondary onPress={() => void loadPreferences().catch(() => {})} /></>}
+      : <Notice error>{store.preferencesError || 'No se pudieron cargar tus preferencias.'} Desliza hacia abajo para volver a consultarlas.</Notice>}
   </View>;
-  return <PreferencesForm userId={userId} preferences={store.preferences} />;
+  return <PreferencesForm userId={userId} preferences={store.preferences} {...guard} />;
 }
 
-function PreferencesForm({ userId, preferences }: { userId: string; preferences: NotificationPreferences }) {
+function PreferencesForm({ userId, preferences, dirty, locked, refreshing }: { userId: string; preferences: NotificationPreferences }&PreferenceRefreshGuard) {
   const { colors, styles } = useStyles();
   const store = useNotifications();
   const [draft, setDraft] = useState(preferences);
@@ -49,7 +53,6 @@ function PreferencesForm({ userId, preferences }: { userId: string; preferences:
   const previous = useRef(preferences);
   const mounted = useRef(true);
   const actor = useRef(store.userId); actor.current = store.userId;
-  const locked = useRef(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   useEffect(() => {
     const old = previous.current;
@@ -58,6 +61,7 @@ function PreferencesForm({ userId, preferences }: { userId: string; preferences:
     setDraft(value => reconcileNotificationPreferenceDraft(value, old, preferences));
   }, [preferences]);
   const changed = !sameNotificationChoices(draft, preferences);
+  dirty.current=changed;
   const busy = store.savingPreferences || store.preferencesLoading;
   const checkpoint = () => { if (!mounted.current || actor.current !== userId) throw new Error('KH_ACCOUNT_CHANGED'); };
   function change(key: 'messages' | 'visits' | 'offers' | 'alerts' | 'agencies', value: boolean) {
@@ -65,7 +69,7 @@ function PreferencesForm({ userId, preferences }: { userId: string; preferences:
     setDraft(current => ({ ...current, [key]: value })); setSaved(false); setIssue('');
   }
   async function save() {
-    if (locked.current || busy || !changed) return;
+    if (locked.current || refreshing() || busy || !changed) return;
     locked.current = true; setSaved(false); setIssue('');
     try {
       checkpoint();
@@ -75,10 +79,9 @@ function PreferencesForm({ userId, preferences }: { userId: string; preferences:
       if (mounted.current && actor.current === userId) setIssue(notificationErrorMessage(error));
     } finally { locked.current = false; }
   }
-  function reload() {
+  function discardChanges() {
     if (busy) return;
     setDraft(preferences); setSaved(false); setIssue('');
-    void store.loadPreferences().catch(() => {});
   }
   return <View style={styles.form}>
     <Text accessibilityRole="header" style={styles.groupLabel}>Lo que quieres recibir</Text>
@@ -93,7 +96,7 @@ function PreferencesForm({ userId, preferences }: { userId: string; preferences:
     {!!(issue || store.preferencesError) && <Notice error>{issue || store.preferencesError}</Notice>}
     {saved && <View accessibilityLiveRegion="polite" style={styles.success}><Icon name="checkmark-circle" color={colors.green} size={19} /><Text style={styles.successText}>Preferencias guardadas.</Text></View>}
     <Button label="Guardar preferencias" onPress={() => void save()} loading={store.savingPreferences} disabled={busy || !changed} />
-    {(changed || !!store.preferencesError) && <Button label={changed ? 'Descartar cambios y actualizar' : 'Actualizar preferencias'} secondary disabled={busy} onPress={reload} />}
+    {changed && <Button label="Descartar cambios" secondary disabled={busy} onPress={discardChanges} />}
   </View>;
 }
 

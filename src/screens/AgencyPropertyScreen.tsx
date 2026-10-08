@@ -1,7 +1,9 @@
 import { randomUUID } from 'expo-crypto';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { useConsultationRefresh } from '../lib/useConsultationRefresh';
+import { isAgencyReadAccessFailure } from '../agencies/messaging/live';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { useAgencyWorkspace } from '../agencies/useAgencyWorkspace';
@@ -24,7 +26,7 @@ export default function AgencyPropertyScreen() {
 function Property({ id }: {
     id: string;
 }) {
-    const w = useAgencyWorkspace(), auth = useAuth(), market = useMarketplace(), { styles: s } = useAgencyFormStyles();
+    const w = useAgencyWorkspace(), auth = useAuth(), market = useMarketplace(), { styles: s, colors } = useAgencyFormStyles();
     const [item, setItem] = useState<AgencyProperty | null>(null), [issue, setIssue] = useState(''), [busy, setBusy] = useState(false), [loaded, setLoaded] = useState(id === 'new');
     const [matches,setMatches]=useState<(AgencyPropertyMatches&{draft:ListingDraft;intent:'draft'|'submit'})|null>(null);
     const mandateAttempt=useRef<{id:string;request:string}|null>(null);
@@ -67,8 +69,8 @@ function Property({ id }: {
         catch (e) {
             try {
                 check();
-                setItem(null);
                 setIssue(agencyError(e));
+                if(!c||isAgencyReadAccessFailure(e))setItem(null);
             }
             catch {
             }
@@ -97,6 +99,7 @@ function Property({ id }: {
         };
     }, [load]));
     const editable = allowed && w.enabled && w.activeAgency?.state==='approved' && loaded && (id === 'new' ? w.membership?.role === 'admin' : item?.canEditCommon), direct = item ? item.publicationPolicy === 'direct' : w.activeAgency?.verified === true;
+    const reload=useConsultationRefresh(`${auth.user?.id}:${auth.session?.access_token}:${w.activeAgencyId}:${w.generation}:${id}`,load,busy||!!editable||!allowed||!!matches||!!pending.current||!!proposedPrice||!!proposedDescription);
     async function propose(kind:'price'|'content'){
         if(!repository||!item||busy||!allowed||w.membership?.role!=='admin')return;
         const proposedPayload=kind==='price'?{price:Number(proposedPrice)}:{description:proposedDescription};
@@ -161,7 +164,7 @@ function Property({ id }: {
     }
     return (
         <SafeAreaView style={[s.safe, { flex: 1 }]} edges={['top', 'bottom', 'left', 'right']}>
-            <View style={[s.content, { paddingBottom: 8 }]}>
+            <ScrollView alwaysBounceVertical style={{flex:editable?undefined:1,flexGrow:editable?0:1}} contentContainerStyle={[s.content, { paddingBottom: 8 }]} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={allowed&&!editable&&!busy&&!proposedPrice&&!proposedDescription} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}>
                 <PageTitle
                     title={id === 'new' ? 'Añadir vivienda en venta' : item?.property.title ?? 'Vivienda'}
                     subtitle={w.activeAgency?.tradeName ?? 'Cartera empresarial'}
@@ -192,8 +195,8 @@ function Property({ id }: {
                 )}
                 {item&&<Button label="Agenda y ocupación" secondary onPress={()=>router.push({pathname:'/agency-agenda',params:{propertyId:item.property.id}})}/>}
                 {item&&w.membership?.role==='admin'&&<Button label="Ver autorizaciones y cambios" secondary onPress={()=>router.push('/agency-property-requests')}/>}
-                {!loaded && allowed && <Button label="Volver a cargar" secondary loading={busy} onPress={() => void load()} />}
-            </View>
+                {!loaded && allowed && Boolean(issue) && <Notice>Desliza hacia abajo para volver a consultar la vivienda.</Notice>}
+            </ScrollView>
             {editable && (
                 <View style={{flex:1,display:matches?'none':'flex'}} pointerEvents={matches?'none':'auto'}><ListingForm
                     key={`${id}:${item?.property.version ?? 0}`}

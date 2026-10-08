@@ -16,6 +16,9 @@ import {createMessageId, isUuid} from '../messaging/domain';
 import {havanaDateTime, NEGOTIATION_TIME_ZONE} from '../negotiations/domain';
 import {supabase} from '../lib/supabase';
 import {Button, Notice, PageTitle, Pill} from '../components/ui';
+import {RefreshControl} from 'react-native';
+import {useConsultationRefresh} from '../lib/useConsultationRefresh';
+import {isAgencyReadAccessFailure} from '../agencies/messaging/live';
 import {useAgencyFormStyles} from '../components/agencies/AgencyRegistrationFields';
 import {VisitDateTimeFields} from '../components/negotiations/VisitDateTimeFields';
 
@@ -122,15 +125,14 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
         } catch (e) {
             try {
                 c?.checkpoint();
-                setItems([]);
-                setDeal(null);
-                setProperty(null);
                 setIssue(closureError(e));
+                if(!c||isAgencyReadAccessFailure(e)){setItems([]);setDeal(null);setProperty(null);}
             } catch { /* Discard responses from an invalidated scope. */ }
         } finally {
             c?.release();
         }
     }, [allowed, operational, capture, dealId, outgoing, personal]);
+    const reload=useConsultationRefresh(`${auth.user?.id}:${auth.session?.access_token}:${w.activeAgencyId}:${w.generation}:${personal}:${outgoing}:${dealId}`,()=>load(),()=>lock.current||!!pending.current||!allowed);
 
     const refreshRef = useRef(w.refreshAgencies), loadRef = useRef(load);
     refreshRef.current = w.refreshAgencies;
@@ -166,7 +168,7 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
     }, [load, scope]);
 
     async function execute(attempt: NonNullable<typeof pending.current>) {
-        if (lock.current || !repository) return;
+        if (lock.current || reload.isRefreshing() || !repository) return;
         lock.current = true;
         setBusy(true);
         setIssue('');
@@ -243,7 +245,7 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
             },
         });
     }
-    const disabled = busy || !!pending.current;
+    const disabled = busy || reload.refreshing || !!pending.current;
 
     function facts(r: SaleRequest) {
         return <>
@@ -262,7 +264,7 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
     }
 
     return <SafeAreaView style={s.safe}>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
+        <ScrollView alwaysBounceVertical keyboardShouldPersistTaps="handled" contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!disabled&&allowed} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}>
             <PageTitle title={personal ? 'Cierres de mis viviendas' : 'Cierres'}
                 subtitle={personal ? 'Solicitudes para tu confirmación personal' : w.activeAgency?.tradeName}
                 back fallback={personal ? '/requests' : '/agency-workspace'}/>
@@ -278,10 +280,6 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
                         void load();
                     }}/>
                 </>}
-                <Button label="Actualizar cierres" secondary disabled={disabled} onPress={() => {
-                    setReview(null);
-                    void load();
-                }}/>
                 {deal && property && !deal.closedReason && <View style={s.card}>
                     <Text style={s.title}>Solicitar cierre · {property.propertyTitle}</Text>
                     <Notice>Declara los ejecutores y el importe final. La autoridad del origen revisará la operación antes de marcar la vivienda como vendida.</Notice>

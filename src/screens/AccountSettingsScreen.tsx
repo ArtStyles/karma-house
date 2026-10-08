@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { router } from 'expo-router';
-import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { accountProfileError } from '../auth/accountProfile';
@@ -16,18 +17,20 @@ import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 export default function AccountSettingsScreen() {
   const { colors, styles } = useStyles();
   const auth = useAuth();
+  const editing = useRef(false), formBusy = useRef(false);
+  const reload = useConsultationRefresh(`${auth.user?.id}:${auth.session?.access_token}`, auth.refreshProfile, () => !auth.user || editing.current || formBusy.current);
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!!auth.user && !editing.current && !formBusy.current} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}>
         <PageTitle title="Ajustes de cuenta" back />
         <AppearanceSettings />
-        {!isSupabaseConfigured ? <EmptyState icon="person-outline" title="Tu perfil, a tu manera" description="La foto y el nombre de tu cuenta estarán disponibles con el servicio conectado." /> : !auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : !auth.user ? <AccountPrompt returnTo="/account-settings" title="Tu perfil, a tu manera" description="Inicia sesión para personalizar el nombre y la foto de tu cuenta." /> : !auth.profileReady ? <View style={styles.card}><Notice error={!!auth.error}>{auth.error || 'Cargando tu perfil…'}</Notice><Button label="Volver a cargar perfil" secondary onPress={() => void auth.refreshProfile()} /></View> : <AccountSettingsForm key={auth.user.id} ownerId={auth.user.id} />}
+        {!isSupabaseConfigured ? <EmptyState icon="person-outline" title="Tu perfil, a tu manera" description="La foto y el nombre de tu cuenta estarán disponibles con el servicio conectado." /> : !auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : !auth.user ? <AccountPrompt returnTo="/account-settings" title="Tu perfil, a tu manera" description="Inicia sesión para personalizar el nombre y la foto de tu cuenta." /> : !auth.profileReady ? <View style={styles.card}><Notice error={!!auth.error}>{auth.error || 'Cargando tu perfil…'} Desliza hacia abajo para volver a cargarlo.</Notice></View> : <AccountSettingsForm key={auth.user.id} ownerId={auth.user.id} editing={editing} locked={formBusy} refreshing={reload.isRefreshing} />}
       </ScrollView>
     </KeyboardAvoidingView>
   </SafeAreaView>;
 }
 
-function AccountSettingsForm({ ownerId }: { ownerId: string }) {
+function AccountSettingsForm({ ownerId, editing, locked, refreshing }: { ownerId: string; editing: RefObject<boolean>; locked: RefObject<boolean>; refreshing(): boolean }) {
   const { colors, styles } = useStyles();
   const auth = useAuth();
   const [name, setName] = useState(auth.displayName);
@@ -37,7 +40,6 @@ function AccountSettingsForm({ ownerId }: { ownerId: string }) {
   const [saved, setSaved] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const mounted = useRef(true);
-  const locked = useRef(false);
   const previousProfileName = useRef(auth.displayName);
   const currentActor = useRef(auth.user?.id); currentActor.current = auth.user?.id;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -50,20 +52,21 @@ function AccountSettingsForm({ ownerId }: { ownerId: string }) {
   }, [auth.displayName]);
   function checkpoint() { if (!mounted.current || currentActor.current !== ownerId) throw new Error('KH_ACCOUNT_CHANGED'); }
   async function selectPhoto() {
-    if (locked.current) return;
+    if (locked.current || refreshing()) return;
     locked.current = true; setBusy('photo'); setError(''); setSaved(false);
     try { const next = await pickAccountAvatar(checkpoint); checkpoint(); if (next) setAvatar(next); }
     catch (failure) { if (mounted.current) setError(accountProfileError(failure)); }
     finally { locked.current = false; if (mounted.current) setBusy(null); }
   }
   async function save() {
-    if (locked.current) return;
+    if (locked.current || refreshing()) return;
     locked.current = true; setBusy('save'); setError(''); setSaved(false);
     try { checkpoint(); await auth.saveProfile({ displayName: name, avatar }); checkpoint(); setName(name.trim()); setAvatar(undefined); setSaved(true); }
     catch (failure) { if (mounted.current) setError(failure instanceof Error ? failure.message : 'No pudimos guardar los cambios.'); }
     finally { locked.current = false; if (mounted.current) setBusy(null); }
   }
   const changed = name.trim() !== auth.displayName || avatar !== undefined;
+  editing.current = changed || deleting;
   const preview = avatar === undefined ? auth.avatarUrl : avatar?.previewUri ?? null;
   return <View style={styles.form}>
     <View style={[styles.card, styles.photoCard]}>

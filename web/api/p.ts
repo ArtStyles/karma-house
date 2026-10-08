@@ -69,11 +69,11 @@ const LEVEL_LABELS: Record<string, string> = { new: 'Nuevo', active: 'Activo', t
 const levelLabel = (level: string) => Object.prototype.hasOwnProperty.call(LEVEL_LABELS, level) ? LEVEL_LABELS[level] : undefined;
 
 export interface Seller { name: string; level: string; verified: boolean }
-export interface PublicContact {propertyId:string;personalContact:boolean;agencies:{agencyId:string;tradeName:string;verified:boolean;contactAvailable:boolean}[]}
+export interface PublicContact {propertyId:string;personalContact:boolean;agencies:{agencyId:string;tradeName:string;verified:boolean;isPrincipal?:boolean;contactAvailable:boolean}[]}
 export function decodePublicContact(value:unknown):PublicContact {
  if(!value||typeof value!=='object'||Array.isArray(value))throw Error('contact shape');const v=value as PublicContact;
  if(!UUID.test(v.propertyId)||typeof v.personalContact!=='boolean'||!Array.isArray(v.agencies)||v.agencies.length>100)throw Error('contact shape');
- return{propertyId:v.propertyId,personalContact:v.personalContact,agencies:v.agencies.map(a=>{if(!UUID.test(a.agencyId)||typeof a.tradeName!=='string'||typeof a.verified!=='boolean'||typeof a.contactAvailable!=='boolean')throw Error('contact shape');return{agencyId:a.agencyId,tradeName:a.tradeName,verified:a.verified,contactAvailable:a.contactAvailable}})};
+ return{propertyId:v.propertyId,personalContact:v.personalContact,agencies:v.agencies.map(a=>{if(!UUID.test(a.agencyId)||typeof a.tradeName!=='string'||typeof a.verified!=='boolean'||typeof a.contactAvailable!=='boolean'||(a.isPrincipal!==undefined&&typeof a.isPrincipal!=='boolean')||(a.isPrincipal&&!a.verified))throw Error('contact shape');return{agencyId:a.agencyId,tradeName:a.tradeName,verified:a.verified,isPrincipal:a.isPrincipal??false,contactAvailable:a.contactAvailable}})};
 }
 
 function sellerLines(seller: Seller | undefined): string {
@@ -97,6 +97,7 @@ h1{font-size:28px;line-height:1.2;margin:16px 0 4px;letter-spacing:-0.02em}
 .price{font-size:26px;font-weight:700;margin:0}.price small{font-size:14px;font-weight:400;color:var(--muted)}
 .muted{color:var(--muted);font-size:14px}
 .agency-verified{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;margin-left:6px;border-radius:50%;background:#16813c;color:#fff;font-size:14px;line-height:1;vertical-align:middle}
+.agency-principal{display:inline-flex;align-items:center;gap:6px;margin-left:6px;border-radius:10px;padding:3px 8px;background:#fff3da;color:#8a5c15;font-size:13px;font-weight:700;line-height:1.5;vertical-align:middle}
 section.card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:16px 20px;margin:16px 0}
 h2{font-size:18px;margin:0 0 8px}dl{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;margin:0}dt{color:var(--muted)}dd{margin:0}
 ul{margin:0;padding-left:20px}
@@ -136,7 +137,7 @@ export function renderListing(row: PublicListingRow, photoUrls: string[], siteUr
   const self = escapeHtml(selfUrl);
   const destinationQuery=destination&&UUID.test(destination.agencyId)&&(!destination.managerId||UUID.test(destination.managerId))?`?agencyId=${destination.agencyId}${destination.managerId?`&managerId=${destination.managerId}`:''}`:'';
   const deepLink = escapeHtml(`karmahouse://property/${row.id}${destinationQuery}`);
-  const agencies=contact?.agencies.map(a=>`<section class="card"><h2>${escapeHtml(a.tradeName)}${a.verified?` <span class="agency-verified" role="img" aria-label="Inmobiliaria verificada por KarmaHouse: ${escapeHtml(a.tradeName)}"><span aria-hidden="true">✓</span></span>`:''}</h2><p><a href="/agency/${a.agencyId}">Ver perfil comercial</a></p><p class="muted">Conversación privada con esta inmobiliaria.</p>${a.contactAvailable?`<a href="${escapeHtml(`karmahouse://property/${row.id}?agencyId=${a.agencyId}${destination?.agencyId===a.agencyId&&destination.managerId&&UUID.test(destination.managerId)?`&managerId=${destination.managerId}`:''}`)}">Elegir ${escapeHtml(a.tradeName)}</a>`:'<p>Contacto no disponible</p>'}</section>`).join('')??'';
+  const agencies=contact?.agencies.map(a=>`<section class="card"><h2>${escapeHtml(a.tradeName)}${a.verified?` <span class="${a.isPrincipal?'agency-principal':'agency-verified'}" role="img" aria-label="${a.isPrincipal?'Inmobiliaria principal':'Inmobiliaria verificada por KarmaHouse'}: ${escapeHtml(a.tradeName)}"><span aria-hidden="true">✓</span>${a.isPrincipal?' Inmobiliaria principal':''}</span>`:''}</h2><p><a href="/agency/${a.agencyId}">Ver perfil comercial</a></p><p class="muted">Conversación privada con esta inmobiliaria.</p>${a.contactAvailable?`<a href="${escapeHtml(`karmahouse://property/${row.id}?agencyId=${a.agencyId}${destination?.agencyId===a.agencyId&&destination.managerId&&UUID.test(destination.managerId)?`&managerId=${destination.managerId}`:''}`)}">Elegir ${escapeHtml(a.tradeName)}</a>`:'<p>Contacto no disponible</p>'}</section>`).join('')??'';
   const head = [
     `<meta name="description" content="${description}">`,
     `<link rel="canonical" href="${self}">`,

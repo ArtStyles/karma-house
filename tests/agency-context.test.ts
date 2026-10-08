@@ -50,3 +50,11 @@ test('late authorization denial from an old captured scope cannot clear the new 
  await f.controller.setActiveAgency(b);late.resolve({data:null,error:{message:'KH_AGENCY_DEAL_NOT_FOUND',code:'42501'}});
  await assert.rejects(response,/CONTEXT_CHANGED/);assert.equal(f.controller.getSnapshot().activeAgencyId,b);c.release();
 });
+
+test('cancelled route selection cannot publish a membership after leaving its screen',async()=>{
+ const late=deferred<AgencyMembership>();let focused=true;
+ const repository={capabilities:async()=>({enabled:true}),listMine:async()=>[summary()],membership:()=>late.promise} as unknown as AgencyRepository;
+ const controller=createAgencyController(repository);controller.setSession({userId:user,accessToken:'route-token'});await controller.refreshAgencies();
+ const selection=controller.setActiveAgencyForRead(a,()=>focused);focused=false;late.resolve(member());await selection;
+ assert.equal(controller.getSnapshot().activeAgencyId,null);assert.equal(controller.getSnapshot().membership,null);assert.equal(controller.getSnapshot().error,null);
+});

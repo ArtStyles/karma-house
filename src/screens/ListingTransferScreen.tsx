@@ -1,10 +1,13 @@
 import {router,useLocalSearchParams} from 'expo-router';import {useEffect,useRef,useState} from 'react';import {Image,ScrollView,StyleSheet,Text,View} from 'react-native';import {SafeAreaView} from 'react-native-safe-area-context';import {Button,EmptyState,Notice,PageTitle} from '../components/ui';import {useListingTransfers} from '../transfers/useListingTransfers';import {transferError,transferStateLabel} from '../transfers/domain';import {fixtureTransfer} from '../transfers/fixtures';import {scopedClient,usePrivateSession} from '../assisted/usePrivateSession';import {supabase} from '../lib/supabase';import {useMarketplace} from '../state/MarketplaceProvider';import {createThemedStyles,formatMoney} from '../theme';
 import {createTransferManagementReconciler} from '../transfers/reconcileManagement';
+import {RefreshControl} from 'react-native';
+import {useConsultationRefresh} from '../lib/useConsultationRefresh';
 export default function ListingTransferScreen(){const privateSession=usePrivateSession();return <TransferBody key={privateSession.key}/>;}
 function TransferBody(){
-  const { styles: s } = useStyles();
+  const { styles: s, colors } = useStyles();
  const {id}=useLocalSearchParams<{id:string}>(),transfers=useListingTransfers(),demo=!transfers.controller,session=usePrivateSession(),marketplace=useMarketplace();
  const row=demo?fixtureTransfer:transfers.state.opened,[urls,setUrls]=useState<Record<string,string>>({}),[previewError,setPreviewError]=useState(''),[confirmed,setConfirmed]=useState(false),[issue,setIssue]=useState(''),[previewAttempt,setPreviewAttempt]=useState(0),[loadedPhotos,setLoadedPhotos]=useState<Record<string,boolean>>({});const latestUrls=useRef(urls);latestUrls.current=urls;const alive=useRef(true);useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
+ const reload=useConsultationRefresh(`${session.key}:${id}`,async()=>{await transfers.controller?.open(row?.id??id);if(alive.current)setPreviewAttempt(n=>n+1);},demo||!transfers.auth.user||transfers.state.busy||transfers.state.loading);
  useEffect(()=>{if(id&&transfers.auth.user)void transfers.controller?.open(id);},[id,transfers.controller,transfers.auth.user?.id,transfers.auth.session?.access_token]);
  useEffect(()=>{
   setUrls({});setLoadedPhotos({});setPreviewError('');setConfirmed(false);if(!supabase||!row||row.effectiveState!=='pending'||![row.recipient.id,row.sourceManagerId].includes(transfers.auth.user?.id??''))return;
@@ -14,12 +17,12 @@ function TransferBody(){
   return()=>{cancelled=true;clearTimeout(timer);};
  },[row?.id,row?.requestVersion,row?.effectiveState,transfers.auth.user?.id,previewAttempt]);
  const reconcile=useRef(createTransferManagementReconciler());useEffect(()=>{reconcile.current(row,marketplace.invalidateListingManagement);},[row?.id,row?.requestVersion,row?.effectiveState]);
- async function decide(decision:'accept'|'reject'|'cancel'){if(!row||!transfers.controller)return;setIssue('');try{const result=await transfers.controller.decide({requestId:row.id,expectedRequestVersion:row.requestVersion,decision});if(!alive.current)return;setUrls({});if(result.state==='accepted')setConfirmed(false);}catch(e){if(alive.current&&!/ACCOUNT_CHANGED/.test(String((e as Error)?.message)))setIssue(transferError(e));}}
+ async function decide(decision:'accept'|'reject'|'cancel'){if(!row||!transfers.controller||reload.isRefreshing()||transfers.state.loading)return;setIssue('');try{const result=await transfers.controller.decide({requestId:row.id,expectedRequestVersion:row.requestVersion,decision});if(!alive.current)return;setUrls({});if(result.state==='accepted')setConfirmed(false);}catch(e){if(alive.current&&!/ACCOUNT_CHANGED/.test(String((e as Error)?.message)))setIssue(transferError(e));}}
  const hasPhotos=!!row?.items.some(i=>i.snapshot.photo_paths.length>0),imagesReady=!hasPhotos||row?.items.every(i=>i.snapshot.photo_paths.every(path=>!!urls[path]&&!!loadedPhotos[path]));
- return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView contentContainerStyle={s.content}><PageTitle title="Revisar gestión" subtitle="La decisión aplica al lote completo." back/>
+ return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView alwaysBounceVertical contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!demo&&!transfers.state.busy} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}><PageTitle title="Revisar gestión" subtitle="La decisión aplica al lote completo." back/>
  {demo&&<Notice>Solicitud de ejemplo. Las acciones están desactivadas en la demostración.</Notice>}
  {transfers.state.error&&<Notice error>{transfers.state.error}</Notice>}{!!issue&&<Notice error>{issue}</Notice>}
- {!row?<EmptyState icon="swap-horizontal-outline" title={transfers.state.loading?'Cargando solicitud':'Solicitud no disponible'} description="Solo la cuenta oficial y el destinatario pueden verla." action={<Button secondary label="Actualizar" disabled={demo||!transfers.auth.user} onPress={()=>void transfers.controller?.open(id)}/>}/>:<>
+ {!row?<EmptyState icon="swap-horizontal-outline" title={transfers.state.loading?'Cargando solicitud':'Solicitud no disponible'} description="Solo la cuenta oficial y el destinatario pueden verla. Desliza hacia abajo para volver a consultar."/>:<>
  <View style={s.card}><Text style={s.status}>{transferStateLabel[row.effectiveState]}</Text><Text style={s.title}>{row.items.length} anuncios · {row.recipient.displayName}</Text><Text selectable style={s.detail}>Cuenta: {row.recipient.id}</Text><Text style={s.detail}>Vence el {new Date(row.expiresAt).toLocaleString('es-CU')}</Text><Text style={s.detail}>Ofrecidos por la cuenta principal oficial de KarmaHouse.</Text></View>
  {row.reasonCode&&<Notice error>{transferError(Error(row.reasonCode))}</Notice>}
  <Notice>Al aceptar, podrás editar las fichas y atender consultas nuevas. Los enlaces, fechas de publicación, fotos, favoritos, moderación y disponibilidad se conservan. Las fichas pausadas seguirán pausadas.</Notice>
@@ -30,7 +33,6 @@ function TransferBody(){
  {row.effectiveState==='accepted'&&<Button secondary label="Abrir anuncio" onPress={()=>router.push(`/property/${item.propertyId}`)}/>}</View>)}
  {row.canAccept&&<><Button label={confirmed?'Aceptación confirmada para mi cuenta':'Confirmar que quiero gestionar todas las fichas'} secondary disabled={transfers.state.busy} onPress={()=>setConfirmed(!confirmed)}/><Button label="Aceptar lote completo" disabled={!confirmed||!imagesReady||!!previewError} loading={transfers.state.busy} onPress={()=>void decide('accept')}/></>}
  {row.canReject&&<Button secondary label="Rechazar solicitud" disabled={transfers.state.busy} onPress={()=>void decide('reject')}/>}{row.canCancel&&<Button secondary label="Cancelar solicitud" disabled={transfers.state.busy} onPress={()=>void decide('cancel')}/>}
- <Button secondary label="Actualizar solicitud y revisión" disabled={demo||transfers.state.busy} loading={transfers.state.loading} onPress={()=>{setPreviewAttempt(n=>n+1);void transfers.controller?.open(row.id);}}/>
  {row.effectiveState==='accepted'&&<Button label="Ir a mis anuncios" onPress={()=>router.push('/my-listings')}/>}
  </>}
  </ScrollView></SafeAreaView>;
