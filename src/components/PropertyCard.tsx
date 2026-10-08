@@ -13,11 +13,11 @@ import { Icon, IconButton } from './ui';
 /** Photo first: the image carries the card, and the text sits on the screen's own background. */
 export function PropertyCard({ listing, horizontal = false, offline = false }: { listing: Listing; horizontal?: boolean; offline?: boolean }) {
   const { colors, styles } = useStyles();
-  const { favoriteIds, toggleFavorite, mode } = useMarketplace();
+  const { favoriteIds, canonicalFavoriteId, toggleFavorite, mode } = useMarketplace();
   const { user, ready } = useAuth();
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const favorite = favoriteIds.includes(listing.id);
+  const favorite = favoriteIds.includes(canonicalFavoriteId(listing.id));
   // The badge only speaks when it tells something apart; a swap or wanted ad says so before «Nueva».
   const operation = operationBadge(listing);
   const badge = operation || (listing.owner === 'demo' ? 'Demo' : listing.owner !== 'remote' ? 'Anuncio local' : isNewListing(listing.createdAt) ? 'Nueva' : '');

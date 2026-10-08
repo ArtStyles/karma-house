@@ -56,6 +56,7 @@ do $$ declare a uuid:=pg_temp.kh_agency_signup(11);agency_actor uuid:='45000000-
  perform pg_temp.kh_as(personal);x:=public.kh_list_agency_mandate_requests(personal,null,0);
  perform pg_temp.kh_assert(x#>>'{items,0,propertyId}'=pid::text,'personal account reads incoming without membership');
  perform public.kh_decide_agency_mandate(personal,null,jsonb_build_object('requestId',q->>'id','expectedVersion',1,'decision','accept','clientRequestId',gen_random_uuid()));
+ x:=public.kh_list_current_agency_mandates(personal,null,0);perform pg_temp.kh_assert(x#>>'{items,0,propertyId}'=pid::text and not(x#>'{items,0}'?'internalReference'),'personal source lists current authorization without agency membership or private reference');
  perform pg_temp.kh_as(agency_actor);x:=public.kh_agency_property(agency_actor,a,pid);perform pg_temp.kh_assert(x->'originAgencyId'='null'::jsonb and not(x->>'canConfirmSale')::boolean,'personal origin projector keeps personal authority');
  c:=public.kh_propose_agency_property_change(agency_actor,a,jsonb_build_object('propertyId',pid,'kind','price','proposedPayload','{"price":35000}'::jsonb,'expectedPropertyVersion',1,'clientRequestId',gen_random_uuid()));
  perform pg_temp.kh_as(personal);perform public.kh_decide_agency_property_change(personal,null,jsonb_build_object('requestId',c->>'id','expectedVersion',1,'decision','accept','clientRequestId',gen_random_uuid()));

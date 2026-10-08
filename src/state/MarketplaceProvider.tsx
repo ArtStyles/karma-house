@@ -32,6 +32,8 @@ export interface MarketplaceContextValue {
    */
   demoCatalog: Listing[] | null;
   favoriteIds: string[];
+  canonicalFavoriteId(id:string):string;
+  normalizeFavoriteIds(checkpoint?:()=>void):Promise<string[]>;
   ownListings: Listing[];
   moderationQueue: Listing[];
   refresh(): Promise<void>;
@@ -78,6 +80,8 @@ function DemoMarketplaceProvider({ children }: PropsWithChildren) {
       invalidateListingManagement:async(ids)=>{listingManagementEvents.invalidate(ids);await controller.hydrate();},
       isOwnListing: (listing) => listing.owner === 'local',
       toggleFavorite: controller.toggleFavorite,
+      canonicalFavoriteId:(id)=>id,
+      normalizeFavoriteIds:async(checkpoint)=>{checkpoint?.();return controller.getState().favoriteIds;},
       saveListing: controller.saveListing,
       setStatus: controller.setStatus,
       submitForReview: async () => { throw new Error('La revisión está disponible en el catálogo conectado.'); },
@@ -123,6 +127,8 @@ function CloudMarketplaceProvider({ children }: PropsWithChildren) {
       refresh: controller.refresh,
       invalidateListingManagement:async(ids)=>{listingManagementEvents.invalidate(ids);await controller.invalidateListingManagement(ids);},
       toggleFavorite: controller.toggleFavorite,
+      canonicalFavoriteId:(id)=>state.sessionUserId===userId?controller.canonicalFavoriteId(id):id,
+      normalizeFavoriteIds:controller.normalizeFavoriteIds,
       saveListing: controller.saveListing,
       setStatus: controller.setStatus,
       submitForReview: controller.submitForReview,

@@ -7,7 +7,7 @@ import { createScopedRpc } from '../../transfers/repository.ts';
 import { decodeAgencyPage } from '../repository.ts';
 import type { AgencyRequestContext } from '../types.ts';
 import type { AgencyProperty, AgencyPropertyRepository } from './types.ts';
-import { decodeMandate, decodePropertyChange, decodeDuplicateCandidate } from './domain.ts';
+import { decodeMandate, decodePropertyChange, decodeDuplicateCandidate, decodeCurrentMandate } from './domain.ts';
 import type { MessagingRequestContext } from '../../messaging/types.ts';
 const invalid = () => Error('No se pudieron interpretar los datos de la vivienda empresarial.');
 function object(v: unknown): Record<string, unknown> {
@@ -93,6 +93,8 @@ export function createAgencyPropertyRepository(client: SupabaseClient, media?: A
         return item;
     }
     return {
+        listAuthorizations:(offset,c)=>page('kh_list_current_agency_mandates',offset,uuid(c.agencyId),c,decodeCurrentMandate),
+        listPersonalAuthorizations:(offset,c)=>page('kh_list_current_agency_mandates',offset,null,c,decodeCurrentMandate),
         listMandates: (offset, c) => page('kh_list_agency_mandate_requests', offset, uuid(c.agencyId), c, decodeMandate),
         listPersonalMandates: (offset, c) => page('kh_list_agency_mandate_requests', offset, null, c, decodeMandate),
         listChanges: (offset, c) => page('kh_list_agency_property_changes', offset, uuid(c.agencyId), c, decodePropertyChange),
@@ -103,8 +105,14 @@ export function createAgencyPropertyRepository(client: SupabaseClient, media?: A
         decidePersonalChange: (input, c) => decide('kh_decide_agency_property_change', input, null, c, decodePropertyChange),
         withdrawMandate: (input, c) => withdraw(input, uuid(c.agencyId), c),
         withdrawPersonalMandate: (input, c) => withdraw(input, null, c),
-        async requestMandate(input, c) { uuid(input.propertyId); uuid(input.clientRequestId); const result = decodeMandate(await rpc('kh_request_agency_mandate', { p_agency_id: uuid(c.agencyId), p_payload: input }, c)); if (result.propertyId !== input.propertyId || result.agencyId !== c.agencyId)
-            throw invalid(); return result; },
+        async requestMandate(input,c){
+            uuid(input.propertyId);uuid(input.clientRequestId);
+            const resolved=object(await rpc('kh_resolve_agency_mandate_property',{p_property_id:input.propertyId},c));
+            if(resolved.requestedPropertyId!==input.propertyId)throw invalid();
+            const canonical=uuid(resolved.propertyId);
+            const result=decodeMandate(await rpc('kh_request_agency_mandate',{p_agency_id:uuid(c.agencyId),p_payload:{...input,propertyId:canonical}},c));
+            if(result.propertyId!==canonical||result.agencyId!==c.agencyId)throw invalid();return result;
+        },
         async proposeChange(input, c) { uuid(input.propertyId); uuid(input.clientRequestId); version(input.expectedPropertyVersion); const result = decodePropertyChange(await rpc('kh_propose_agency_property_change', { p_agency_id: uuid(c.agencyId), p_payload: input }, c)); if (result.propertyId !== input.propertyId || result.agencyId !== c.agencyId)
             throw invalid(); return result; },
         async duplicateCandidates(id, offset, c) { uuid(id); if (!Number.isSafeInteger(offset) || offset < 0)

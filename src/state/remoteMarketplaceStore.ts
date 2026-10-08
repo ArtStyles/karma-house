@@ -1,3 +1,4 @@
+import {isUuid} from '../messaging/domain.ts';
 import { validateDraft, type Listing, type ListingDraft, type ListingStatus } from '../domain/listings.ts';
 
 export type SaveModeration = 'draft' | 'pending';
@@ -18,6 +19,7 @@ export interface RemoteMarketplaceState extends RemoteCatalogSnapshot {
 }
 export interface RemoteMarketplaceRepository {
   load(ownerId: string | null, checkpoint: () => void): Promise<RemoteCatalogSnapshot>;
+  resolvePropertyAlias?(id:string,checkpoint:()=>void):Promise<string>;
   save(draft: ListingDraft, ownerId: string, current: Listing | undefined, moderation: SaveModeration, checkpoint: () => void): Promise<Listing>;
   setFavorite(ownerId: string, listingId: string, favorite: boolean, checkpoint: () => void): Promise<void>;
   setStatus(id: string, status: ListingStatus, checkpoint: () => void): Promise<void>;
@@ -38,6 +40,20 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
   let refreshSequence = 0;
   let reviewSequence = 0;
   let mutationQueue: Promise<void> = Promise.resolve();
+  let favoriteAliases=new Map<string,string>();
+  const canonicalFrom=(id:string,aliases:ReadonlyMap<string,string>)=>{const seen=new Set<string>();while(aliases.has(id)){if(seen.has(id))throw Error('El servidor devolvió un enlace de vivienda no válido.');seen.add(id);id=aliases.get(id)!}return id};
+  const canonicalFavoriteId=(id:string)=>canonicalFrom(id,favoriteAliases);
+  const resolveFavorites=async(extra:string[],checkpoint:()=>void)=>{
+    checkpoint();const ids=[...new Set([...state.favoriteIds,...extra])],resolved=new Map(favoriteAliases);
+    for(let start=0;start<ids.length;start+=50){
+      const pairs=await Promise.all(ids.slice(start,start+50).map(async id=>{const canonical=repository.resolvePropertyAlias?await repository.resolvePropertyAlias(id,checkpoint):id;checkpoint();if(repository.resolvePropertyAlias&&!isUuid(canonical))throw Error('El servidor devolvió un enlace de vivienda no válido.');return [id,canonical] as const}));
+      for(const [id,canonical]of pairs)if(id!==canonical)resolved.set(id,canonical);
+    }
+    checkpoint();for(const id of resolved.keys())canonicalFrom(id,resolved);
+    favoriteAliases=resolved;refreshSequence+=1;
+    const favoriteIds=[...new Set(state.favoriteIds.map(canonicalFavoriteId))];
+    publish({...state,favoriteIds});return favoriteIds;
+  };
   const listeners = new Set<() => void>();
   const publish = (next: RemoteMarketplaceState) => { state = next; listeners.forEach((listener) => listener()); };
   const checkpointFor = (epoch: number) => () => {
@@ -54,7 +70,7 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
     try {
       const result = await repository.load(userId, checkpoint);
       if (epoch !== generation || sequence !== refreshSequence) return;
-      publish({ ...state, ...result, ready: true, storageError: null });
+      publish({ ...state, ...result, favoriteIds:[...new Set(result.favoriteIds.map(canonicalFavoriteId))], ready: true, storageError: null });
     } catch (error) {
       if (epoch !== generation || sequence !== refreshSequence) return;
       reportError(error, epoch);
@@ -62,7 +78,7 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
     }
   };
 
-  const enqueue = <T>(operation: (ownerId: string, checkpoint: () => void) => Promise<T>): Promise<T> => {
+  const enqueue = <T>(operation: (ownerId: string, checkpoint: () => void) => Promise<T>,report=true): Promise<T> => {
     const epoch = generation;
     const capturedUserId = userId;
     const checkpoint = checkpointFor(epoch);
@@ -73,7 +89,7 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
         const value = await operation(capturedUserId, checkpoint);
         checkpoint();
         return value;
-      } catch (error) { reportError(error, epoch); throw new Error(remoteErrorMessage(error)); }
+      } catch (error) { if(report)reportError(error, epoch); throw new Error(remoteErrorMessage(error)); }
     });
     mutationQueue = result.then(() => undefined, () => undefined);
     return result;
@@ -104,7 +120,7 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
     subscribe(listener: () => void) { listeners.add(listener); return () => listeners.delete(listener); },
     setSession(nextUserId: string | null, nextAdmin: boolean) {
       if (userId === nextUserId && isAdmin === nextAdmin) return;
-      userId = nextUserId; isAdmin = nextAdmin; generation += 1;
+      userId = nextUserId; isAdmin = nextAdmin; generation += 1;favoriteAliases=new Map();
       refreshSequence += 1; reviewSequence += 1;
       // A new account must never wait behind another account's pending network request.
       mutationQueue = Promise.resolve();
@@ -118,8 +134,13 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
       return refresh();
     },
     isOwnListing: (listing: Listing) => !!userId && listing.owner === 'remote' && listing.ownerId === userId,
+    canonicalFavoriteId,
+    normalizeFavoriteIds(externalCheckpoint:()=>void=()=>{}) {
+      return enqueue(async(_ownerId,checkpoint)=>resolveFavorites([],()=>{checkpoint();externalCheckpoint()}),false);
+    },
     toggleFavorite(id: string) {
       return enqueue(async (ownerId, checkpoint) => {
+        await resolveFavorites([id],checkpoint);checkpoint();id=canonicalFavoriteId(id);
         const favorite = !state.favoriteIds.includes(id);
         await repository.setFavorite(ownerId, id, favorite, checkpoint); checkpoint();
         refreshSequence += 1;

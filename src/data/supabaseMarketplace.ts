@@ -1,3 +1,4 @@
+import {isUuid} from '../messaging/domain';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PhotoDraft } from '../domain/listings';
@@ -107,6 +108,10 @@ export function createSupabaseMarketplaceRepository(client: SupabaseClient, stor
       checkpoint();
       if (error) throw error;
       return (await resolveRows([data as RemotePropertyRow], checkpoint))[0];
+    },
+    async resolvePropertyAlias(id,checkpoint){
+      checkpoint();const {data,error}=await client.rpc('kh_resolve_property_alias',{p_property_id:id});checkpoint();
+      if(error)throw error;if(!isUuid(data))throw Error('El servidor devolvió un enlace de vivienda no válido.');return data;
     },
     async setFavorite(ownerId, listingId, favorite, checkpoint) {
       checkpoint();

@@ -17,14 +17,15 @@ export function decodeMandate(value: unknown): AgencyMandateRequest { const v = 
 export function decodePropertyChange(value: unknown): PropertyChangeRequest { const v = object(value); if (!['price', 'content'].includes(String(v.kind)))
     throw invalidPropertyRequest(); return { ...base(v), kind: v.kind as 'price' | 'content', proposedPayload: object(v.proposedPayload), expectedPropertyVersion: version(v.expectedPropertyVersion) }; }
 export function decodeDuplicateCandidate(value: unknown): DuplicateCandidate { const v = object(value); return { id: uuid(v.id), title: text(v.title), location: text(v.location), version: version(v.version) }; }
-export function sharedPropertyId(value: string): string { const raw = value.trim(); if (isUuid(raw))
-    return raw; let url: URL; try {
-    url = new URL(raw);
+export function sharedPropertyId(value:string):string{
+ const raw=value.trim();if(isUuid(raw))return raw;
+ const invalid=()=>Error('Introduce el UUID o el enlace público de la vivienda.');
+ let url:URL;try{url=new URL(raw)}catch{throw invalid()}
+ if(url.username||url.password||url.search||url.hash||url.port)throw invalid();
+ const path=url.protocol==='karmahouse:'&&url.hostname==='property'?url.pathname.match(/^\/([0-9a-f-]+)\/?$/i):url.protocol==='https:'&&url.hostname==='karmahouse.vercel.app'?url.pathname.match(/^\/(?:p|property)\/([0-9a-f-]+)\/?$/i):null;
+ if(!path||!isUuid(path[1]))throw invalid();return path[1];
 }
-catch {
-    throw Error('Introduce el UUID o el enlace público de la vivienda.');
-} const match = url.pathname.match(/^\/(?:p|property)\/([0-9a-f-]+)\/?$/i); if (!match || !isUuid(match[1]) || !(url.protocol === 'https:' || url.protocol === 'karmahouse:'))
-    throw Error('Introduce el UUID o el enlace público de la vivienda.'); return match[1]; }
+export function decodeCurrentMandate(value:unknown):import('./types.ts').CurrentAgencyMandate{const v=object(value);return {propertyId:uuid(v.propertyId),agencyId:uuid(v.agencyId),agencyName:text(v.agencyName),version:version(v.version),...(v.internalReference===undefined?{}:{internalReference:text(v.internalReference,100)})}}
 
 export async function resolvePropertyAliases(ids:string[],resolve:(id:string)=>Promise<unknown>,checkpoint:()=>void):Promise<string[]>{
  checkpoint();

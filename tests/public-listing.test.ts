@@ -96,7 +96,7 @@ const ownerId = '44000000-0000-4000-8000-000000000004';
 const dbRow = { ...row, owner_id: ownerId, photo_paths: ['u/a/one.jpg', 'u/a/two.jpg'] };
 const PROFILE_URL = 'https://example.supabase.co/rest/v1/rpc/kh_public_profile';
 type Reply = { status: number; body?: unknown } | Error | Response;
-function fakeFetch(rest: { status: number; body?: unknown }, sign?: Reply, profile: Reply = { status: 404 }): { fetch: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
+function fakeFetch(rest: { status: number; body?: unknown }, sign?: Reply, profile: Reply = { status: 200, body: {id:ownerId,displayName:'Fixture Seller',level:'new',verified:false} }): { fetch: typeof fetch; calls: { url: string; init?: RequestInit }[] } {
   const calls: { url: string; init?: RequestInit }[] = [];
   const respond = (reply: Reply) => {
     if (reply instanceof Error) throw reply;
@@ -166,9 +166,15 @@ test('handle renders an approved listing with signed photos and the canonical pa
   assert.equal(calls[1].url, 'https://example.supabase.co/storage/v1/object/sign/property-photos');
   assert.deepEqual(JSON.parse(String(calls[1].init?.body)), { expiresIn: 3600, paths: dbRow.photo_paths });
 });
+async function expectedDiagnostics<T>(expected:RegExp,run:()=>Promise<T>):Promise<T>{
+ const previous=console.error,lines:string[]=[];
+ console.error=(...args:unknown[])=>{const line=args.map(String).join(' ');lines.push(line);if(!expected.test(line))previous(...args)};
+ try{const result=await run();assert.equal(lines.length,1,'exactly the expected negative-path diagnostic');assert.match(lines[0],expected);return result}finally{console.error=previous}
+}
+
 test('handle still renders when photo signing fails', async () => {
   for (const sign of [{ status: 400 }, new Error('offline')]) {
-    const response = await handle(get(`/api/p?id=${row.id}`), env, fakeFetch({ status: 200, body: [dbRow] }, sign).fetch);
+    const response = await expectedDiagnostics(sign instanceof Error?/^photo signing failed offline$/:/^photo signing failed storage 400$/,()=>handle(get(`/api/p?id=${row.id}`), env, fakeFetch({ status: 200, body: [dbRow] }, sign).fetch));
     const html = await response.text();
     assert.equal(response.status, 200);
     assert.ok(!html.includes('og:image') && !html.includes('<img'));
@@ -210,8 +216,9 @@ test('handle renders without the seller line when the profile is missing or malf
     { status: 200, body: { ...profile, level: 'toString' } },
     { status: 200, body: { ...profile, verified: 'yes' } },
   ];
-  for (const failure of failures) {
-    const response = await handle(get(`/api/p?id=${row.id}`), env, fakeFetch(listed, { status: 200, body: [] }, failure).fetch);
+  const diagnostics=[/^seller profile failed profile 404$/, /^seller profile failed profile 500$/, /^seller profile failed offline$/, /^seller profile failed Unexpected token/, /^seller profile failed profile shape$/, /^seller profile failed profile shape$/, /^seller profile failed profile name$/, /^seller profile failed profile name$/, /^seller profile failed profile name$/, /^seller profile failed profile level$/, /^seller profile failed profile level$/, /^seller profile failed profile level$/];
+  for (const [index,failure] of failures.entries()) {
+    const response = await expectedDiagnostics(diagnostics[index],()=>handle(get(`/api/p?id=${row.id}`), env, fakeFetch(listed, { status: 200, body: [] }, failure).fetch));
     const html = await response.text();
     assert.equal(response.status, 200);
     assert.ok(html.includes('<h1>Casa en el Vedado'));
@@ -229,14 +236,14 @@ test('handle answers 404 for unknown, hidden or malformed ids without touching S
   assert.equal(bogus.calls.length, 0);
 });
 test('handle answers 503 when the REST call fails and 405 for other methods', async () => {
-  const down = await handle(get(`/api/p?id=${row.id}`), env, fakeFetch({ status: 500 }).fetch);
+  const down = await expectedDiagnostics(/^properties query failed rest 500$/,()=>handle(get(`/api/p?id=${row.id}`), env, fakeFetch({ status: 500 }).fetch));
   assert.equal(down.status, 503);
   assert.equal(down.headers.get('retry-after'), '30');
   assert.equal(await down.text(), 'Service Unavailable: rest 500');
   const unconfigured = await handle(get(`/api/p?id=${row.id}`), { ...env, anonKey: '' }, fakeFetch({ status: 200, body: [dbRow] }).fetch);
   assert.equal(unconfigured.status, 503);
   assert.equal(await unconfigured.text(), 'Service Unavailable: missing SUPABASE_URL or SUPABASE_ANON_KEY');
-  const offline = await handle(get(`/api/p?id=${row.id}`), env, (async () => { throw new Error('offline'); }) as unknown as typeof fetch);
+  const offline = await expectedDiagnostics(/^properties query failed offline$/,()=>handle(get(`/api/p?id=${row.id}`), env, (async () => { throw new Error('offline'); }) as unknown as typeof fetch));
   assert.equal(offline.status, 503);
   const post = await handle(new Request(`https://karmahouse.vercel.app/api/p?id=${row.id}`, { method: 'POST' }), env, fakeFetch({ status: 200, body: [dbRow] }).fetch);
   assert.equal(post.status, 405);

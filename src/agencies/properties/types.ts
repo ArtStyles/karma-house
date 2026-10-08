@@ -78,6 +78,8 @@ export interface MergePropertyDuplicates {
     clientRequestId: string;
 }
 export interface AgencyPropertyRepository {
+    listAuthorizations(offset:number,context:AgencyRequestContext):Promise<Page<CurrentAgencyMandate>>;
+    listPersonalAuthorizations(offset:number,context:MessagingRequestContext):Promise<Page<CurrentAgencyMandate>>;
     list(offset: number, context: AgencyRequestContext): Promise<Page<AgencyProperty>>;
     get(propertyId: string, context: AgencyRequestContext): Promise<AgencyProperty>;
     save(input: AgencyPropertySaveInput, context: AgencyRequestContext): Promise<AgencyProperty>;
@@ -108,3 +110,5 @@ export interface AgencyPropertyRepository {
     }>;
     mergeDuplicates(input: MergePropertyDuplicates, context: MessagingRequestContext): Promise<void>;
 }
+
+export interface CurrentAgencyMandate {propertyId:string;agencyId:string;agencyName:string;version:number;internalReference?:string}

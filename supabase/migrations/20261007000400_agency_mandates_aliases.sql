@@ -46,6 +46,7 @@ create function kh_private.property_change_json(actor uuid,agency uuid,r kh_priv
 $$;
 create function public.kh_request_agency_mandate(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare pid uuid:=(p_payload->>'propertyId')::uuid;receipt jsonb;r kh_private.agency_mandate_requests;begin
+ pid:=(public.kh_resolve_agency_mandate_property(p_actor_id,pid)->>'propertyId')::uuid;
  perform kh_private.mandate_context(p_actor_id,p_agency_id,pid,p_agency_id);
  if p_agency_id is null then raise exception 'KH_AGENCY_MEMBERSHIP_REQUIRED';end if;
  receipt:=kh_private.agency_receipt(p_actor_id,p_agency_id,'request_mandate',p_payload);if receipt is not null then
@@ -272,3 +273,25 @@ do $$ declare f record;begin
  end loop;
 end $$;
 notify pgrst,'reload schema';
+
+-- Current authorizations are independent of the historical request that granted them.
+create function public.kh_list_current_agency_mandates(p_actor_id uuid,p_agency_id uuid,p_offset integer default 0) returns jsonb language plpgsql security definer set search_path='' as $$
+ declare items jsonb;begin
+ perform kh_private.agency_account(p_actor_id);if p_agency_id is not null then perform kh_private.agency_actor(p_actor_id,p_agency_id,'admin');end if;
+ if p_offset is null or p_offset<0 or p_offset>100000 then raise exception 'KH_AGENCY_INVALID';end if;
+ select coalesce(jsonb_agg(v),'[]') into items from(select jsonb_build_object('propertyId',m.property_id,'agencyId',m.agency_id,'agencyName',a.trade_name,'version',m.version)
+ ||case when m.agency_id=p_agency_id then jsonb_build_object('internalReference',m.reference) else '{}'::jsonb end v
+ from kh_private.agency_mandates m join kh_private.agencies a on a.id=m.agency_id left join kh_private.agency_property_origins o on o.property_id=m.property_id
+ where m.state='active' and m.agency_id is distinct from o.origin_agency_id and not exists(select 1 from kh_private.property_aliases where property_id=m.property_id)
+ and (m.agency_id=p_agency_id or kh_private.property_source_decider(p_actor_id,p_agency_id,m.property_id)) order by m.created_at desc,m.property_id,m.agency_id offset p_offset limit 31)x;
+ return jsonb_build_object('items',case when jsonb_array_length(items)>30 then items-30 else items end,'hasMore',jsonb_array_length(items)>30);
+end $$;
+create function public.kh_resolve_agency_mandate_property(p_actor_id uuid,p_property_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$
+ declare canonical uuid;begin
+ perform kh_private.agency_account(p_actor_id);
+ canonical:=coalesce((select canonical_id from kh_private.property_aliases where property_id=p_property_id),p_property_id);
+ if not exists(select 1 from public.properties p where p.id=canonical and p.operation='sale' and p.moderation='approved' and p.availability='active' and not kh_private.is_suspended(p.owner_id) and not kh_private.is_deleting(p.owner_id)) then raise exception 'KH_AGENCY_PROPERTY_NOT_FOUND';end if;
+ return jsonb_build_object('requestedPropertyId',p_property_id,'propertyId',canonical);
+end $$;
+revoke all on function public.kh_list_current_agency_mandates(uuid,uuid,integer),public.kh_resolve_agency_mandate_property(uuid,uuid) from public,anon,authenticated;
+grant execute on function public.kh_list_current_agency_mandates(uuid,uuid,integer),public.kh_resolve_agency_mandate_property(uuid,uuid) to authenticated;

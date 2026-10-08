@@ -1,3 +1,4 @@
+import {canonicalFavoriteCards} from '../catalog/favoritesController';
 import { router } from 'expo-router';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useRef, useState } from 'react';
@@ -14,7 +15,7 @@ import { listingPresentation, unavailableFavoriteCount } from '../catalog/presen
 
 export default function FavoritesScreen() {
   const { colors, styles } = useStyles();
-  const { favoriteIds, toggleFavorite, mode, storageError, refresh } = useMarketplace();
+  const { favoriteIds, canonicalFavoriteId, toggleFavorite, mode, storageError, refresh } = useMarketplace();
   const auth = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [undoError, setUndoError] = useState('');
@@ -29,10 +30,10 @@ export default function FavoritesScreen() {
   const seenSession = useRef('');
   const sessionKey = `${mode}:${auth.user?.id ?? ''}`;
   if (seenSession.current !== sessionKey) { seen.current.clear(); seenSession.current = sessionKey; }
-  favorites.forEach(listing => seen.current.set(listing.id, listing));
+  seen.current=new Map(canonicalFavoriteCards([...seen.current.values(),...favorites],canonicalFavoriteId).map(listing=>[listing.id,listing]));
   const visible = new Set(favorites.map(listing => listing.id));
-  const cards = [...seen.current.values()].filter(listing => visible.has(listing.id) || !favoriteIds.includes(listing.id));
-  const removed = cards.filter(listing => !favoriteIds.includes(listing.id));
+  const cards = [...seen.current.values()].filter(listing => visible.has(listing.id) || !favoriteIds.includes(canonicalFavoriteId(listing.id)));
+  const removed = cards.filter(listing => !favoriteIds.includes(canonicalFavoriteId(listing.id)));
   const missing = unavailableFavoriteCount(favoriteIds.length, favorites.length, { ready, error });
   const presentation = listingPresentation({ ready, error, hasData: cards.length > 0 });
 
@@ -57,7 +58,7 @@ export default function FavoritesScreen() {
         <Pressable accessibilityRole="button" accessibilityLabel="Deshacer y devolver a favoritos" accessibilityState={{ disabled: undoing }} disabled={undoing} onPress={() => void undo()} style={({ pressed }) => [styles.undoButton, (pressed || undoing) && { opacity: .5 }]}><Text style={styles.undo}>Deshacer</Text></Pressable>
       </View>}
       {undoError ? <Notice error>{undoError}</Notice> : null}
-      {presentation === 'loading' ? <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 50 }} /> : cards.length ? <View style={styles.grid}>{cards.map(listing => <View key={listing.id} style={[{ width: width >= 720 ? '48.8%' : '100%' }, !favoriteIds.includes(listing.id) && styles.faded]}><PropertyCard listing={listing} offline={!!error} /></View>)}</View> : presentation === 'empty' && !storageError ? <EmptyState icon="heart-outline" title="Algunos lugares se quedan contigo" description="Toca el corazón de una vivienda y encuéntrala aquí cuando quieras volver a verla." action={<Button label="Descubrir viviendas" onPress={() => router.push('/')} />} /> : null}
+      {presentation === 'loading' ? <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 50 }} /> : cards.length ? <View style={styles.grid}>{cards.map(listing => <View key={listing.id} style={[{ width: width >= 720 ? '48.8%' : '100%' }, !favoriteIds.includes(canonicalFavoriteId(listing.id)) && styles.faded]}><PropertyCard listing={listing} offline={!!error} /></View>)}</View> : presentation === 'empty' && !storageError ? <EmptyState icon="heart-outline" title="Algunos lugares se quedan contigo" description="Toca el corazón de una vivienda y encuéntrala aquí cuando quieras volver a verla." action={<Button label="Descubrir viviendas" onPress={() => router.push('/')} />} /> : null}
     </>}
   </ScrollView></SafeAreaView>;
 }

@@ -30,7 +30,7 @@ const NEEDS_CONNECTION = 'Necesitas conexión para esto.';
 export default function DetailScreen() {
   const { colors, styles } = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { favoriteIds, toggleFavorite, isOwnListing, mode, storageError } = useMarketplace();
+  const { favoriteIds, canonicalFavoriteId, toggleFavorite, isOwnListing, mode, storageError } = useMarketplace();
   const auth = useAuth();
   const messaging = useMessaging();
   const { listing, ready, offline, error: listingError, retry } = useListing(id);
@@ -69,7 +69,7 @@ export default function DetailScreen() {
   const sellerProfile = sellerId ? seller.profile : null;
   const presentation = listingPresentation({ ready, hasData: !!listing, error: listingError, offline });
   if (!listing) return <SafeAreaView style={styles.safe}>{presentation === 'loading' ? <View style={styles.loading}><ActivityIndicator color={colors.primary} size="large" /><Text style={styles.sellerText}>Cargando vivienda…</Text></View> : presentation === 'error' ? <View style={styles.body}><Notice error>{`No pudimos cargar esta vivienda. ${listingError}`}</Notice><Button label="Reintentar" onPress={retry} /><Button label="Volver a explorar" secondary onPress={() => router.replace('/')} /></View> : <EmptyState title="Esta vivienda no está disponible" description="Vuelve al catálogo para explorar otras viviendas." action={<Button label="Volver a explorar" onPress={() => router.replace('/')} />} />}</SafeAreaView>;
-  const favorite = favoriteIds.includes(listing.id);
+  const favorite = favoriteIds.includes(canonicalFavoriteId(listing.id));
   const own = mode==='demo'?isOwnListing(listing):Boolean(!offline&&auth.user&&management.value&&management.value.managerId===auth.user.id);
   const operation = listingOperation(listing);
   const wanted = operation === 'wanted';

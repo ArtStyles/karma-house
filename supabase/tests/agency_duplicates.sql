@@ -85,3 +85,34 @@ do $$begin
  perform pg_temp.kh_assert(not has_function_privilege('authenticated','kh_private.mandate_context(uuid,uuid,uuid,uuid)','execute'),'client cannot mint source context');
  perform pg_temp.kh_assert(has_function_privilege('anon','public.kh_resolve_property_alias(uuid)','execute'),'old public links resolve anonymously');
 end $$;
+
+-- Review I1/I3: use real authorization history, then exercise both current actors.
+do $$ declare a uuid:=pg_temp.kh_agency_signup(15);b uuid:=pg_temp.kh_agency_signup(16);aa uuid:='45000000-0000-4000-8000-000000000015';bb uuid:='45000000-0000-4000-8000-000000000016';owner uuid:='45000000-0000-4000-8000-000000000001';c uuid:=gen_random_uuid();d uuid:=gen_random_uuid();q jsonb;x jsonb;proposal jsonb;body jsonb;begin
+ perform pg_temp.kh_agency_approve(a);perform pg_temp.kh_agency_approve(b);
+ insert into public.properties(id,owner_id,client_request_id,title,location,province,type,price,bedrooms,bathrooms,description,moderation,photo_paths)select i,owner,i::text,'Mandato trasladado revisable','Vedado','La Habana','Casa',30000,2,1,'Vivienda compartida con autorización trazable.','approved',array[owner||'/'||i||'/photo.jpg'] from unnest(array[c,d])i;
+ insert into kh_private.agency_property_origins(property_id,origin_agency_id,publisher_id,source_reference,consent_reference)select i,a,aa,i::text,'Consentimiento' from unnest(array[c,d])i;
+ insert into kh_private.agency_mandates(property_id,agency_id,reference)values(c,a,c::text),(d,a,d::text);
+ perform pg_temp.kh_as(bb);q:=public.kh_request_agency_mandate(bb,b,jsonb_build_object('propertyId',d,'internalReference','B-ORIGINAL','clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(aa);perform public.kh_decide_agency_mandate(aa,a,jsonb_build_object('requestId',q->>'id','expectedVersion',1,'decision','accept','clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(owner);perform public.kh_admin_merge_property_duplicates(owner,jsonb_build_object('canonicalId',c,'duplicateIds',jsonb_build_array(d),'expectedVersions',jsonb_build_object(c,1,d,1),'originEvidence','Origen empresarial coincidente','reason','Consolidación revisada de duplicado','clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(bb);x:=public.kh_list_current_agency_mandates(bb,b,0);
+ perform pg_temp.kh_assert(x#>>'{items,0,propertyId}'=c::text and x#>>'{items,0,version}'='2' and x#>>'{items,0,internalReference}'='B-ORIGINAL','carried authorization is currently revocable by B');
+ x:=public.kh_list_agency_mandate_requests(bb,b,0);perform pg_temp.kh_assert(x#>>'{items,0,propertyId}'=d::text and x#>>'{items,0,state}'='withdrawn','historical D request is retained');
+ proposal:=public.kh_propose_agency_property_change(bb,b,jsonb_build_object('propertyId',c,'kind','price','proposedPayload','{"price":34000}'::jsonb,'expectedPropertyVersion',1,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(aa);x:=public.kh_list_current_agency_mandates(aa,a,0);
+ perform pg_temp.kh_assert(x#>>'{items,0,propertyId}'=c::text and x#>>'{items,0,agencyId}'=b::text and not(x#>'{items,0}'?'internalReference'),'source can withdraw carried authorization without B reference');
+ perform public.kh_withdraw_agency_mandate(aa,a,jsonb_build_object('propertyId',c,'requestingAgencyId',b,'expectedVersion',2,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert((select state='withdrawn' from kh_private.agency_property_changes where id=(proposal->>'id')::uuid) and (select state='active' from kh_private.agency_mandates where property_id=c and agency_id=a),'withdraw current C ends only B');
+ perform pg_temp.kh_as(bb);body:=jsonb_build_object('propertyId',d,'internalReference','B-ORIGINAL','clientRequestId',gen_random_uuid());
+ q:=public.kh_request_agency_mandate(bb,b,body);perform pg_temp.kh_assert(q->>'propertyId'=c::text and q->>'state'='pending','old public link requests canonical without private access');
+ perform pg_temp.kh_assert(public.kh_request_agency_mandate(bb,b,body)->>'id'=q->>'id','old public link retry recovers same pending request');
+ perform pg_temp.kh_assert((select state='withdrawn' from kh_private.agency_mandates where property_id=c and agency_id=b),'request via old link does not revive withdrawn mandate');
+ perform pg_temp.kh_as(aa);perform public.kh_decide_agency_mandate(aa,a,jsonb_build_object('requestId',q->>'id','expectedVersion',1,'decision','accept','clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_as(bb);x:=public.kh_list_current_agency_mandates(bb,b,0);
+ perform public.kh_withdraw_agency_mandate(bb,b,jsonb_build_object('propertyId',c,'requestingAgencyId',b,'expectedVersion',(x#>>'{items,0,version}')::integer,'clientRequestId',gen_random_uuid()));
+ perform pg_temp.kh_assert((select state='active' from kh_private.agency_mandates where property_id=c and agency_id=a),'B can independently withdraw canonical without affecting A');
+ perform pg_temp.kh_as(owner);perform public.kh_admin_unpublish(owner,c,1,'No disponible para nuevas autorizaciones');
+ perform pg_temp.kh_as(bb);perform pg_temp.kh_error(format('select public.kh_resolve_agency_mandate_property(%L,%L)',bb,d),'KH_AGENCY_PROPERTY_NOT_FOUND');
+ perform pg_temp.kh_error(format('select public.kh_request_agency_mandate(%L,%L,%L)',bb,b,body),'KH_AGENCY_PROPERTY_NOT_FOUND');
+ perform pg_temp.kh_error(format('select public.kh_resolve_agency_mandate_property(%L,%L)',bb,gen_random_uuid()),'KH_AGENCY_PROPERTY_NOT_FOUND');
+end $$;
