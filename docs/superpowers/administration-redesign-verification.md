@@ -2,6 +2,8 @@
 
 Fecha: 8 de octubre de 2026. Implementación del diseño aprobado, basada en Expo 57.0.23 y React Native 0.86.3. Documentación exacta de Expo v57 consultada antes de editar.
 
+Actualización posterior: el trabajo se integró y sincronizó con `main`, la APK 0.1.21 se instaló en el Pixel 7 Pro y ambas migraciones se aplicaron en producción con autorización del usuario. El [recibo de entrega y activación](administration-redesign-release.md) documenta esas comprobaciones. Este documento conserva las evidencias de la fase local inicial.
+
 ## Resultado
 
 - Panel con ocho accesos, tarjetas con jerarquía visual y contadores reales de pendientes. Accesos reservados al propietario mantienen sus permisos.
@@ -42,7 +44,7 @@ Limpieza verificada: sesión sintética cerrada, clon de datos eliminado, invent
 
 Los registros, capturas, dependencias y exportaciones quedan fuera de Git. La implementación está en el worktree administrado `C:\Users\ACER NITRO\.codex\worktrees\admin-redesign\karma-house`, rama local `codex/admin-redesign`. Los cambios previos del checkout principal se conservaron.
 
-## Límites y siguiente activación
+## Estado al terminar la fase local inicial
 
 La implementación está terminada localmente. No se aplicaron migraciones en producción, no se publicó una versión, no se subió una rama ni se generó/instaló un APK. El gesto nativo de recarga está implementado, probado en sus controles de estado y compilado para Android/iOS; su comportamiento táctil en un dispositivo físico todavía requiere prueba.
 
