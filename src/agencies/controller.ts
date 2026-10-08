@@ -21,7 +21,11 @@ export function createAgencyController(repository:AgencyRepository|null){
    release(){accountRequests.delete(controller)}};
  }
  function captureAgencyContext():CapturedAgencyContext{
-  if(!state.enabled||!state.activeAgencyId||state.membership?.state!=='active')throw Error('KH_AGENCY_CONTEXT_REQUIRED');
+  if(!state.enabled||!state.agencies.some(a=>a.id===state.activeAgencyId&&a.state==='approved'))throw Error('KH_AGENCY_CONTEXT_REQUIRED');
+  return captureAgencyReadContext();
+ }
+ function captureAgencyReadContext():CapturedAgencyContext{
+  if(!state.activeAgencyId||state.membership?.state!=='active')throw Error('KH_AGENCY_CONTEXT_REQUIRED');
   const base=captureAccountContext(),generation=state.generation,agencyId=state.activeAgencyId,controller=new AbortController();agencyRequests.add(controller);
   return {...base,agencyId,generation,signal:controller.signal,
    checkpoint(){base.checkpoint();if(controller.signal.aborted||generation!==state.generation||state.activeAgencyId!==agencyId)throw Error('KH_AGENCY_CONTEXT_CHANGED')},
@@ -48,11 +52,11 @@ export function createAgencyController(repository:AgencyRepository|null){
    const agencies=await repository.listMine(context);current();
    const selected=state.activeAgencyId,generation=state.generation;
    let membership:AgencyMembership|null=null;
-   if(capabilities.enabled&&selected&&agencies.some(a=>a.id===selected&&a.state==='approved'))membership=await repository.membership(selected,context);
+   if(selected&&agencies.some(a=>a.id===selected))membership=await repository.membership(selected,context);
    current();
    if(selected===state.activeAgencyId&&generation===state.generation){
-    if(selected&&(!capabilities.enabled||membership?.state!=='active'))invalidateAgency();
-    else if(selected&&membership&&(membership.role!==state.membership?.role||membership.version!==state.membership?.version)){
+    if(selected&&membership?.state!=='active')invalidateAgency();
+    else if(selected&&membership&&(membership.role!==state.membership?.role||membership.version!==state.membership?.version||capabilities.enabled!==state.enabled||agencies.find(a=>a.id===selected)?.state!==state.agencies.find(a=>a.id===selected)?.state)){
      abort(agencyRequests);publish({generation:state.generation+1,membership});
     }else if(selected)publish({membership});
    }
@@ -65,10 +69,16 @@ export function createAgencyController(repository:AgencyRepository|null){
   }finally{context.release()}
  }
  async function setActiveAgency(id:string|null){
+  if(id!==null){
+   if(!state.enabled)throw Error('KH_AGENCY_DISABLED');
+   if(!state.agencies.some(a=>a.id===id&&a.state==='approved'))throw Error('KH_AGENCY_NOT_APPROVED');
+  }
+  return setActiveAgencyForRead(id);
+ }
+ async function setActiveAgencyForRead(id:string|null){
   if(id===null){invalidateAgency();return}
   if(!repository||!session)throw Error('KH_SESSION_REQUIRED');
-  if(!state.enabled)throw Error('KH_AGENCY_DISABLED');
-  if(!state.agencies.some(a=>a.id===id&&a.state==='approved'))throw Error('KH_AGENCY_NOT_APPROVED');
+  if(!state.agencies.some(a=>a.id===id))throw Error('KH_AGENCY_MEMBERSHIP_REQUIRED');
   invalidateAgency();const generation=state.generation,context=captureAccountContext();
   const current=()=>{context.checkpoint();if(generation!==state.generation)throw Error('KH_AGENCY_CONTEXT_CHANGED')};
   try{
@@ -77,7 +87,7 @@ export function createAgencyController(repository:AgencyRepository|null){
    publish({activeAgencyId:id,membership,error:null});
   }catch(error){try{current();}catch{return}publish({error:agencyError(error)});throw error}finally{context.release()}
  }
- return {getSessionUserId:()=>session?.userId??null,getSnapshot:()=>state,subscribe(listener:()=>void){listeners.add(listener);return()=>{listeners.delete(listener)}},setSession,refreshAgencies,setActiveAgency,captureAccountContext,captureAgencyContext,
+ return {getSessionUserId:()=>session?.userId??null,getSnapshot:()=>state,subscribe(listener:()=>void){listeners.add(listener);return()=>{listeners.delete(listener)}},setSession,refreshAgencies,setActiveAgency,setActiveAgencyForRead,captureAccountContext,captureAgencyContext,captureAgencyReadContext,
   resetAgencyContext(){refreshSequence++;invalidateAgency();publish({error:null})},
   dispose(){accountEpoch++;refreshSequence++;abort(accountRequests);abort(agencyRequests);listeners.clear()}};
 }

@@ -24,7 +24,7 @@ export default function AgencyTeamScreen(){
  const [candidate,setCandidate]=useState<{id:string;displayName:string;canInvite:boolean}|null>(null),[confirmRemove,setConfirmRemove]=useState<string|null>(null);
  const sequence=useRef(0),focused=useRef(false),latestKey=useRef(key);latestKey.current=key;
  const recordRef=useRef(record);recordRef.current=record;
- const data=record?.key===key&&!auth.suspended&&auth.session?record:null,admin=Boolean(data&&!busy&&w.membership?.role==='admin');
+ const data=record?.key===key&&!auth.suspended&&auth.session?record:null,admin=Boolean(w.enabled&&w.activeAgency?.state==='approved'&&data&&!busy&&w.membership?.role==='admin');
  const load=useCallback(async(append=false)=>{
   const currentAuth=authRef.current,currentWorkspace=workspaceRef.current;
   if(!currentAuth.user||currentAuth.suspended||!currentAuth.session||!currentWorkspace.repository||!currentWorkspace.ready){setRecord(null);setBusy(false);return;}
@@ -67,7 +67,7 @@ export default function AgencyTeamScreen(){
  {data?.invitations.length===0&&<Text style={s.copy}>No tienes invitaciones.</Text>}
  {data?.invitations.map(invitation=><View key={invitation.id} style={s.card}><Text style={s.title}>{invitation.agencyName??`Inmobiliaria ${invitation.agencyId.slice(0,8)}`}</Text><Text style={s.copy}>{agencyRoleLabel[invitation.role]} · {invitation.state==='pending'?'Pendiente':invitation.state==='accepted'?'Aceptada':invitation.state==='declined'?'Rechazada':invitation.state==='expired'?'Caducada':'Cancelada'}</Text>{invitation.state==='pending'&&w.enabled&&<><Text style={s.copy}>Caduca el {new Date(invitation.expiresAt).toLocaleDateString('es-CU')}.</Text><Button label="Aceptar invitación" disabled={busy} onPress={()=>void decide(invitation,true)}/><Button secondary label="Rechazar invitación" disabled={busy} onPress={()=>void decide(invitation,false)}/></>}</View>)}
  {!w.enabled&&<Notice>Las operaciones empresariales aún no están habilitadas.</Notice>}
- {w.activeAgency&&w.membership&&w.enabled?<>
+ {w.activeAgency&&w.membership?<>
  <Text style={s.title}>Miembros de {w.activeAgency.tradeName}</Text>
  <Notice>Los coordinadores también gestionan casos. Los administradores pueden gestionar casos, coordinar y administrar el equipo.</Notice>
  {data?.members.map(member=><View key={member.userId} style={s.card}><Text style={s.title}>{member.displayName??`Cuenta ${member.userId.slice(0,8)}`}{member.userId===user.id?' · tú':''}</Text><Text style={s.copy}>{agencyRoleLabel[member.role]}</Text>{admin&&<><View style={s.wrap}>{roles.map(next=><Pill key={next} label={agencyRoleLabel[next]} active={member.role===next} onPress={()=>{if(!busy&&member.role!==next)void run(true,async context=>{await w.repository!.setMemberRole({userId:member.userId,role:next,expectedVersion:member.version,clientRequestId:randomUUID()},context as CapturedAgencyContext);await w.refreshAgencies()})}}/>)}</View>{confirmRemove===member.userId?<><Notice>¿Retirar a {member.displayName??'esta cuenta'} del equipo? Perderá el acceso a los expedientes de la agencia.</Notice><Button label="Confirmar retirada" disabled={busy} onPress={()=>void run(true,async context=>{await w.repository!.removeMember({userId:member.userId,expectedVersion:member.version,clientRequestId:randomUUID()},context as CapturedAgencyContext);await w.refreshAgencies()})}/><Button secondary label="Conservar miembro" disabled={busy} onPress={()=>setConfirmRemove(null)}/></>:<Button secondary label="Retirar del equipo" disabled={busy} onPress={()=>setConfirmRemove(member.userId)}/>}</>}</View>)}

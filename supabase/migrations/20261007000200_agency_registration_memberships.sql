@@ -25,6 +25,7 @@ create function kh_private.agency_validate_application(v jsonb) returns jsonb la
 end$$;
 create function kh_private.agency_signup() returns trigger language plpgsql security definer set search_path='' as $$declare input jsonb;a uuid;begin
  if new.raw_user_meta_data->>'registration_intent'='agency' then
+  perform kh_private.agency_require_enabled();
   if not(select enabled from kh_private.agency_settings where singleton)then raise exception 'KH_AGENCY_DISABLED';end if;
   -- Copy the allowlist only. Other Auth metadata cannot set status or verification.
   select jsonb_object_agg(key,value) into input from jsonb_each(new.raw_user_meta_data->'agency_application')where key in('tradeName','responsibleFullName','businessPhone','province','municipality','serviceAreas','description','officeAddress','publishOfficeAddress','evidenceReferences');
@@ -39,6 +40,7 @@ create function kh_private.agency_application_json(a uuid) returns jsonb languag
 $$;
 create function public.kh_agency_application(p_actor_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$declare a uuid;begin perform kh_private.agency_account(p_actor_id);select agency_id into a from kh_private.agency_applications where responsible_id=p_actor_id;return kh_private.agency_application_json(a);end$$;
 create function public.kh_submit_agency_application(p_actor_id uuid,p_payload jsonb)returns jsonb language plpgsql security definer set search_path='' as $$declare a uuid;v integer;v_input jsonb;receipt jsonb;begin
+ perform kh_private.agency_require_enabled();
  perform kh_private.agency_account(p_actor_id);select agency_id into a from kh_private.agency_applications where responsible_id=p_actor_id;if a is null then raise exception 'KH_AGENCY_APPLICATION_REQUIRED';end if;perform kh_private.agency_lock(a);
  receipt:=kh_private.agency_receipt(p_actor_id,a,'submit_application',p_payload);if receipt is not null then return kh_private.agency_application_json(a);end if;
  select version into v from kh_private.agencies where id=a and state in('pending','needs_changes','rejected');if v is null or v is distinct from (p_payload->>'expectedVersion')::integer then raise exception 'KH_AGENCY_VERSION_CONFLICT';end if;
@@ -79,8 +81,9 @@ create function kh_private.agency_verification_request_json(p_id uuid)returns js
  select jsonb_build_object('id',r.id,'agencyId',r.agency_id,'input',r.input,'state',r.state,'reviewNote',r.review_note,'version',r.version,'createdAt',r.created_at,'reviewedAt',r.reviewed_at)from kh_private.agency_verification_requests r where r.id=p_id;
 $$;
 create function public.kh_agency_verification_request(p_actor_id uuid,p_agency_id uuid)returns jsonb language plpgsql security definer set search_path='' as $$declare v_id uuid;begin
- perform kh_private.agency_actor(p_actor_id,p_agency_id,'admin');select id into v_id from kh_private.agency_verification_requests where agency_id=p_agency_id order by created_at desc,id desc limit 1;return kh_private.agency_verification_request_json(v_id);end$$;
+ perform kh_private.agency_reader(p_actor_id,p_agency_id,'admin');select id into v_id from kh_private.agency_verification_requests where agency_id=p_agency_id order by created_at desc,id desc limit 1;return kh_private.agency_verification_request_json(v_id);end$$;
 create function public.kh_request_agency_verification(p_actor_id uuid,p_agency_id uuid,p_payload jsonb)returns jsonb language plpgsql security definer set search_path='' as $$declare v_id uuid:=(p_payload->>'requestId')::uuid;v_input jsonb;v_receipt jsonb;begin
+ perform kh_private.agency_require_enabled();
  perform kh_private.agency_actor(p_actor_id,p_agency_id,'admin');
  v_receipt:=kh_private.agency_receipt(p_actor_id,p_agency_id,'request_verification',p_payload);if v_receipt is not null then return kh_private.agency_verification_request_json((v_receipt->>'id')::uuid);end if;
  if(kh_private.agency_summary(p_agency_id)->>'verified')::boolean then raise exception 'KH_AGENCY_ALREADY_VERIFIED';end if;
@@ -138,6 +141,7 @@ create function public.kh_agency_invitation_candidate(p_actor_id uuid,p_agency_i
  return(select jsonb_build_object('id',u.id,'displayName',p.display_name,'canInvite',u.email_confirmed_at is not null and not kh_private.is_suspended(u.id)and not kh_private.is_deleting(u.id)and not exists(select 1 from kh_private.agency_memberships m where m.agency_id=p_agency_id and m.user_id=u.id and m.state='active'))from auth.users u join public.profiles p on p.id=u.id where u.id=p_user_id);
 end$$;
 create function public.kh_invite_agency_member(p_actor_id uuid,p_agency_id uuid,p_payload jsonb)returns jsonb language plpgsql security definer set search_path='' as $$declare v_user uuid:=(p_payload->>'userId')::uuid;v_role text:=p_payload->>'role';v_id uuid;v_receipt jsonb;begin
+ perform kh_private.agency_require_enabled();
  perform kh_private.agency_lock_accounts(p_actor_id,v_user);perform kh_private.agency_actor(p_actor_id,p_agency_id,'admin');
  v_receipt:=kh_private.agency_receipt(p_actor_id,p_agency_id,'invite_member',p_payload);if v_receipt is not null then return kh_private.agency_invitation_json((v_receipt->>'id')::uuid);end if;
  if v_role is null or v_role not in('manager','coordinator','admin')then raise exception 'KH_AGENCY_INVALID';end if;
@@ -150,6 +154,7 @@ create function public.kh_invite_agency_member(p_actor_id uuid,p_agency_id uuid,
  return kh_private.agency_remember(p_actor_id,p_agency_id,'invite_member',p_payload,kh_private.agency_invitation_json(v_id));
 end$$;
 create function public.kh_decide_agency_invitation(p_actor_id uuid,p_payload jsonb)returns jsonb language plpgsql security definer set search_path='' as $$declare v_id uuid:=(p_payload->>'invitationId')::uuid;v_invite kh_private.agency_invitations;v_receipt jsonb;begin
+ perform kh_private.agency_require_enabled();
  perform kh_private.agency_account(p_actor_id);select * into v_invite from kh_private.agency_invitations where id=v_id;
  if v_invite.recipient_id is distinct from p_actor_id then raise exception 'KH_AGENCY_INVITATION_RECIPIENT';end if;perform kh_private.agency_lock(v_invite.agency_id);
  select * into v_invite from kh_private.agency_invitations where id=v_id;
@@ -179,10 +184,12 @@ create function kh_private.agency_change_member(p_actor uuid,p_agency uuid,p_pay
  insert into kh_private.agency_events(agency_id,actor_id,kind,subject_id)values(p_agency,p_actor,v_operation,v_user);
  return kh_private.agency_remember(p_actor,p_agency,v_operation,p_payload,kh_private.agency_membership_json(p_agency,v_user));
 end$$;
-create function public.kh_set_agency_member_role(p_actor_id uuid,p_agency_id uuid,p_payload jsonb)returns jsonb language sql security definer set search_path='' as $$select kh_private.agency_change_member(p_actor_id,p_agency_id,p_payload,false)$$;
-create function public.kh_remove_agency_member(p_actor_id uuid,p_agency_id uuid,p_payload jsonb)returns jsonb language sql security definer set search_path='' as $$select kh_private.agency_change_member(p_actor_id,p_agency_id,p_payload,true)$$;
+create function public.kh_set_agency_member_role(p_actor_id uuid,p_agency_id uuid,p_payload jsonb)returns jsonb language plpgsql security definer set search_path='' as $$begin
+ perform kh_private.agency_require_enabled(); return kh_private.agency_change_member(p_actor_id,p_agency_id,p_payload,false);end$$;
+create function public.kh_remove_agency_member(p_actor_id uuid,p_agency_id uuid,p_payload jsonb)returns jsonb language plpgsql security definer set search_path='' as $$begin
+ perform kh_private.agency_require_enabled(); return kh_private.agency_change_member(p_actor_id,p_agency_id,p_payload,true);end$$;
 create function public.kh_list_agency_members(p_actor_id uuid,p_agency_id uuid,p_offset integer default 0,p_limit integer default 30)returns jsonb language plpgsql security definer set search_path='' as $$declare v_items jsonb;begin
- perform kh_private.agency_actor(p_actor_id,p_agency_id,'manager');select coalesce(jsonb_agg(kh_private.agency_membership_json(p_agency_id,user_id)order by user_id),'[]')into v_items from(select user_id from kh_private.agency_memberships where agency_id=p_agency_id and state='active'order by user_id offset greatest(p_offset,0)limit least(greatest(p_limit,1),50))q;
+ perform kh_private.agency_reader(p_actor_id,p_agency_id,'manager');select coalesce(jsonb_agg(kh_private.agency_membership_json(p_agency_id,user_id)order by user_id),'[]')into v_items from(select user_id from kh_private.agency_memberships where agency_id=p_agency_id and state='active'order by user_id offset greatest(p_offset,0)limit least(greatest(p_limit,1),50))q;
  return jsonb_build_object('items',v_items,'hasMore',exists(select 1 from kh_private.agency_memberships where agency_id=p_agency_id and state='active'offset greatest(p_offset,0)+least(greatest(p_limit,1),50)));end$$;
 create function public.kh_list_agency_invitations(p_actor_id uuid,p_offset integer default 0,p_limit integer default 30)returns jsonb language plpgsql security definer set search_path='' as $$declare v_items jsonb;begin
  perform kh_private.agency_account(p_actor_id);select coalesce(jsonb_agg(kh_private.agency_invitation_json(id)order by created_at desc,id),'[]')into v_items from(select id,created_at from kh_private.agency_invitations where recipient_id=p_actor_id order by created_at desc,id offset greatest(p_offset,0)limit least(greatest(p_limit,1),50))q;
@@ -213,7 +220,7 @@ create function kh_private.agency_asset_read(p_path text) returns boolean langua
  (auth.uid() is not null and (exists(select 1 from kh_private.platform_owner o where o.singleton and o.user_id=auth.uid()) or exists(select 1 from kh_private.agency_applications r where r.agency_id=a.id and r.responsible_id=auth.uid())))));
 $$;
 create function kh_private.agency_asset_write(p_path text) returns boolean language sql stable security definer set search_path='' as $$
- select auth.uid() is not null and exists(select 1 from kh_private.agency_applications r join kh_private.agencies a on a.id=r.agency_id join auth.users u on u.id=r.responsible_id
+ select exists(select 1 from kh_private.agency_settings where singleton and enabled) and auth.uid() is not null and exists(select 1 from kh_private.agency_applications r join kh_private.agencies a on a.id=r.agency_id join auth.users u on u.id=r.responsible_id
  where a.id=kh_private.agency_logo_scope(p_path)and r.responsible_id=auth.uid()and a.state in('pending','needs_changes','rejected')and u.email_confirmed_at is not null and not kh_private.is_suspended(auth.uid())and not kh_private.is_deleting(auth.uid()));
 $$;
 revoke all on function kh_private.agency_logo_scope(text),kh_private.agency_asset_read(text),kh_private.agency_asset_write(text) from public;
@@ -225,6 +232,7 @@ create policy kh_agency_assets_read on storage.objects for select to anon,authen
 create policy kh_agency_assets_insert on storage.objects for insert to authenticated with check(bucket_id='agency-assets' and kh_private.agency_asset_write(name));
 create policy kh_agency_assets_delete on storage.objects for delete to authenticated using(bucket_id='agency-assets' and kh_private.agency_asset_write(name)and kh_private.agency_asset_unreferenced(name));
 create function public.kh_set_agency_logo(p_actor_id uuid,p_agency_id uuid,p_path text,p_expected_version integer) returns jsonb language plpgsql security definer set search_path='' as $$begin
+ perform kh_private.agency_require_enabled();
  perform kh_private.agency_account(p_actor_id);perform kh_private.agency_lock(p_agency_id);
  if not exists(select 1 from kh_private.agency_applications where agency_id=p_agency_id and responsible_id=p_actor_id)then raise exception 'KH_AGENCY_APPLICANT_REQUIRED';end if;
  if not exists(select 1 from kh_private.agencies where id=p_agency_id and state in('pending','needs_changes','rejected')and version=p_expected_version)then raise exception 'KH_AGENCY_VERSION_CONFLICT';end if;

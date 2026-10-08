@@ -93,6 +93,7 @@ create function public.kh_get_agency_deal_conversation_id(p_actor_id uuid,p_agen
  d:=kh_private.agency_deal_access(p_actor_id,p_agency_id,p_deal_id);perform kh_private.agency_followup_staff(p_actor_id,p_agency_id,d);
  return (select id from kh_private.agency_conversations where deal_id=d.id);end $$;
 create function public.kh_save_agency_task(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$declare before kh_private.agency_deals;d kh_private.agency_deals;t kh_private.agency_tasks;r jsonb;target uuid:=(p_payload->>'assigneeId')::uuid;due timestamptz:=(p_payload->>'dueAt')::timestamptz;begin
+ perform kh_private.agency_require_enabled();
  if jsonb_typeof(p_payload) is distinct from 'object' or p_payload-array['id','dealId','assigneeId','dueAt','title','expectedVersion','clientRequestId']<>'{}'::jsonb or not(p_payload?'assigneeId') or not(p_payload?'dueAt') then raise exception 'KH_AGENCY_INVALID_TASK';end if;
  before:=kh_private.agency_prepare_deal(p_actor_id,p_agency_id,(p_payload->>'dealId')::uuid);
  perform kh_private.agency_flow_locks(p_actor_id,p_agency_id,before.property_id,array[before.buyer_id,before.assignee_id,target]);
@@ -119,6 +120,7 @@ create function public.kh_save_agency_task(p_actor_id uuid,p_agency_id uuid,p_pa
  perform kh_private.agency_followup_event(d.id,t.id,p_actor_id,'task_saved',jsonb_build_object('title',t.title,'assigneeId',target,'state',t.state));
  return kh_private.agency_remember(p_actor_id,p_agency_id,'save_task',p_payload,kh_private.agency_task_json(t));end $$;
 create function public.kh_finish_agency_task(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$declare before kh_private.agency_tasks;t kh_private.agency_tasks;prepared kh_private.agency_deals;d kh_private.agency_deals;r jsonb;v_state text:=p_payload->>'state';begin
+ perform kh_private.agency_require_enabled();
  if jsonb_typeof(p_payload) is distinct from 'object' or p_payload-array['taskId','state','expectedVersion','clientRequestId']<>'{}'::jsonb or coalesce(v_state,'') not in('done','cancelled') then raise exception 'KH_AGENCY_INVALID_TASK';end if;
  select * into before from kh_private.agency_tasks where id=(p_payload->>'taskId')::uuid;if before.id is null then raise exception 'KH_AGENCY_INVALID_TASK';end if;
  d:=kh_private.agency_prepare_deal(p_actor_id,p_agency_id,before.deal_id);
@@ -149,6 +151,7 @@ create function kh_private.terminate_agency_member_flows(p_agency_id uuid,p_user
  perform kh_private.agency_followup_event(t.deal_id,t.id,auth.uid(),'task_unassigned',jsonb_build_object('title',t.title,'previousAssigneeId',p_user_id,'assigneeId',null,'reason',p_reason));end loop;
  update kh_private.agency_reminders set state='cancelled',reason=p_reason where recipient_id=p_user_id and deal_id in(select id from kh_private.agency_deals where agency_id=p_agency_id) and state in('pending','failed');end $$;
 create function public.kh_set_agency_deal_stage(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$declare d kh_private.agency_deals;r jsonb;v_stage text:=p_payload->>'stage';begin
+ perform kh_private.agency_require_enabled();
  if jsonb_typeof(p_payload) is distinct from 'object' or p_payload-array['dealId','stage','expectedVersion','clientRequestId']<>'{}'::jsonb or coalesce(v_stage,'') not in('inquiry','visit_proposed','visit_confirmed','visited','offer','won','lost') then raise exception 'KH_AGENCY_INVALID';end if;
  d:=kh_private.agency_scheduling_deal(p_actor_id,p_agency_id,(p_payload->>'dealId')::uuid);perform kh_private.agency_followup_staff(p_actor_id,p_agency_id,d);
  if v_stage='won' then raise exception 'KH_AGENCY_CLOSURE_REQUIRED';end if;
@@ -160,6 +163,7 @@ create function public.kh_set_agency_deal_stage(p_actor_id uuid,p_agency_id uuid
  perform kh_private.agency_followup_event(d.id,null,p_actor_id,'stage_changed',jsonb_build_object('stage',v_stage));return kh_private.agency_remember(p_actor_id,p_agency_id,'set_deal_stage',p_payload,kh_private.agency_deal_json(d));end $$;
 alter function public.kh_assign_agency_deal(uuid,uuid,jsonb) rename to kh_assign_agency_deal_pre_followups;
 create function public.kh_assign_agency_deal(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$declare before kh_private.agency_deals;d kh_private.agency_deals;s kh_private.property_visit_slots;t kh_private.agency_tasks;target uuid:=(p_payload->>'userId')::uuid;r jsonb;begin
+ perform kh_private.agency_require_enabled();
  before:=kh_private.agency_prepare_deal(p_actor_id,p_agency_id,(p_payload->>'dealId')::uuid);
  perform kh_private.agency_flow_locks(p_actor_id,p_agency_id,before.property_id,array[before.buyer_id,before.assignee_id,target]);perform kh_private.agency_actor(p_actor_id,p_agency_id,'coordinator');d:=kh_private.agency_deal_access(p_actor_id,p_agency_id,before.id);
  if before.assignee_id is distinct from d.assignee_id or before.buyer_id is distinct from d.buyer_id then raise exception 'KH_VERSION_CONFLICT';end if;

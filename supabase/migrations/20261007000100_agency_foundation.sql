@@ -48,6 +48,23 @@ begin
  if exists(select 1 from kh_private.account_deletions where user_id=p_actor) then raise exception 'KH_ACCOUNT_DELETING' using errcode='42501';end if;
  return p_actor;
 end $$;
+-- Operations share this lock; explicit disable takes it exclusively before cancellation.
+create function kh_private.agency_require_enabled() returns void language plpgsql security definer set search_path='' as $$
+declare live boolean;begin
+ perform pg_advisory_xact_lock_shared(hashtextextended('kh:agency:module',0));
+ select enabled into live from kh_private.agency_settings where singleton for share;
+ if not coalesce(live,false) then raise exception 'KH_AGENCY_DISABLED';end if;
+end $$;
+-- Read authority deliberately has no approval/module liveness requirement.
+create function kh_private.agency_reader(actor uuid,agency uuid,minimum_role text) returns uuid language plpgsql security definer set search_path='' as $$
+declare r text;begin
+ perform kh_private.agency_account(actor);
+ select role into r from kh_private.agency_memberships where agency_id=agency and user_id=actor and state='active';
+ if r is null then raise exception 'KH_AGENCY_MEMBERSHIP_REQUIRED' using errcode='42501';end if;
+ if minimum_role not in('manager','coordinator','admin') or array_position(array['manager','coordinator','admin'],r)<array_position(array['manager','coordinator','admin'],minimum_role) then raise exception 'KH_AGENCY_ROLE_REQUIRED' using errcode='42501';end if;
+ return actor;
+end $$;
+revoke all on function kh_private.agency_require_enabled(),kh_private.agency_reader(uuid,uuid,text) from public,anon,authenticated;
 create function kh_private.agency_actor(actor uuid,agency uuid,minimum_role text) returns uuid language plpgsql security definer set search_path='' as $$
 declare r text;begin
  perform kh_private.agency_account(actor);

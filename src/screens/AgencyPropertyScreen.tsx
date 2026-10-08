@@ -32,7 +32,7 @@ function Property({ id }: {
         body: string;
         request: string;
     } | null>(null);
-    const allowed = w.ready && w.enabled && w.activeAgency?.state === 'approved' && Boolean(auth.session && !auth.suspended && w.membership);
+    const allowed = w.ready && Boolean(w.activeAgency) && Boolean(auth.session && !auth.suspended && w.membership);
     const load = useCallback(async () => {
         if (!repository || !allowed)
             return;
@@ -55,7 +55,7 @@ function Property({ id }: {
         setIssue('');
         setLoaded(false);
         try {
-            c = w.captureAgencyContext();
+            c = w.captureAgencyReadContext();
             const result = await repository.get(id, c);
             check();
             setItem(result);
@@ -80,7 +80,7 @@ function Property({ id }: {
             }
             c?.release();
         }
-    }, [allowed, id, w.captureAgencyContext]);
+    }, [allowed, id, w.captureAgencyReadContext]);
     useFocusEffect(useCallback(() => {
         focused.current = true;
         setItem(null);
@@ -94,7 +94,7 @@ function Property({ id }: {
             sequence.current++;
         };
     }, [load]));
-    const editable = allowed && loaded && (id === 'new' ? w.membership?.role === 'admin' : item?.canEditCommon), direct = item ? item.publicationPolicy === 'direct' : w.activeAgency?.verified === true;
+    const editable = allowed && w.enabled && w.activeAgency?.state==='approved' && loaded && (id === 'new' ? w.membership?.role === 'admin' : item?.canEditCommon), direct = item ? item.publicationPolicy === 'direct' : w.activeAgency?.verified === true;
     async function propose(kind:'price'|'content'){
         if(!repository||!item||busy||!allowed||w.membership?.role!=='admin')return;
         const proposedPayload=kind==='price'?{price:Number(proposedPrice)}:{description:proposedDescription};
@@ -166,7 +166,7 @@ function Property({ id }: {
                     <>
                         <Text style={s.copy}>{item.property.description}</Text>
                         <Notice>El responsable de origen conserva la edición de los datos comunes y la confirmación de venta.</Notice>
-                        {w.membership?.role==='admin'&&item.property.status!=='sold'&&<>
+                        {w.enabled&&w.activeAgency?.state==='approved'&&w.membership?.role==='admin'&&item.property.status!=='sold'&&<>
                             <AgencyTextField label="Proponer precio (USD)" value={proposedPrice} onChangeText={setProposedPrice} keyboardType="numeric" editable={!busy}/>
                             <Button label="Proponer cambio de precio" secondary disabled={busy||!(Number(proposedPrice)>0)} onPress={()=>void propose('price')}/>
                             <AgencyTextField label="Proponer descripción" value={proposedDescription} onChangeText={setProposedDescription} multiline maxLength={2000} editable={!busy}/>

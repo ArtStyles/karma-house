@@ -5,7 +5,7 @@ import {supabase} from '../lib/supabase';
 import {createAgencyRepository,type AgencyRepository} from './repository';
 import {createAgencyController,type CapturedAccountContext,type CapturedAgencyContext,type AgencyWorkspaceState} from './controller';
 import type {AgencyMembership,AgencySummary} from './types';
-export interface AgencyWorkspaceContextValue {ready:boolean;enabled:boolean;agencies:AgencySummary[];activeAgency:AgencySummary|null;activeAgencyId:string|null;generation:number;membership:AgencyMembership|null;error:string|null;repository:AgencyRepository|null;getCurrentWorkspace():AgencyWorkspaceState;refreshAgencies():Promise<void>;setActiveAgency(id:string|null):Promise<void>;resetAgencyContext():void;captureAccountContext():CapturedAccountContext;captureAgencyContext():CapturedAgencyContext}
+export interface AgencyWorkspaceContextValue {ready:boolean;enabled:boolean;agencies:AgencySummary[];activeAgency:AgencySummary|null;activeAgencyId:string|null;generation:number;membership:AgencyMembership|null;error:string|null;repository:AgencyRepository|null;getCurrentWorkspace():AgencyWorkspaceState;refreshAgencies():Promise<void>;setActiveAgency(id:string|null):Promise<void>;setActiveAgencyForRead(id:string|null):Promise<void>;resetAgencyContext():void;captureAccountContext():CapturedAccountContext;captureAgencyContext():CapturedAgencyContext;captureAgencyReadContext():CapturedAgencyContext}
 const AgencyContext=createContext<AgencyWorkspaceContextValue|null>(null);
 export function AgencyProvider({children}:{children:ReactNode}){
  const {ready:authReady,session,suspended}=useAuth();
@@ -19,10 +19,11 @@ export function AgencyProvider({children}:{children:ReactNode}){
  const aligned=controller.getSessionUserId()===actor;
  const captureAccountContext=useCallback(()=>{if(controller.getSessionUserId()!==actor||!authReady||suspended)throw Error('KH_SESSION_REQUIRED');return controller.captureAccountContext()},[controller,actor,authReady,suspended]);
  const captureAgencyContext=useCallback(()=>{if(controller.getSessionUserId()!==actor||!authReady||suspended)throw Error('KH_AGENCY_CONTEXT_CHANGED');return controller.captureAgencyContext()},[controller,actor,authReady,suspended]);
+ const captureAgencyReadContext=useCallback(()=>{if(controller.getSessionUserId()!==actor||!authReady||suspended)throw Error('KH_AGENCY_CONTEXT_CHANGED');return controller.captureAgencyReadContext()},[controller,actor,authReady,suspended]);
  const value:AgencyWorkspaceContextValue={...state,ready:authReady&&aligned&&state.ready,enabled:aligned&&state.enabled,agencies:aligned?state.agencies:[],activeAgencyId:aligned?state.activeAgencyId:null,membership:aligned?state.membership:null,error:aligned?state.error:null,
   activeAgency:aligned?state.agencies.find(a=>a.id===state.activeAgencyId)??null:null,repository,
-  getCurrentWorkspace:controller.getSnapshot,refreshAgencies:controller.refreshAgencies,setActiveAgency:controller.setActiveAgency,resetAgencyContext:controller.resetAgencyContext,
-  captureAccountContext,captureAgencyContext};
+  getCurrentWorkspace:controller.getSnapshot,refreshAgencies:controller.refreshAgencies,setActiveAgency:controller.setActiveAgency,setActiveAgencyForRead:controller.setActiveAgencyForRead,resetAgencyContext:controller.resetAgencyContext,
+  captureAccountContext,captureAgencyContext,captureAgencyReadContext};
  return <AgencyContext.Provider value={value}>{children}</AgencyContext.Provider>;
 }
 export function useAgencyWorkspace(){const context=useContext(AgencyContext);if(!context)throw Error('AgencyProvider is required');return context}

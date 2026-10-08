@@ -50,7 +50,7 @@ declare source uuid;begin
  perform kh_private.agency_account(p_actor);
  select origin_agency_id into source from kh_private.agency_property_origins where property_id=p_property;
  perform kh_private.agency_lock_many(array[p_agency,source]);
- perform kh_private.agency_actor(p_actor,p_agency,case when p_edit then 'admin' else 'manager' end);
+ if p_edit then perform kh_private.agency_actor(p_actor,p_agency,'admin');else perform kh_private.agency_reader(p_actor,p_agency,'manager');end if;
  if not exists(select 1 from kh_private.agency_mandates where property_id=p_property and agency_id=p_agency and state='active') then raise exception 'KH_AGENCY_PROPERTY_NOT_FOUND';end if;
  if p_edit and source is distinct from p_agency then raise exception 'KH_AGENCY_ORIGIN_REQUIRED';end if;
  perform 1 from public.properties where id=p_property for update;
@@ -79,7 +79,7 @@ declare ids uuid[];result jsonb:='[]';i uuid;begin
  if p_offset is null or p_offset<0 or p_offset>100000 or p_limit is null or p_limit<1 or p_limit>50 then raise exception 'KH_AGENCY_INVALID';end if;
  -- All source locks precede row locks, including shared mandates added in phase 2.
  perform kh_private.agency_lock_many(array[p_agency_id]||(select coalesce(array_agg(distinct o.origin_agency_id),'{}') from kh_private.agency_property_origins o join kh_private.agency_mandates m using(property_id) where m.agency_id=p_agency_id and m.state='active'));
- perform kh_private.agency_actor(p_actor_id,p_agency_id,'manager');
+ perform kh_private.agency_reader(p_actor_id,p_agency_id,'manager');
  select array_agg(id) into ids from(select p.id from public.properties p join kh_private.agency_mandates m on m.property_id=p.id where m.agency_id=p_agency_id and m.state='active' order by p.created_at desc,p.id offset p_offset limit p_limit+1) x;
  foreach i in array coalesce(ids[1:p_limit],'{}') loop result:=result||jsonb_build_array(kh_private.agency_property_json(p_actor_id,p_agency_id,i));end loop;
  return jsonb_build_object('items',result,'hasMore',coalesce(cardinality(ids)>p_limit,false));
@@ -96,6 +96,7 @@ create trigger kh_agency_property_guard before update or delete on public.proper
 create function public.kh_agency_save_property(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
 #variable_conflict use_variable
 declare source uuid;id uuid:=(p_payload->>'propertyId')::uuid;receipt jsonb;result jsonb;custodian uuid;old public.properties%rowtype;draft jsonb;policy text;intent text:=p_payload->>'publicationIntent';begin
+ perform kh_private.agency_require_enabled();
  perform kh_private.agency_account(p_actor_id);
  select origin_agency_id into source from kh_private.agency_property_origins where property_id=id;
  perform kh_private.agency_lock_many(array[p_agency_id,source]);
@@ -615,9 +616,8 @@ $$;
 -- Private material remains available only to active members of authorized agencies.
 create function kh_private.agency_media_read(p_path text) returns boolean language sql stable security definer set search_path='' as $$
  select auth.uid() is not null and not kh_private.is_suspended(auth.uid()) and not kh_private.is_deleting(auth.uid())
- and exists(select 1 from kh_private.agency_settings where enabled)
  and exists(select 1 from kh_private.property_media_assets asset join kh_private.agency_mandates m on m.property_id=asset.property_id and m.state='active'
- join kh_private.agencies a on a.id=m.agency_id and a.state='approved'
+ join kh_private.agencies a on a.id=m.agency_id
  join kh_private.agency_memberships member on member.agency_id=a.id and member.user_id=auth.uid() and member.state='active'
  where asset.path=p_path and asset.state='attached');
 $$;

@@ -20,14 +20,15 @@ export default function AgencyVerificationScreen(){
  const [record,setRecord]=useState<{key:string;owner:string;agencyId:string;request:AgencyVerificationRequest|null}|null>(null),[message,setMessage]=useState(''),[references,setReferences]=useState(''),[issue,setIssue]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false);
  const request=record&&record.key===key&&record.owner===auth.user?.id&&record.agencyId===agency?.id?record.request:null;
  const canRequest=!auth.suspended&&Boolean(auth.session)&&canRequestAgencyVerification(agency?.state??null,workspace.membership?.state==='active'?workspace.membership.role:null,workspace.enabled);
+ const canRead=!auth.suspended&&Boolean(auth.session)&&workspace.membership?.state==='active'&&workspace.membership.role==='admin';
  const presentation=agencyVerificationPresentation(agency?.verified??false,request?.state??null);
  const load=useCallback(async()=>{
- if(!workspace.repository||!canRequest)return;
+ if(!workspace.repository||!canRead)return;
  const ticket=scope.begin();let context:CapturedAgencyContext|null=null;setLoading(true);setIssue('');
- try{context=workspace.captureAgencyContext();const next=await workspace.repository.verificationRequest(context);ticket.checkpoint(context);setRecord({key,owner:context.userId,agencyId:context.agencyId,request:next});setMessage(next?.input.message??'');setReferences(next?.input.evidenceReferences.join('\n')??'');}
+ try{context=workspace.captureAgencyReadContext();const next=await workspace.repository.verificationRequest(context);ticket.checkpoint(context);setRecord({key,owner:context.userId,agencyId:context.agencyId,request:next});setMessage(next?.input.message??'');setReferences(next?.input.evidenceReferences.join('\n')??'');}
  catch(cause){try{ticket.checkpoint(context??undefined);setRecord(null);setMessage('');setReferences('');setIssue(agencyError(cause));}catch{}}
  finally{try{ticket.checkpoint(context??undefined);setLoading(false);}catch{}context?.release();}
- },[workspace.repository,workspace.captureAgencyContext,canRequest,agency?.id,key,scope]);
+ },[workspace.repository,workspace.captureAgencyReadContext,canRead,agency?.id,key,scope]);
  useFocusEffect(useCallback(()=>{scope.enter(key);stateKey.current=key;setRecord(null);setMessage('');setReferences('');setIssue('');setBusy(false);setLoading(false);void load();return()=>scope.leave();},[load,key,scope]));
  async function submit(){
  if(!workspace.repository||busy||!canRequest||agency?.verified||request?.state==='pending')return;
@@ -40,7 +41,7 @@ export default function AgencyVerificationScreen(){
  return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}><PageTitle title="Verificación de inmobiliaria" subtitle="KarmaHouse revisa y concede el sello empresarial." back fallback="/agency-workspace"/>
  {!agency?<EmptyState title="Selecciona una inmobiliaria" description="Abre Mi inmobiliaria con una agencia aprobada para consultar su verificación."/>:<>
  <View style={s.card}><View style={s.row}><Text style={s.title}>{agency.tradeName}</Text><AgencyVerifiedBadge verified={agency.verified} agencyName={agency.tradeName}/></View><Text style={s.title}>{presentation.label}</Text><Notice>{presentation.publication}</Notice>{request?.reviewNote&&<Notice>{request.reviewNote}</Notice>}</View>
- {!canRequest?<Notice>Solo el administrador activo de una inmobiliaria aprobada puede solicitar o corregir su verificación. El sello personal no concede verificación empresarial.</Notice>:<><Button label="Actualizar verificación" secondary onPress={()=>void load()} loading={loading} disabled={busy}/>{viewCurrent&&loading&&<ActivityIndicator color={colors.primary}/>}</>}
+ {!canRead?<Notice>Solo el administrador activo de una inmobiliaria aprobada puede solicitar o corregir su verificación. El sello personal no concede verificación empresarial.</Notice>:<><Button label="Actualizar verificación" secondary onPress={()=>void load()} loading={loading} disabled={busy}/>{viewCurrent&&loading&&<ActivityIndicator color={colors.primary}/>}</>}
  {viewCurrent&&issue&&<Notice error>{issue}</Notice>}
  {canRequest&&record?.key===key&&!agency.verified&&request?.state!=='pending'&&<View style={s.card}><AgencyTextField label="Explicación para KarmaHouse" multiline maxLength={1000} value={message} onChangeText={setMessage} editable={!busy&&!loading}/><AgencyTextField label="Referencias privadas · una por línea, máximo cinco" multiline maxLength={2504} value={references} onChangeText={setReferences} editable={!busy&&!loading}/><Text style={s.copy}>Estas referencias son privadas. Solo KarmaHouse puede conceder o retirar el sello. Una solicitud no cambia la revisión de tus anuncios.</Text><Button label={request?.state==='needs_changes'?'Enviar correcciones':'Solicitar verificación'} onPress={()=>void submit()} loading={busy} disabled={loading}/></View>}
  </>}

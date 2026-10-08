@@ -25,6 +25,12 @@ create function kh_private.property_source_decider(actor uuid,agency uuid,pid uu
  then exists(select 1 from kh_private.agency_property_origins o join kh_private.agency_memberships m on m.agency_id=o.origin_agency_id join kh_private.agencies a on a.id=m.agency_id where o.property_id=pid and o.origin_agency_id=agency and a.state='approved' and m.user_id=actor and m.state='active' and m.role='admin')
  else agency is null and exists(select 1 from public.properties where id=pid and owner_id=actor) end
 $$;
+create function kh_private.property_source_reader(actor uuid,agency uuid,pid uuid) returns boolean language sql stable security definer set search_path='' as $$
+ select case when exists(select 1 from kh_private.agency_property_origins where property_id=pid)
+ then exists(select 1 from kh_private.agency_property_origins o join kh_private.agency_memberships m on m.agency_id=o.origin_agency_id join kh_private.agencies a on a.id=m.agency_id where o.property_id=pid and o.origin_agency_id=agency and m.user_id=actor and m.state='active' and m.role='admin')
+ else agency is null and exists(select 1 from public.properties where id=pid and owner_id=actor) end
+$$;
+revoke all on function kh_private.property_source_reader(uuid,uuid,uuid) from public,anon,authenticated;
 create function kh_private.mandate_context(actor uuid,agency uuid,pid uuid,requesting uuid) returns void language plpgsql security definer set search_path='' as $$
  declare source uuid;begin
  perform kh_private.agency_account(actor);
@@ -46,6 +52,7 @@ create function kh_private.property_change_json(actor uuid,agency uuid,r kh_priv
 $$;
 create function public.kh_request_agency_mandate(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare pid uuid:=(p_payload->>'propertyId')::uuid;receipt jsonb;r kh_private.agency_mandate_requests;begin
+ perform kh_private.agency_require_enabled();
  pid:=(public.kh_resolve_agency_mandate_property(p_actor_id,pid)->>'propertyId')::uuid;
  perform kh_private.mandate_context(p_actor_id,p_agency_id,pid,p_agency_id);
  if p_agency_id is null then raise exception 'KH_AGENCY_MEMBERSHIP_REQUIRED';end if;
@@ -59,6 +66,7 @@ create function public.kh_request_agency_mandate(p_actor_id uuid,p_agency_id uui
 end $$;
 create function public.kh_decide_agency_mandate(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare r kh_private.agency_mandate_requests;receipt jsonb;begin
+ perform kh_private.agency_require_enabled();
  select * into r from kh_private.agency_mandate_requests where id=(p_payload->>'requestId')::uuid;
  perform kh_private.mandate_context(p_actor_id,p_agency_id,r.property_id,r.agency_id);
  if not kh_private.property_source_decider(p_actor_id,p_agency_id,r.property_id) then raise exception 'KH_AGENCY_ORIGIN_REQUIRED';end if;
@@ -84,6 +92,7 @@ create function kh_private.terminate_mandate_flows(p_property_id uuid,p_agency_i
 end $$;
 create function public.kh_withdraw_agency_mandate(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare pid uuid:=(p_payload->>'propertyId')::uuid;agency uuid:=(p_payload->>'requestingAgencyId')::uuid;m kh_private.agency_mandates;receipt jsonb;begin
+ perform kh_private.agency_require_enabled();
  perform kh_private.mandate_context(p_actor_id,p_agency_id,pid,agency);
  if exists(select 1 from kh_private.agency_property_origins where property_id=pid and origin_agency_id=agency) then raise exception 'KH_AGENCY_SOURCE_IMMUTABLE';end if;
  receipt:=kh_private.agency_receipt(p_actor_id,coalesce(p_agency_id,p_actor_id),'withdraw_mandate',p_payload);if receipt is not null then return receipt;end if;
@@ -102,6 +111,7 @@ create function public.kh_withdraw_agency_mandate(p_actor_id uuid,p_agency_id uu
 end $$;
 create function public.kh_propose_agency_property_change(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare pid uuid:=(p_payload->>'propertyId')::uuid;r kh_private.agency_property_changes;receipt jsonb;proposal jsonb:=p_payload->'proposedPayload';kind text:=p_payload->>'kind';begin
+ perform kh_private.agency_require_enabled();
  perform kh_private.agency_property_access(p_actor_id,p_agency_id,pid);perform kh_private.agency_actor(p_actor_id,p_agency_id,'admin');
  if exists(select 1 from kh_private.property_aliases where property_id=pid) or not exists(select 1 from public.properties where id=pid and availability<>'sold' and operation='sale') then raise exception 'KH_AGENCY_PROPERTY_CLOSED';end if;
  receipt:=kh_private.agency_receipt(p_actor_id,p_agency_id,'propose_change',p_payload);if receipt is not null then select * into r from kh_private.agency_property_changes where id=(receipt->>'id')::uuid;return kh_private.property_change_json(p_actor_id,p_agency_id,r);end if;
@@ -113,6 +123,7 @@ create function public.kh_propose_agency_property_change(p_actor_id uuid,p_agenc
 end $$;
 create function public.kh_decide_agency_property_change(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare r kh_private.agency_property_changes;p public.properties;source uuid;receipt jsonb;draft jsonb;policy text;begin
+ perform kh_private.agency_require_enabled();
  select * into r from kh_private.agency_property_changes where id=(p_payload->>'requestId')::uuid;
  perform kh_private.mandate_context(p_actor_id,p_agency_id,r.property_id,r.agency_id);
  if not kh_private.property_source_decider(p_actor_id,p_agency_id,r.property_id) then raise exception 'KH_AGENCY_ORIGIN_REQUIRED';end if;
@@ -139,16 +150,16 @@ create function public.kh_decide_agency_property_change(p_actor_id uuid,p_agency
 end $$;
 create function public.kh_list_agency_mandate_requests(p_actor_id uuid,p_agency_id uuid,p_offset integer default 0) returns jsonb language plpgsql security definer set search_path='' as $$
  declare items jsonb;begin
- perform kh_private.agency_account(p_actor_id);if p_agency_id is not null then perform kh_private.agency_actor(p_actor_id,p_agency_id,'admin');end if;
+ perform kh_private.agency_account(p_actor_id);if p_agency_id is not null then perform kh_private.agency_reader(p_actor_id,p_agency_id,'admin');end if;
  if p_offset is null or p_offset<0 or p_offset>100000 then raise exception 'KH_AGENCY_INVALID';end if;
- select coalesce(jsonb_agg(v),'[]') into items from(select kh_private.mandate_request_json(p_actor_id,p_agency_id,r) v from kh_private.agency_mandate_requests r where r.agency_id=p_agency_id or kh_private.property_source_decider(p_actor_id,p_agency_id,r.property_id) order by r.created_at desc,r.id offset p_offset limit 31)x;
+ select coalesce(jsonb_agg(v),'[]') into items from(select kh_private.mandate_request_json(p_actor_id,p_agency_id,r) v from kh_private.agency_mandate_requests r where r.agency_id=p_agency_id or kh_private.property_source_reader(p_actor_id,p_agency_id,r.property_id) order by r.created_at desc,r.id offset p_offset limit 31)x;
  return jsonb_build_object('items',case when jsonb_array_length(items)>30 then items-30 else items end,'hasMore',jsonb_array_length(items)>30);
 end $$;
 create function public.kh_list_agency_property_changes(p_actor_id uuid,p_agency_id uuid,p_offset integer default 0) returns jsonb language plpgsql security definer set search_path='' as $$
  declare items jsonb;begin
- perform kh_private.agency_account(p_actor_id);if p_agency_id is not null then perform kh_private.agency_actor(p_actor_id,p_agency_id,'admin');end if;
+ perform kh_private.agency_account(p_actor_id);if p_agency_id is not null then perform kh_private.agency_reader(p_actor_id,p_agency_id,'admin');end if;
  if p_offset is null or p_offset<0 or p_offset>100000 then raise exception 'KH_AGENCY_INVALID';end if;
- select coalesce(jsonb_agg(v),'[]') into items from(select kh_private.property_change_json(p_actor_id,p_agency_id,r) v from kh_private.agency_property_changes r where r.agency_id=p_agency_id or kh_private.property_source_decider(p_actor_id,p_agency_id,r.property_id) order by r.created_at desc,r.id offset p_offset limit 31)x;
+ select coalesce(jsonb_agg(v),'[]') into items from(select kh_private.property_change_json(p_actor_id,p_agency_id,r) v from kh_private.agency_property_changes r where r.agency_id=p_agency_id or kh_private.property_source_reader(p_actor_id,p_agency_id,r.property_id) order by r.created_at desc,r.id offset p_offset limit 31)x;
  return jsonb_build_object('items',case when jsonb_array_length(items)>30 then items-30 else items end,'hasMore',jsonb_array_length(items)>30);
 end $$;
 
@@ -258,6 +269,7 @@ alter function public.kh_admin_link_assisted_agency(uuid,jsonb) set schema kh_pr
 alter function kh_private.kh_admin_link_assisted_agency(uuid,jsonb) rename to link_assisted_agency_before_aliases;
 revoke all on function kh_private.link_assisted_agency_before_aliases(uuid,jsonb) from public,anon,authenticated;
 create function public.kh_admin_link_assisted_agency(p_actor_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$begin
+ perform kh_private.agency_require_enabled();
  perform kh_private.agency_account(p_actor_id);if not kh_private.is_owner(p_actor_id) then raise exception 'KH_OWNER_REQUIRED';end if;
  if exists(select 1 from kh_private.property_aliases where property_id=(p_payload->>'propertyId')::uuid) then raise exception 'KH_PROPERTY_ALIAS_READ_ONLY';end if;
  return kh_private.link_assisted_agency_before_aliases(p_actor_id,p_payload);
@@ -277,13 +289,13 @@ notify pgrst,'reload schema';
 -- Current authorizations are independent of the historical request that granted them.
 create function public.kh_list_current_agency_mandates(p_actor_id uuid,p_agency_id uuid,p_offset integer default 0) returns jsonb language plpgsql security definer set search_path='' as $$
  declare items jsonb;begin
- perform kh_private.agency_account(p_actor_id);if p_agency_id is not null then perform kh_private.agency_actor(p_actor_id,p_agency_id,'admin');end if;
+ perform kh_private.agency_account(p_actor_id);if p_agency_id is not null then perform kh_private.agency_reader(p_actor_id,p_agency_id,'admin');end if;
  if p_offset is null or p_offset<0 or p_offset>100000 then raise exception 'KH_AGENCY_INVALID';end if;
  select coalesce(jsonb_agg(v),'[]') into items from(select jsonb_build_object('propertyId',m.property_id,'agencyId',m.agency_id,'agencyName',a.trade_name,'version',m.version)
  ||case when m.agency_id=p_agency_id then jsonb_build_object('internalReference',m.reference) else '{}'::jsonb end v
  from kh_private.agency_mandates m join kh_private.agencies a on a.id=m.agency_id left join kh_private.agency_property_origins o on o.property_id=m.property_id
  where m.state='active' and m.agency_id is distinct from o.origin_agency_id and not exists(select 1 from kh_private.property_aliases where property_id=m.property_id)
- and (m.agency_id=p_agency_id or kh_private.property_source_decider(p_actor_id,p_agency_id,m.property_id)) order by m.created_at desc,m.property_id,m.agency_id offset p_offset limit 31)x;
+ and (m.agency_id=p_agency_id or kh_private.property_source_reader(p_actor_id,p_agency_id,m.property_id)) order by m.created_at desc,m.property_id,m.agency_id offset p_offset limit 31)x;
  return jsonb_build_object('items',case when jsonb_array_length(items)>30 then items-30 else items end,'hasMore',jsonb_array_length(items)>30);
 end $$;
 create function public.kh_resolve_agency_mandate_property(p_actor_id uuid,p_property_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$

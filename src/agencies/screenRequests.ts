@@ -11,7 +11,7 @@ export function createAgencyScreenRequestScope(){
  }};
 }
 export interface AgencyTeamPage{userId:string;agencyId:string|null;generation:number;members:AgencyMembership[];invitations:AgencyInvitation[];membersMore:boolean;invitationsMore:boolean}
-interface TeamSource{repository:AgencyRepository;refreshAgencies():Promise<void>;getCurrentWorkspace():AgencyWorkspaceState;captureAccountContext():CapturedAccountContext;captureAgencyContext():CapturedAgencyContext}
+interface TeamSource{repository:AgencyRepository;refreshAgencies():Promise<void>;getCurrentWorkspace():AgencyWorkspaceState;captureAccountContext():CapturedAccountContext;captureAgencyReadContext():CapturedAgencyContext}
 export async function loadAgencyTeamPage(source:TeamSource,append:boolean,previous:AgencyTeamPage|null,checkpoint:()=>void):Promise<AgencyTeamPage>{
  let account:CapturedAccountContext|null=null,enterprise:CapturedAgencyContext|null=null;
  try{
@@ -22,8 +22,8 @@ export async function loadAgencyTeamPage(source:TeamSource,append:boolean,previo
   const same=Boolean(append&&previous?.userId===account.userId&&previous.agencyId===state.activeAgencyId&&previous.generation===state.generation);
   const invitations=await source.repository.listInvitations(same?previous!.invitations.length:0,account);account.checkpoint();checkpoint();
   let members:AgencyMembership[]=[],membersMore=false;
-  if(state.activeAgencyId&&state.membership?.state==='active'&&state.enabled){
-   enterprise=source.captureAgencyContext();const page=await source.repository.listMembers(same?previous!.members.length:0,enterprise);enterprise.checkpoint();checkpoint();members=page.items;membersMore=page.hasMore;
+  if(state.activeAgencyId&&state.membership?.state==='active'){
+   enterprise=source.captureAgencyReadContext();const page=await source.repository.listMembers(same?previous!.members.length:0,enterprise);enterprise.checkpoint();checkpoint();members=page.items;membersMore=page.hasMore;
   }
   return {userId:account.userId,agencyId:state.activeAgencyId,generation:state.generation,members:same?[...previous!.members,...members]:members,invitations:same?[...previous!.invitations,...invitations.items]:invitations.items,membersMore,invitationsMore:invitations.hasMore};
  }finally{account?.release();enterprise?.release();}

@@ -151,11 +151,13 @@ create function kh_private.agency_make_deal(actor uuid,agency uuid,payload jsonb
 end $$;
 create function public.kh_create_agency_deal(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare r jsonb;d kh_private.agency_deals;begin
+ perform kh_private.agency_require_enabled();
  perform kh_private.agency_flow_locks(p_actor_id,p_agency_id,(p_payload->>'propertyId')::uuid,array[(p_payload->>'buyerId')::uuid,(p_payload->>'assigneeId')::uuid]);perform kh_private.agency_actor(p_actor_id,p_agency_id,'manager');
  r:=kh_private.agency_receipt(p_actor_id,p_agency_id,'create_deal',p_payload);if r is not null then return public.kh_get_agency_deal(p_actor_id,p_agency_id,(r->>'id')::uuid);end if;
  d:=kh_private.agency_make_deal(p_actor_id,p_agency_id,p_payload,false);return kh_private.agency_remember(p_actor_id,p_agency_id,'create_deal',p_payload,kh_private.agency_deal_json(d));end $$;
 create function public.kh_start_agency_conversation(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare r jsonb;d kh_private.agency_deals;c kh_private.agency_conversations;begin
+ perform kh_private.agency_require_enabled();
  perform kh_private.agency_flow_locks(p_actor_id,p_agency_id,(p_payload->>'propertyId')::uuid,array[(p_payload->>'preferredManagerId')::uuid]);
  if not(select enabled from kh_private.agency_settings where singleton) then raise exception 'KH_AGENCY_DISABLED';end if;
  if p_payload ? 'preferredManagerId' and not kh_private.agency_contact_member(p_agency_id,(p_payload->>'preferredManagerId')::uuid) then raise exception 'KH_AGENCY_MANAGER_CHANGED';end if;
@@ -166,6 +168,7 @@ create function public.kh_start_agency_conversation(p_actor_id uuid,p_agency_id 
  return kh_private.agency_remember(p_actor_id,p_agency_id,'start_conversation',p_payload,kh_private.agency_conversation_json(p_actor_id,null,c));end $$;
 create function public.kh_assign_agency_deal(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare d kh_private.agency_deals;prior uuid;target uuid:=(p_payload->>'userId')::uuid;r jsonb;begin
+ perform kh_private.agency_require_enabled();
  d:=kh_private.agency_prepare_deal(p_actor_id,p_agency_id,(p_payload->>'dealId')::uuid);prior:=d.assignee_id;
  perform kh_private.agency_flow_locks(p_actor_id,p_agency_id,d.property_id,array[d.buyer_id,d.assignee_id,target]);perform kh_private.agency_actor(p_actor_id,p_agency_id,'coordinator');
  d:=kh_private.agency_deal_access(p_actor_id,p_agency_id,d.id);
@@ -190,6 +193,7 @@ create function public.kh_list_agency_messages(p_actor_id uuid,p_agency_id uuid,
  return jsonb_build_object('items',case when jsonb_array_length(items)>p_limit then items-p_limit else items end,'hasMore',jsonb_array_length(items)>p_limit);end $$;
 create function public.kh_send_agency_message(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare c kh_private.agency_conversations;d kh_private.agency_deals;prior uuid;r jsonb;m kh_private.agency_messages;body text:=btrim(p_payload->>'body');stamp timestamptz:=clock_timestamp();begin
+ perform kh_private.agency_require_enabled();
  select * into c from kh_private.agency_conversations where id=(p_payload->>'conversationId')::uuid;d:=kh_private.agency_prepare_deal(p_actor_id,p_agency_id,c.deal_id);prior:=d.assignee_id;
  if body is null or char_length(body) not between 1 and 2000 or body~'^[[:space:]]*$' or (p_payload->>'clientMessageId')::uuid is null then raise exception 'KH_CHAT_INVALID_MESSAGE';end if;
  perform kh_private.agency_flow_locks(p_actor_id,d.agency_id,d.property_id,array[d.buyer_id,d.assignee_id]);

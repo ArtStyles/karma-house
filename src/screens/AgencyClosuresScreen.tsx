@@ -50,12 +50,13 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
     const pending = useRef<
         {kind: 'request'; input: RequestSale} | {kind: 'decide'; input: DecideSale} | null
     >(null);
-    const allowed = !!auth.session && !auth.suspended && w.enabled
-        && (personal || w.activeAgency?.state === 'approved' && !!w.membership);
+    const allowed = !!auth.session && !auth.suspended
+        && (personal || !!w.activeAgency && !!w.membership);
 
-    const capture = useCallback((latest = false): Context => {
+    const operational=w.enabled&&(personal||w.activeAgency?.state==='approved');
+    const capture = useCallback((latest = false,write=false): Context => {
         const check = scope.capture(latest);
-        const base = personal ? w.captureAccountContext() : w.captureAgencyContext();
+        const base = personal ? w.captureAccountContext() : write?w.captureAgencyContext():w.captureAgencyReadContext();
         const controller = new AbortController(), abort = () => controller.abort();
         controllers.add(controller);
         base.signal.addEventListener('abort', abort, {once: true});
@@ -74,7 +75,7 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
                 base.release();
             },
         };
-    }, [personal, scope, w.captureAccountContext, w.captureAgencyContext, controllers]);
+    }, [personal, scope, w.captureAccountContext, w.captureAgencyContext,w.captureAgencyReadContext, controllers]);
 
     const clear = useCallback(() => {
         setItems([]);
@@ -106,7 +107,7 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
                 ? await repository.personalList(offset, c)
                 : await repository.list({scope: outgoing ? 'outgoing' : 'incoming', offset}, c as CapturedAgencyContext);
             let d: AgencyDeal | null = null, p: SalePreparation | null = null;
-            if (dealId && !personal) {
+            if (operational && dealId && !personal) {
                 if (!isUuid(dealId)) throw Error('Expediente inválido');
                 d = await deals!.get(dealId, c as CapturedAgencyContext);
                 if (!d.closedReason) p = await repository.prepare(d.id, c as CapturedAgencyContext);
@@ -129,7 +130,7 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
         } finally {
             c?.release();
         }
-    }, [allowed, capture, dealId, outgoing, personal]);
+    }, [allowed, operational, capture, dealId, outgoing, personal]);
 
     const refreshRef = useRef(w.refreshAgencies), loadRef = useRef(load);
     refreshRef.current = w.refreshAgencies;
@@ -172,7 +173,7 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
         pending.current = attempt;
         let c: Context | undefined;
         try {
-            c = capture();
+            c = capture(false,true);
             if (attempt.kind === 'request') {
                 if (!('agencyId' in c)) throw Error('KH_AGENCY_CONTEXT_REQUIRED');
                 const r = await repository.request(attempt.input, c);
@@ -313,11 +314,11 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
                     </View>}
                     {items.map(r => <View key={r.id} style={s.card}>
                         {facts(r)}
-                        {r.canDecide && <>
+                        {operational && r.canDecide && <>
                             <Button label="Revisar y confirmar venta" disabled={disabled} onPress={() => setReview(r)}/>
                             <Button label="Rechazar solicitud" secondary disabled={disabled} onPress={() => decide(r, 'reject')}/>
                         </>}
-                        {r.canCancel && <Button label="Cancelar solicitud" secondary disabled={disabled} onPress={() => decide(r, 'cancel')}/>}
+                        {operational && r.canCancel && <Button label="Cancelar solicitud" secondary disabled={disabled} onPress={() => decide(r, 'cancel')}/>}
                     </View>)}
                     {!items.length && <Notice>No hay solicitudes en esta vista.</Notice>}
                     {more && <Button label="Más cierres" secondary disabled={disabled} onPress={() => void load(items.length)}/>}

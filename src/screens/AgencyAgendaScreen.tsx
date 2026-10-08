@@ -30,16 +30,16 @@ function Agenda({ propertyId }: {
         key: string;
         id: string;
     } | null>(null);
-    const allowed = w.enabled && w.activeAgency?.state === 'approved' && !!w.membership;
-    const capture = useCallback(() => { const c = w.captureAgencyContext(), version = epoch.current; return { ...c, checkpoint() { c.checkpoint(); if (!focused.current || version !== epoch.current)
-            throw Error('KH_AGENCY_CONTEXT_CHANGED'); } }; }, [w.captureAgencyContext]);
+    const allowed = Boolean(w.activeAgency) && !!w.membership;
+    const capture = useCallback((write=false) => { const c = write?w.captureAgencyContext():w.captureAgencyReadContext(), version = epoch.current; return { ...c, checkpoint() { c.checkpoint(); if (!focused.current || version !== epoch.current)
+            throw Error('KH_AGENCY_CONTEXT_CHANGED'); } }; }, [w.captureAgencyContext,w.captureAgencyReadContext]);
     const bounds = useCallback(() => havanaAgendaRange(range), [range]);
     const load = useCallback(async () => { if (!repository || !allowed)
         return; let c: ReturnType<typeof capture> | undefined; try {
         c = capture();
         const { from, to } = bounds(), page = await repository.calendar(from, to, 0, c);
         let intervals: BusyInterval[] = [], canReserve = false, current: AgencyReservation | null = null;
-        if (propertyId) {
+        if (propertyId && w.enabled && w.activeAgency?.state==='approved') {
             if (!isUuid(propertyId))
                 throw Error('Vivienda inválida.');
             intervals = await repository.occupancy(propertyId, from, to, c);
@@ -68,11 +68,11 @@ function Agenda({ propertyId }: {
     }
     finally {
         c?.release();
-    } }, [allowed, capture, bounds, propertyId, w.membership?.role]);
+    } }, [allowed, capture, bounds, propertyId,w.enabled,w.activeAgency?.state, w.membership?.role]);
     useFocusEffect(useCallback(() => { focused.current = true; epoch.current++; setItems([]); setOccupancy([]); setOriginAdmin(false); setReservation(null); setJoint(null); pending.current = null; void load(); return () => { focused.current = false; epoch.current++; }; }, [load]));
     async function act(key: string, work: (c: ReturnType<typeof capture>, request: string) => Promise<void>, refresh = true) { if (locked.current)
         return; locked.current = true; setBusy(true); let c: ReturnType<typeof capture> | undefined; try {
-        c = capture();
+        c = capture(key!=='page');
         if (pending.current?.key !== key)
             pending.current = { key, id: createMessageId() };
         await work(c, pending.current.id);
@@ -111,7 +111,7 @@ function Agenda({ propertyId }: {
  {items.length === 0 && <Notice>No hay visitas en esta semana.</Notice>}
  {items.map(v => <View key={v.proposalId} style={s.card}><Text style={s.title}>{v.propertyTitle}</Text><Text style={s.copy}>{v.contactName} · {format(v.startsAt)} — {format(v.endsAt)}</Text><Text style={s.copy}>{v.assigneeId === w.membership?.userId ? 'Responsable: tú' : 'Responsable: ' + v.assigneeName} · {visitOutcomeLabel(v.outcome)}</Text>{v.existingConflict && <Notice error>Esta cita coincide con otro compromiso anterior. Coordina una nueva fecha.</Notice>}
  <Button secondary label="Abrir expediente privado" onPress={() => router.push({ pathname: '/agency-deal/[id]', params: { id: v.dealId } })}/><Button secondary label="Ver ocupación de esta vivienda" onPress={() => router.push({ pathname: '/agency-agenda', params: { propertyId: v.propertyId } })}/>
- {v.outcome === 'unrecorded' && (['performed', 'no_show', 'cancelled'] as const).map(outcome => <Button key={outcome} secondary label={visitOutcomeLabel(outcome)} disabled={busy || outcome !== 'cancelled' && Date.parse(v.startsAt) > Date.now()} onPress={() => void act(`${v.proposalId}:${v.version}:${outcome}`, async (c, clientRequestId) => { await repository!.recordOutcome({ proposalId: v.proposalId, expectedVersion: v.version, outcome, clientRequestId }, c); })}/>)}
+ {w.enabled && w.activeAgency?.state==='approved' && v.outcome === 'unrecorded' && (['performed', 'no_show', 'cancelled'] as const).map(outcome => <Button key={outcome} secondary label={visitOutcomeLabel(outcome)} disabled={busy || outcome !== 'cancelled' && Date.parse(v.startsAt) > Date.now()} onPress={() => void act(`${v.proposalId}:${v.version}:${outcome}`, async (c, clientRequestId) => { await repository!.recordOutcome({ proposalId: v.proposalId, expectedVersion: v.version, outcome, clientRequestId }, c); })}/>)}
  </View>)}
  {more && <Button secondary label="Ver más visitas" loading={busy} onPress={() => void act('page', async (c) => { const { from, to } = bounds(), page = await repository!.calendar(from, to, items.length, c); c.checkpoint(); setItems(old => [...old, ...page.items]); setMore(page.hasMore); }, false)}/>}
  {propertyId && <View style={s.card}><Text style={s.title}>Ocupación de la vivienda</Text><Notice>Las citas de otras agencias muestran únicamente el intervalo ocupado.</Notice>{occupancy.length ? occupancy.map((o, i) => <Text key={i} style={s.copy}>Ocupado · {format(o.startsAt)} — {format(o.endsAt)}</Text>) : <Text style={s.copy}>Sin intervalos ocupados en esta semana.</Text>}</View>}

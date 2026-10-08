@@ -99,6 +99,7 @@ create function public.kh_list_agency_proposals(p_actor_id uuid,p_agency_id uuid
  return jsonb_build_object('items',case when jsonb_array_length(items)>p_limit then items-p_limit else items end,'hasMore',jsonb_array_length(items)>p_limit);end $$;
 create function public.kh_create_agency_proposal(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare d kh_private.agency_deals;p kh_private.agency_proposals;parent kh_private.agency_proposals;e kh_private.agency_proposals;r jsonb;party text;stamp timestamptz;visit timestamptz;amount numeric;duration integer;v_kind text:=p_payload->>'kind';note text;begin
+ perform kh_private.agency_require_enabled();
  if jsonb_typeof(p_payload) is distinct from 'object' or p_payload-array['dealId','kind','note','amountUsd','visitDate','visitTime','durationMinutes','replacesId','expectedVersion','externalResponse','clientRequestId']<>'{}'::jsonb or coalesce(v_kind,'') not in('visit','offer') then raise exception 'KH_NEG_INVALID_PAYLOAD';end if;
  d:=kh_private.agency_scheduling_deal(p_actor_id,p_agency_id,(p_payload->>'dealId')::uuid);
  r:=kh_private.agency_receipt(p_actor_id,d.agency_id,'create_proposal',p_payload);if r is not null then select * into p from kh_private.agency_proposals where id=(r->>'id')::uuid;return kh_private.agency_proposal_json(p);end if;
@@ -130,6 +131,7 @@ create function public.kh_create_agency_proposal(p_actor_id uuid,p_agency_id uui
  return kh_private.agency_remember(p_actor_id,d.agency_id,'create_proposal',p_payload,kh_private.agency_proposal_json(p));end $$;
 create function public.kh_respond_agency_proposal(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare d kh_private.agency_deals;p kh_private.agency_proposals;r jsonb;party text;action text:=p_payload->>'action';joint kh_private.property_visit_slots;stamp timestamptz;begin
+ perform kh_private.agency_require_enabled();
  if jsonb_typeof(p_payload) is distinct from 'object' or p_payload-array['proposalId','action','expectedVersion','clientRequestId','externalResponse','jointVisitToken']<>'{}'::jsonb or coalesce(action,'') not in('accept','decline','cancel') then raise exception 'KH_NEG_INVALID_PAYLOAD';end if;
  select * into p from kh_private.agency_proposals where id=(p_payload->>'proposalId')::uuid;if p.id is null then raise exception 'KH_NEG_NOT_FOUND';end if;
  d:=kh_private.agency_scheduling_deal(p_actor_id,p_agency_id,p.deal_id);
@@ -164,6 +166,7 @@ create function public.kh_respond_agency_proposal(p_actor_id uuid,p_agency_id uu
  return kh_private.agency_remember(p_actor_id,d.agency_id,'respond_proposal',p_payload,kh_private.agency_proposal_json(p));end $$;
 create function public.kh_record_agency_visit_outcome(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare p kh_private.agency_proposals;d kh_private.agency_deals;s kh_private.property_visit_slots;r jsonb;v_outcome text:=p_payload->>'outcome';begin
+ perform kh_private.agency_require_enabled();
  if p_agency_id is null or coalesce(v_outcome,'') not in('performed','no_show','cancelled') or p_payload-array['proposalId','outcome','expectedVersion','clientRequestId']<>'{}'::jsonb then raise exception 'KH_AGENCY_INVALID';end if;
  select * into p from kh_private.agency_proposals where id=(p_payload->>'proposalId')::uuid;d:=kh_private.agency_scheduling_deal(p_actor_id,p_agency_id,p.deal_id);
  r:=kh_private.agency_receipt(p_actor_id,d.agency_id,'visit_outcome',p_payload);if r is not null then select * into s from kh_private.property_visit_slots where proposal_id=p.id;return kh_private.agency_visit_json(s);end if;
@@ -184,6 +187,7 @@ create function kh_private.agency_origin_schedule(actor uuid,agency uuid,pid uui
 create function kh_private.agency_reservation_json(r kh_private.property_reservations) returns jsonb language sql volatile set search_path='' as $$select jsonb_build_object('id',r.id,'propertyId',r.property_id,'agencyId',r.agency_id,'expiresAt',r.expires_at,'releasedAt',r.released_at,'version',r.version,'active',r.released_at is null and r.expires_at>clock_timestamp())$$;
 create function public.kh_set_agency_reservation(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare pid uuid:=(p_payload->>'propertyId')::uuid;expires timestamptz;reservation kh_private.property_reservations;r jsonb;begin
+ perform kh_private.agency_require_enabled();
  if p_payload-array['propertyId','expiresAt','clientRequestId']<>'{}'::jsonb then raise exception 'KH_AGENCY_INVALID';end if;
  perform kh_private.agency_origin_schedule(p_actor_id,p_agency_id,pid);
  r:=kh_private.agency_receipt(p_actor_id,p_agency_id,'reserve_property',p_payload);if r is not null then select * into reservation from kh_private.property_reservations where id=(r->>'id')::uuid;return kh_private.agency_reservation_json(reservation);end if;
@@ -195,6 +199,7 @@ create function public.kh_set_agency_reservation(p_actor_id uuid,p_agency_id uui
  return kh_private.agency_remember(p_actor_id,p_agency_id,'reserve_property',p_payload,kh_private.agency_reservation_json(reservation));end $$;
 create function public.kh_release_agency_reservation(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare s kh_private.property_reservations;r jsonb;begin
+ perform kh_private.agency_require_enabled();
  if p_payload-array['reservationId','expectedVersion','clientRequestId']<>'{}'::jsonb then raise exception 'KH_AGENCY_INVALID';end if;
  select * into s from kh_private.property_reservations where id=(p_payload->>'reservationId')::uuid and agency_id=p_agency_id;if s.id is null then raise exception 'KH_AGENCY_PROPERTY_NOT_FOUND';end if;
  perform kh_private.agency_origin_schedule(p_actor_id,p_agency_id,s.property_id,false);
@@ -206,6 +211,7 @@ create function public.kh_release_agency_reservation(p_actor_id uuid,p_agency_id
  return kh_private.agency_remember(p_actor_id,p_agency_id,'release_reservation',p_payload,kh_private.agency_reservation_json(s));end $$;
 create function public.kh_create_joint_visit_slot(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare pid uuid:=(p_payload->>'propertyId')::uuid;starts timestamptz;duration integer:=coalesce((p_payload->>'durationMinutes')::integer,60);s kh_private.property_visit_slots;r jsonb;begin
+ perform kh_private.agency_require_enabled();
  if p_payload-array['propertyId','visitDate','visitTime','durationMinutes','clientRequestId']<>'{}'::jsonb then raise exception 'KH_AGENCY_INVALID';end if;
  perform kh_private.agency_origin_schedule(p_actor_id,p_agency_id,pid);
  r:=kh_private.agency_receipt(p_actor_id,p_agency_id,'joint_visit_slot',p_payload);if r is not null then return r;end if;
@@ -215,6 +221,7 @@ create function public.kh_create_joint_visit_slot(p_actor_id uuid,p_agency_id uu
  insert into kh_private.property_visit_slots(property_id,agency_id,starts_at,ends_at,joint_token)values(pid,p_agency_id,starts,starts+make_interval(mins=>duration),gen_random_uuid())returning * into s;
  return kh_private.agency_remember(p_actor_id,p_agency_id,'joint_visit_slot',p_payload,jsonb_build_object('id',s.id,'propertyId',pid,'token',s.joint_token,'startsAt',s.starts_at,'endsAt',s.ends_at));end $$;
 create function public.kh_join_joint_visit_slot(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$begin
+ perform kh_private.agency_require_enabled();
  if p_agency_id is null or not(p_payload?'jointVisitToken') or p_payload?'action' then raise exception 'KH_AGENCY_JOINT_PERMISSION_REQUIRED';end if;
  return public.kh_respond_agency_proposal(p_actor_id,p_agency_id,p_payload||jsonb_build_object('action','accept'));end $$;
 create function public.kh_agency_calendar(p_actor_id uuid,p_agency_id uuid,p_from timestamptz,p_to timestamptz,p_offset integer default 0,p_limit integer default 30) returns jsonb language plpgsql security definer set search_path='' as $$
@@ -311,7 +318,8 @@ revoke all on function public.kh_list_agency_proposal_events(uuid,uuid,uuid,inte
 grant execute on function public.kh_list_agency_proposal_events(uuid,uuid,uuid,integer,integer) to authenticated;
 create function public.kh_get_agency_reservation(p_actor_id uuid,p_agency_id uuid,p_property_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$
  declare r kh_private.property_reservations;begin
- perform kh_private.agency_origin_schedule(p_actor_id,p_agency_id,p_property_id,false);
+ perform kh_private.agency_reader(p_actor_id,p_agency_id,'admin');
+ if not exists(select 1 from kh_private.agency_property_origins where property_id=kh_private.agency_effective_property(p_property_id) and origin_agency_id=p_agency_id) then raise exception 'KH_AGENCY_ORIGIN_REQUIRED';end if;
  select * into r from kh_private.property_reservations where agency_id=p_agency_id and kh_private.agency_effective_property(property_id)=kh_private.agency_effective_property(p_property_id) and released_at is null and expires_at>clock_timestamp() order by created_at desc,id limit 1;
  return case when r.id is null then null else kh_private.agency_reservation_json(r) end;end $$;
 revoke all on function public.kh_get_agency_reservation(uuid,uuid,uuid) from public,anon,authenticated;

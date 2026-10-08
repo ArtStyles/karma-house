@@ -70,6 +70,7 @@ create function kh_private.sale_request_json(actor uuid,agency uuid,r kh_private
 $$;
 create function public.kh_request_agency_sale(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$
  declare before kh_private.agency_deals;d kh_private.agency_deals;pid uuid;p public.properties;o kh_private.agency_property_origins;r kh_private.agency_sale_requests;receipt jsonb;offer uuid;begin
+ perform kh_private.agency_require_enabled();
  before:=kh_private.agency_prepare_deal(p_actor_id,p_agency_id,(p_payload->>'winningDealId')::uuid);
  pid:=kh_private.sale_group_lock(p_actor_id,p_agency_id,before.property_id);perform kh_private.agency_actor(p_actor_id,p_agency_id,'manager');d:=kh_private.agency_deal_access(p_actor_id,p_agency_id,before.id);
  receipt:=kh_private.agency_receipt(p_actor_id,p_agency_id,'request_agency_sale',p_payload);if receipt is not null then return receipt;end if;
@@ -272,6 +273,7 @@ declare
  closure jsonb:=null;
  action text:=payload->>'action';
 begin
+ perform kh_private.agency_require_enabled();
  perform kh_private.agency_prepare_account(actor);
  select * into r from kh_private.agency_sale_requests where id=(payload->>'requestId')::uuid;
  if r.id is null or not coalesce(kh_private.sale_request_visible(actor,agency,r),false) then
@@ -326,13 +328,14 @@ begin
   jsonb_build_object('request',kh_private.sale_request_json(actor,agency,r),'closure',closure)
  );
 end $$;
-create function public.kh_decide_agency_sale(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$begin if p_agency_id is null then raise exception 'KH_AGENCY_ORIGIN_REQUIRED';end if;return kh_private.decide_sale(p_actor_id,p_agency_id,p_payload);end $$;
+create function public.kh_decide_agency_sale(p_actor_id uuid,p_agency_id uuid,p_payload jsonb) returns jsonb language plpgsql security definer set search_path='' as $$begin
+ perform kh_private.agency_require_enabled(); if p_agency_id is null then raise exception 'KH_AGENCY_ORIGIN_REQUIRED';end if;return kh_private.decide_sale(p_actor_id,p_agency_id,p_payload);end $$;
 create function public.kh_decide_personal_sale(p_actor_id uuid,p_payload jsonb) returns jsonb language sql security definer set search_path='' as $$select kh_private.decide_sale(p_actor_id,null,p_payload)$$;
 create function kh_private.list_sale_requests(actor uuid,agency uuid,scope text,off integer,lim integer) returns jsonb language plpgsql security definer set search_path='' as $$declare items jsonb;begin
- perform kh_private.agency_account(actor);if not(select enabled from kh_private.agency_settings where singleton) then raise exception 'KH_AGENCY_DISABLED';end if;
- if agency is not null then perform kh_private.agency_actor(actor,agency,'manager');end if;
+ perform kh_private.agency_account(actor);
+ if agency is not null then perform kh_private.agency_reader(actor,agency,'manager');end if;
  if off is null or off<0 or off>100000 or lim is null or lim<1 or lim>50 or scope is null or scope not in('incoming','outgoing') then raise exception 'KH_AGENCY_SALE_INVALID';end if;
- select coalesce(jsonb_agg(v),'[]') into items from(select kh_private.sale_request_json(actor,agency,r)v from kh_private.agency_sale_requests r where kh_private.sale_request_visible(actor,agency,r) and (scope='incoming' and kh_private.property_source_decider(actor,agency,r.property_id) or scope='outgoing' and agency=r.executing_agency_id) order by r.created_at desc,r.id offset off limit lim+1)x;
+ select coalesce(jsonb_agg(v),'[]') into items from(select kh_private.sale_request_json(actor,agency,r)v from kh_private.agency_sale_requests r where (kh_private.property_source_reader(actor,agency,r.property_id) or agency=r.executing_agency_id and exists(select 1 from kh_private.agency_deals d where d.id=r.winning_deal_id and kh_private.agency_deal_visible(actor,agency,d))) and (scope='incoming' and kh_private.property_source_reader(actor,agency,r.property_id) or scope='outgoing' and agency=r.executing_agency_id) order by r.created_at desc,r.id offset off limit lim+1)x;
  return jsonb_build_object('items',case when jsonb_array_length(items)>lim then items-lim else items end,'hasMore',jsonb_array_length(items)>lim);
 end $$;
 create function public.kh_list_agency_sale_requests(p_actor_id uuid,p_agency_id uuid,p_scope text,p_offset integer default 0,p_limit integer default 30) returns jsonb language plpgsql security definer set search_path='' as $$begin if p_agency_id is null then raise exception 'KH_AGENCY_ORIGIN_REQUIRED';end if;return kh_private.list_sale_requests(p_actor_id,p_agency_id,p_scope,p_offset,p_limit);end $$;

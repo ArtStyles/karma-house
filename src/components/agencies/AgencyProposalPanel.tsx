@@ -18,7 +18,7 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
     conversation: Pick<AgencyConversation,'dealId'|'buyerId'|'assigneeId'|'canSend'>;
     actorId: string;
     staff: boolean;
-    capture: () => CapturedAccountContext | CapturedAgencyContext;
+    capture: (write?:boolean) => CapturedAccountContext | CapturedAgencyContext;
     onChanged: () => Promise<void>;
     external?: boolean;
     onRequestClosure?: () => void;
@@ -48,9 +48,9 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
     } }, [c.dealId, capture]);
     useFocusEffect(useCallback(() => { mounted.current = true; void load().catch(e => { if (mounted.current)
         setError(schedulingError(e)); }); return () => { mounted.current = false; }; }, [load]));
-    async function run(work: (ctx: ReturnType<typeof capture>) => Promise<void>) { if (lock.current)
+    async function run(work: (ctx: ReturnType<typeof capture>) => Promise<void>,write=false) { if (lock.current)
         return; lock.current = true; setBusy(true); setError(''); let ctx: ReturnType<typeof capture> | undefined; try {
-        ctx = capture();
+        ctx = capture(write);
         await work(ctx);
         ctx.checkpoint();
     }
@@ -70,7 +70,7 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
     } }
     async function save() { if (!c.canSend) return; await run(async (ctx) => { if (!repository)
         return; if (!attempt.current)
-        attempt.current = { kind: 'create', payload: validateAgencyProposal({ dealId: c.dealId, kind, note, clientRequestId: createMessageId(), ...(kind === 'offer' ? { amountUsd: amount } : { visitDate: date, visitTime: time, durationMinutes: duration }), ...(parent ? { replacesId: parent.id, expectedVersion: parent.version } : {}),...(external&&manualBuyer?{externalResponse:manualResponse()}: {}) }) }; await submitAttempt(ctx); }); }
+        attempt.current = { kind: 'create', payload: validateAgencyProposal({ dealId: c.dealId, kind, note, clientRequestId: createMessageId(), ...(kind === 'offer' ? { amountUsd: amount } : { visitDate: date, visitTime: time, durationMinutes: duration }), ...(parent ? { replacesId: parent.id, expectedVersion: parent.version } : {}),...(external&&manualBuyer?{externalResponse:manualResponse()}: {}) }) }; await submitAttempt(ctx); },true); }
     async function submitAttempt(ctx: ReturnType<typeof capture>) { if (!c.canSend || !repository || !attempt.current)
         return; const a = attempt.current; if (a.kind === 'create')
         await repository.create(a.payload, ctx);
@@ -78,11 +78,11 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
         await repository.respond(a.payload, ctx); ctx.checkpoint(); if (!mounted.current)
         return; attempt.current = null; setParent(null); setNote(''); setEvents([]); setEventTarget(null); await load(); await onChanged(); }
     function manualResponse():ExternalResponse {const trimmed=reference.trim();if(trimmed.length<2||trimmed.length>500)throw Error('Revisa la referencia de la respuesta del interesado.');return {channel,reference:trimmed};}
-    async function respond(p: AgencyProposal, action: RespondAgencyProposal['action']) { if (!c.canSend) return; await run(async (ctx) => { attempt.current = { kind: 'respond', payload: { proposalId: p.id, expectedVersion: p.version, action, clientRequestId: createMessageId(), ...(action === 'accept' && p.kind === 'visit' && jointToken.trim() ? { jointVisitToken: jointToken.trim() } : {}),...(external&&buyerResponse?{externalResponse:manualResponse()}: {}) } }; await submitAttempt(ctx); }); }
+    async function respond(p: AgencyProposal, action: RespondAgencyProposal['action']) { if (!c.canSend) return; await run(async (ctx) => { attempt.current = { kind: 'respond', payload: { proposalId: p.id, expectedVersion: p.version, action, clientRequestId: createMessageId(), ...(action === 'accept' && p.kind === 'visit' && jointToken.trim() ? { jointVisitToken: jointToken.trim() } : {}),...(external&&buyerResponse?{externalResponse:manualResponse()}: {}) } }; await submitAttempt(ctx); },true); }
     const editable = c.canSend && !busy && !attempt.current;
     return <View style={s.card}><Text style={s.title}>Visitas y ofertas</Text><Notice>Las horas se muestran en Cuba. Una visita pasada sigue pendiente de resultado hasta que el equipo lo registre.</Notice>
  {error ? <Notice error>{error}</Notice> : null}
- {external&&<><Notice>Selecciona quién respondió según la propuesta registrada. La aceptación o el rechazo corresponden a la otra parte; consulta el historial si tienes dudas.</Notice><View style={s.wrap}><Pill label="Respuesta del interesado" active={buyerResponse} onPress={()=>{if(!busy&&!attempt.current)setBuyerResponse(true);}}/><Pill label="Decisión de la agencia" active={!buyerResponse} onPress={()=>{if(!busy&&!attempt.current)setBuyerResponse(false);}}/></View><Notice>Las respuestas del interesado conservan tu autoría, el canal y la referencia recibida.</Notice><View style={s.wrap}>{(['phone','in_person','whatsapp','other'] as const).map(ch=><Pill key={ch} label={{phone:'Teléfono',in_person:'En persona',whatsapp:'WhatsApp',other:'Otro'}[ch]} active={channel===ch} onPress={()=>{if(!busy&&!attempt.current)setChannel(ch);}}/>)}</View><TextInput style={s.input} accessibilityLabel="Referencia de respuesta externa" value={reference} onChangeText={setReference} maxLength={500} editable={!busy&&!attempt.current} placeholder="Cuándo y cómo respondió el interesado" placeholderTextColor={colors.muted}/></>}
+ {external&&c.canSend&&<><Notice>Selecciona quién respondió según la propuesta registrada. La aceptación o el rechazo corresponden a la otra parte; consulta el historial si tienes dudas.</Notice><View style={s.wrap}><Pill label="Respuesta del interesado" active={buyerResponse} onPress={()=>{if(!busy&&!attempt.current)setBuyerResponse(true);}}/><Pill label="Decisión de la agencia" active={!buyerResponse} onPress={()=>{if(!busy&&!attempt.current)setBuyerResponse(false);}}/></View><Notice>Las respuestas del interesado conservan tu autoría, el canal y la referencia recibida.</Notice><View style={s.wrap}>{(['phone','in_person','whatsapp','other'] as const).map(ch=><Pill key={ch} label={{phone:'Teléfono',in_person:'En persona',whatsapp:'WhatsApp',other:'Otro'}[ch]} active={channel===ch} onPress={()=>{if(!busy&&!attempt.current)setChannel(ch);}}/>)}</View><TextInput style={s.input} accessibilityLabel="Referencia de respuesta externa" value={reference} onChangeText={setReference} maxLength={500} editable={!busy&&!attempt.current} placeholder="Cuándo y cómo respondió el interesado" placeholderTextColor={colors.muted}/></>}
  <Button secondary label="Actualizar propuestas" disabled={busy} onPress={() => void run(async () => { await load(); await onChanged(); })}/>
  {items.map(p => {
             const ownSide = staff ? p.createdBy !== c.buyerId : p.createdBy === actorId;
@@ -116,7 +116,7 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
         setEvents(old => [...old, ...page.items]);
         setMoreEvents(page.hasMore);
     } })}/>}
- {attempt.current ? <><Notice>Conservamos el envío para reintentarlo con el mismo contenido.</Notice><Button label="Reintentar propuesta" disabled={!c.canSend} loading={busy} onPress={() => void run(submitAttempt)}/><Button secondary label="Descartar intento" disabled={busy} onPress={() => { attempt.current = null; setError(''); }}/></> : <>
+ {c.canSend&&(attempt.current ? <><Notice>Conservamos el envío para reintentarlo con el mismo contenido.</Notice><Button label="Reintentar propuesta" disabled={!c.canSend} loading={busy} onPress={() => void run(submitAttempt,true)}/><Button secondary label="Descartar intento" disabled={busy} onPress={() => { attempt.current = null; setError(''); }}/></> : <>
  <Text style={s.title}>{parent ? 'Preparar alternativa' : 'Preparar propuesta'}</Text><View style={s.wrap}>{(['visit', 'offer'] as const).map(k => <Pill key={k} label={k === 'visit' ? 'Visita' : 'Oferta'} active={kind === k} onPress={() => { if (editable) {
             setKind(k);
             setParent(null);
@@ -127,6 +127,6 @@ export function AgencyProposalPanel({ conversation: c, actorId, staff, capture, 
  <TextInput style={s.input} accessibilityLabel="Nota de la propuesta" value={note} editable={editable} multiline maxLength={500} placeholder="Nota opcional" placeholderTextColor={colors.muted} onChangeText={setNote}/>
  <TextInput style={s.input} accessibilityLabel="Código de visita conjunta" value={jointToken} editable={editable} autoCapitalize="none" placeholder="Código de visita conjunta (si corresponde)" placeholderTextColor={colors.muted} onChangeText={setJointToken}/>
  <Button label={parent ? 'Enviar alternativa' : 'Enviar propuesta'} disabled={!editable} onPress={() => void save()}/>{parent && <Button secondary label="Descartar alternativa" disabled={busy} onPress={() => setParent(null)}/>}
- </>}
+ </>)}
  </View>;
 }

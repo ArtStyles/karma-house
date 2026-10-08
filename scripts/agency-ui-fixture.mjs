@@ -7,11 +7,13 @@ import {readFile,writeFile,readdir,mkdir,unlink} from 'node:fs/promises';
 import {resolve,dirname} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {Client,Pool} from 'pg';
+import {migrationArtifacts} from './agency-activation.mjs';
 import {createAgencyLocaleClone} from './local-sql/agency-locale-clone.mjs';
 
 const SOURCE='postgresql://agency_test@127.0.0.1:55487/kh_agency_test_suites_20261007';
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const RECEIPT=resolve(ROOT,'.superpowers/sdd/2026-10-07-agency-closure-release/task-14-fixture-receipt.json');
+const task=process.env.KH_AGENCY_UI_TASK??'14';assert.ok(['14','15'].includes(task),'Unknown fixture owner');
+const RECEIPT=resolve(ROOT,`.superpowers/sdd/2026-10-07-agency-closure-release/task-${task}-fixture-receipt.json`);
 const ENV=resolve(ROOT,'.env.local'),ORIGIN='http://127.0.0.1:56434';
 const config=`EXPO_PUBLIC_SUPABASE_URL=${ORIGIN}\nEXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=synthetic-local-agency-fixture-only\n`;
 const hash=value=>createHash('sha256').update(value).digest('hex');
@@ -69,7 +71,10 @@ async function main(action){
   try{
    assert.deepEqual(await inventory(db),receipt.sourceBefore);
    assert.equal((await db.query("select lower(U&'\\00c1') value")).rows[0].value,'á');
-   for(const name of (await readdir(resolve(ROOT,'supabase/migrations'))).filter(n=>/^20261007\d{6}_.*\.sql$/.test(n)).sort())await db.query(await readFile(resolve(ROOT,'supabase/migrations',name),'utf8'));
+   const migrations=await migrationArtifacts();
+   await db.query('create schema if not exists supabase_migrations;create table if not exists supabase_migrations.schema_migrations(version text primary key,statements text[],name text);create table if not exists supabase_migrations.karmahouse_migration_checksums(version text primary key references supabase_migrations.schema_migrations(version),sha256 text not null,applied_at timestamptz default now())');
+   for(const m of migrations){await db.query('begin');try{await db.query(m.sql);await db.query('insert into supabase_migrations.schema_migrations(version,statements,name)values($1,$2,$3)',[m.version,[m.sql],m.file.slice(15,-4)]);await db.query('insert into supabase_migrations.karmahouse_migration_checksums(version,sha256)values($1,$2)',[m.version,m.sha256]);await db.query('commit')}catch(error){await db.query('rollback');throw error}}
+
    await db.query(`create or replace function kh_private.push_http_post(p_kind text,p_payload jsonb) returns bigint language plpgsql security definer set search_path='' as $$begin raise exception 'UI fixture prohibits provider transport';end$$;`);
    await db.query('begin');await db.query(await readFile(resolve(ROOT,'supabase/tests/helpers/agency_fixture.sql'),'utf8'));
    const actorRoles=['owner','coordinator-a','moderator','manager-a','manager-b','buyer-one','buyer-two','invitee','admin-a','admin-b'];

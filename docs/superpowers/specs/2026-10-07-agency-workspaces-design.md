@@ -1,7 +1,7 @@
 # Espacios de inmobiliarias y cartera compartida
 
 Fecha: 7 de octubre de 2026.
-Estado: implementación local autorizada mediante «comienza con el plan» el 7 de octubre de 2026; despliegue y activación pendientes.
+Estado histórico del 7 de octubre: implementación local autorizada mediante «comienza con el plan». Actualización Task 15, 8 de octubre: el usuario autorizó posteriormente migraciones de producción y activación; su ejecución sigue pendiente de gates de revisión/cliente/release y corresponde al controlador. Esta tarea solo acredita preparación local, no activación. Véase `docs/agency-workspaces-activation.md`.
 
 ## 1. Objetivo y decisiones confirmadas
 
@@ -17,7 +17,7 @@ El usuario ha confirmado estas reglas:
 6. El coordinador puede hacer todo lo que hace un gestor. El administrador puede hacer todo lo que hacen el gestor y el coordinador.
 7. Solo las inmobiliarias verificadas por KarmaHouse pueden publicar sin aprobación individual de sus anuncios. La agencia puede solicitar la verificación; únicamente KarmaHouse la concede, y se muestra mediante un check verde.
 
-Las secciones siguientes concretan la propuesta de producto y sus límites para revisión. No constituyen una aprobación de implementación.
+Las secciones siguientes conservan la propuesta de producto y sus límites tal como se formularon para revisión el 7 de octubre; la propuesta por sí sola no constituía aprobación. Las autorizaciones posteriores indicadas arriba gobiernan la implementación y el release actuales.
 
 ## 2. Arquitectura recomendada
 

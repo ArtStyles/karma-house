@@ -26,7 +26,8 @@ function Requests({ personal }: {
         body: string;
         request: string;
     } | null>(null);
-    const allowed = Boolean(w.ready && w.enabled && auth.session && !auth.suspended && (personal || w.activeAgency?.state === 'approved' && w.membership?.role === 'admin'));
+    const allowed = Boolean(w.ready && auth.session && !auth.suspended && (personal || w.activeAgency && w.membership?.role === 'admin'));
+    const operational = w.enabled && (personal || w.activeAgency?.state==='approved');
     const load = useCallback(async () => {
         if (!repository || !allowed)
             return;
@@ -43,7 +44,7 @@ function Requests({ personal }: {
                 current=await repository.listPersonalAuthorizations(offset,c);
             }
             else {
-                const agency = w.captureAgencyContext();
+                const agency = w.captureAgencyReadContext();
                 c = agency;
                 m = await repository.listMandates(offset, agency);
                 ch = await repository.listChanges(offset, agency);
@@ -72,7 +73,7 @@ function Requests({ personal }: {
             catch { }
             c?.release();
         }
-    }, [allowed, offset, personal, scope, w.captureAccountContext, w.captureAgencyContext]);
+    }, [allowed, offset, personal, scope, w.captureAccountContext, w.captureAgencyReadContext]);
     useFocusEffect(useCallback(() => { scope.enter(`${personal}:${offset}`); setMandates([]);setAuthorizations([]); setChanges([]); pending.current = null; void load(); return () => scope.leave(); }, [load, offset, personal, scope]));
     async function act(action: 'request' | 'accept' | 'reject' | 'withdraw', item?: AgencyMandateRequest | PropertyChangeRequest | CurrentAgencyMandate) {
         if (!repository || !allowed || busy)
@@ -137,10 +138,10 @@ function Requests({ personal }: {
     return <SafeAreaView style={s.safe} edges={['top', 'bottom', 'left', 'right']}><ScrollView contentContainerStyle={s.content}><PageTitle title="Autorizaciones y cambios" subtitle={personal ? 'Tus viviendas personales' : w.activeAgency?.tradeName ?? 'Inmobiliaria'} back/>
  {!allowed ? <Notice>Inicia sesión y selecciona el contexto autorizado para revisar estas solicitudes.</Notice> : <>
  {Boolean(issue) && <Notice error>{issue}</Notice>}<Button label="Actualizar solicitudes" secondary loading={busy} onPress={() => void load()}/>
- {!personal && <View style={s.card}><Text style={s.title}>Solicitar una vivienda compartida</Text><AgencyTextField label="Enlace público o UUID de la vivienda" value={link} onChangeText={setLink} editable={!busy}/><AgencyTextField label="Referencia interna de tu inmobiliaria" value={reference} onChangeText={setReference} maxLength={100} editable={!busy}/><Button label="Solicitar autorización al origen" disabled={busy || !link.trim() || !reference.trim()} onPress={() => void act('request')}/></View>}
- {authorizations.map(item=><View key={`${item.propertyId}:${item.agencyId}`} style={s.card}><Text style={s.title}>Autorización vigente · {item.agencyName}</Text><Text selectable style={s.copy}>{item.propertyId}</Text>{item.internalReference&&<Text style={s.copy}>Tu referencia: {item.internalReference}</Text>}<Button label="Ver vivienda autorizada" secondary onPress={()=>router.push(`/property/${item.propertyId}`)}/><Button label="Retirar autorización vigente" secondary disabled={busy} onPress={()=>void act('withdraw',item)}/></View>)}
- {mandates.map(item => <View key={item.id} style={s.card}><Text style={s.title}>{item.agencyName}</Text><Text style={s.copy}>Autorización · {states[item.state]}</Text><Text selectable style={s.copy}>{item.propertyId}</Text>{item.internalReference && <Text style={s.copy}>Tu referencia: {item.internalReference}</Text>}<Button label="Ver vivienda" secondary onPress={() => router.push(`/property/${item.propertyId}`)}/>{item.canDecide && <><Button label="Autorizar colaboración" disabled={busy} onPress={() => void act('accept', item)}/><Button label="Rechazar solicitud" secondary disabled={busy} onPress={() => void act('reject', item)}/></>}{item.canWithdraw && item.state==='pending' && <Button label="Retirar solicitud pendiente" secondary disabled={busy} onPress={() => void act('withdraw', item)}/>}</View>)}
- {changes.map(item => <View key={item.id} style={s.card}><Text style={s.title}>Cambio de {item.kind === 'price' ? 'precio' : 'contenido'} · {item.agencyName}</Text><Text style={s.copy}>{states[item.state]} · Versión de vivienda {item.expectedPropertyVersion}</Text><Text selectable style={s.copy}>{item.propertyId}</Text>{Object.entries(item.proposedPayload).map(([key, value]) => <Text key={key} style={s.copy}>{fieldLabels[key] ?? key}: {typeof value === 'string' ? value : JSON.stringify(value)}</Text>)}{item.canDecide && <><Notice>Al aceptar se envía el cambio a publicación. El origen y los bloqueos de KarmaHouse determinan si requiere revisión.</Notice><Button label="Aceptar y enviar cambio" disabled={busy} onPress={() => void act('accept', item)}/><Button label="Rechazar cambio" secondary disabled={busy} onPress={() => void act('reject', item)}/></>}</View>)}
+ {operational && !personal && <View style={s.card}><Text style={s.title}>Solicitar una vivienda compartida</Text><AgencyTextField label="Enlace público o UUID de la vivienda" value={link} onChangeText={setLink} editable={!busy}/><AgencyTextField label="Referencia interna de tu inmobiliaria" value={reference} onChangeText={setReference} maxLength={100} editable={!busy}/><Button label="Solicitar autorización al origen" disabled={busy || !link.trim() || !reference.trim()} onPress={() => void act('request')}/></View>}
+ {authorizations.map(item=><View key={`${item.propertyId}:${item.agencyId}`} style={s.card}><Text style={s.title}>Autorización vigente · {item.agencyName}</Text><Text selectable style={s.copy}>{item.propertyId}</Text>{item.internalReference&&<Text style={s.copy}>Tu referencia: {item.internalReference}</Text>}<Button label="Ver vivienda autorizada" secondary onPress={()=>router.push(`/property/${item.propertyId}`)}/><Button label="Retirar autorización vigente" secondary disabled={busy||!operational} onPress={()=>void act('withdraw',item)}/></View>)}
+ {mandates.map(item => <View key={item.id} style={s.card}><Text style={s.title}>{item.agencyName}</Text><Text style={s.copy}>Autorización · {states[item.state]}</Text><Text selectable style={s.copy}>{item.propertyId}</Text>{item.internalReference && <Text style={s.copy}>Tu referencia: {item.internalReference}</Text>}<Button label="Ver vivienda" secondary onPress={() => router.push(`/property/${item.propertyId}`)}/>{operational && item.canDecide && <><Button label="Autorizar colaboración" disabled={busy} onPress={() => void act('accept', item)}/><Button label="Rechazar solicitud" secondary disabled={busy} onPress={() => void act('reject', item)}/></>}{operational && item.canWithdraw && item.state==='pending' && <Button label="Retirar solicitud pendiente" secondary disabled={busy} onPress={() => void act('withdraw', item)}/>}</View>)}
+ {changes.map(item => <View key={item.id} style={s.card}><Text style={s.title}>Cambio de {item.kind === 'price' ? 'precio' : 'contenido'} · {item.agencyName}</Text><Text style={s.copy}>{states[item.state]} · Versión de vivienda {item.expectedPropertyVersion}</Text><Text selectable style={s.copy}>{item.propertyId}</Text>{Object.entries(item.proposedPayload).map(([key, value]) => <Text key={key} style={s.copy}>{fieldLabels[key] ?? key}: {typeof value === 'string' ? value : JSON.stringify(value)}</Text>)}{operational && item.canDecide && <><Notice>Al aceptar se envía el cambio a publicación. El origen y los bloqueos de KarmaHouse determinan si requiere revisión.</Notice><Button label="Aceptar y enviar cambio" disabled={busy} onPress={() => void act('accept', item)}/><Button label="Rechazar cambio" secondary disabled={busy} onPress={() => void act('reject', item)}/></>}</View>)}
  {!busy && !mandates.length && !changes.length && !authorizations.length && <Notice>No hay solicitudes en esta página.</Notice>}{offset > 0 && <Button label="Página anterior" secondary disabled={busy} onPress={() => setOffset(offset - 30)}/>}{more && <Button label="Siguiente página" secondary disabled={busy} onPress={() => setOffset(offset + 30)}/>}</>}
  </ScrollView></SafeAreaView>;
 }

@@ -2,7 +2,7 @@ import type {AgencyPushTarget} from '../push/types.ts';
 import type {AgencyWorkspaceContextValue} from '../agencies/AgencyProvider.tsx';
 
 type NavigationWorkspace = Pick<AgencyWorkspaceContextValue,
- 'captureAccountContext'|'refreshAgencies'|'setActiveAgency'|'getCurrentWorkspace'|'resetAgencyContext'>;
+ 'captureAccountContext'|'refreshAgencies'|'setActiveAgencyForRead'|'getCurrentWorkspace'|'resetAgencyContext'>;
 
 export interface PreparedAgencyNavigation {
  /** Synchronous final checkpoint and router handoff; the captured scope is released afterward. */
@@ -33,7 +33,7 @@ export async function prepareAgencyNotificationTarget(target:AgencyPushTarget,w:
   context.checkpoint();
   if(target.agencyId){
    await w.refreshAgencies();context.checkpoint();
-   await w.setActiveAgency(target.agencyId);context.checkpoint();
+   await w.setActiveAgencyForRead(target.agencyId);context.checkpoint();
    const current=w.getCurrentWorkspace();
    if(current.activeAgencyId!==target.agencyId||current.membership?.state!=='active')throw Error('KH_AGENCY_CONTEXT_CHANGED');
   }else w.resetAgencyContext();

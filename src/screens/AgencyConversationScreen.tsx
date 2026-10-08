@@ -43,15 +43,15 @@ export default function AgencyConversationScreen() {
         body: string;
     } | null>(null);
     const visible = state.scope === scope ? state : null, c = visible?.conversation;
-    const capture = useCallback((): CapturedAccountContext | CapturedAgencyContext => {
+    const capture = useCallback((write=false): CapturedAccountContext | CapturedAgencyContext => {
         if (!isUuid(id) || (agencyId && !isUuid(agencyId)))
             throw Error('Enlace de conversación inválido.');
         if (agencyId && w.activeAgencyId !== agencyId)
             throw Error('Selecciona el espacio de esta inmobiliaria para abrir su conversación.');
-        const base = agencyId ? w.captureAgencyContext() : w.captureAccountContext(), version = epoch.current, key = current.current;
+        const base = agencyId ? (write?w.captureAgencyContext():w.captureAgencyReadContext()) : w.captureAccountContext(), version = epoch.current, key = current.current;
         return { ...base, checkpoint() { base.checkpoint(); if (version !== epoch.current || key !== current.current)
                 throw Error('KH_AGENCY_CONTEXT_CHANGED'); } };
-    }, [id, agencyId, agencyId ? w.activeAgencyId : null, w.captureAgencyContext, w.captureAccountContext]);
+    }, [id, agencyId, agencyId ? w.activeAgencyId : null, w.captureAgencyReadContext,w.captureAgencyContext, w.captureAccountContext]);
     const load = useCallback(async () => {
         if (!repo || !auth.user)
             return;
@@ -87,13 +87,13 @@ export default function AgencyConversationScreen() {
         void load();
         return () => { epoch.current++; busyRef.current = false; };
     }, [load,scope]));
-    async function act(work:(ctx:ReturnType<typeof capture>)=>Promise<void>) {
+    async function act(work:(ctx:ReturnType<typeof capture>)=>Promise<void>,write=false) {
         if(busyRef.current) return;
         busyRef.current=true;
         setBusy(true);
         let ctx:ReturnType<typeof capture>|undefined;
         try {
-            ctx=capture();
+            ctx=capture(write);
             await work(ctx);
             ctx.checkpoint();
         } catch(error) {
@@ -117,7 +117,7 @@ export default function AgencyConversationScreen() {
             setBody('');
             setState(old=>({...old,messages:mergeAgencyMessages(old.messages,[message]),error:''}));
             await load();
-        });
+        },true);
     }
     const counterpartActions = agencyConversationCounterparts(c ?? null, (visible?.messages ?? []).map(m => m.senderId), auth.user?.id, !!agencyId);
     const counterparts = counterpartActions.map(target => target.userId);
@@ -126,8 +126,8 @@ export default function AgencyConversationScreen() {
   {!auth.user ? <AccountPrompt returnTo={`/agency-conversation/${id}${agencyId ? `?agencyId=${agencyId}` : ''}`}/> : <>
    <Notice>Esta conversación pertenece a {c?.agencyName ?? 'la inmobiliaria elegida'}. Solo tú y su equipo autorizado podéis verla. Las conversaciones personales siguen siendo privadas.</Notice>
    {visible?.error && <Notice error>{visible.error}</Notice>}<Button label="Actualizar mensajes" secondary loading={busy} onPress={() => void load()}/>
-   {c && agencyId && c.assigneeId !== auth.user.id && w.membership?.role !== 'manager' && !c.closedReason && <Button label="Tomar este caso" loading={busy} onPress={() => void act(async (ctx) => { if (!supabase || !('agencyId' in ctx))
-            return; await createAgencyDealRepository(supabase).assign({ dealId: c.dealId, userId: ctx.userId, expectedVersion: c.dealVersion, clientRequestId: createMessageId() }, ctx); await load(); })}/>}
+   {w.enabled && w.activeAgency?.state==='approved' && c && agencyId && c.assigneeId !== auth.user.id && w.membership?.role !== 'manager' && !c.closedReason && <Button label="Tomar este caso" loading={busy} onPress={() => void act(async (ctx) => { if (!supabase || !('agencyId' in ctx))
+            return; await createAgencyDealRepository(supabase).assign({ dealId: c.dealId, userId: ctx.userId, expectedVersion: c.dealVersion, clientRequestId: createMessageId() }, ctx); await load(); },true)}/>}
    {visible?.hasMore && <Button label="Ver mensajes anteriores" secondary loading={busy} onPress={() => void act(async (ctx) => { if (!repo)
             return; const page = await repo.history(id, visible.messages[0]?.seq ?? null, ctx); ctx.checkpoint(); setState(old => ({ ...old, messages: mergeAgencyMessages(old.messages, page.items), hasMore: page.hasMore })); })}/>}
    {visible?.messages.map(m => <View key={m.id} style={s.card}><Text style={s.meta}>{m.senderId === null ? 'Cuenta eliminada' : m.senderId === auth.user?.id ? 'Tú' : m.senderId === c?.buyerId ? 'Comprador' : `Equipo · participante ${counterparts.indexOf(m.senderId)+1}`} · {new Date(m.createdAt).toLocaleString('es', { timeZone: 'America/Havana' })}</Text><Text selectable style={s.body}>{m.body}</Text></View>)}
