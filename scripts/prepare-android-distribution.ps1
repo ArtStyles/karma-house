@@ -3,7 +3,8 @@ param(
   [string]$ApkPath,
   [string]$SdkPath = '',
   [string]$JdkPath = '',
-  [string]$BuildToolsVersion = '36.0.0'
+  [string]$BuildToolsVersion = '36.0.0',
+  [string]$PrivateConfigurationPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -27,7 +28,8 @@ $hashBefore = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLower
 $verification = @(& (Join-Path $PSScriptRoot 'verify-android-preview.ps1') `
   -ApkPath $source -SdkPath $SdkPath -JdkPath $JdkPath -BuildToolsVersion $BuildToolsVersion `
   -ExpectedVersion $expoConfig.version -ExpectedVersionCode $expoConfig.android.versionCode `
-  -ExpectedPackage $expoConfig.android.package -ExpectedCertificateSha256 $releaseCertificate)
+  -ExpectedPackage $expoConfig.android.package -ExpectedCertificateSha256 $releaseCertificate `
+  -PrivateConfigurationPath $PrivateConfigurationPath)
 $hashAfter = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($hashBefore -ne $hashAfter) { throw 'El APK cambió durante la verificación.' }
 
@@ -51,7 +53,11 @@ VersionCode: $($expoConfig.android.versionCode)
 SHA-256 de KarmaHouse.apk: $hashAfter
 SHA-256 del certificado: $releaseCertificate
 
-Incluye una corrección del decodificador de enlaces frente a entradas malformadas.
+Incluye espacios de inmobiliarias: registro y revisión, equipos, cartera compartida,
+conversaciones, propuestas, agenda, seguimiento y confirmación de cierres.
+La aprobación de cada inmobiliaria y su sello de verificación son decisiones separadas.
+Los cierres conservan el historial y terminan los compromisos comerciales afectados.
+Incluye avisos de inmobiliarias y consulta autorizada del historial con el módulo apagado.
 El APK conserva el certificado de las versiones anteriores.
 Android puede solicitar autorización para instalar desde el navegador y un
 análisis de Play Protect. Mantén Play Protect activado. Esta entrega no implica

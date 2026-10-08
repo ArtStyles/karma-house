@@ -7,10 +7,10 @@ import {
 import { Cenefa, Mediopunto, ProvinceMarquee, Reveal, Stagger, StaggerItem, VerbRotator } from './ui';
 
 const RELEASE = 'https://github.com/ArtStyles/karma-house/releases';
-const APK = `${RELEASE}/download/v0.1.16/KarmaHouse.apk`;
+const APK = `${RELEASE}/download/v0.1.20/KarmaHouse.apk`;
 const SHA = `${APK}.sha256`;
-const NOTES = `${RELEASE}/tag/v0.1.16`;
-const INSTALL = `${RELEASE}/download/v0.1.16/INSTALACION.txt`;
+const NOTES = `${RELEASE}/tag/v0.1.20`;
+const INSTALL = `${RELEASE}/download/v0.1.20/INSTALACION.txt`;
 const LEGAL = 'https://artstyles.github.io/karma-house';
 const CONTACT = 'mailto:hernandezfrankjames@gmail.com';
 const ASSISTED_EMAIL = 'fejames07@gmail.com';
@@ -352,7 +352,7 @@ function Download() {
           <Reveal className="relative">
             <span className="inline-flex items-center gap-2.5 rounded-full border border-white/15 px-3.5 py-1.5 text-xs font-semibold text-sol">
               <span className="relative flex size-2" aria-hidden="true"><span className="absolute inline-flex size-full rounded-full bg-sol opacity-60 motion-safe:animate-ping" /><span className="relative inline-flex size-2 rounded-full bg-sol" /></span>
-              Disponible para Android · 0.1.16
+              Disponible para Android · 0.1.20
             </span>
             <h2 id="android-title" className="mt-7 text-[clamp(2.3rem,4.4vw,3.8rem)] text-white">Tu búsqueda,<br /><span className="text-sol">también en tu bolsillo.</span></h2>
             <p className="mt-6 max-w-[28rem] leading-relaxed">KarmaHouse para Android reúne catálogo, mapa y conversaciones. Fotos optimizadas y ahorro de datos para aprovechar mejor tu conexión.</p>
@@ -360,7 +360,7 @@ function Download() {
               <a className="group inline-flex min-h-12 items-center gap-3 rounded-full bg-sol px-6 text-sm font-semibold text-mar transition hover:bg-[#f0c46a] active:scale-[.98]" href={APK}>Descargar APK <ArrowRight className={ARROW} aria-hidden="true" /></a>
               <a className="inline-flex min-h-11 items-center text-sm font-semibold text-white underline-offset-4 hover:underline" href={NOTES}>Ver la versión</a>
             </div>
-            <p className="mt-7 text-xs leading-relaxed">Versión 0.1.16 · 84,5 MB · Android 7 o superior<br />Publicar y contactar es gratis</p>
+            <p className="mt-7 text-xs leading-relaxed">Versión 0.1.20 · Android 7 o superior<br />Publicar y contactar es gratis</p>
             <p className="mt-3 text-xs leading-relaxed">APK firmado con el certificado oficial de KarmaHouse. <a className="text-white underline underline-offset-4" href={INSTALL}>Instrucciones para instalar y actualizar</a> · <a className="text-white underline underline-offset-4" href={SHA}>Comprobación SHA-256</a></p>
           </Reveal>
           <Reveal delay={0.1} className="relative rounded-[28px] border border-white/10 bg-white/[.04] p-7 backdrop-blur-sm">
@@ -388,7 +388,7 @@ function Download() {
 
 const FAQ: [string, ReactNode][] = [
   ['¿Cuánto cuesta usar KarmaHouse?', 'Publicar, buscar y conversar es gratis. KarmaHouse no cobra comisión por las operaciones ni interviene en la negociación entre las partes.'],
-  ['¿Ya puedo descargar la app?', <>Sí. KarmaHouse 0.1.16 está disponible para Android 7 o superior. <a href={APK}>Descarga el APK oficial</a> e instálalo siguiendo las instrucciones de esta página. Si ya tienes KarmaHouse, instala la actualización sobre la versión anterior.</>],
+  ['¿Ya puedo descargar la app?', <>Sí. KarmaHouse 0.1.20 está disponible para Android 7 o superior. <a href={APK}>Descarga el APK oficial</a> e instálalo siguiendo las instrucciones de esta página. Si ya tienes KarmaHouse, instala la actualización sobre la versión anterior.</>],
   ['¿Por qué Android puede mostrar un aviso?', 'El APK se instalará fuera de Google Play. Android puede pedir autorización para ese origen y Play Protect puede solicitar un análisis. Mantén Play Protect activo y espera el resultado. Si identifica el archivo como dañino, detén la instalación y contacta con nosotros.'],
   ['¿Cómo compruebo que el APK es el original?', <>Descárgalo desde el enlace oficial de esta página y compara su hash con el <a href={SHA}>archivo SHA-256 de esta versión</a>. Las <a href={NOTES}>notas de la entrega</a> también lo incluyen. Compararlo permite detectar cambios; no sustituye al análisis de Play Protect ni implica una aprobación de Google.</>],
   ['¿Quién ve mi teléfono o mi correo?', 'Otros usuarios no ven esos datos de tu cuenta. La conversación ocurre dentro de la app y puedes bloquear o reportar contactos.'],

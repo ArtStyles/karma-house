@@ -7,7 +7,9 @@ param(
   [string]$ExpectedVersion = '',
   [string]$ExpectedPackage = '',
   [Nullable[int]]$ExpectedVersionCode = $null,
-  [string]$ExpectedCertificateSha256 = ''
+  [string]$ExpectedCertificateSha256 = '',
+  # Reference only: never copied into the public configuration or the APK.
+  [string]$PrivateConfigurationPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -55,7 +57,8 @@ function Test-PrivateCredentialText([string]$Text) {
 }
 
 $publicConfiguration = Read-LocalConfiguration (Join-Path $projectPath '.env.local')
-$privateConfiguration = Read-LocalConfiguration (Join-Path $projectPath 'infra\.env.local')
+if (!$PrivateConfigurationPath) { $PrivateConfigurationPath = Join-Path $projectPath 'infra\.env.local' }
+$privateConfiguration = Read-LocalConfiguration $PrivateConfigurationPath
 $publicNames = @('EXPO_PUBLIC_SUPABASE_URL', 'EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY')
 $privateNames = @('SUPABASE_SECRET_KEY', 'SUPABASE_DB_PASSWORD', 'KARMAHOUSE_ADMIN_EMAIL')
 foreach ($name in $publicNames) {

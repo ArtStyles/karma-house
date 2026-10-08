@@ -1,0 +1,2631 @@
+{
+  "at": "2026-10-08T14:35:53.223Z",
+  "source": ".superpowers/sdd",
+  "privateArchive": "artifacts/agency-release-preparation/sdd-archive",
+  "files": 523,
+  "skipped": [
+    "2026-10-07-agency-workspaces/node_modules-shared",
+    "2026-10-07-agency-workspaces/postgres-data"
+  ],
+  "ledgerRulings": 99,
+  "masterRulings": 59,
+  "phaseOccurrences": 40,
+  "unmatched": 0,
+  "entries": [
+    {
+      "path": "2026-10-07-agency-foundation/task-3-4-fix-round-1-report.md",
+      "bytes": 4910,
+      "sha256": "e2978f02fec04b5b6d5d69fd79dfac06a684c3e86aefc1ebea898ebceb77f4a9"
+    },
+    {
+      "path": "2026-10-07-agency-foundation/task-3-report.md",
+      "bytes": 6118,
+      "sha256": "a23852b401a8dfc1b9825d4253ad029730ed1080efdbe3542717f8907555aabc"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/baseline.log",
+      "bytes": 39573,
+      "sha256": "708ac1ee92ef21e9c7a7541c6d5136190a530618c384df6fe8115de63196b013"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/dependencies-copy.log",
+      "bytes": 2,
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/expo-web.pid",
+      "bytes": 7,
+      "sha256": "83df831132b4b28d6910ddbd54a6ddd3d6751c060ee525f442c2a0b817a522bb"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/expo-web.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/expo-web.stdout.log",
+      "bytes": 192410,
+      "sha256": "f3c189c1a935737e869dee8ee082b54941c623c9b29df13553b3e4ea3ea68996"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/hosted-auth-preflight-readonly.json",
+      "bytes": 203,
+      "sha256": "f127ff6ae288fdb34df1512f10872b28bd02556ade7d17540853da824ad2be43"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/hosted-dependency-preflight-readonly.json",
+      "bytes": 2690,
+      "sha256": "b5969a0af7a019b4270cae1855f35ff4f49e77c4300e2ba557b8a9e7aa0670d5"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/hosted-locale-preflight-readonly.json",
+      "bytes": 159,
+      "sha256": "85f0c64b7bf5e98192352bf487244c07c41a21c7d13e4481593aa5f320bf9189"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/hosted-preflight-readonly.json",
+      "bytes": 568,
+      "sha256": "6ce77511b3d2fba853fa2eca05c8d97bceb638a04abdf5fbe092be5ea6031ec2"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/inspect-hosted-dependencies-readonly.mjs",
+      "bytes": 3054,
+      "sha256": "a09cc91f186a2d466ff3fc44371812ff0ab448159978137cc7607da8f991ff2a"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/inspect-hosted-locale-readonly.mjs",
+      "bytes": 492,
+      "sha256": "671e8268e3b134bbaa0cf2a6d6642da9ab4f5ffad522b919090414b9b1724b7d"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/plan-path",
+      "bytes": 122,
+      "sha256": "518f267a50c2354e5cb42bc9e01f66b74a6d26fb159411d593b097ed656151e9"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/postgres-init.log",
+      "bytes": 1105,
+      "sha256": "ce5027761d7c5130fbbd5a31a81b00eccdd2483e09d334dc23d37c2853995812"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/postgres.log",
+      "bytes": 1903442,
+      "sha256": "50d9e347eccedca7b40bb204a242caadb1a4751514878a1d98eda148f28ab0ed"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/progress.md",
+      "bytes": 82812,
+      "sha256": "255b3e80967ba43c35a6a0df6d8cd68a8dcd7e97a1de2bca0eb7ac9adfa2142a"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/rulings-snapshot.json",
+      "bytes": 77508,
+      "sha256": "014d083967c70fcd081db0ccc35c7260633bccfca873f18ca9acfd2e1ed3feab"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/sql-baseline.log",
+      "bytes": 1332,
+      "sha256": "dab082cedb307a02ee8cbb30c4de47d2526c2f0ce81cfa1c7d04128ea51b68e9"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/task-1-green.log",
+      "bytes": 40151,
+      "sha256": "f704f46eb38bb3aa9b45b371af950c882a355a5aaffe3e35e2c0ef03ee00d522"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/task-1-red.log",
+      "bytes": 1521,
+      "sha256": "a735b6e575acfd95540b2da35fbb8ff6dc78ddb58cfe10c4119035545bf8615a"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/task-1-runner-red.log",
+      "bytes": 3385,
+      "sha256": "c033f96fa6710a309fb5e25cd2d53f0b6e293bd1e93ef4ad60f0d189b63b4963"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/task-11-preflight.md",
+      "bytes": 5644,
+      "sha256": "44be037476e4049663645cc54914939ea20c9b2a253491ca2d08c6aff239abb0"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/task-2-green.log",
+      "bytes": 40426,
+      "sha256": "efe539e7d4e0b0829a030bbd69616a316353f0b15c4fbe7f072d345b6d117cd1"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/task-2-repository-red.log",
+      "bytes": 1548,
+      "sha256": "d960332e58fddc8783f7ec579e0d5b5e225f541634a31518b3d7d9d6ec92af95"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/task-8-preflight.md",
+      "bytes": 6357,
+      "sha256": "79ebb96a3c225a02726611678b0fc7c82f56c7f2bfad1a085a204848131b654f"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/task14-preflight-notes.md",
+      "bytes": 16949,
+      "sha256": "33e1d108e2160b8a00defa97c8cd72ea11c8f164c3cbac7640914d4a789dc246"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/task4-check.log",
+      "bytes": 41841,
+      "sha256": "f1c38ccd033355fc3d9f6f500b62bb4f481ab8e6caf51ccd420995e42ec63290"
+    },
+    {
+      "path": "2026-10-07-agency-foundation/plan-path",
+      "bytes": 122,
+      "sha256": "5c33ec4d5ec6b83cf013ae5300b56ce262bbb551eb04d4041a5c315c346665ff"
+    },
+    {
+      "path": "2026-10-07-agency-foundation/progress.md",
+      "bytes": 545,
+      "sha256": "e6a9691dd886a3cfc7a666342fff53d0a26f3cb673f5a0960e824e8372f685f0"
+    },
+    {
+      "path": "2026-10-07-agency-foundation/review-70cb0ee..837c386.diff",
+      "bytes": 100416,
+      "sha256": "594f1df7bf375338233ab4ca51f46738bda7df329e0a19bf1421501186b1fc71"
+    },
+    {
+      "path": "2026-10-07-agency-foundation/review-837c386..e39c059.diff",
+      "bytes": 55530,
+      "sha256": "d758fabd157853d616c1b17a7ee57e8acbd19b86d6ea26f508e68a6ae9dccdcc"
+    },
+    {
+      "path": "2026-10-07-agency-foundation/review-e39c059..d48a45f.diff",
+      "bytes": 97344,
+      "sha256": "00aad9dd69b83077ba980e0581b2db9ff52e670fc2e51890cee8c4243d4556a5"
+    },
+    {
+      "path": "2026-10-07-agency-foundation/task-1-brief.md",
+      "bytes": 5617,
+      "sha256": "0ff2904fb13c2c0fe27b28127d2cce4ea48b215d4e2a36a496ee884f82374a4e"
+    },
+    {
+      "path": "2026-10-07-agency-foundation/task-1-tests.log",
+      "bytes": 39688,
+      "sha256": "6ff14030a0e9249d50478dbe4e1c0bb1221c9336321be4d74f0c78648ad38465"
+    },
+    {
+      "path": "2026-10-07-agency-foundation/task-2-brief.md",
+      "bytes": 6855,
+      "sha256": "3d4ec3e0bf7e290b722f224d1d2241960e07325f0744e4fe3e46d86ea0f40cda"
+    },
+    {
+      "path": "2026-10-07-agency-foundation/task-2-tests.log",
+      "bytes": 363,
+      "sha256": "0f69cb6474eb108f5dcd72ecfe8c7d7fd921aed627bfca0353d4def14ce11e55"
+    },
+    {
+      "path": "2026-10-07-agency-foundation/task-3-brief.md",
+      "bytes": 4152,
+      "sha256": "cb37ad3220ada1c260534d6104fcbb0a6321e2c3efde04131ea2b003dc520d66"
+    },
+    {
+      "path": "2026-10-07-agency-foundation/task-4-brief.md",
+      "bytes": 2541,
+      "sha256": "24b4ea64a4b489a388379b51bce6f816ccc4fa1eeb11847114fd62949df1324c"
+    },
+    {
+      "path": "2026-10-07-agency-foundation/task-4-report.md",
+      "bytes": 2027,
+      "sha256": "cabd60976afaabbae1380d423e9ccfafe75d909cbf7e531dcbf4a8f9649930c6"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/plan-path",
+      "bytes": 129,
+      "sha256": "e20c6eec2a27660986ad71e34dda5ba0ab8af6171b94ae407db1c3aa77e549b6"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/progress.md",
+      "bytes": 8437,
+      "sha256": "86310ac940ccaa705b600a3f435e39baa17b888e0efba88bdddf527fcca78f6b"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/review-11ba854..380aaf3.diff",
+      "bytes": 98427,
+      "sha256": "2374b44475c6da38b1d86dcebdd88ecb52318be92a0a97600564818e543b909c"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/review-380aaf3..f3f011f.diff",
+      "bytes": 36058,
+      "sha256": "b041079a4b31e29a5b19633113aad5436c76b6efeceb91c206864825f13ac130"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/review-890d05f..fde49a7.diff",
+      "bytes": 71078,
+      "sha256": "9bdbf7537e2674a6ec5294a6e5ae5c538bc8618a453bbae85824707c4d7ea53a"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/review-d48a45f..890d05f.diff",
+      "bytes": 109370,
+      "sha256": "26ce92016cde2e288d3ec660538b0910a75f325243d7fd21f60dd33a5f34f3e3"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/review-f3f011f..0d06183.diff",
+      "bytes": 89844,
+      "sha256": "9faa731580ae25b75ce6d973de9a822689338c396d2fece0791edca80c59d78b"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/review-fde49a7..11ba854.diff",
+      "bytes": 124548,
+      "sha256": "394878ff9ecc931b20a92b07bfeaa176a6b311a24a53e2192cfc5e6182159bcd"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-5-brief.md",
+      "bytes": 6221,
+      "sha256": "59125666ff9ed2064b933dfc186bdbe6227daaa0cfded9eaa4884eac92d678f8"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-5-check.log",
+      "bytes": 43608,
+      "sha256": "0f4ed1d39563748cd1d08841398d971ef6d1f6bf5e43cbc1cda820385b97d54f"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-5-fix-1-check.log",
+      "bytes": 43713,
+      "sha256": "aa2801db6f720c84c3143697197157780e4403129c6bbc9b6db4e16fecf637ed"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-5-fix-1-review.md",
+      "bytes": 5210,
+      "sha256": "958c60e256b53aa639e54c726d4c836c161b61c1a42c08d1deb165a45c1294b9"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-5-report.md",
+      "bytes": 16262,
+      "sha256": "5c055a459602435ead059d1456a9a9a5213c304816b1d58345a6b18202208363"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-5-review.md",
+      "bytes": 8955,
+      "sha256": "19c79b0a2f8464b3f1fb15bc31297635fc51d738faf07421891faba3e683ebbf"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-6-brief.md",
+      "bytes": 5055,
+      "sha256": "d28d2b39eb7c550d827ffbb3d8b6cd82bc0e635acce627e6699512da75de0ae9"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-6-context.md",
+      "bytes": 3394,
+      "sha256": "8f8e0dbe48439cc0a9bc01dcbe7c7c5e94b5e4994405dda41145209d18e29089"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-6-fix-1-review.md",
+      "bytes": 8086,
+      "sha256": "f780922a238edbe025204cd885f30b4cecb5bcc61b0ebe948fbe3301f175d4a6"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-6-fix-2-review.md",
+      "bytes": 6622,
+      "sha256": "e9eb88d7b10d431fe3ff0f93b81912544108f61a6ca398f711bcf1cf6dea69a1"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-6-report.md",
+      "bytes": 22932,
+      "sha256": "4b747e9cae09c088bd4c1992fd26d85571dc07ae05486f6fe15d673b11ba191f"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-6-review.md",
+      "bytes": 13671,
+      "sha256": "e5f5634ba64b23f6b798b5205120752e018970653a6c4cb6ebf7bd2abb282e27"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-7-brief.md",
+      "bytes": 4228,
+      "sha256": "5fe392be3c2ef4b504c949ecbc16394b26510e68f3c82fc1a4d5020e77d9502d"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-7-preflight.md",
+      "bytes": 5217,
+      "sha256": "8629ea1c51661dc193cb20c4c194495a7af18d11b2489cec28f7d009eebd25e0"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-7-report.md",
+      "bytes": 11261,
+      "sha256": "978fb9e37fc7a7b8d3aa536b46736ba8252281e3da86603e2e4182e1093fd2fc"
+    },
+    {
+      "path": "2026-10-07-agency-shared-properties/task-7-review.md",
+      "bytes": 6937,
+      "sha256": "63d635bafa90c7a8ee69f06af163925811ff08ba55786d898cee3d75046aa368"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/plan-path",
+      "bytes": 128,
+      "sha256": "7f23d335af48a61b49313f82510758b3fc1fb9ac28238a0bc7886e8226094f59"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/progress.md",
+      "bytes": 20121,
+      "sha256": "f0c6e910df0aeef3848639e4a391eb6324d55e6f9f220718648791466b824365"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/review-0d06183..935912a.diff",
+      "bytes": 164513,
+      "sha256": "d1e6df604ee9cf0a65e5bc2aedfe0abe72301c21ada365ec8430805e47b16688"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/review-59b07a4..d3f95bc.diff",
+      "bytes": 140124,
+      "sha256": "d321c4da76deb1e6f05351f046b7c85dd08d8b33a44a3cf70e11c9b6f3bee96e"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/review-935912a..d883011.diff",
+      "bytes": 93433,
+      "sha256": "1e398ac3dcf6410e880acf92a8ce76e8fa3506d08fc3c50112b2ae3752723597"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/review-9b92781..bbd11ae.diff",
+      "bytes": 125613,
+      "sha256": "b1952052c1a36e4e2831d2f08d5f353cf7d0381edeff206a48af16e7919ea817"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/review-bbd11ae..48afc18.diff",
+      "bytes": 5023,
+      "sha256": "39746eb42142e65fede2a6e951e9aac910f1b567a34ee2e36771a93d8bf4b4f1"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/review-d3f95bc..9b92781.diff",
+      "bytes": 31766,
+      "sha256": "e419a511182dc87325085997d86067d2cc2a93baf789f7ec9f4702ba79f79075"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/review-d883011..59b07a4.diff",
+      "bytes": 23517,
+      "sha256": "a285745f738c55d28a65334449bfec52d143fe0ea3dd5b7630284cb118cfcc9b"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-10-brief.md",
+      "bytes": 3129,
+      "sha256": "89ad0109d7f954651d6ad9aad36db5dd517726f143bb4f7aadc9f17890c46c25"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-10-diff-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-10-final-check.log",
+      "bytes": 47879,
+      "sha256": "1095c6322622abf0ec22b27890e636eab6c57ef2b3d25ee72c8f1e556ca3684e"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-10-final-sql.log",
+      "bytes": 215,
+      "sha256": "5841f6898d63ae5900b3523f3e1f532c9bc28019c548cea4d4b19c71c3c07649"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-10-fix1-diff-check.log",
+      "bytes": 129,
+      "sha256": "32b38ec39747425ffac703320ec3d56e3725682642a1f9c07147739156103a57"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-10-fix1-followups.log",
+      "bytes": 52,
+      "sha256": "4c937798c0e19be4c21ed398b9b7a830cbe5240a75cc9e6ebf2f2369298cb897"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-10-fix1-review.md",
+      "bytes": 4121,
+      "sha256": "653c9c4e0c85d2e7e8f752c874d7411f274cdbe8fafa661e54be50bceaaf7cd2"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-10-focused-sql.log",
+      "bytes": 52,
+      "sha256": "4c937798c0e19be4c21ed398b9b7a830cbe5240a75cc9e6ebf2f2369298cb897"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-10-focused-ts.log",
+      "bytes": 841,
+      "sha256": "a4e6f67d30cf8f97bc1cf7bff58fd91a615307d66781a8663c076af2793eb398"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-10-preflight.md",
+      "bytes": 9618,
+      "sha256": "c911d33f39902b78b16e962615efc1ca1e75e2876adbee8426170578e65e7d0d"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-10-red-excerpts.log",
+      "bytes": 1318,
+      "sha256": "314829d037dd8b12b4104851a62cbe5421f87693ef1d460f6b971581df3d16dd"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-10-report.md",
+      "bytes": 18850,
+      "sha256": "8f79c7c353bf659ce0e521629bb3af642bb12821d0136129ae7481e68bebe591"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-10-review.md",
+      "bytes": 10103,
+      "sha256": "ea6f97b5ff76ea4f664acb2d3d41ee5cfcb71dfa9314b4076020df4633f0a2d4"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-8-brief.md",
+      "bytes": 5430,
+      "sha256": "65ec001b85aeb61dbbcc98a650268c129e9321e6e43e5e21795f171501fe8c4a"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-8-check.log",
+      "bytes": 46366,
+      "sha256": "ae7800a660f3d5accbefc32a23736671b92429e77774906943b55811f3287845"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-8-fix1-check.log",
+      "bytes": 46573,
+      "sha256": "9e8bdb59ecb95a6c2309b4c00069c7b6652d2ce8b092845b97a7282a6cd5a508"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-8-fix1-review.md",
+      "bytes": 3680,
+      "sha256": "bd7cbefab314be2cadac02a23db7782d4e02365bbfa2a80345c3e32ef94d7bb7"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-8-fix2-check.log",
+      "bytes": 46685,
+      "sha256": "7453e71792ca8c460b79f65ff690c2c4ba1656a9241a35e8702c55b7ec3e1d04"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-8-fix2-review.md",
+      "bytes": 3089,
+      "sha256": "63dd559f405a9ccaca64ca0103b551e43836c28d5d18eb5ef99dca9d7ccc3052"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-8-report.md",
+      "bytes": 35133,
+      "sha256": "d881870a4698192c8595997413a9c298e3ae24d5db8da43c7286ee0c28505c20"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-8-review.md",
+      "bytes": 11227,
+      "sha256": "f14c1991c4df3643f2676f228de857974cced0acaee32ec3c2d284c0d811bfdc"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-9-brief.md",
+      "bytes": 4264,
+      "sha256": "42abf86b7bf6442fe82b432c8f7561496651934e53854e9b466be2cfb6325402"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-9-final-check.log",
+      "bytes": 47146,
+      "sha256": "fb2638a33e365397a3b3f7915820dfd5bf39155f6963d3fd3e23cff7fe61b0ee"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-9-final-concurrency.log",
+      "bytes": 970,
+      "sha256": "5439e05638beefe6c903aa95305f97d7b5ead73d79d6654605ad0b9e4be21622"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-9-final-sql.log",
+      "bytes": 105,
+      "sha256": "9d6cf643230bf4c09080b1ea705b4cbe6d1ed496b71b307481dcfc938b253bfb"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-9-fix1-clock-green.log",
+      "bytes": 255,
+      "sha256": "86caef60cd00641edb3856d28c7d2dbba32e2c989c15bf18672d473c44789d31"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-9-fix1-clock-red.log",
+      "bytes": 750,
+      "sha256": "c1245ee9d8e57cafb3e01e6d2ac12006d150f67e85a6961c5b8cb0903230c772"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-9-fix1-final-check.log",
+      "bytes": 47149,
+      "sha256": "6889db828dae68adcdcdbb7b797bda855072e7793ea161adf330c7c94d780a08"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-9-fix1-focused-ts.log",
+      "bytes": 1935,
+      "sha256": "32d92224492d0e38601aa71d3e4fc8c5b99cb4d7df03b73e3e17f1527ef44063"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-9-fix1-review.md",
+      "bytes": 4297,
+      "sha256": "9e4bc967f287b9285f76b3e9ea197cfd3e45d4c6b652777237802fe2373f2992"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-9-fix1-sql.log",
+      "bytes": 105,
+      "sha256": "9d6cf643230bf4c09080b1ea705b4cbe6d1ed496b71b307481dcfc938b253bfb"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-9-preflight.md",
+      "bytes": 4501,
+      "sha256": "492361deefaf76644771a776ef05b737eca1f7bef20323cfae6aba5896e4576e"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-9-report.md",
+      "bytes": 20957,
+      "sha256": "926a1b94e0fc09e3d0848ff123d13427e4ce2d2abbbc27c86ca988f92ff3f0d2"
+    },
+    {
+      "path": "2026-10-07-agency-commercial-flows/task-9-review.md",
+      "bytes": 11776,
+      "sha256": "2ce2ac8e7b562033389e91102bb29beae07393efc5e19029a0f74a86b9654cec"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/final-review-preflight.md",
+      "bytes": 4004,
+      "sha256": "a348df8cb5a69ac59ef48ab4437bc8e0cc191f9fe1d306a9318689e31f269c75"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/inspect-task12.mjs",
+      "bytes": 328,
+      "sha256": "55497aa67438ce1ad228623a640a14cd60adc94969e4735e47046692c8598c54"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/plan-path",
+      "bytes": 127,
+      "sha256": "56f58f8cc21ee01d4d27b0b498b384cdb79c2bfd0fd7ddc0f151c01f03f7754c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/progress.md",
+      "bytes": 47675,
+      "sha256": "7a41e7fc07667c565503f12cad7f6b0a7b6e3d8d3bc7b7177461d3302fdf24c0"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/review-023b48a..aec0863.diff",
+      "bytes": 21338,
+      "sha256": "ec97148c49a27549609ff96ca5b91045a55dbfad1681bdb7a191ad9d8f990ec3"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/review-21aa4a6..8141e71.diff",
+      "bytes": 52841,
+      "sha256": "c93cddfd66b36a4cd81e3f71b9a0f9e29e2162f17ebec72dc0f5fc513a980940"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/review-48afc18..c0b9b78.diff",
+      "bytes": 118834,
+      "sha256": "0b020706827c1b7a7104d28f33ec6c731e114d0fa1c827b9b78338ada2ec6ef8"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/review-60ee8d6..834bca4.diff",
+      "bytes": 148951,
+      "sha256": "1c44ebcdf30d16aaeff71f40c4e9a905098de44d72d58c94e13a66a5ec273b89"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/review-8141e71..60ee8d6.diff",
+      "bytes": 92404,
+      "sha256": "fc0d57313699b9dc3701629109bcccab9253f2d928ec0698617d55af9c20e26c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/review-834bca4..023b48a.diff",
+      "bytes": 529541,
+      "sha256": "04712ec0d449de5f38cf7c54e3ac9df8364cf9722dc77d3588be1ee9ba04e313"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/review-c0b9b78..da03bf2.diff",
+      "bytes": 60128,
+      "sha256": "88824cd4da87471f1549b8b17a7738b5a406ebf4b0d148c59f05dbe89131beaa"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/review-da03bf2..21aa4a6.diff",
+      "bytes": 147742,
+      "sha256": "472b7945ec485ae56206bb241a6c4c584cf11a93450899a0a26cc859898beb7d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-brief.md",
+      "bytes": 4962,
+      "sha256": "c761d8774a305cc9f36487abdefb462a71cff977dc6e62fd32c16eb0e4d96614"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-date-red.log",
+      "bytes": 347,
+      "sha256": "e4cdccc59b732e9eac88334adf210242016698ae7cb44bc4b2bd009fec009c7e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-final-check.log",
+      "bytes": 48317,
+      "sha256": "6de98f07a9521fe069ac8a662688e12a0d6cfe65d158a0e4203f9ed193814042"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-fix1-check.log",
+      "bytes": 48340,
+      "sha256": "fb0dde9d6ffa912add99bbc2b172bb309e400fb10ce762a4d6c1939927cb2969"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-fix1-committed-diff-check.log",
+      "bytes": 263,
+      "sha256": "66e3410dd20692ed508abdf3a935cf6d8954bd18ab604311594cde4df17b983b"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-fix1-final-sql.log",
+      "bytes": 51,
+      "sha256": "b70de8de2d9e114edf503698908d6ae101c96715b1948e8129517db20372eb33"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-fix1-focused-green.log",
+      "bytes": 51,
+      "sha256": "b70de8de2d9e114edf503698908d6ae101c96715b1948e8129517db20372eb33"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-fix1-format-check.log",
+      "bytes": 169,
+      "sha256": "a748315d20bf7ccbdea7d1ec146d79ef42ee62b2db4b46406ce733d7c051610d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-fix1-format-check.mjs",
+      "bytes": 2260,
+      "sha256": "c1a6a055d17d0dd851938e6c915279a14494b80e5958e3dffe64ab6cf12a6133"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-fix1-red.log",
+      "bytes": 328,
+      "sha256": "6dcc7b545fe44d98bcc4c35578f20854467781c0a53ce9f973906927d4d5c269"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-fix1-review.md",
+      "bytes": 4312,
+      "sha256": "5b25c192df115dc434467286e11ccc95050819ffe438fe1bea4a81f85459b7d7"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-fix1-sql.log",
+      "bytes": 51,
+      "sha256": "b70de8de2d9e114edf503698908d6ae101c96715b1948e8129517db20372eb33"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-fix1-ui-after.js",
+      "bytes": 16112,
+      "sha256": "fff6748521e557dc22906625927de74c8f47df5f15053f5978a79ce5b195ae38"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-fix1-ui-before.js",
+      "bytes": 14903,
+      "sha256": "76395a569696b3b166d7b50d7565b905b919426032990e875e185cacfe46511a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-flows.log",
+      "bytes": 215,
+      "sha256": "5841f6898d63ae5900b3523f3e1f532c9bc28019c548cea4d4b19c71c3c07649"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-focused-sql.log",
+      "bytes": 51,
+      "sha256": "b70de8de2d9e114edf503698908d6ae101c96715b1948e8129517db20372eb33"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-format.mjs",
+      "bytes": 394,
+      "sha256": "c6cd37480cb12a6a8256a0d87455d3765fd945b875a33120a3a8cdf8d7cf8fe2"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-legacy-red.log",
+      "bytes": 763,
+      "sha256": "89c8e823108659dbf457f7173f580787e3a47225d5f40ddae120e748e6dcfa50"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-personal-red.log",
+      "bytes": 391,
+      "sha256": "c2f8b173b0550bb886d9efbfe66dace98c2c6d9efcac7d1771d5d4e15765f55e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-properties.log",
+      "bytes": 328,
+      "sha256": "3601af7fdeaee29c3d12ecae046f4da4ab5eccffcdc921883b6404576cd1fbc8"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-red-excerpts.log",
+      "bytes": 675,
+      "sha256": "5f2fcf7ac3fce3ab652dcae4583a4e030823bc03ee5bb94ece9dca24d1283661"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-red-sql.log",
+      "bytes": 36,
+      "sha256": "bfcd81d6eb26e3edc602377da0f471b1ab922916f93770db25fd84597c64871e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-red-ts.log",
+      "bytes": 3310,
+      "sha256": "000cbdef4bf0edfc2c142d140662674125769405e2e8629b03a8f7671d29175f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-report.md",
+      "bytes": 23082,
+      "sha256": "2545b5d4f2f2d97501b40c580cc2cba550fd62a2b6eb1cd1ed6bbc914d3c96fc"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-review.md",
+      "bytes": 10523,
+      "sha256": "38ec226165c90c31eb5ef65fd3ed98fb7153a30764056c62ae9e225db2787efb"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-11-ui-format-preview.tsx",
+      "bytes": 13924,
+      "sha256": "aecd49ef917b2be4c14a146707a86bb86b175be30ed983cd9dab454a344ed451"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-brief.md",
+      "bytes": 4508,
+      "sha256": "56bc385d5c04ecc85211632cdb0f2b6fc6f253ae1d41df6d1ef2212642858791"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-device-red.log",
+      "bytes": 918,
+      "sha256": "07eef440781f620326f0130b69955d54b51371c5691e1f4e0b69b8bafeb2797d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-diff-check.log",
+      "bytes": 69,
+      "sha256": "036e69afc812630faacd3dec2666a4b00299ecf8f81500b9c850f949a70bedfd"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-final-check.log",
+      "bytes": 49006,
+      "sha256": "1320a3285f6e218a47b184589c119430c7a17fb246de4767ec84291ce4096f8c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-final-notifications.log",
+      "bytes": 56,
+      "sha256": "86208e4679c207bcfd1b791b08547dd71be7a64894e86a53c435e79a1c6a63ea"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-final-reminders.log",
+      "bytes": 52,
+      "sha256": "6f839ca364e22c18fb73702306807b588f64341f502009d90fd60c6579c060e8"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-fix1-clock-green.log",
+      "bytes": 1363,
+      "sha256": "f81c53fa227ec2de574b90212da14eb5f840f65432191285a73ae34158a3f774"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-fix1-clock-red.log",
+      "bytes": 2004,
+      "sha256": "dc059e42be01066ae8f92bfaa12204f03738993f3d516adbce42ae4a951dbc6e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-fix1-diff-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-fix1-edit.cjs",
+      "bytes": 2203,
+      "sha256": "f02e17b90cf9535c79ea4ad123164c95f020e5e55dbf6aa6d289faa3870b65ea"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-fix1-final-check.log",
+      "bytes": 49408,
+      "sha256": "9e1118ab2babbc3db9302bcdd05b98bb337f1eab452c5da077310c21a70a0e8c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-fix1-guard-test.cjs",
+      "bytes": 1455,
+      "sha256": "884f2e8f60b32b58e6a6ea32eb3c4e5378f970299fd2d85287a7d525bf0e0319"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-fix1-navigation-green.log",
+      "bytes": 3410,
+      "sha256": "46545022707026ff3117a03e7aed6b27c749c921f78a438be30af958870298e9"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-fix1-navigation-red.log",
+      "bytes": 3079,
+      "sha256": "59c2260936f939422408ab201858c89dc292a3cbdd5d5af6f18fcd9c4cf0d104"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-fix1-notifications.log",
+      "bytes": 56,
+      "sha256": "86208e4679c207bcfd1b791b08547dd71be7a64894e86a53c435e79a1c6a63ea"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-fix1-push-guard-red.log",
+      "bytes": 962,
+      "sha256": "bda97602bb904918b843170ed41f3ca498435da83c26b2237df0d58dbd50df73"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-fix1-reminders.log",
+      "bytes": 52,
+      "sha256": "6f839ca364e22c18fb73702306807b588f64341f502009d90fd60c6579c060e8"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-fix1-review.md",
+      "bytes": 8481,
+      "sha256": "b673deae1dce8a1f406c59beddbb1595ff1997127eeb532e8f3f7a699a4e2cf7"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-history-red.log",
+      "bytes": 319,
+      "sha256": "824b7b9107bded19ae14ce86db8364f2629b416709d234ccb6010f375a5c960a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-nochat-red.log",
+      "bytes": 401,
+      "sha256": "8eefb8b3244e53c1888ecf9ff2fa61774a2d24a520b4cbd9ebfac64caa02ac8c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-preflight.md",
+      "bytes": 8101,
+      "sha256": "313f6c64e2c2585773ac79610d2902a93f95baffb8071592e5cccfac36ccebdb"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-red-sql.log",
+      "bytes": 36,
+      "sha256": "2c6b68033c1dfe3db34bc0acbd38dbfa0c61791beddcd198b55bf59017b36332"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-red-ts.log",
+      "bytes": 2821,
+      "sha256": "85adcf4938d22bb702ea0827e3ae3bc1ee65ae808195ccf5d2301aa544199d91"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-report.md",
+      "bytes": 28421,
+      "sha256": "ba0f31b2ab93c77cf8774e90213a3de2206a8c27a57b6db096f0412faf6ad41d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-review-red.log",
+      "bytes": 433,
+      "sha256": "11cac347329f3441c751862b53a1af43f769de22fc093b93f714eebe13614e7d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-12-review.md",
+      "bytes": 11906,
+      "sha256": "85f39114e9df5194256d051c91763c57eeb71107f5c1e83bd7288a0a46e83408"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-all-candidate.log",
+      "bytes": 1248,
+      "sha256": "63ee2b8be8ffe28568056befcd4a0c4b6cdb847c3476caf5e2278e203b91718d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-all-final.log",
+      "bytes": 2938,
+      "sha256": "ca0ca8a5c0439a5be41fb5bbbb0e2a8d3266864ffd30f7328dbe149634507b4f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-all-initial.log",
+      "bytes": 1110,
+      "sha256": "c688be4c4ed0eb93c8d34e880d609d17b1fd395d722fe439f389cda96f08a94e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-android-focused.log",
+      "bytes": 69,
+      "sha256": "421ff78290f0bbe362595cadbc3e6b8e37b40a4f72432c7440f7b97ad26bef1b"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-brief.md",
+      "bytes": 3358,
+      "sha256": "40ba690505eafcdfdfb064792e6086935fb76c62dddd63254dd65fd1d1360319"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-catalog-diagnostic.mjs",
+      "bytes": 907,
+      "sha256": "6a8004adaeb706c2802f8577a84980a2af9a1acfd7024a72407f09bc8b5e7dae"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-catalog-locale-green.log",
+      "bytes": 205,
+      "sha256": "7550b9859af66062735a40481f7b9fd35576aa4f3b51cb6e285d186d1096983e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-check-final.log",
+      "bytes": 49624,
+      "sha256": "5d72c9400a190e935630a198b88a472adb0742273a96061d54a6d02bc148d110"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-cleanup-final.log",
+      "bytes": 9,
+      "sha256": "48b27c9f33bf2af7d6aadb16a23ccfb8d53889d9d97662a23c5a91786dc86c8b"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-committed-diff-check.json",
+      "bytes": 197,
+      "sha256": "eef0ac97f0c6aa982b99cf1b6a2ea08e6d2839d0fb43e877fd56016054df2209"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-committed-diff-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-concurrency-final.log",
+      "bytes": 11117,
+      "sha256": "28ee2413b7801f8861c257d758023f0c3704663f30a6be17bb10c71a8e19dea8"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-delete-green.log",
+      "bytes": 2977,
+      "sha256": "10dbec2e080f09dee1c49559ada4683b8658de73a65043a2939d3638a7bb8530"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-details-baseline-red.log",
+      "bytes": 144,
+      "sha256": "fd298d604c11316140a0e6691dc04470a140cd24d24a5e7215aa7c17ab76ef41"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-dynamic-worker.log",
+      "bytes": 3719,
+      "sha256": "75c3ada7d4aa947272f5a9666be0d9cb416e45293bf771531ed398a3efaa704e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-legacy-contract-diagnostic.mjs",
+      "bytes": 445,
+      "sha256": "9449b2996bd426b59dd757f6ab835c490bc1e8beb9ca6018ba553ca477fc6ac3"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-legacy-notifications-green.log",
+      "bytes": 200,
+      "sha256": "8b50e866581043f4384a91fb30a9c56ab90202d43cce363a0df3cbc7fbd5a90c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-legacy-notifications.log",
+      "bytes": 222,
+      "sha256": "a5cd6e050777ecc68ae4ec549fabf23281f42aa2595fa711ed71a274051cb965"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-legacy-red.log",
+      "bytes": 2466,
+      "sha256": "43286befe49d13dbb47140c942a9fc1374ec8cde8112398571a0155fceefb77a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-map-baseline-red.log",
+      "bytes": 140,
+      "sha256": "a384f2e76e02588d63a7b502b114053425de69b853aa46635037ab45db44eef2"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-preflight.md",
+      "bytes": 11272,
+      "sha256": "95226352419348c4f34af49d95d4176c66918a08163885b32e4195448d79f32d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-race-initial.log",
+      "bytes": 1699,
+      "sha256": "393bcbc02d62660313a2eee9dffeecf779ecb21f04536cc7e562e1541919df39"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-race-matrix-initial.log",
+      "bytes": 4612,
+      "sha256": "8585eb839643540b5ba57bd08811e0ae8dbc58052064db14bc9d68fd55f8b082"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-remaining-historical.log",
+      "bytes": 608,
+      "sha256": "40263b0bf4d82ddadc00207a2198a8dd26f4dc6b2fe4528c1d52a31ea36f173a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-report.md",
+      "bytes": 23318,
+      "sha256": "deac75db297d45deac441deb77808771af74af88b9965736a7a8984f24054551"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-review.md",
+      "bytes": 14683,
+      "sha256": "118e8a431aa68325e347cc148db293e4709784e686b758179221a01133fdbaf0"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-security-alias-initial.log",
+      "bytes": 1784,
+      "sha256": "a14407a7f6d833fbbc5dc1acb17b78c02af802638203838f2187827df882bd9e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-security-final.log",
+      "bytes": 1064,
+      "sha256": "509549beba0e759fabd9e70a20e8984ddbaa74b916be05439fb95cd87c4d286e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-security-focused.log",
+      "bytes": 1315,
+      "sha256": "c0b55deca939f94da8efdf84a021570cad0e66b9ec59e79f9b945cf0e7081e15"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-source-worker-initial.log",
+      "bytes": 5087,
+      "sha256": "0f2f0f7b09826fd601c5422e7e76aded39a73fa8d38b3d67c6d07da92238ea57"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-upgrade-final.log",
+      "bytes": 292,
+      "sha256": "828b083ea88927e1ca17c4802ade90e67e46ef1469ea7a17ce1831cccee22adc"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-upgrade-focused.log",
+      "bytes": 292,
+      "sha256": "828b083ea88927e1ca17c4802ade90e67e46ef1469ea7a17ce1831cccee22adc"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-13-upgrade-initial.log",
+      "bytes": 292,
+      "sha256": "828b083ea88927e1ca17c4802ade90e67e46ef1469ea7a17ce1831cccee22adc"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-access-loss-red.log",
+      "bytes": 1889,
+      "sha256": "65f98dedaa6cad3cdf3afc57530eb42f105bed3de8ffbdd1a7c87f774b7f98a2"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-after-retries.json",
+      "bytes": 82324,
+      "sha256": "eb0f9120e4ad7375a5bd3b66822d0b04b84d6a40109f161ac42da3fc3299e554"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-badge-contrast.json",
+      "bytes": 229,
+      "sha256": "c3bf0b7fb2b91873edbb914a1404f67a5cc9e1821f2a4a30545284233da025fe"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-before-retry503.json",
+      "bytes": 80483,
+      "sha256": "0727a9ff421367f3b81b582533cc22344424e9d11401c225e7162aa1fc75e268"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-before-retry504.json",
+      "bytes": 82324,
+      "sha256": "72771163317fc5bfa3a3d26757f15a3be7c9678829d6e6e901b371a8036539d1"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-brief.md",
+      "bytes": 3120,
+      "sha256": "1ba58998bba157e49b6a2675d7bea335e27027df70b89832af8a00275671d19c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-capture-1791460863958.json",
+      "bytes": 7025,
+      "sha256": "6af0e5af61b6079941c6b579b217be42a868c34801670daf18b1c42b12d07efc"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-capture-1791461494172.json",
+      "bytes": 109918,
+      "sha256": "5bcbc46254095129ebf3faf3b80105c7ee9e1a9304619da5d3e1795b39bb9d03"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-capture-1791461526673.json",
+      "bytes": 112527,
+      "sha256": "c286f5c4d9bbfa50fb5764bfeedb30859d247042ffcaa439a7aacc3160ec557a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-capture-1791461539467.json",
+      "bytes": 112527,
+      "sha256": "8bf9a628715352de8ce390d02c168afbc793d490e6496f688229ea5bd076926d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-capture-1791462295200.json",
+      "bytes": 141114,
+      "sha256": "ca753e43039ff0466d306eb96cda2f9f45e7904a849119489199b63fa833c362"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-capture-1791462787539.json",
+      "bytes": 141179,
+      "sha256": "90da265e8fabb71f83005dba9440bae50a480f0d252bb9f725b8104461c1dd1b"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-check-final.log",
+      "bytes": 50773,
+      "sha256": "6153a1d1cf505898b5498c31db0557618903813b91b33ae90fd10ce835632b53"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-check.log",
+      "bytes": 50575,
+      "sha256": "5d97460f7bca6f6b062ca94976b2d12b39dacc5139603821d12b6a91834d510f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-cleanup.json",
+      "bytes": 135,
+      "sha256": "45d2dc9237429c40f9f6aa1daccfe1f214f699de1ae1794b70a1e278cae54b9e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-deliver-in-app-1791460892485.json",
+      "bytes": 439,
+      "sha256": "fc63cfd7557b21390185acc03d53be0e2b7794d2e84476fba7fdf564c827fc82"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-empty-text-red.log",
+      "bytes": 2216,
+      "sha256": "e0cf39bb0add81f7bbbff5ffc203b673ce98af8bb724dc6b01c4cf81b43aadbe"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/01-personal-register-390.jpg",
+      "bytes": 30728,
+      "sha256": "fb9e8bb01b013fd93efc5ff1ee5a6a296493ff812dc39e3f4681f088005f85bd"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/02-personal-confirmation-390.jpg",
+      "bytes": 32574,
+      "sha256": "7e1d1f1ca78e3d13fd50bd7fe1f524ef0d3df88d9fdbd914b154c6fa73e9f0c3"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/03-agency-register-390.jpg",
+      "bytes": 44820,
+      "sha256": "e5c97484fae375042cf572adc6a4778e1776276c5dd19e285f90baeea0039b15"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/04-agency-register-1440.jpg",
+      "bytes": 51589,
+      "sha256": "b114015e35febf61f256f5ca947e813cbf3fa3948decc5b3e3ac2e0377bd18a1"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/05-pending-email-1440.jpg",
+      "bytes": 38059,
+      "sha256": "c9dc3e2e021b3226cc633889796c8ffe33a34dbabb1d7e145ff2d7fe9a5c8945"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/06-server-recovered-application-1440.jpg",
+      "bytes": 58534,
+      "sha256": "40b56b977ba2f80ca8ed9c47e5a893df39debbe168de755451860a95e4b3b25d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/06-server-recovered-application-1440.txt",
+      "bytes": 2906,
+      "sha256": "93f888c863de8bcba43335ae14593f1c631c22349bbb2598624df8dfbe6fd52e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/07-owner-pending-review-1440.jpg",
+      "bytes": 60587,
+      "sha256": "1bc2c76ff7d5b967cfc68a60269260122b01991d1828462668f8331c5f558c96"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/07-owner-pending-review-1440.txt",
+      "bytes": 1575,
+      "sha256": "abac8a5f041d86700909809f4a2d23f9837770cee72ea2c5e1320cf729aa47c4"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/08-corrected-application-1440.jpg",
+      "bytes": 58336,
+      "sha256": "7ef24c785a6bce12a5f6f4f3f0fd81d2eef4fbee74af86a1d1f78ad4b8b07806"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/08-corrected-application-1440.txt",
+      "bytes": 2924,
+      "sha256": "44a1e67af6cebb5ecbf90379e09344c3c7d83a2c8d65a3b2f670a887c14c55d8"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/09-owner-rejected-1440.jpg",
+      "bytes": 59563,
+      "sha256": "4c8b689c7f6a2e830979844dbd790d43d33ef39b1ff7578e462efa60d819cdd2"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/09-owner-rejected-1440.txt",
+      "bytes": 1533,
+      "sha256": "e0de646b09314698d2a43679f22f031e3c5206b6fa2b0d3cc2b161d009514c1d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/10-a-approved-unverified-1440.jpg",
+      "bytes": 58396,
+      "sha256": "b4abd24b93c50ae410e7bcac684ea30c12f6c53cfb6297835117d4466997d2e4"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/10-a-approved-unverified-1440.txt",
+      "bytes": 1255,
+      "sha256": "a56b14a0292a6f9f6da04fb1ae953fbc1a486f44fed49860646408becd27306d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/100-restored-final-demo-1440.jpg",
+      "bytes": 27094,
+      "sha256": "801bd69da31cc5a56346d71c775d2d10f50b18d9aafc947cfcaf9a05da8b4f22"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/100-restored-final-demo-1440.txt",
+      "bytes": 450,
+      "sha256": "7fd926405d3612a380a798c7bea815dbbf3b15122a12f192d767553e65d6351d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/11-property-form-raw-text-error-1440.jpg",
+      "bytes": 49067,
+      "sha256": "5a808ca2cd4074a5dc72bcef03a4125fe2042043d094b384021b5f00fb99b4d8"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/11-property-form-raw-text-error-1440.txt",
+      "bytes": 2181,
+      "sha256": "83c50c3371f97f25b3ce20030f1b770fbafb5656362a2988d931ea11864e57fa"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/12-a-unverified-submitted-1440.jpg",
+      "bytes": 58337,
+      "sha256": "60e0d339e52d31c58c510a1d688d9f09531fa3cef508f26245aa4ac3494309b5"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/12-a-unverified-submitted-1440.txt",
+      "bytes": 1454,
+      "sha256": "c18c142e8066942b4566730fe9f5ce56a75b2fe472da58390d3ce49a0f629750"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/13-a-verification-pending-390.jpg",
+      "bytes": 21061,
+      "sha256": "ddbb548f18198ad7af587527fbc4e04d85b52bd49cb111b95e9e756dd03b72df"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/13-a-verification-pending-390.txt",
+      "bytes": 383,
+      "sha256": "c79e31653b62ecf1cbcee48291b8c08d6879eec39ea8334a136accdbce7ba0f8"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/14-owner-verification-pending-390.jpg",
+      "bytes": 35590,
+      "sha256": "3f9aea835356ee1bc411e2e945cf35a7103ebaf537107b66fb6c892b1775063b"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/14-owner-verification-pending-390.txt",
+      "bytes": 1554,
+      "sha256": "b0b2a10b31629ac6784813fc5544092f18dc08cc3f106ed57f14255318c76196"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/15-a-verified-workspace-390.jpg",
+      "bytes": 36494,
+      "sha256": "b3b0c43bb85b14506bfe9571f88988bc7b092c371fde10b477e23eb9d7f205e3"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/15-a-verified-workspace-390.txt",
+      "bytes": 1368,
+      "sha256": "ca1db2bf098fbca8b9d3632b13cd7e7aa924e9e26a232525dae430cc620259c0"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/16-a-direct-publication-390.jpg",
+      "bytes": 38692,
+      "sha256": "642593edd8bc596ff0c586a28f332889b68d6b270a6305309ed1be1923f640b8"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/16-a-direct-publication-390.txt",
+      "bytes": 1454,
+      "sha256": "c8c2755a37879f2e8ab938ed82f82388ef793c28b548edf9d4c13daedbfec988"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/17-b-empty-portfolio-390.jpg",
+      "bytes": 16100,
+      "sha256": "b3a23315754875cc1cea22b685d1462202a466ef00b884356703a8cba0bdb1f4"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/17-b-empty-portfolio-390.txt",
+      "bytes": 431,
+      "sha256": "d888cd4044da48ff4712b472c36276b7eabfbedf0ce8b6bff64cd7d02949e79a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/18-b-mandate-pending-390.jpg",
+      "bytes": 38427,
+      "sha256": "0e9dc9bbe418eaa42770e87a5fe0fc3d205e1a53aeee4385311efce29a2f5e99"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/18-b-mandate-pending-390.txt",
+      "bytes": 884,
+      "sha256": "4333529b15c725922a4dc84a0bea8b76cb09103de44b917e01d63e5e68f151e2"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/19-a-approved-shared-uuid-390.jpg",
+      "bytes": 35740,
+      "sha256": "0f73450e4478bd675bb91e69356bf403e871f7e81fe1fa0607165aa5f342238d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/19-a-approved-shared-uuid-390.txt",
+      "bytes": 993,
+      "sha256": "0f362cc85883882ff3a8d4df6cc69d0a85d194db4ac98cd4d4fc5bb707d45d90"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/20-a-invitation-sent-390.jpg",
+      "bytes": 32103,
+      "sha256": "ef63f039d78ce9f6fb8d939eb7be51d4922c4f9abad953f62fc569ee65c777b6"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/20-a-invitation-sent-390.txt",
+      "bytes": 1710,
+      "sha256": "af8e65e2fd352bbe1a274c2c819c38c346aa38a3bbf9e85d4f5c0d12090afe59"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/21-invitee-no-membership-390.jpg",
+      "bytes": 26036,
+      "sha256": "a9baa333c19cbff5e75b49c7f8804354e4ddc8553b31088febfb3479136c6a17"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/21-invitee-no-membership-390.txt",
+      "bytes": 542,
+      "sha256": "2abe86285303a0c55eefd76c38d051f32de778c6b7e31a4e397f00cebbcf8b4a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/22-invitation-accepted-390.jpg",
+      "bytes": 24889,
+      "sha256": "64ff1280cf09381b960a92449562c75e65d039908772594aac1589739d634ddc"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/22-invitation-accepted-390.txt",
+      "bytes": 675,
+      "sha256": "25f0a151ac8e4309a70a95f14f41f6eb1a12dbc959ece30a3b27616c6ab378de"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/23-invitee-manager-controls-390.jpg",
+      "bytes": 35953,
+      "sha256": "5fd83e10f9e38437a6f910478ac4cb56690bf5bb81f3435c46fe6cde3189c84c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/23-invitee-manager-controls-390.txt",
+      "bytes": 1263,
+      "sha256": "4f003432b79641d320e446036efb3d5c7340b050eabc6a1ddae6862c03e4654c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/24-public-a-b-badge-only-a-390.jpg",
+      "bytes": 62888,
+      "sha256": "e872f93e1d98005c326a4819a671c273963f3441e58a15b69c257ee1f563bc2a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/24-public-a-b-badge-only-a-390.txt",
+      "bytes": 1579,
+      "sha256": "342bc3285a629487205c2f8c76f9e6e151dc710053fe205cb45826ebf65dd3f3"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/25-public-a-b-badge-only-a-1440.jpg",
+      "bytes": 136882,
+      "sha256": "6328eb0e7476b1c2b28e2a31d8285d826a1ae779ceaf3eade68292b43cbfb949"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/25-public-a-b-badge-only-a-1440.txt",
+      "bytes": 1579,
+      "sha256": "342bc3285a629487205c2f8c76f9e6e151dc710053fe205cb45826ebf65dd3f3"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/26-contact-selector-1440.jpg",
+      "bytes": 60963,
+      "sha256": "831e5ab8c9d384e5e096e5ba449c860ed2aead66e0de4fdd8ee36598258eff97"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/26-contact-selector-1440.txt",
+      "bytes": 2215,
+      "sha256": "cd19aa95dc9e7a2895f371083368abe890887011f2a9c1f38aad31c4884bc31e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/27-buyer-a-visit-pending-1440.jpg",
+      "bytes": 47351,
+      "sha256": "393211f0707a4f1ca7019212ba608fef5f6a7d572ef043bddeb0f708a797e36f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/27-buyer-a-visit-pending-1440.txt",
+      "bytes": 2257,
+      "sha256": "63968a4e019576b2a7312116a66a582e41ff2094daec43804d2194483ce32e35"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/28-a-admin-manager-accepted-visit-1440.jpg",
+      "bytes": 46313,
+      "sha256": "b16211f05ab927ed920e75b1c0132f7a731e9830ee778eac8d3e1f9e805ac3e9"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/28-a-admin-manager-accepted-visit-1440.txt",
+      "bytes": 3798,
+      "sha256": "d1d7cd240e90556076d21f9d6e4fcab0cf1d3359a9253ee8988cc6ae1c7c99da"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/29-assigned-visit-retained-1440.jpg",
+      "bytes": 53863,
+      "sha256": "98c28913f5e5704cf1c3e803bd1a1b56bc5cc2e6dadc70a34f6e0182f76f277a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/29-assigned-visit-retained-1440.txt",
+      "bytes": 4230,
+      "sha256": "50062868f41b8e7c6084238e42b7e03021eed0abb2d6bb5c569ed524315a6859"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/30-member-departure-keeps-booking-1440.jpg",
+      "bytes": 51465,
+      "sha256": "b3ae95428c0eb477561831cc0849ad3f5fccfcdeb1bf0ca5f3675f1d8722ea85"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/30-member-departure-keeps-booking-1440.txt",
+      "bytes": 4145,
+      "sha256": "26c9162dc3f7e45036041315ab025545d3fa10cb51646e1937f2b1f9d5029f14"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/31-reassigned-booking-1440.jpg",
+      "bytes": 56574,
+      "sha256": "68045103725f417084e83ee26f513ffca628797f56b251fe24a96fe5ae455224"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/31-reassigned-booking-1440.txt",
+      "bytes": 4244,
+      "sha256": "0fbb7617a79a9a00de179602fad0a5a1672b0a2909c5cda0341b4543dfcfe386"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/32-external-visit-history-1440.jpg",
+      "bytes": 51848,
+      "sha256": "36cd3a296fea3ccb8cd17c8ce26aaaa3abaaa59fbc6f561eb14467d91fdea59f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/32-external-visit-history-1440.txt",
+      "bytes": 4665,
+      "sha256": "b54a107e8c0f4b7a182e0fc1ad62dd9af84f73633c4336b8146764658d682c52"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/33-external-agreement-history-1440.jpg",
+      "bytes": 44642,
+      "sha256": "2cc34ec9bf5cca3993c01a23cb580916a1bd326c2892c5c897bad3e4dcc674bb"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/33-external-agreement-history-1440.txt",
+      "bytes": 5343,
+      "sha256": "119b9a910e32321e6f9adc62ea45d1df1db04573bfd60aafa1f1aa6dc865ddf6"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/34-owner-direct-b-verification-1440.jpg",
+      "bytes": 52484,
+      "sha256": "1bcfb4d1bbcf99da74769a47e2c5e082069cc731682a6d7748fb798a0c137e4d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/34-owner-direct-b-verification-1440.txt",
+      "bytes": 2520,
+      "sha256": "db8e0f7415fde9ee7dd78e0f3c79585e5cb26549849e261ea74ea55938a444be"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/35-a-revoked-workspace-1440.jpg",
+      "bytes": 58978,
+      "sha256": "e784f3fa57f4d450c8cbb4e906d5c150564da65433284f35a49fade075b8a5e3"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/35-a-revoked-workspace-1440.txt",
+      "bytes": 1255,
+      "sha256": "a56b14a0292a6f9f6da04fb1ae953fbc1a486f44fed49860646408becd27306d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/36-revocation-keeps-approved-properties-1440.jpg",
+      "bytes": 55225,
+      "sha256": "ef87362f8750f4f1557d50df9f5047bf11e95427353e4808bf04f75a513e0b12"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/36-revocation-keeps-approved-properties-1440.txt",
+      "bytes": 1312,
+      "sha256": "ed749bfff6a27547331d942193c0e52002ef46ea08ee9eb335675df6584f6874"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/37-revocation-edit-pending-main-approved-1440.jpg",
+      "bytes": 59245,
+      "sha256": "78651585f8b9cd7d1f25d92c481f6feec4ef75ede733e47dd102a2be47760105"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/37-revocation-edit-pending-main-approved-1440.txt",
+      "bytes": 1467,
+      "sha256": "0e781f250e00f79af21a29d766f05a497b01edb74760e903e7ab3787181dc922"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/38-property-render-no-text-error-1440.jpg",
+      "bytes": 48757,
+      "sha256": "2540ad7c8d9140ec8dc8db27f856a10c270e0fcf7b9a071f5d42fb760484e19f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/38-property-render-no-text-error-1440.txt",
+      "bytes": 2065,
+      "sha256": "dfb1b9fbf398b0e9549758a6e9f9921c52bd63f189f471ea49d7f96e70075b98"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/39-verified-b-price-still-needs-origin-1440.jpg",
+      "bytes": 53041,
+      "sha256": "a9c0c4462317e212621d8388849d0a79ca35fa9d1502c06733f6d5fa56135924"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/39-verified-b-price-still-needs-origin-1440.txt",
+      "bytes": 1265,
+      "sha256": "531349e4e300dd7db1c2cf2f823d557dbc5d71778f59bf18d4000836e9492940"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/40-b-sale-request-not-authority-1440.jpg",
+      "bytes": 54003,
+      "sha256": "93426511a6929cd5b0a0145a0c95fda2c3248cddc7cfcbf81b650d0e7ec0c386"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/40-b-sale-request-not-authority-1440.txt",
+      "bytes": 2104,
+      "sha256": "6fc320974d67a946c2e4a3c48972fc1517ac3e222c0b531f75854fc9499fba7c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/41-private-lost-no-sale-1440.jpg",
+      "bytes": 49315,
+      "sha256": "a72e07462060de370a859cd027a1565e34bfd9f6c502af539e804dd20c4c2ab4"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/41-private-lost-no-sale-1440.txt",
+      "bytes": 3198,
+      "sha256": "058b261c77ea34167b30e0cf02fb9b5cfea72c49d6f6e5b1b285923fa7534312"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/42-origin-sale-review-without-verification-390.jpg",
+      "bytes": 38270,
+      "sha256": "2c4f9e2d9c4ce8b5ba8e19f9b3c5be7d7e84f68aa15659636ab07fff1fac92fc"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/42-origin-sale-review-without-verification-390.txt",
+      "bytes": 948,
+      "sha256": "98560d8fa7df0d0f089e0428fd6f7e3a62e95dbb00e0f16138f6c4b2b8c079d1"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/43-sale-confirmed-receipt-390.jpg",
+      "bytes": 37105,
+      "sha256": "907820f9cd017965c454913152f0cd7c37cccfb1be7793245cd306902d3a354c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/43-sale-confirmed-receipt-390.txt",
+      "bytes": 871,
+      "sha256": "962a94fd5c3da0c1deb6526fa4cbd6660f9763588166a0eb22deebc41f1b7146"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/44-sale-confirmed-receipt-1440.jpg",
+      "bytes": 44652,
+      "sha256": "38710be658d7ce5810c19e93eaef7d853a76a72aa1e440a8c6246dbb5344da55"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/44-sale-confirmed-receipt-1440.txt",
+      "bytes": 871,
+      "sha256": "962a94fd5c3da0c1deb6526fa4cbd6660f9763588166a0eb22deebc41f1b7146"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/45-a-visit-cancelled-readonly-case-1440.jpg",
+      "bytes": 51442,
+      "sha256": "97775cd07ec337a172ebfe09afc2932442d99512ea290c60da0d1449c3723454"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/45-a-visit-cancelled-readonly-case-1440.txt",
+      "bytes": 3141,
+      "sha256": "c3acde5f0af724d3191813e3699b6a28829ebf04d88cf1bffc5ca06961ae1ba1"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/46-staff-chat-readonly-1440.jpg",
+      "bytes": 51992,
+      "sha256": "3ca9dc591fc2c0813b62728712551c1a36a2525af8d77a567e1b55ed91ecab0f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/46-staff-chat-readonly-1440.txt",
+      "bytes": 2200,
+      "sha256": "dcf71be2b309468dc3c0b532f45edc1ff301bf7fab49da59cc1f9e79a2690cd3"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/47-buyer-real-chat-minimal-sold-notice-1440.jpg",
+      "bytes": 33621,
+      "sha256": "1a84d31ad85a77f48f5be8e7ad6887cb3ccd911357da56d50f1a4a7478d38605"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/47-buyer-real-chat-minimal-sold-notice-1440.txt",
+      "bytes": 932,
+      "sha256": "51d6bc0f81444924d0d893057acb1181565c5a8adcf058c1a311c5de41624527"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/48-buyer-chat-actual-uuid-readonly-1440.jpg",
+      "bytes": 51769,
+      "sha256": "905debfa086f720dd5f4240f8069da572642e7ac6cdbc47a0c955cc783ece9fa"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/48-buyer-chat-actual-uuid-readonly-1440.txt",
+      "bytes": 2346,
+      "sha256": "995056120bf17749f5725e8ec1a4b4ae5beba3863c6b31cccb655813c8703505"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/49-buyer-no-chat-account-notice-390.jpg",
+      "bytes": 25889,
+      "sha256": "900699079aa4216c94df825c41f3a3f01ae6fe1fce5b3dcdddf898c564f9edb9"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/49-buyer-no-chat-account-notice-390.txt",
+      "bytes": 923,
+      "sha256": "c4d484369152669b05c2eb0ae6c45f8630b606571f446db81feed6cbad1a9b71"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/50-agency-preference-saved-reloaded-390.jpg",
+      "bytes": 37344,
+      "sha256": "21a43457bcab10d8fd7c2610dc2a5a80bc7f7f30096540091b9de7f8d4bb258c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/50-agency-preference-saved-reloaded-390.txt",
+      "bytes": 1400,
+      "sha256": "b87620c779ad0c70b914084ce6b76a27b868c336db54ab842130f588d891236a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/51-external-cancellation-task-390.jpg",
+      "bytes": 32359,
+      "sha256": "eb116ad5d1659f18b9a6ae97058701dfc3f54301a6c429eedc6cc7cc05ae92fe"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/51-external-cancellation-task-390.txt",
+      "bytes": 4815,
+      "sha256": "b96938d3b973ecf0d7f71f419e323fac57e66a5189a3bd91f611ca611873d542"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/52-external-communication-complete-390.jpg",
+      "bytes": 35979,
+      "sha256": "e6b0e49724dc63957f65935d366fb9d1a65297466aab07982e0adccd5c230e34"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/52-external-communication-complete-390.txt",
+      "bytes": 4721,
+      "sha256": "3ebd2f75fb3210ccfc47fc430d89bd9e3f21ec648c32a5bc2fb73849da289976"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/53-public-api-before-badge-fix-390.jpg",
+      "bytes": 56554,
+      "sha256": "ed48e5eb1af249abdd528c9bf5b16ccd6646b185c95325ee02ce14db9c707a03"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/53-public-api-before-badge-fix-390.txt",
+      "bytes": 1408,
+      "sha256": "780921b491c0ed0b39dbfb3a6789316774a9142868067cabc9c5591ade79be6c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/54-public-api-circular-agency-badge-390.jpg",
+      "bytes": 56993,
+      "sha256": "cfa84adf81601a0905e64cf35eb9b3c5550f880b3267dfa673a3c6b76a6905b6"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/54-public-api-circular-agency-badge-390.txt",
+      "bytes": 1548,
+      "sha256": "192790b5a888ed3b576f9afe0f1b391bffb9d92473ba0f52a8b445f50d334ae8"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/55-public-api-circular-agency-badge-1440.jpg",
+      "bytes": 144009,
+      "sha256": "c86ddd6ee51cce8223598aab5190133f8e7d915f5078083be936011adcf738e9"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/55-public-api-circular-agency-badge-1440.txt",
+      "bytes": 1548,
+      "sha256": "192790b5a888ed3b576f9afe0f1b391bffb9d92473ba0f52a8b445f50d334ae8"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/56-gateway503-before-no-write-1440.jpg",
+      "bytes": 42068,
+      "sha256": "ca3a390ed9cdd92b704f7ae6c7d25bf8b08232a80d0d702f764b221f62ccbf6f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/56-gateway503-before-no-write-1440.txt",
+      "bytes": 4664,
+      "sha256": "57c095bdb1c712758332d7c25be83368d91c5c99e3222d0ca42134356f78d7a0"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/57-gateway504-after-commit-1440.jpg",
+      "bytes": 45747,
+      "sha256": "9120e5269601ea9d7e1f186f53b5b4dc0d543cc0d57fac08ef72ac6756f2a66c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/57-gateway504-after-commit-1440.txt",
+      "bytes": 5025,
+      "sha256": "676210227095c7c154204e9ad38f263712c236ce2b95eb1adf95054f457a1712"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/58-explicit-retry-single-tasks-1440.jpg",
+      "bytes": 51310,
+      "sha256": "07abe2c3477a00dac8f937bd46c08b1d2d17c5afac37a3c8517febcc9504b803"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/58-explicit-retry-single-tasks-1440.txt",
+      "bytes": 4533,
+      "sha256": "720d6bb3a39eb3a0748c9d8899d26941731ca29c66e86e91023f584f7939096a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/59-sale-future-date-rejected-1440.jpg",
+      "bytes": 53397,
+      "sha256": "3b1ae4af6f905cc3c9b037681eec4588020d02b19957a4ff43e7b51cc24c016a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/59-sale-future-date-rejected-1440.txt",
+      "bytes": 1583,
+      "sha256": "0ae67318a44f82fdef2a14e4f0211fd0ee3db7dae3da9e7e832d4b3127e590d0"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/60-sale-historical-date-saved-390.jpg",
+      "bytes": 38552,
+      "sha256": "3b7568b638d22b083d5c8126c8a4e3ea484ade523dc18fa7d5753e59924dd5ef"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/60-sale-historical-date-saved-390.txt",
+      "bytes": 2165,
+      "sha256": "9468ea99e128562fc025feab7f5630a365eaa3757946545086e26a0526d680e6"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/61-coordinator-two-agencies-selected-a-390.jpg",
+      "bytes": 33145,
+      "sha256": "9b3f493d44be49c3fcc399e3209b9fe31ffecb1b701da1b34e7ec9b7c4dd2c3f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/61-coordinator-two-agencies-selected-a-390.txt",
+      "bytes": 1379,
+      "sha256": "9b3d222b1e92b8ddadc27941120c4c71ecf3ff3d76b04091c20017a1fb58da33"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/62-same-account-a-private-cases-390.jpg",
+      "bytes": 32336,
+      "sha256": "6207c19fd752a80330aa08f406c47463a8ef60d22d9612ff520ad25856e73cf6"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/62-same-account-a-private-cases-390.txt",
+      "bytes": 1131,
+      "sha256": "bc1ea53683e0ff6c02167283de01ca9a3c9888ed174ef694fa465783dbec461e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/63-same-account-b-private-cases-390.jpg",
+      "bytes": 32337,
+      "sha256": "f422b3294e72733896c983f16104256325efc51d44c5e8875a18536c4381ec5a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/63-same-account-b-private-cases-390.txt",
+      "bytes": 1314,
+      "sha256": "cea1c3cdbbf20c65ed405559ab6a19462d9bc801d72ada4565b95710cf118a12"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/64-open-draft-before-permission-loss-390.jpg",
+      "bytes": 33331,
+      "sha256": "b48537ee5fed276d8ab25a767c805fbcb7e23fdd5c29a0ab43723100dd2e79e2"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/64-open-draft-before-permission-loss-390.txt",
+      "bytes": 5261,
+      "sha256": "e0371607787b7907bfd16140c55658433dd9f52b5b7bf24e1d9dfb4b0f321406"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/65-permission-denied-stale-draft-red-390.jpg",
+      "bytes": 36322,
+      "sha256": "d465c24b3c1cdea2ffdb40e83b7425e6c7d544d827cd310134e5d7fbd2bdcc60"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/65-permission-denied-stale-draft-red-390.txt",
+      "bytes": 5720,
+      "sha256": "5a1404e65b6121cd1695dcd11a01bd6b6bdf43924782ef6eb0c0bc825dab9252"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/66-old-private-link-after-permission-loss-390.jpg",
+      "bytes": 10761,
+      "sha256": "7ba1aa72aecbea751e8f20a686af78658feb65adb401bf450a7c7bff73fd1249"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/66-old-private-link-after-permission-loss-390.txt",
+      "bytes": 205,
+      "sha256": "e59d71617c22af6dc1b7f4c03c83c24cbd75ac94aa32553bcbcf72983ea77ef1"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/67-revoked-draft-before-green-390.jpg",
+      "bytes": 33297,
+      "sha256": "8980298a0babd2ad61bacbf3e2ecd45eb6e5f0e5c8f68b530cd3343113948e57"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/67-revoked-draft-before-green-390.txt",
+      "bytes": 5260,
+      "sha256": "ba81e7adce6fb40ce3b125ea62551ab0a65d5953eb0e23fb4e4ae7ad8fa50044"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/68-revoked-permission-clears-private-data-green-390.jpg",
+      "bytes": 10761,
+      "sha256": "7ba1aa72aecbea751e8f20a686af78658feb65adb401bf450a7c7bff73fd1249"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/68-revoked-permission-clears-private-data-green-390.txt",
+      "bytes": 205,
+      "sha256": "e59d71617c22af6dc1b7f4c03c83c24cbd75ac94aa32553bcbcf72983ea77ef1"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/69-workspace-B-390.jpg",
+      "bytes": 36204,
+      "sha256": "ffd63984565d8f58905b5fa0d29056790a2d24b0fdc8d57095e65b41b51ef8ff"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/69-workspace-B-390.txt",
+      "bytes": 1368,
+      "sha256": "850354eed76d9763fd0acee06aad20cff8eef4d9591a26050be3b75a4a44acaa"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/70-workspace-B-1440.jpg",
+      "bytes": 58902,
+      "sha256": "993318cf5ab13929b2ddf678e918162becf544a6d7c490a350b8dad1c43ba088"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/70-workspace-B-1440.txt",
+      "bytes": 1368,
+      "sha256": "850354eed76d9763fd0acee06aad20cff8eef4d9591a26050be3b75a4a44acaa"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/71-agenda-cancelled-B-1440.jpg",
+      "bytes": 36534,
+      "sha256": "bf0ea82279a2f1c24b9c788d06e1fbe2178806a31ec34059b32a215466ed04cb"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/71-agenda-cancelled-B-1440.txt",
+      "bytes": 729,
+      "sha256": "6673adf56c68019a8550840b5cb9dcdf22e5002fdf8eb273e1d8fcafdfcbe4c4"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/72-agenda-cancelled-B-390.jpg",
+      "bytes": 27509,
+      "sha256": "76f8578fcd19cd73288c44739f5a0d00010460ab388de07af5ade91fc1a3ed40"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/72-agenda-cancelled-B-390.txt",
+      "bytes": 729,
+      "sha256": "6673adf56c68019a8550840b5cb9dcdf22e5002fdf8eb273e1d8fcafdfcbe4c4"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/73-sold-proposals-disabled-390.jpg",
+      "bytes": 30562,
+      "sha256": "fc311b0a7265f1dcd15af299f0bcc87f9048259dc6f43fc82afee860358adf77"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/73-sold-proposals-disabled-390.txt",
+      "bytes": 4741,
+      "sha256": "e80f5d2da267693920eb72fd1657192bb8bdda4411a00bf208cae3ccbd574cd6"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/74-sold-case-1440.jpg",
+      "bytes": 45274,
+      "sha256": "9e7a65eca9c3a0c3bc776da35497fa703c33989ab5eb0fe8c6707064eb6ed762"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/74-sold-case-1440.txt",
+      "bytes": 4741,
+      "sha256": "e80f5d2da267693920eb72fd1657192bb8bdda4411a00bf208cae3ccbd574cd6"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/75-verification-form-keyboard-1440.jpg",
+      "bytes": 55364,
+      "sha256": "855f2097db2fb1a372387781600fe98fc57fa1aab8088ee299beb090439a64e6"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/75-verification-form-keyboard-1440.txt",
+      "bytes": 959,
+      "sha256": "91adb2e0e7e489145bdafaf57c904f60efebbb1ad6aa0de6b6169008f0485b1b"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/76-verification-form-390.jpg",
+      "bytes": 36656,
+      "sha256": "775a4f4f87e6a2cce4c0432fd1858a68225e45776850f72396a13b63d0a077a0"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/76-verification-form-390.txt",
+      "bytes": 959,
+      "sha256": "91adb2e0e7e489145bdafaf57c904f60efebbb1ad6aa0de6b6169008f0485b1b"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/77-verification-pending-no-badge-390.jpg",
+      "bytes": 20655,
+      "sha256": "b4ad15a98950727e48e567f402bdb405102f94efd4fbec794a97c0db6cae57cb"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/77-verification-pending-no-badge-390.txt",
+      "bytes": 387,
+      "sha256": "21a7dac185e5bc627c129c56f046e1f2f98dfe8fe4193277ac06315678a42d11"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/78-verification-review-correction-390.jpg",
+      "bytes": 35592,
+      "sha256": "88aa14c00b52e9891f06bde3a1f4dfda6ca01b3a50daab79b00967f516226a28"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/78-verification-review-correction-390.txt",
+      "bytes": 2313,
+      "sha256": "90feb52aa259ce7fbee3f01b7f66082c0c42f67eb664a18c8d719e65ec4efce0"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/79-verification-review-correction-1440.jpg",
+      "bytes": 62031,
+      "sha256": "4dc6b48f481e2f7d5f3e2d78871cccb1b88e362114e9a640c177a61b4d25af3e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/79-verification-review-correction-1440.txt",
+      "bytes": 2313,
+      "sha256": "90feb52aa259ce7fbee3f01b7f66082c0c42f67eb664a18c8d719e65ec4efce0"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/80-verification-needs-changes-1440.jpg",
+      "bytes": 59178,
+      "sha256": "ce22f4179b7818ae695b259baf9b54bb7c6ed4c8415c986c9ddcd938ec29bbd0"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/80-verification-needs-changes-1440.txt",
+      "bytes": 1054,
+      "sha256": "80008c472e32838ade1620e487aed4b12d27731cdbbe62fc675ceb258add8c0f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/81-verification-rejected-still-approved-1440.jpg",
+      "bytes": 60259,
+      "sha256": "8659168765ca5e59903d65318f2b8f506f54e85128b1517e26e4c0aaecf50f66"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/81-verification-rejected-still-approved-1440.txt",
+      "bytes": 1084,
+      "sha256": "793ddf821aa2acf45fbe6e321ec4f51063a0c6e37151c095887b8c5e319bc0b9"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/82-verification-rejected-still-approved-390.jpg",
+      "bytes": 36633,
+      "sha256": "c7bb1d038b2e7f7f8fb7c46c92d0e42b4b346a4bd19b9f99b2c8626db05e2e30"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/82-verification-rejected-still-approved-390.txt",
+      "bytes": 1084,
+      "sha256": "793ddf821aa2acf45fbe6e321ec4f51063a0c6e37151c095887b8c5e319bc0b9"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/83-session-ended-old-private-link-390.jpg",
+      "bytes": 10761,
+      "sha256": "7ba1aa72aecbea751e8f20a686af78658feb65adb401bf450a7c7bff73fd1249"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/83-session-ended-old-private-link-390.txt",
+      "bytes": 205,
+      "sha256": "e59d71617c22af6dc1b7f4c03c83c24cbd75ac94aa32553bcbcf72983ea77ef1"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/84-independent-B-moderation-withdrawal-390.jpg",
+      "bytes": 26340,
+      "sha256": "bf51f9ec4fc80d0f2fd4275e7dd89d45bc52852c7fb9f493d2b92980a530563c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/84-independent-B-moderation-withdrawal-390.txt",
+      "bytes": 1148,
+      "sha256": "efac31e82a07539de824f08ea29a07b7cae85318f26eb54586529a35fcc1fd11"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/85-portfolio-B-moderation-390.jpg",
+      "bytes": 35900,
+      "sha256": "27819887282c510e713d10248e0dedebcd02989f6b06ed98005752780483f80c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/85-portfolio-B-moderation-390.txt",
+      "bytes": 934,
+      "sha256": "cc5680112e8953c81eaab32cc31a43964ff8baf5a6fb00e63dd57ec730516454"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/86-portfolio-B-moderation-1440.jpg",
+      "bytes": 53321,
+      "sha256": "80c2fdf64a7aef4e9119415d337cd482ec2c41b49cef6d3510fd1677f91ff0ec"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/86-portfolio-B-moderation-1440.txt",
+      "bytes": 934,
+      "sha256": "cc5680112e8953c81eaab32cc31a43964ff8baf5a6fb00e63dd57ec730516454"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/87-verified-B-cannot-bypass-moderation-1440.jpg",
+      "bytes": 89163,
+      "sha256": "ffe6d5569545cf3301e22393d39add8a18c33039e4f8748d90de8a27a089ced8"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/87-verified-B-cannot-bypass-moderation-1440.txt",
+      "bytes": 1807,
+      "sha256": "377e8b9fb6a109dede6dfabe51217e0f1edc2e95b13a7c4ea28b3a97c6e8d568"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/88-verified-B-pending-after-submit-1440.jpg",
+      "bytes": 52980,
+      "sha256": "2acc736a0a2073f39872d0d89db9385daa214df1e20a8282d28a01425e9e43cf"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/88-verified-B-pending-after-submit-1440.txt",
+      "bytes": 932,
+      "sha256": "7f2bc5b51cfda81835cdcdccc7ce3a42f3666972ae1a8e13d21a14cfcb393956"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/89-personal-email-pending-1440.jpg",
+      "bytes": 37438,
+      "sha256": "3730ff5c866355df6a7e10443f05043e407a32eb7d9cf87a7c84f70b2656c998"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/89-personal-email-pending-1440.txt",
+      "bytes": 884,
+      "sha256": "0b6742d62e2c1a61e03f4ca28f2d3a24c800852b2cbd17af9e4b87c41ceb3dff"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/90-personal-email-pending-390.jpg",
+      "bytes": 28960,
+      "sha256": "2eb965b25db52355bd02b18308af89dfad1ac1e392566f66983a9248dd585346"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/90-personal-email-pending-390.txt",
+      "bytes": 884,
+      "sha256": "0b6742d62e2c1a61e03f4ca28f2d3a24c800852b2cbd17af9e4b87c41ceb3dff"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/91-personal-confirmed-signin-390.jpg",
+      "bytes": 33464,
+      "sha256": "db7493e5159921034bcd31ad5d06ed9490b171592af45731ebd8db272fab1622"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/91-personal-confirmed-signin-390.txt",
+      "bytes": 2775,
+      "sha256": "798fe61bd15c30844490d3fa8fcda03a3315cd3581799afc8a54b08daf52cccf"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/92-real-moderation-queue-paginated-390.jpg",
+      "bytes": 43202,
+      "sha256": "38f0f6d68a55484b0167dfa88043ed351f680f0f7973afda6752adfdf8125bdf"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/92-real-moderation-queue-paginated-390.txt",
+      "bytes": 1683,
+      "sha256": "e177bf858a8e4af3983c6a6f67d09c2f37928611691fb7d664bf353d09a12b63"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/93-public-property-empty-text-red-390.jpg",
+      "bytes": 63249,
+      "sha256": "60fe3d8dc0f65f0de2964ffb2b3240d6dd3f6d22311f733e133fd41dd8954a2b"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/93-public-property-empty-text-red-390.txt",
+      "bytes": 1424,
+      "sha256": "a32c05acbd0f132a46ae9f056ee0da48f4aa8e517296d88fff3df5088fa70484"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/94-public-card-no-text-warning-390.jpg",
+      "bytes": 63026,
+      "sha256": "5e2107b5c6f856dd461de501b5f60ace78d9e2f8d84f6038d42ef8c7b080033d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/94-public-card-no-text-warning-390.txt",
+      "bytes": 1282,
+      "sha256": "09a68feeeae80f1a92a4ec41e4987328c8e9d2a2a5e549948bfcf85ea1a32c54"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/95-public-card-no-text-warning-1440.jpg",
+      "bytes": 133032,
+      "sha256": "90d2052d87689bb5154d839df83605fbd8d0f79f69424d1d0670ecb61313141d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/95-public-card-no-text-warning-1440.txt",
+      "bytes": 1282,
+      "sha256": "09a68feeeae80f1a92a4ec41e4987328c8e9d2a2a5e549948bfcf85ea1a32c54"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/96-contact-selector-1440.jpg",
+      "bytes": 46536,
+      "sha256": "5adc6683cfe805bbd4c5fe86def25a2fa73a0c6e30d1515504c803a7301aa2a7"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/96-contact-selector-1440.txt",
+      "bytes": 1755,
+      "sha256": "a424bcd63da582c8ef38fa0137142d060c4ec4084919ccb3b576fbdf54a9ea99"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/97-contact-selector-390.jpg",
+      "bytes": 26887,
+      "sha256": "c6eccfc753d1a134d665d59c589c534983abd669ae932a9bc1e845b3c184df4f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/97-contact-selector-390.txt",
+      "bytes": 1755,
+      "sha256": "a424bcd63da582c8ef38fa0137142d060c4ec4084919ccb3b576fbdf54a9ea99"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/98-restored-demo-no-fixture-390.jpg",
+      "bytes": 19951,
+      "sha256": "cf828d748e85b5210278175e6b6e1dc8b9f71661d7a6ee98df8da2943432cf92"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/98-restored-demo-no-fixture-390.txt",
+      "bytes": 450,
+      "sha256": "7fd926405d3612a380a798c7bea815dbbf3b15122a12f192d767553e65d6351d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/99-personal-registration-desktop-1440.jpg",
+      "bytes": 47277,
+      "sha256": "13e128f05cfb187ec510a7690266a3843efc19e2db8d08c404d4b508a30dd85c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/99-personal-registration-desktop-1440.txt",
+      "bytes": 1199,
+      "sha256": "16260bce1a244abe10b08df35e5773f0067d3148167bfa9bd7e35d620600e73c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/browser-cleanup.json",
+      "bytes": 18161,
+      "sha256": "940f7746645a49016fbe44852a82c2973fbcdf3c743693a5d9d39aaace1f1cbf"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence/browser-smoke-cleanup.json",
+      "bytes": 186,
+      "sha256": "241f4eb199c2064ed903537f74633b2d9ad611e364ed25ef6b8411880bebf108"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-evidence-manifest.json",
+      "bytes": 33971,
+      "sha256": "d5076578cacdd6b23b076f982b74805fc8cdc19fb297e4444e16f0ce02d29097"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo-final.err.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo-final.out.log",
+      "bytes": 2705,
+      "sha256": "33dec9b6537539d48f9c0a4ff93b92d49f32db89632c4775d0b3c318ca3f712b"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo-initial-receipt.json",
+      "bytes": 270,
+      "sha256": "4b4e4914f3da20db6edc1b6d7a2450c9ca1744e11012556305e77eed70d41220"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo-proxy-receipt.json",
+      "bytes": 318,
+      "sha256": "1c354448c70089e7335828f19d108bbf6c401a700498aac483783648528f59ae"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo-proxy.err.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo-proxy.out.log",
+      "bytes": 33492,
+      "sha256": "d95eaaab582f1ce4152e7bd8eb8109b7493f9d75502901e39fbb647662a3fe77"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo-receipt.json",
+      "bytes": 351,
+      "sha256": "bd04b3376102b866fe276e89fd97ff585b30dd326771aece5688abf735022146"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo-restored-first-receipt.json",
+      "bytes": 399,
+      "sha256": "5e427a615281ea5bb7a2bc927b7bc25b17a4dc8bf84de8b6c6eacccbf1070a6f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo-restored.err.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo-restored.out.log",
+      "bytes": 2705,
+      "sha256": "20a512d8f550f79a249862e400e6a06bc56b4469d2ed0bba72fc565d3c90cf31"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo-smoke-receipt.json",
+      "bytes": 366,
+      "sha256": "9d1f0e327e2f4027cb7882934b95a4175549427f1780caa4cae76c8f9cba9fe9"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo-smoke.err.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo-smoke.out.log",
+      "bytes": 1050,
+      "sha256": "d6fc2857c56dd681e3e2750eeb16aebbe26cc991f97038eb91dd42151dd658b9"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo.err.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-expo.out.log",
+      "bytes": 213016,
+      "sha256": "25c3f4ee75443b685a92a8169a5643adf4f862330f18fe54646f542ace0592eb"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-export-final.log",
+      "bytes": 5594,
+      "sha256": "228e244e6c858660d65975d9c5fbe2de7f807d7c2710a768067ff2fe8a479ce7"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-export-manifest.json",
+      "bytes": 1464,
+      "sha256": "a0f90af0d62e0e0b0a9646ddd28dfe2794d5b6df6c0e3b415c2c034d30d253cb"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-export.log",
+      "bytes": 5594,
+      "sha256": "4b1d1ab04c2ef8050b48900c7d50e239edb3bdafc3bca4ed5e26b55eba0b9214"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-final-cleanup-verification.json",
+      "bytes": 212,
+      "sha256": "0d1e293388fed61d168634f6dd32f2b1c587fe6030b02da4f99aa20255a43009"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-fixture-business-receipt.json",
+      "bytes": 2243849,
+      "sha256": "e9c26f593141e4f65a759ca8c2ef9e623427ae526587b284c57fb0df3e944ddc"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-fixture-receipt.json",
+      "bytes": 28510,
+      "sha256": "0b0d9152ccbec47ce4b4d4ce155968bfd762fa10de998fa58957760be1adfab1"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-fixture-red.log",
+      "bytes": 1985,
+      "sha256": "85cb1ea2bb215837f5489462110195a0a6d66918080304104b7ed843a5830047"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-native-capability.json",
+      "bytes": 387,
+      "sha256": "9ea61b6b5b9182c8ab13e988067a06b2214ac64c31cba9b4e9d03908959297ee"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-native-text-red.log",
+      "bytes": 1106,
+      "sha256": "352e14bc2e514e4aa5f9e7d583dfe5eedc354c5cfc014a126ade95f0cc6b47b2"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-pagination-red.log",
+      "bytes": 1005,
+      "sha256": "bc9a03c5da597707f75d0be2c25fc4bb93dde23b75f2a484eed1d8e61f5d75b0"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-persisted-verification.json",
+      "bytes": 2997,
+      "sha256": "c4ec22ad9876003e13a192e1fc0b338d3b0d493f0734d210941dbd93c266f33a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-protocol-v2-smoke.json",
+      "bytes": 517,
+      "sha256": "c1d9b25c499df95980deaadb6b7574e04fa7f9a14d3dab4e691537378ba823ee"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-proxy-auth-receipt.json",
+      "bytes": 576,
+      "sha256": "92db47fb001ce6b0acd68d22e7fd04609b9734ed9b033bf9b79c6ccd8e05f4ab"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-proxy-cleanup.json",
+      "bytes": 42,
+      "sha256": "83a801f624ed464ea8a78a7220dc04348012259fd53c332e3449308343df4903"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-proxy-gateway-receipt.json",
+      "bytes": 1466,
+      "sha256": "914a5ab4658b2cc157e69af5a20324eed3d8c807a720a7c677a8aaa784308441"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-proxy-receipt.json",
+      "bytes": 576,
+      "sha256": "825dc2e46b3c7d0e8e0482f6c5b74b19b9e40177bc5d165039fc18e1b28176a5"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-proxy-socket-receipt.json",
+      "bytes": 876,
+      "sha256": "81ec6b98d18a1296d8bbd54bf971b53a521faead4ebea15d5b998eca8bcf4858"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-public-badge-red.log",
+      "bytes": 2153,
+      "sha256": "4585530bcfd55c62a1e7c3482fe0956c76909bd65fd45fc0cda5aa4b58c4ef82"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-public-preview-before-receipt.json",
+      "bytes": 257,
+      "sha256": "cd2a0b057f85e7b51089434df8c8761a2d907add3f29e71a623010e3ba98751d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-public-preview-receipt.json",
+      "bytes": 256,
+      "sha256": "30808617a409fcf1a2edebccd68d49de997cac319a586686d8106a89b0403691"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-public-text-red.log",
+      "bytes": 1577,
+      "sha256": "758691254ad80d4bb2edfbdaf16708f06471a46afe6fab30ad0b8d8bfe6aca94"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-readonly-red.log",
+      "bytes": 937,
+      "sha256": "8417c3aee113eec32ba4de107ffc9813041551a130f81b73af3a9e9f8f2f4c4a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-reinvite-coordinator-b-1791461802064.json",
+      "bytes": 811,
+      "sha256": "46579406bd2f9d3496507e7964067d36a9332ab90cbfcc8cb48d108c7ff3daf7"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-remove-coordinator-b-1791461658453.json",
+      "bytes": 692,
+      "sha256": "a515817a2d67c7ab35839596c9eb69ba62450ebc28162c164f66a3633135dcfc"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-remove-coordinator-b-1791462037273.json",
+      "bytes": 692,
+      "sha256": "ff0c37129151fc73c7790674e808e33be5f53785bbab22e7a7e5703facc99066"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-report.md",
+      "bytes": 25876,
+      "sha256": "d5c0e5653728bf7d6b23aa11c09c265f0c45e5378b7dd83e3c092b375e44265b"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-review.md",
+      "bytes": 12711,
+      "sha256": "bb623a14b77c3acda70ce366a0434f18283a62bbd1193df7666440703f41af1d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-sale-date-red.log",
+      "bytes": 1022,
+      "sha256": "60544bb62de239cee1b52dece0ead05210d50fcf090e89f620266272958bb3c2"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-seed-no-chat-1791460804082.json",
+      "bytes": 919,
+      "sha256": "7bb90d6a1ae0a4e30318d44230a565d7ca97ab7f784b795622e20abd77a02ae5"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-seed-public-1791461137642.json",
+      "bytes": 3189,
+      "sha256": "d6a2d6c6a3c8ad6abbf9efac8c69d6622193d524c1df2c610743d8a20e05d58e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-shared-native-text-red.log",
+      "bytes": 2036,
+      "sha256": "dac226abbf5c6e7a79c00992bede39f4a8e9abb953350d6df20ed713ed414bb7"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-smoke-cleanup.json",
+      "bytes": 135,
+      "sha256": "af89d8f90b66f10293f01db520a2607141ab09858fcd251cf81ca2403a33a78c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-smoke-status-final.json",
+      "bytes": 12296,
+      "sha256": "ea06b49dbd0baf3b0a9f1420ad38db75e2aa180fd79cd79446cd790e37e72d8a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-smoke-status.json",
+      "bytes": 12163,
+      "sha256": "44ab7313463614debc538bb082ad447e80475e004d57a1c64e8228932636ed6e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-state-after-sale.json",
+      "bytes": 5400,
+      "sha256": "5fdaaf1b825adcf8b8459dfdd9a81650db9b5ab22184217c225c0d787d925370"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-state-final.json",
+      "bytes": 103588,
+      "sha256": "c9d071e977909564186da218e0782b6f8952f864df725d3ac20a62339830ca05"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-state-moderation.json",
+      "bytes": 103523,
+      "sha256": "074b70a09a7747cf3efb27c76a48c663014b3e03a64316cf3dece82d904e0efc"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-status-final.json",
+      "bytes": 762315,
+      "sha256": "e8fbf84f2ab93d3fa30d19fba35b865a1ef6ba8cf3959059ddf0b72b3ee57bc0"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-status-initial.json",
+      "bytes": 12163,
+      "sha256": "9cdb5a611f88d0520037422e8c3335338c4dea5db23a3f62d00747af99adaf79"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-14-verify-1791462698071.json",
+      "bytes": 3694,
+      "sha256": "c5c7925a09ca4ff1a881b4f92e0d06e6cc23207dca09226f8490e25312731533"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-brief.md",
+      "bytes": 2762,
+      "sha256": "e87eb40afae847a564b64b9ee4dd68c5429fe18614a3487c279a963539fe747c"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-bytes.json",
+      "bytes": 2149,
+      "sha256": "71347177fd27d5c1b135b3130f572c1eec6664c17f275051632d51ecd5cd7933"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-check-final.log",
+      "bytes": 51262,
+      "sha256": "22d0c42807a730a249f83f0b3562ea5fa4cb28c8e606c8b1a2c964a6664c451a"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-check.log",
+      "bytes": 51276,
+      "sha256": "9ddcb7fb068b4561dc53d53e6b19810f69f2f5e83c43cc84540a5bbc796e1d51"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-concurrency-clean.log",
+      "bytes": 11120,
+      "sha256": "4568a6fcdf8f804a5d86674252c9ceee6059cba2dc6b7d933bd99eceda5e00d1"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-concurrency-final.log",
+      "bytes": 11116,
+      "sha256": "e2bfa6c32c29b88d542b31107cb060fd0339df11e3893f944f5fd5902078e6fb"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-concurrency.log",
+      "bytes": 9443,
+      "sha256": "151110a52a5537b98bad18716a71c79f9a33fa1fae194e90a3db4d17adda8516"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-export.log",
+      "bytes": 3893,
+      "sha256": "65aae4f278137da03f73fbd51355d71c8e7329a7e263dd03d4a86743c7ca8f36"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-fix1-bytes.json",
+      "bytes": 715,
+      "sha256": "094d2fcdc079b16058e0ca460d2aea9d5b1560796c0a6db4d488edf5bb6712a4"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-fix1-green.log",
+      "bytes": 1399,
+      "sha256": "f2c682456bedbca854984a53579d205f27dad0658638b08fbd46c57a148d4dde"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-fix1-red.log",
+      "bytes": 895,
+      "sha256": "3099f65f752a2805a209fbb65ce640e8e5ffe7275acd8b81cd5bee85eafa9b96"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-fix1-review.md",
+      "bytes": 4395,
+      "sha256": "b65a1f5765c7062ff1423ef0a1dc96624e2969415bf9c5e29637159063018ad2"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-fix1-tests.log",
+      "bytes": 331,
+      "sha256": "a8bd7cc49b0aaf6cea25d117ffb2d335c58f71a34c8df1beb15e2afbea847bc8"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-fix1-verifier.log",
+      "bytes": 1399,
+      "sha256": "f2c682456bedbca854984a53579d205f27dad0658638b08fbd46c57a148d4dde"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-fixture-receipt-first-cleaned.json",
+      "bytes": 164727,
+      "sha256": "9456ada37c7ac6c0222431b20924e8f1822df4a954a30761c198d3f20d96f314"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-fixture-receipt.json",
+      "bytes": 125509,
+      "sha256": "056a8d3f835143ac964497719c635625feccb22addb4e0a1c3802243bda289e6"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-offread-desktop.png",
+      "bytes": 41027,
+      "sha256": "4c610f8b58539782d696236974ed4279330589bd1eaf0f032e8f01cf99862654"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-offread-mobile.png",
+      "bytes": 35028,
+      "sha256": "cb2f5959ccffdfa9916bbbca73a84c400a4a42813bbbffeeab25548a87a9070d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-offread-notification-mobile.png",
+      "bytes": 33380,
+      "sha256": "7bfb716a72bb6bc3cdeddc32ae7309364d416773d81201e6636da95c547430a7"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-offread-portfolio-mobile.png",
+      "bytes": 35110,
+      "sha256": "f645ddc7707ffde9888a041a5ac1f181aed43ee19df4ed6017a72cf4871af8b6"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-offread-property-mobile.png",
+      "bytes": 23752,
+      "sha256": "1f97383613744f7c87e71823eef161f2427b8251abb0122feb3b168b2189a8fa"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-offread-removed-desktop.png",
+      "bytes": 13135,
+      "sha256": "3a6710e52ca7bfd8351e0d7e45c4de898b69dc14c3b832ce7ca2c272fe04c0ac"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-offread-sale-mobile.png",
+      "bytes": 33375,
+      "sha256": "3d72bbfa66f1ff82c2d1d527c77c928e1bcafa3cbc0dd81d060a428c4c590115"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-offread-team-mobile.png",
+      "bytes": 33297,
+      "sha256": "036373487c163a9018b006847d42298ac774c0e609ae8a4b6d2027cddeb5a63d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-preflight.md",
+      "bytes": 12004,
+      "sha256": "02c6768c33e89c7db7757af210a64945c6f93fbd9e363581fa8d70fcb14dbeb8"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-report.md",
+      "bytes": 25853,
+      "sha256": "b74d6bb61cda5613d3e1f4165d03570fb62dfcf967d09147883487eacc656d8f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-review-preflight.md",
+      "bytes": 3358,
+      "sha256": "952f8c29420865f43e47627c9eb5dcbff4cf7f1894627b1fbbc487131db0b3c7"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-review.md",
+      "bytes": 11670,
+      "sha256": "1f642b485f84bce8ed47f20ccebdcdcc59a6f1f18a2307be74d71e233f259a72"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-sql-final.log",
+      "bytes": 2938,
+      "sha256": "ca0ca8a5c0439a5be41fb5bbbb0e2a8d3266864ffd30f7328dbe149634507b4f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-ui-remove-member.json",
+      "bytes": 195,
+      "sha256": "a38010f82f999f52132aa7f9cf0876ab78eb61ca33f989530b09283b7c553d27"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-ui-seed.json",
+      "bytes": 3675,
+      "sha256": "671bf158c506aba7d08bd3c1cf4dc63d239223f03b2b0e4964c5305f27a04c4d"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-15-ui-status.json",
+      "bytes": 321,
+      "sha256": "38e41b04813375b65951ee7cbf52e149fe6ff1825aca0eaeee5462f9e4f99a81"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-16-brief.md",
+      "bytes": 2055,
+      "sha256": "f646739c78ad28849ce10ac5be08ef2f61900a30e80465b9f3ae3652d814939f"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-16-native-readiness-current.json",
+      "bytes": 156,
+      "sha256": "f7748219878053a75c137b82945c5421a48b32d01170e4da27c6dd8cabf244c6"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-16-preflight.md",
+      "bytes": 25206,
+      "sha256": "dfe8dacf9e99ceecea19f77fe135bd1ce9c51a2594320bb6becb343184087fbb"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task-16-preparation-report.md",
+      "bytes": 20448,
+      "sha256": "5e1f8997102cd785b83f6386caed6d7ee79c01bb5e9d61de6cf5a5acb60490f4"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task12-buyer-test.cjs",
+      "bytes": 1176,
+      "sha256": "aa14ef3a8582e6cf6ec6ecc904366f955da3a92fa9f8f9ba4317b14d8471d306"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task12-clean.cjs",
+      "bytes": 1286,
+      "sha256": "57737cb4879a755ecb7f60e072eebe8d26c34999144c284a44456f3ef032a692"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task12-generate.cjs",
+      "bytes": 9462,
+      "sha256": "b2697a04a169478fe707e4715a55ec27637a8d88068c8adfd5cabecbd66eb59e"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task12-history.cjs",
+      "bytes": 4864,
+      "sha256": "e7063a63328413de7ae6bf61134bc461ed622115ff51c7f7f1f01463a50d8901"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task12-nochat.cjs",
+      "bytes": 2275,
+      "sha256": "8c81bc3b9665a232c86a92dd5f2899dbf67982344d2453b41559c0dfee12ea39"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task12-repair.cjs",
+      "bytes": 3332,
+      "sha256": "577412b0178635b452f3c77c1a241766691a7430987e4e7b795255e140d47375"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task12-ts.cjs",
+      "bytes": 6654,
+      "sha256": "d6ce0615f0dece047010721da1673e7c18a6d6e33a324aa68537b7e353f8dbb6"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task12-upgrade.cjs",
+      "bytes": 2871,
+      "sha256": "6604a023311e934d0537f15606167dc33a3951ddd6e70fcc8a3bfbcec75c3313"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task12-whitespace.cjs",
+      "bytes": 296,
+      "sha256": "f75d0f724ee3f5cf07b638ea276794188bf10270a9b0ee9a81fd738318cf2f06"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task12-wiring.cjs",
+      "bytes": 2421,
+      "sha256": "c9086043e183553a22177e68ef4f9598c67a2db7f904484a7405154781ccad93"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/task14-review-preflight.md",
+      "bytes": 6163,
+      "sha256": "51fb4dd3895ff4759ea2e33e1aa33c479d3d1b6edfdbed96a9af0428bb59b2d7"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/vercel-dry-preflight.json",
+      "bytes": 539622,
+      "sha256": "ef7e979b9bbc44ec989074ddb901fac534769a3e32827dc8d517eae6820188cd"
+    },
+    {
+      "path": "2026-10-07-agency-closure-release/vercel-dry-preflight.stderr.log",
+      "bytes": 60,
+      "sha256": "86a92d0662fd3bced9fb16d8bea14589f6acdc928749d193b463e0e150011401"
+    }
+  ]
+}
