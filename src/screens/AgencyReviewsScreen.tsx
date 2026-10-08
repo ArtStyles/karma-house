@@ -1,6 +1,6 @@
 import {randomUUID} from 'expo-crypto';
-import {useFocusEffect} from 'expo-router';
-import {useCallback,useRef,useState} from 'react';
+import {useFocusEffect,useLocalSearchParams} from 'expo-router';
+import {useCallback,useEffect,useRef,useState} from 'react';
 import {ActivityIndicator,Image,Modal,ScrollView,Text,View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useAuth} from '../auth/AuthProvider';
@@ -21,8 +21,10 @@ type Detail={application:AgencyApplication;request:AgencyVerificationRequest|nul
 type Choice={actorId:string;detail:Detail;kind:'recovery';decision:'recover';requestId?:undefined}|{actorId:string;requestId?:string;detail:Detail;kind:'application';decision:'approve'|'needs_changes'|'reject'|'suspend'}|{actorId:string;requestId?:string;detail:Detail;kind:'verification';decision:'grant'|'needs_changes'|'reject'|'revoke'};
 const actionLabels={recover:'Recuperar inmobiliaria',approve:'Aprobar inmobiliaria',needs_changes:'Pedir correcciones',reject:'Rechazar',suspend:'Suspender inmobiliaria',grant:'Conceder verificación',revoke:'Retirar verificación'};
 export default function AgencyReviewsScreen(){
+ const params=useLocalSearchParams<{section?:string}>();
  const auth=useAuth(),workspace=useAgencyWorkspace(),{colors,styles:s}=useAgencyFormStyles();
- const owner=canReviewAgency(auth)&&!auth.suspended&&Boolean(auth.session),[section,setSection]=useState<'application'|'verification'>('application'),[agencyState,setAgencyState]=useState<AgencyState>('pending'),[verificationState,setVerificationState]=useState<AgencyVerificationRequestState|'all'>('pending'),[offset,setOffset]=useState(0),[page,setPage]=useState<{actorId:string;items:Detail[];hasMore:boolean}|null>(null),[selection,setSelection]=useState<Choice|null>(null),[newAdminId,setNewAdminId]=useState(''),[note,setNote]=useState(''),[issue,setIssue]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false);
+ const owner=canReviewAgency(auth)&&!auth.suspended&&Boolean(auth.session),[section,setSection]=useState<'application'|'verification'>(params.section==='verification'?'verification':'application'),[agencyState,setAgencyState]=useState<AgencyState>('pending'),[verificationState,setVerificationState]=useState<AgencyVerificationRequestState|'all'>('pending'),[offset,setOffset]=useState(0),[page,setPage]=useState<{actorId:string;items:Detail[];hasMore:boolean}|null>(null),[selection,setSelection]=useState<Choice|null>(null),[newAdminId,setNewAdminId]=useState(''),[note,setNote]=useState(''),[issue,setIssue]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(false);
+ useEffect(()=>{setSection(params.section==='verification'?'verification':'application');setOffset(0)},[params.section]);
  const viewKey=`${auth.user?.id??''}:${section}:${agencyState}:${verificationState}:${offset}`,scope=useRef(createAgencyScreenRequestScope()).current;
  const items=page&&page.actorId===auth.user?.id&&owner?page.items:[],selected=selection?.actorId===auth.user?.id&&owner?selection:null;
  const load=useCallback(async()=>{

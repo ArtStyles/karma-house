@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { MessagingRequestContext } from '../messaging/types.ts';
 import { isUuid } from '../messaging/domain.ts';
-import { compareNotificationSequence, isNotificationSequence, NOTIFICATION_PAGE_SIZE, NotificationError } from './domain.ts';
+import { AGENCY_NOTIFICATION_KINDS, compareNotificationSequence, isNotificationSequence, NOTIFICATION_PAGE_SIZE, NotificationError } from './domain.ts';
 import type { AppNotification, NotificationPreferences, NotificationRepository, NotificationSummary } from './types.ts';
 
 const invalid = () => new NotificationError('No se pudieron interpretar los avisos. Actualiza la bandeja e inténtalo de nuevo.');
@@ -23,15 +23,15 @@ function decodeSummary(value: unknown): NotificationSummary {
   if (item.readThrough === '0' && count.unreadCount !== 0) throw invalid();
   return { ...count, readThrough: item.readThrough };
 }
-const categories = ['message', 'visit', 'offer', 'alert'];
+const categories = ['message', 'visit', 'offer', 'alert', 'agency'];
 export function decodeNotification(value: unknown): AppNotification {
   const item = record(value) as unknown as AppNotification;
   // Servers before search alerts omit these fields.
   const propertyId = item.propertyId ?? null, savedSearchId = item.savedSearchId ?? null;
   if (![item.id, item.recipientId, item.actorId].every(isUuid)
-    || item.actorId === item.recipientId || !isNotificationSequence(item.seq)
+    || (item.category !== 'agency' && item.actorId === item.recipientId) || !isNotificationSequence(item.seq)
     || !categories.includes(item.category)
-    || (item.category === 'alert'
+    || (item.category === 'agency' ? !AGENCY_NOTIFICATION_KINDS.includes(item.eventKind!) || ![item.agencyId,item.dealId,item.saleRequestId,item.verificationRequestId].every(v=>v===null||isUuid(v)) || item.conversationId!==null || item.messageId!==null || item.negotiationId!==null || propertyId!==null || savedSearchId!==null : item.category === 'alert'
       ? item.conversationId !== null || item.messageId !== null || item.negotiationId !== null
         || !isUuid(propertyId) || (savedSearchId !== null && !isUuid(savedSearchId))
       : ![item.conversationId, item.messageId].every(isUuid) || propertyId !== null || savedSearchId !== null)
@@ -40,7 +40,7 @@ export function decodeNotification(value: unknown): AppNotification {
     || !text(item.actorName, 200) || !text(item.propertyTitle, 200)
     || !text(item.title, 200) || !text(item.body, 500)
     || !timestamp(item.createdAt) || (item.readAt !== null && !timestamp(item.readAt))) throw invalid();
-  return { id: item.id, seq: item.seq, recipientId: item.recipientId, category: item.category,
+  return { agencyId:item.agencyId??null,dealId:item.dealId??null,saleRequestId:item.saleRequestId??null,verificationRequestId:item.verificationRequestId??null,eventKind:item.eventKind??null,id: item.id, seq: item.seq, recipientId: item.recipientId, category: item.category,
     conversationId: item.conversationId, messageId: item.messageId, negotiationId: item.negotiationId,
     propertyId, savedSearchId, actorId: item.actorId, actorName: item.actorName, propertyTitle: item.propertyTitle,
     title: item.title, body: item.body, createdAt: item.createdAt, readAt: item.readAt };
@@ -48,8 +48,8 @@ export function decodeNotification(value: unknown): AppNotification {
 function decodePreferences(value: unknown): NotificationPreferences {
   const item = record(value);
   if (typeof item.messages !== 'boolean' || typeof item.visits !== 'boolean' || typeof item.offers !== 'boolean'
-    || typeof item.alerts !== 'boolean' || !Number.isSafeInteger(item.version) || (item.version as number) < 0) throw invalid();
-  return { messages: item.messages, visits: item.visits, offers: item.offers, alerts: item.alerts, version: item.version as number };
+    || (item.agencies!==undefined&&typeof item.agencies!=='boolean') || typeof item.alerts !== 'boolean' || !Number.isSafeInteger(item.version) || (item.version as number) < 0) throw invalid();
+  return { messages: item.messages, visits: item.visits, offers: item.offers, alerts: item.alerts, agencies: item.agencies===undefined?true:item.agencies as boolean, version: item.version as number };
 }
 export function createSupabaseNotificationRepository(client: SupabaseClient): NotificationRepository {
   const rpc = async (name: string, parameters: Record<string, unknown>, context: MessagingRequestContext): Promise<unknown> => {
@@ -64,15 +64,15 @@ export function createSupabaseNotificationRepository(client: SupabaseClient): No
   };
   // The read RPCs count without alerts; the bell counts with them, so ask the summary.
   const unreadWithAlerts = async (context: MessagingRequestContext) =>
-    decodeCount(await rpc('kh_notification_summary', { p_include_alerts: true }, context));
+    decodeCount(await rpc('kh_notification_summary', { p_include_alerts: true, p_include_agencies: true }, context));
   return {
-    async summary(context) { return decodeSummary(await rpc('kh_notification_summary', { p_include_alerts: true }, context)); },
+    async summary(context) { return decodeSummary(await rpc('kh_notification_summary', { p_include_alerts: true, p_include_agencies: true }, context)); },
     async list(options, context) {
       if (options.beforeSeq !== undefined && !isNotificationSequence(options.beforeSeq)
         || options.unreadOnly !== undefined && typeof options.unreadOnly !== 'boolean'
         || options.category !== undefined && !categories.includes(options.category)) throw invalid();
       const result = record(await rpc('kh_list_notifications', { p_before_seq: options.beforeSeq ?? null,
-        p_unread_only: options.unreadOnly ?? false, p_category: options.category ?? null, p_limit: NOTIFICATION_PAGE_SIZE, p_include_alerts: true }, context));
+        p_unread_only: options.unreadOnly ?? false, p_category: options.category ?? null, p_limit: NOTIFICATION_PAGE_SIZE, p_include_alerts: true, p_include_agencies: true }, context));
       const summary = decodeSummary(result);
       if (!Array.isArray(result.items) || result.items.length > NOTIFICATION_PAGE_SIZE
         || result.nextCursor !== null && !isNotificationSequence(result.nextCursor)) throw invalid();
@@ -88,21 +88,21 @@ export function createSupabaseNotificationRepository(client: SupabaseClient): No
     },
     async markRead(id, context) {
       if (!isUuid(id)) throw invalid();
-      decodeCount(await rpc('kh_read_notification', { p_id: id }, context));
+      decodeCount(await rpc('kh_read_notification', { p_id: id, p_include_agencies: true }, context));
       return unreadWithAlerts(context);
     },
     async markAllRead(readThrough, context) {
       if (!isNotificationSequence(readThrough, true)) throw invalid();
-      decodeCount(await rpc('kh_read_notifications_through', { p_through_seq: readThrough }, context));
+      decodeCount(await rpc('kh_read_notifications_through', { p_through_seq: readThrough, p_include_agencies: true }, context));
       return unreadWithAlerts(context);
     },
     async preferences(context) { return decodePreferences(await rpc('kh_get_notification_preferences', {}, context)); },
     async savePreferences(input, context) {
-      if (![input.messages, input.visits, input.offers, input.alerts].every(value => typeof value === 'boolean')
+      if (![input.messages, input.visits, input.offers, input.alerts, input.agencies].every(value => typeof value === 'boolean')
         || !Number.isSafeInteger(input.expectedVersion) || input.expectedVersion < 0) throw invalid();
       const result = decodePreferences(await rpc('kh_save_notification_preferences', { p_payload: input }, context));
       if (result.messages !== input.messages || result.visits !== input.visits || result.offers !== input.offers
-        || result.alerts !== input.alerts) throw invalid();
+        || result.alerts !== input.alerts || result.agencies !== input.agencies) throw invalid();
       return result;
     },
   };

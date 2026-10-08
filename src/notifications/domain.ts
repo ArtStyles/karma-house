@@ -21,3 +21,5 @@ export function notificationErrorMessage(error: unknown): string {
   if (/network|fetch|timeout|abort/i.test(message)) return 'No se pudo conectar. Vuelve a intentar cuando tengas conexión.';
   return 'No se pudieron actualizar los avisos. Inténtalo de nuevo.';
 }
+
+export const AGENCY_NOTIFICATION_KINDS = ['agency_review','agency_verification','team_invitation','deal_assignment','sale_request','property_sold','visit_reminder','task_reminder','manual_cancellation_notice'] as const;

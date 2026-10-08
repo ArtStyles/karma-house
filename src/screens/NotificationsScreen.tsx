@@ -1,3 +1,6 @@
+import {useState} from 'react';
+import {useNotificationNavigation} from '../notifications/useNotificationNavigation';
+import {notificationErrorMessage} from '../notifications/domain';
 import { router } from 'expo-router';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,7 +29,9 @@ function NotificationsBody() {
   const { colors, styles } = useStyles();
   const store = useNotificationCenter();
   const { list } = store;
-  const issue = store.mutationError || list.error || store.summaryError;
+  const navigation=useNotificationNavigation(),[openingError,setOpeningError]=useState('');
+  const open=(id:string)=>{setOpeningError('');void navigation.open(id).catch(e=>setOpeningError(notificationErrorMessage(e)))};
+  const issue = openingError || store.mutationError || list.error || store.summaryError;
   const markAll = () => {
     // Capture precisely the last server-observed sequence, never a future unread count.
     const cutoff = store.readThrough;
@@ -48,7 +53,7 @@ function NotificationsBody() {
         {store.unreadCount > 0 && <Button label="Marcar todos como leídos" secondary icon="checkmark-done-outline" disabled={!!store.marking || store.readThrough === '0'} loading={store.marking === 'all'} onPress={markAll} />}
         {!!issue && <Notice error>{issue}</Notice>}
       </View>}
-      renderItem={({ item }) => <NotificationCard item={item} busy={!!store.marking} marking={store.marking === item.id} onRead={() => void store.markRead(item.id).catch(() => {})} onOpen={() => router.push(item.category === 'alert' ? `/property/${item.propertyId}` : `/messages/${item.conversationId}`)} />}
+      renderItem={({ item }) => <NotificationCard item={item} busy={!!store.marking} marking={store.marking === item.id} onRead={() => void store.markRead(item.id).catch(() => {})} onOpen={() => open(item.id)} />}
       ListEmptyComponent={!list.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} />
         : list.error ? null
         : list.nextCursor ? <Notice>Has revisado esta página. Carga más avisos para seguir consultando los anteriores.</Notice>

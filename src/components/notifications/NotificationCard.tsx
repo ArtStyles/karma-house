@@ -4,9 +4,9 @@ import { createThemedStyles } from '../../theme';
 import { Button, Icon, type IconName } from '../ui';
 
 const categoryIcons: Record<AppNotification['category'], IconName> = {
-  message: 'chatbubble-outline', visit: 'calendar-outline', offer: 'pricetag-outline', alert: 'search-outline',
+  message: 'chatbubble-outline', visit: 'calendar-outline', offer: 'pricetag-outline', alert: 'search-outline', agency: 'business-outline',
 };
-const categoryLabels: Record<AppNotification['category'], string> = { message: 'Mensaje', visit: 'Visita', offer: 'Oferta', alert: 'Alerta' };
+const categoryLabels: Record<AppNotification['category'], string> = { message: 'Mensaje', visit: 'Visita', offer: 'Oferta', alert: 'Alerta', agency: 'Agencia' };
 
 export function NotificationCard({ item, busy, marking, onOpen, onRead }: {
   item: AppNotification; busy: boolean; marking: boolean; onOpen(): void; onRead(): void;
@@ -29,10 +29,10 @@ export function NotificationCard({ item, busy, marking, onOpen, onRead }: {
       <Text numberOfLines={2} style={styles.actor}>{item.actorName}</Text>
       <Text accessibilityRole="header" style={styles.title}>{item.title}</Text>
       <Text style={styles.body}>{item.body}</Text>
-      <View style={styles.property}><Icon name="home-outline" size={15} color={colors.muted} /><Text style={styles.propertyText}>{item.propertyTitle}</Text></View>
+      {!!item.propertyTitle && <View style={styles.property}><Icon name="home-outline" size={15} color={colors.muted} /><Text style={styles.propertyText}>{item.propertyTitle}</Text></View>}
     </View>
     <View style={styles.actions}>
-      <Button label={item.category === 'alert' ? 'Ver vivienda' : 'Abrir conversación'} secondary onPress={onOpen} style={styles.action} />
+      <Button label={item.category === 'agency' ? 'Abrir aviso' : item.category === 'alert' ? 'Ver vivienda' : 'Abrir conversación'} secondary onPress={onOpen} style={styles.action} />
       {unread
         ? <Button label="Marcar como leído" secondary icon="checkmark-outline" loading={marking} disabled={busy} onPress={onRead} style={[styles.action, styles.readAction]} />
         : <View style={styles.readLabel}><Icon name="checkmark-circle-outline" size={16} color={colors.muted} /><Text style={styles.readText}>Leído</Text></View>}

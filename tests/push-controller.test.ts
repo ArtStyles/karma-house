@@ -218,3 +218,11 @@ test('clearing a handled response identifies it so an older completion cannot er
   f.controller.receiveResponse('one', payload()); f.controller.receiveResponse('two', payload()); await tick();
   assert.deepEqual(f.clearedResponses, ['one', 'two']);
 });
+
+test('agency capability upgrade persists a new revision and retries it consistently',async()=>{
+ const f=fixture();await f.controller.setSession(session());
+ const token='fcm-test-token-000000000000000000000000000000000000000000000000000000000000';
+ await f.store.change(s=>({...s,revision:7,intent:{enabled:true,userId:actor,sessionId,fcmToken:token,confirmed:true,wasEnabled:true}}));
+ await f.controller.refresh();assert.equal(f.calls.at(-1)?.revision,8);
+ await f.controller.refresh();assert.equal(f.calls.at(-1)?.revision,8);
+});
