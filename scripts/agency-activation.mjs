@@ -22,6 +22,7 @@ export function parseAgencyCommand(args,verify=false){
  return result;
 }
 export async function agencyConnection(command,env=process.env){
+ if(!['local','hosted'].includes(command.target))throw Error('Invalid agency target');
  let connectionString,ssl;
  if(command.target==='local'){
   const value=env.KH_LOCAL_DATABASE_URL;let url;try{url=new URL(value)}catch{throw Error('Explicit local fixture URL required')}
@@ -80,24 +81,52 @@ export function inventoryNames(migrations){
  const sql=migrations.map(m=>m.sql).join('\n'),functions=new Set(),tables=new Set(),managed=[];
  for(const m of sql.matchAll(/create\s+(?:or\s+replace\s+)?function\s+((?:public|kh_private)\.[a-z_]+)/gi))functions.add(m[1]);
  for(const m of sql.matchAll(/alter function\s+((?:public|kh_private))\.[a-z_]+\([^;]+?rename to\s+([a-z_]+)/gi))functions.add(`${m[1]}.${m[2]}`);
+ // Rename-then-move retains the function identity/ACL; pin its final schema too.
+ for(const m of sql.matchAll(/alter function\s+public\.[a-z_]+\([^;]+?rename to\s+([a-z_]+)\s*;\s*alter function\s+public\.([a-z_]+)\([^;]+?set schema\s+kh_private/gi)){
+  if(m[1]!==m[2])throw Error('Ambiguous renamed agency function');
+  functions.delete(`public.${m[1]}`);functions.add(`kh_private.${m[1]}`);
+ }
  for(const m of sql.matchAll(/(?:create table|alter table)\s+((?:public|kh_private|storage)\.[a-z_]+)/gi))tables.add(m[1]);
  for(const m of sql.matchAll(/create\s+(policy|trigger)\s+([a-z_]+)\s+[^;]*?\bon\s+((?:public|kh_private|storage|auth)\.[a-z_]+)/gi)){
   if(/^(auth|storage)\./.test(m[3]))managed.push({table:m[3],kind:m[1].toLowerCase(),name:m[2]});else tables.add(m[3]);
  }
  return {functions:[...functions].sort(),tables:[...tables].sort(),managed:managed.sort((a,b)=>`${a.table}.${a.name}`<`${b.table}.${b.name}`?-1:1)};
 }
-export async function verifyAgencies(db){
+export function agencyProfileSchema(manifest,profile){
+ if(!['local','hosted'].includes(profile))throw Error('Invalid agency manifest profile');
+ const schema=structuredClone(manifest.schema);
+ if(profile==='hosted'){
+  const pins=manifest.profiles?.hosted;if(!pins)throw Error('Reviewed hosted profile missing');
+  for(const {signature,service_role} of pins.functions){
+   const row=schema.functions.find(f=>f.signature===signature);
+   if(!row||service_role!==true||row.service_role!==false)throw Error('Invalid hosted function grant pin');
+   row.service_role=true;
+  }
+  for(const pin of pins.managed){
+   const row=schema.managed.find(m=>m.table===pin.table&&m.kind===pin.kind&&m.name===pin.name);
+   if(!row||pin.table!=='auth.users'||pin.kind!=='trigger'||!/^[a-f0-9]{64}$/.test(pin.sha256))throw Error('Invalid hosted managed security pin');
+   row.sha256=pin.sha256;
+  }
+ }
+ return schema;
+}
+export async function reviewedAgencyManifest(profile='local'){
+ if(!['local','hosted'].includes(profile))throw Error('Invalid agency manifest profile');
  const migrations=await migrationArtifacts(),manifest=JSON.parse(await readFile(manifestFile,'utf8'));
  if(JSON.stringify(migrations.map(({file,version,sha256})=>({file,version,sha256})))!==JSON.stringify(manifest.migrations))throw Error('Reviewed agency manifest differs from local bytes');
  if(JSON.stringify(inventoryNames(migrations))!==JSON.stringify(manifest.names))throw Error('Agency manifest omits required SQL inventory');
+ return {migrations,manifest,schema:agencyProfileSchema(manifest,profile)};
+}
+export async function verifyAgencies(db,profile='local'){
+ const {migrations,manifest,schema}=await reviewedAgencyManifest(profile);
  const rows=(await db.query('select m.version,m.statements,c.sha256 from supabase_migrations.schema_migrations m left join supabase_migrations.karmahouse_migration_checksums c using(version) where m.version=any($1) order by m.version',[migrations.map(m=>m.version)])).rows;
  assertMigrationLedger(migrations,rows);
  const actual=await schemaInventory(db,manifest.names);
- if(JSON.stringify(actual)!==JSON.stringify(manifest.schema))throw Error('Agency schema/function/grant inventory differs from reviewed manifest');
+ if(JSON.stringify(actual)!==JSON.stringify(schema))throw Error('Agency schema/function/grant inventory differs from reviewed manifest');
  const setting=(await db.query('select enabled from kh_private.agency_settings where singleton')).rows;
  if(setting.length!==1||typeof setting[0].enabled!=='boolean')throw Error('Agency flag missing');
  const bucket=(await db.query("select public from storage.buckets where id='agency-assets'")).rows[0];if(bucket?.public!==false)throw Error('Agency assets must remain private');
- return {complete:true,migrations:10,functions:actual.functions.length,tables:actual.tables.length,permissions:'reviewed',enabled:setting[0].enabled};
+ return {complete:true,migrations:10,functions:actual.functions.length,tables:actual.tables.length,permissions:'reviewed',enabled:setting[0].enabled,profile};
 }
 export async function disableAgencies(db,reason){
  const flag=await db.query('update kh_private.agency_settings set enabled=false where singleton');
@@ -137,9 +166,9 @@ export async function runAgencyCommand(command){
   let status;
   if(command.action==='disable'){
    await db.query('savepoint agency_inventory');
-   try{status=await verifyAgencies(db);}catch{await db.query('rollback to savepoint agency_inventory');status={complete:false,permissions:'unverified'};}
+   try{status=await verifyAgencies(db,command.target);}catch{await db.query('rollback to savepoint agency_inventory');status={complete:false,permissions:'unverified',profile:command.target};}
    await db.query('release savepoint agency_inventory');
-  }else status=await verifyAgencies(db);
+  }else status=await verifyAgencies(db,command.target);
   let cancelled;
   if(command.action==='enable'){
    await db.query('update kh_private.agency_settings set enabled=true where singleton');

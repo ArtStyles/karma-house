@@ -17,7 +17,10 @@ try{
  await db.query('create schema if not exists supabase_migrations;create table if not exists supabase_migrations.schema_migrations(version text primary key,statements text[],name text);create table if not exists supabase_migrations.karmahouse_migration_checksums(version text primary key references supabase_migrations.schema_migrations(version),sha256 text not null,applied_at timestamptz default now())');
  for(const m of migrations){await db.query('insert into supabase_migrations.schema_migrations(version,statements,name)values($1,$2,$3)',[m.version,[m.sql],m.file.slice(15,-4)]);await db.query('insert into supabase_migrations.karmahouse_migration_checksums(version,sha256)values($1,$2)',[m.version,m.sha256]);}
  const names=inventoryNames(migrations),schema=await schemaInventory(db,names);
- if(process.argv.includes('--record-manifest'))await writeFile(manifestFile,JSON.stringify({format:1,migrations:migrations.map(({file,version,sha256})=>({file,version,sha256})),names,schema},null,2)+'\n');
+ if(process.argv.includes('--record-manifest')){
+  const {profiles}=JSON.parse(await readFile(manifestFile,'utf8'));
+  await writeFile(manifestFile,JSON.stringify({format:1,migrations:migrations.map(({file,version,sha256})=>({file,version,sha256})),names,schema,...(profiles?{profiles}:{})},null,2)+'\n');
+ }
  assert.equal((await verifyAgencies(db)).enabled,false);console.log('ten byte hashes, ledger SQL, schema, functions and effective grants verified; default OFF');
  // Drift must fail closed even with a complete settings row.
  for(const damage of ["delete from supabase_migrations.karmahouse_migration_checksums where version='20261007000500'", "alter function public.kh_list_agency_members(uuid,uuid,integer,integer) rename to broken_members", "grant select on kh_private.agency_events to authenticated", "alter table kh_private.agency_settings alter column enabled set default true"]){await db.query('begin');await db.query(damage);await assert.rejects(verifyAgencies(db));await db.query('rollback');}

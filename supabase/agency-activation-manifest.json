@@ -147,6 +147,9 @@
       "kh_private.guard_alias_origin",
       "kh_private.guard_assisted_consent",
       "kh_private.guard_property_alias_write",
+      "kh_private.kh_create_negotiation_pre_scheduling",
+      "kh_private.kh_respond_negotiation_pre_scheduling",
+      "kh_private.kh_review_agency_before_lifecycle",
       "kh_private.lifecycle_pause_permitted",
       "kh_private.link_assisted_agency_before_aliases",
       "kh_private.list_sale_requests",
@@ -212,7 +215,6 @@
       "public.kh_create_agency_proposal",
       "public.kh_create_joint_visit_slot",
       "public.kh_create_negotiation",
-      "public.kh_create_negotiation_pre_scheduling",
       "public.kh_decide_agency_invitation",
       "public.kh_decide_agency_mandate",
       "public.kh_decide_agency_property_change",
@@ -272,9 +274,7 @@
       "public.kh_resolve_push_notification",
       "public.kh_respond_agency_proposal",
       "public.kh_respond_negotiation",
-      "public.kh_respond_negotiation_pre_scheduling",
       "public.kh_review_agency",
-      "public.kh_review_agency_before_lifecycle",
       "public.kh_review_agency_message_report",
       "public.kh_review_agency_verification",
       "public.kh_review_property",
@@ -1027,6 +1027,27 @@
         "authenticated": false,
         "service_role": false,
         "sha256": "72642753c1617417f53ccebaf5082f9c8c845dfe4767404379749534e5c365db"
+      },
+      {
+        "signature": "kh_private.kh_create_negotiation_pre_scheduling(p_actor_id uuid, p_payload jsonb)",
+        "anon": false,
+        "authenticated": false,
+        "service_role": false,
+        "sha256": "3e094447fcaf9dadc57bf096384e4cd275a2902dd9ef00531d057567e93b0172"
+      },
+      {
+        "signature": "kh_private.kh_respond_negotiation_pre_scheduling(p_actor_id uuid, p_payload jsonb)",
+        "anon": false,
+        "authenticated": false,
+        "service_role": false,
+        "sha256": "7551352521449e3cfb8fb83ee6fa34af7fa32b12a68c7204aeb4b3f42d159a57"
+      },
+      {
+        "signature": "kh_private.kh_review_agency_before_lifecycle(p_actor_id uuid, p_payload jsonb)",
+        "anon": false,
+        "authenticated": false,
+        "service_role": false,
+        "sha256": "b5cc1cdcb0ac7dbac1062036d348d93fa3cd34fecc1f0dfc930d5b60ba766a8f"
       },
       {
         "signature": "kh_private.lifecycle_pause_permitted(pid uuid)",
@@ -6682,5 +6703,461 @@
         "sha256": "12925cbfbedff10ac74918193b398f56965f66df3df0a16ec8e9cc8deb731c15"
       }
     ]
+  },
+  "profiles": {
+    "hosted": {
+      "functions": [
+        {
+          "signature": "kh_private.full_public_profile(p_user_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "kh_private.kh_create_negotiation_pre_scheduling(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "kh_private.kh_respond_negotiation_pre_scheduling(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "kh_private.kh_review_agency_before_lifecycle(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "kh_private.link_assisted_agency_before_aliases(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "kh_private.personal_kh_save_property(p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "kh_private.personal_kh_set_property_status(p_id uuid, p_status text)",
+          "service_role": true
+        },
+        {
+          "signature": "kh_private.personal_kh_submit_property(p_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_admin_link_assisted_agency(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_admin_merge_property_duplicates(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_admin_property_duplicate_candidates(p_actor_id uuid, p_property_id uuid, p_offset integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_admin_recover_agency(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_admin_unpublish(p_actor_id uuid, p_property_id uuid, p_expected_version integer, p_reason text)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_agency_application(p_actor_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_agency_calendar(p_actor_id uuid, p_agency_id uuid, p_from timestamp with time zone, p_to timestamp with time zone, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_agency_capabilities(p_actor_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_agency_invitation_candidate(p_actor_id uuid, p_agency_id uuid, p_user_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_agency_membership(p_actor_id uuid, p_agency_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_agency_properties(p_actor_id uuid, p_agency_id uuid, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_agency_property(p_actor_id uuid, p_agency_id uuid, p_property_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_agency_registration_available()",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_agency_review_detail(p_actor_id uuid, p_agency_id uuid, p_request_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_agency_save_property(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_agency_share_context(p_actor_id uuid, p_agency_id uuid, p_property_id uuid, p_manager_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_agency_verification_request(p_actor_id uuid, p_agency_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_assign_agency_deal(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_assign_agency_deal_pre_followups(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_begin_account_deletion(p_actor_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_create_agency_deal(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_create_agency_proposal(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_create_joint_visit_slot(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_create_negotiation(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_decide_agency_invitation(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_decide_agency_mandate(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_decide_agency_property_change(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_decide_agency_sale(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_decide_personal_sale(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_find_agency_property_matches(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_finish_agency_task(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_get_agency_conversation(p_actor_id uuid, p_agency_id uuid, p_conversation_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_get_agency_deal(p_actor_id uuid, p_agency_id uuid, p_deal_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_get_agency_deal_conversation_id(p_actor_id uuid, p_agency_id uuid, p_deal_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_get_agency_profile(p_actor_id uuid, p_agency_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_get_agency_reservation(p_actor_id uuid, p_agency_id uuid, p_property_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_get_listing_management(p_property_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_invite_agency_member(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_join_joint_visit_slot(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_conversations(p_actor_id uuid, p_agency_id uuid, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_deal_visits(p_actor_id uuid, p_agency_id uuid, p_deal_id uuid, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_deals(p_actor_id uuid, p_agency_id uuid, p_offset integer, p_limit integer, p_filters jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_followup_events(p_actor_id uuid, p_agency_id uuid, p_deal_id uuid, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_invitations(p_actor_id uuid, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_mandate_requests(p_actor_id uuid, p_agency_id uuid, p_offset integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_members(p_actor_id uuid, p_agency_id uuid, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_message_reports(p_actor_id uuid, p_status text, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_messages(p_actor_id uuid, p_agency_id uuid, p_conversation_id uuid, p_before_seq integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_property_changes(p_actor_id uuid, p_agency_id uuid, p_offset integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_proposal_events(p_actor_id uuid, p_agency_id uuid, p_proposal_id uuid, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_proposals(p_actor_id uuid, p_agency_id uuid, p_deal_id uuid, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_reviews(p_actor_id uuid, p_state text, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_sale_requests(p_actor_id uuid, p_agency_id uuid, p_scope text, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_tasks(p_actor_id uuid, p_agency_id uuid, p_deal_id uuid, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_agency_verification_reviews(p_actor_id uuid, p_state text, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_current_agency_mandates(p_actor_id uuid, p_agency_id uuid, p_offset integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_notifications(p_actor_id uuid, p_before_seq text, p_unread_only boolean, p_category text, p_limit integer, p_include_alerts boolean, p_include_agencies boolean)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_list_personal_sale_requests(p_actor_id uuid, p_offset integer, p_limit integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_notification_summary(p_actor_id uuid, p_include_alerts boolean, p_include_agencies boolean)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_prepare_agency_sale(p_actor_id uuid, p_agency_id uuid, p_deal_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_property_visit_occupancy(p_actor_id uuid, p_agency_id uuid, p_property_id uuid, p_from timestamp with time zone, p_to timestamp with time zone)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_propose_agency_property_change(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_public_agency_context(p_property_ids uuid[])",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_public_agency_profile(p_agency_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_public_agency_share_context(p_property_id uuid, p_agency_id uuid, p_manager_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_public_property_contact(p_property_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_read_agency_conversation(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_read_notification(p_actor_id uuid, p_id uuid, p_include_agencies boolean)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_read_notifications_through(p_actor_id uuid, p_through_seq text, p_include_agencies boolean)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_record_agency_visit_outcome(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_register_push_device(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_release_agency_reservation(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_remove_agency_member(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_report_agency_conversation(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_request_agency_mandate(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_request_agency_sale(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_request_agency_verification(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_resolve_agency_mandate_property(p_actor_id uuid, p_property_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_resolve_property_alias(p_property_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_resolve_push_notification(p_actor_id uuid, p_notification_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_respond_agency_proposal(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_respond_negotiation(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_review_agency(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_review_agency_message_report(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_review_agency_verification(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_review_property(p_id uuid, p_decision text, p_note text, p_expected_version integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_save_agency_task(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_save_notification_preferences(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_save_property(p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_send_agency_message(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_set_agency_conversation_block(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_set_agency_deal_stage(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_set_agency_logo(p_actor_id uuid, p_agency_id uuid, p_path text, p_expected_version integer)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_set_agency_member_role(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_set_agency_reservation(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_set_property_status(p_id uuid, p_status text)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_start_agency_conversation(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_submit_agency_application(p_actor_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_submit_property(p_id uuid)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_update_agency_profile(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        },
+        {
+          "signature": "public.kh_withdraw_agency_mandate(p_actor_id uuid, p_agency_id uuid, p_payload jsonb)",
+          "service_role": true
+        }
+      ],
+      "managed": [
+        {
+          "table": "auth.users",
+          "kind": "trigger",
+          "name": "kh_agency_auth_signup",
+          "sha256": "b75366c0e664319adba9fb0aaf6fab0be9e4c7e1bdf5529080eec81361092556"
+        },
+        {
+          "table": "auth.users",
+          "kind": "trigger",
+          "name": "kh_agency_before_auth_delete",
+          "sha256": "e13672639e3dda278f7b675368dc2e97c709f5778d596ced0164f6ca74b3f7d0"
+        }
+      ]
+    }
   }
 }

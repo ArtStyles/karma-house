@@ -42,6 +42,38 @@ node scripts/configure-agencies.mjs --target hosted --config $agencyPrivateConfi
 
 `status` y `verify` usan transacción de solo lectura. `enable` exige inventario completo. El JSON de salida comunica estado y conteos, nunca motivo privado, credenciales, evidencias ni compradores. Código 0 confirma éxito completo; 2 argumentos inválidos; 1 error o desactivación incompleta. Un error genérico no confirma cambio alguno.
 
+## Perfiles estrictos local y hosted
+
+`verifyAgencies(db, 'local' | 'hosted')` selecciona explícitamente un perfil revisado. Las llamadas históricas de fixture sin segundo argumento conservan `local`; los CLI siempre pasan su target validado como perfil. Un target/perfil distinto se rechaza antes de configuración, conexión o consultas. No hay detección permisiva del entorno. La salida incluye `profile`. Ambos perfiles fijan las diez migraciones y sus bytes/ledger, 241 definiciones de función y permisos efectivos anon/authenticated/service_role, 41 tablas con metadatos/permisos de tabla/columna, siete adjuntos administrados y sus estados de disparo, bucket privado y singleton.
+
+La base del manifest sigue siendo el esquema local revisado. `profiles.hosted` contiene exclusivamente 109 cambios exactos de EXECUTE service_role y dos hashes de triggers Auth derivados de las mismas definiciones/estados con `auth.users` RLS **true**, FORCE RLS **false**. El resto de los pines es compartido literalmente. Desactivar RLS, activar FORCE RLS, cambiar/desactivar un trigger o añadir/quitar cualquier permiso efectivo esperado falla. No se modifican los defaults ni RLS de Auth en producción para satisfacer el fixture.
+
+La derivación de service_role procede de los defaults de funciones del esquema public del propietario Supabase: EXECUTE para anon/authenticated/service_role. REVOKE a PUBLIC no retira grants explícitos a esos roles; CREATE OR REPLACE conserva el ACL y SET SCHEMA/RENAME conserva la identidad. Todas las 102 funciones públicas inventariadas conservan service_role (una ya estaba true en el perfil local, por lo que son 101 overrides). Ocho funciones privadas conservan su grant de creación pública y revocan únicamente PUBLIC/anon/authenticated:
+
+- `full_public_profile(uuid)`: `20261003000100_owner_administration.sql` trasladó/renombró `kh_public_profile`; las sustituciones de octubre conservan su ACL.
+- `personal_kh_save_property(jsonb)`, `personal_kh_submit_property(uuid)`, `personal_kh_set_property_status(uuid,text)`: `20261007000300_agency_property_origins.sql` traslada las RPC históricas y revoca los tres roles de cliente.
+- `link_assisted_agency_before_aliases(uuid,jsonb)`: la RPC pública se crea en `20261007000300` y se traslada/renombra en `20261007000400` conservando service_role.
+- `kh_review_agency_before_lifecycle(uuid,jsonb)`: creada públicamente en `20261007000200`, renombrada y trasladada en `20261007000500`.
+- `kh_create_negotiation_pre_scheduling(uuid,jsonb)` y `kh_respond_negotiation_pre_scheduling(uuid,jsonb)`: RPC históricas públicas de `20260920000300_negotiations.sql`, renombradas y trasladadas en `20261007000700`.
+
+El parser anterior conservaba tres nombres públicos inexistentes para los últimos tres helpers. Ahora registra sus identidades finales privadas y fija sus definiciones/grants, conservando literalmente los 238 pines previos. El inventario no acepta esos nombres fantasma como prueba de existencia. Los overrides hosted están enumerados por firma exacta en el manifest; no se generan desde el catálogo del destino ni se ignoran permisos de service_role.
+
+### Remediación acotada de los dos permisos anónimos
+
+`kh_set_agency_logo(uuid,uuid,text,integer)` y `kh_agency_review_detail(uuid,uuid,uuid)` se crearon después del bloque de revocación de `20261007000200`; su REVOKE posterior solo menciona PUBLIC. Los defaults públicos de Supabase dejaron un EXECUTE explícito para anon. **Ambos perfiles exigen anon=false**. Las migraciones aplicadas son inmutables; esta corrección operativa no añade SQL ficticio al ledger.
+
+Solo el controlador raíz, después de revisión independiente y respaldo verificado, debe importar `remediateAgencyPlatform` de `scripts/agency-platform-remediation.mjs`. El módulo no tiene CLI ni lee configuración/conecta/muta al importar. Usar una conexión dedicada, sin transacción previa, abierta con `agencyConnection` tras validar literalmente `--target hosted --config <JSON privado absoluto>`; nunca pasar una URL directa ni reutilizar una sesión con worker pausado externamente. En esa conexión:
+
+```javascript
+// El controlador ya validó el comando hosted, respaldó el destino y conectó db.
+const {remediateAgencyPlatform} = await import('./scripts/agency-platform-remediation.mjs');
+const result = await remediateAgencyPlatform(db, 'hosted');
+```
+
+La rutina exige el perfil hosted explícito, toma los bloqueos migration→worker→module, bloquea el singleton y exige OFF. Compara todo el inventario con el perfil hosted, permitiendo en el **estado previo únicamente** anon=true para esas dos firmas. Un tercer grant, definición distinta, helper ausente o estado ya corregido aborta. Ejecuta una sola sentencia atómica `REVOKE EXECUTE ON FUNCTION public.kh_agency_review_detail(uuid,uuid,uuid), public.kh_set_agency_logo(uuid,uuid,text,integer) FROM anon`, verifica de nuevo ledger/bytes/esquema/grants/bucket/OFF con el perfil hosted y confirma. Cualquier fallo revierte ambos revokes; no activa, cambia defaults/RLS ni modifica datos comerciales/ledger. Éxito devuelve `complete:true`, `profile:'hosted'`, `enabled:false`, `revokedAnonymousExecute:2`. Una repetición falla por estado previo ya corregido y requiere comprobar `verify`, sin reintento automático.
+
+Después, ejecutar `verify-agencies --target hosted --config ...` y `configure-agencies --target hosted --config ... --status`; ambos deben confirmar el mismo perfil completo y OFF antes de continuar los gates de release. La prueba de clon solo acredita estas reglas locales; el controlador verifica por separado el resultado real del destino, los usuarios/Auth/Storage y la publicación/activación autorizadas.
+
 `disable` establece OFF aunque el inventario presente deriva. Usa savepoints para que un fallo de inventario o cola no aborte ese cierre de operaciones. Si existe el singleton y el commit funciona, devuelve `disabled:true, enabled:false`; `complete:false` identifica inventario no validado y `cancellationComplete:false`/`failed` identifica cancelación o auditoría incompleta, con salida 1. La ausencia del singleton falla sin afirmar OFF. Esos resultados parciales requieren revisión privada y reparación, nunca activación automática.
 
 Se cancelan recordatorios pending/failed, eventos empresariales pending, terminaciones agency_deal pending/failed y push de categoría agency pending/retry/ticketed/sending/checking_receipt, limpiando su intento activo. Se conservan notificaciones guardadas, recibos, ventas, eventos entregados y trabajos personales, además de provider_accepted/failed/cancelled. Esto impide futuros envíos internos; no retira una entrega ya autorizada externamente ni demuestra recepción física.
