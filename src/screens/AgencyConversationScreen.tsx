@@ -17,7 +17,7 @@ import { AccountPrompt } from '../components/AccountPrompt';
 import { ReportConversationSheet } from '../components/messaging/ReportConversationSheet';
 import { AgencyProposalPanel } from '../components/agencies/AgencyProposalPanel';
 import {useMessagingActivity} from '../components/messaging/useMessagingActivity';
-import {startAgencyPoll,readIncomingAgencyMessages} from '../agencies/messaging/live';
+import {startAgencyPoll,readIncomingAgencyMessages,isAgencyReadAccessFailure} from '../agencies/messaging/live';
 import { createThemedStyles } from '../theme';
 export default function AgencyConversationScreen() {
     const { id, agencyId } = useLocalSearchParams<{
@@ -74,8 +74,13 @@ export default function AgencyConversationScreen() {
         catch (e) {
             try {
                 ctx?.checkpoint();
-                if (current.current === scope && ticket===readTicket.current)
-                    setState({ scope, conversation: null, messages: [], hasMore: false, error: agencyError(e) });
+                if (current.current === scope && ticket===readTicket.current) {
+                    const preserve=!!ctx&&!isAgencyReadAccessFailure(e);
+                    setState(old=>preserve&&old.scope===scope
+                        ? {...old,error:agencyError(e)}
+                        : { scope, conversation: null, messages: [], hasMore: false, error: agencyError(e) });
+                    if(!preserve){setBody('');setReportTarget(null);pending.current=null;}
+                }
             }
             catch { }
         }
@@ -92,7 +97,11 @@ export default function AgencyConversationScreen() {
         pending.current = null;
         setState({scope,conversation:null,messages:[],hasMore:false,error:''});
         void load();
-        return () => { epoch.current++; busyRef.current = false; };
+        return () => {
+            epoch.current++; readTicket.current++; busyRef.current = false;
+            setState({scope,conversation:null,messages:[],hasMore:false,error:''});
+            setBody('');setReportTarget(null);pending.current=null;
+        };
     }, [load,scope]));
     useEffect(()=>{if(!active||!auth.user||(agencyId&&w.activeAgencyId!==agencyId))return;return startAgencyPoll(load);},[active,load,auth.user?.id,agencyId,w.activeAgencyId]);
     async function act(work:(ctx:ReturnType<typeof capture>)=>Promise<void>,write=false) {

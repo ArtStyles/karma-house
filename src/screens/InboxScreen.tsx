@@ -10,7 +10,7 @@ import {agencyError} from '../agencies/domain';
 import {createAgencyMessagingRepository} from '../agencies/messaging/repository';
 import type {AgencyConversation} from '../agencies/messaging/types';
 import {supabase} from '../lib/supabase';
-import {startAgencyPoll} from '../agencies/messaging/live';
+import {startAgencyPoll,isAgencyReadAccessFailure} from '../agencies/messaging/live';
 import { useMessagingActivity } from '../components/messaging/useMessagingActivity';
 import { useMessaging } from '../messaging/MessagingProvider';
 import type { Conversation } from '../messaging/types';
@@ -65,10 +65,18 @@ function AgencyInbox(){
  const active=useMessagingActivity();
  const load=useCallback(async(append=false)=>{if(!repo||!auth.user||loading.current)return;loading.current=true;const version=epoch.current;let ctx:ReturnType<typeof w.captureAccountContext>|undefined;
   try{ctx=staff?w.captureAgencyReadContext():w.captureAccountContext();const offset=append&&state.scope===scope?state.items.length:0;let page=await repo.list(offset,ctx);if(!append&&state.scope===scope){const target=state.items.length;while(page.hasMore&&page.items.length<target){const next=await repo.list(page.items.length,ctx);page={items:[...page.items,...next.items],hasMore:next.hasMore};}}ctx.checkpoint();if(version===epoch.current&&current.current===scope)setState(old=>({scope,items:append?[...(old.scope===scope?old.items:[]),...page.items.filter(x=>!old.items.some(y=>x.id===y.id))]:page.items,hasMore:page.hasMore,error:''}))}
-  catch(e){if(version===epoch.current&&current.current===scope)setState({scope,items:[],hasMore:false,error:agencyError(e)})}finally{ctx?.release();if(version===epoch.current)loading.current=false}
+  catch(e){
+   try{
+    ctx?.checkpoint();
+    if(version===epoch.current&&current.current===scope)
+     setState(old=>ctx&&!isAgencyReadAccessFailure(e)&&old.scope===scope
+      ? {...old,error:agencyError(e)}
+      : {scope,items:[],hasMore:false,error:agencyError(e)});
+   }catch{/* Obsolete contexts cannot publish data or errors. */}
+  }finally{ctx?.release();if(version===epoch.current)loading.current=false}
  },[repo,auth.user?.id,staff,w.captureAccountContext,w.captureAgencyReadContext,scope,state.scope,state.items.length]);
  const latest=useRef(load);latest.current=load;
- useFocusEffect(useCallback(()=>{epoch.current++;loading.current=false;setState({scope,items:[],hasMore:false,error:''});void latest.current();return()=>{epoch.current++;loading.current=false}},[scope]));
+ useFocusEffect(useCallback(()=>{epoch.current++;loading.current=false;setState({scope,items:[],hasMore:false,error:''});void latest.current();return()=>{epoch.current++;loading.current=false;setState({scope,items:[],hasMore:false,error:''})}},[scope]));
  useEffect(()=>{if(!active||!auth.user||(staff&&!w.activeAgencyId))return;return startAgencyPoll(()=>latest.current());},[active,scope,auth.user?.id,staff,w.activeAgencyId]);
  if(!auth.user)return null;
  return <View style={{gap:10,paddingBottom:20}}><Text style={s.name}>Conversaciones con inmobiliarias</Text><View style={s.line}><Pill label="Como comprador" active={!staff} onPress={()=>setStaff(false)}/>{w.activeAgencyId&&<Pill label="Equipo de mi agencia" active={staff} onPress={()=>setStaff(true)}/>}</View>
