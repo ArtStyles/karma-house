@@ -28,6 +28,7 @@ function Portfolio(){
  {!allowed?<Notice>Selecciona una inmobiliaria aprobada con una membresía activa para consultar su cartera.</Notice>:<>
  {issue&&<Notice error>{issue}</Notice>}<Button label="Actualizar cartera" secondary loading={busy} onPress={()=>void load()}/>
  {w.membership?.role==='admin'&&<Button label="Añadir vivienda en venta" onPress={()=>router.push('/agency-property/new')}/>}
+ {w.membership?.role==='admin'&&<Button label="Autorizaciones y cambios compartidos" secondary onPress={()=>router.push('/agency-property-requests')}/>}
  {!busy&&!items.length&&<Notice>Esta inmobiliaria todavía no tiene viviendas autorizadas.</Notice>}
  {items.map(item=><View key={item.property.id} style={s.card}><Text style={s.title}>{item.property.title}</Text><Text style={s.copy}>{item.property.location} · {item.mandate.reference}</Text><Text style={s.copy}>{item.property.moderationStatus==='draft'?'Borrador':item.property.moderationStatus==='pending'?'En revisión':item.property.moderationStatus==='approved'?'Aprobada':'Rechazada'} · {item.canEditCommon?'Origen de esta inmobiliaria':'Cartera autorizada'}</Text><Button label="Abrir vivienda" secondary onPress={()=>router.push({pathname:'/agency-property/[id]',params:{id:item.property.id}})}/></View>)}
  {more&&<Button label="Cargar más viviendas" secondary disabled={busy} onPress={()=>void load(true)}/>}

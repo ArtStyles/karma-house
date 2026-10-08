@@ -25,7 +25,7 @@ export function createFavoriteListingsController(repository: Pick<CatalogReposit
     try {
       const listings = await repository.byIds(requestedIds, checkpoint);
       checkpoint();
-      publish({ ...state, listings, ready: true, loading: false, error: null });
+      publish({ ...state, listings: [...new Map(listings.map(row => [row.id, row])).values()], ready: true, loading: false, error: null });
     } catch (error) {
       if (epoch !== generation || mine !== sequence) return;
       publish({ ...state, ready: true, loading: false, error: remoteErrorMessage(error) });

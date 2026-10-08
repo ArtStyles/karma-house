@@ -221,6 +221,20 @@ export async function handle(request: Request, env: Env, fetchImpl: typeof fetch
     const rows = await fetchImpl(`${base}/rest/v1/properties?select=${COLUMNS}&id=eq.${id}&moderation=eq.approved&availability=eq.active&limit=1`, { headers: auth });
     if (!rows.ok) throw new Error(`rest ${rows.status}`);
     [row] = (await rows.json()) as Row[];
+    if (!row) {
+      const alias = await fetchImpl(`${base}/rest/v1/rpc/kh_resolve_property_alias`, {
+        method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_property_id: id }),
+      });
+      if (!alias.ok) throw new Error(`alias ${alias.status}`);
+      const canonical: unknown = await alias.json();
+      if (typeof canonical !== 'string' || !UUID.test(canonical)) throw new Error('alias shape');
+      if (canonical !== id) {
+        const resolved = await fetchImpl(`${base}/rest/v1/properties?select=${COLUMNS}&id=eq.${canonical}&moderation=eq.approved&availability=eq.active&limit=1`, { headers: auth });
+        if (!resolved.ok) throw new Error(`rest ${resolved.status}`);
+        [row] = (await resolved.json()) as Row[];
+        if (row && row.id !== canonical) throw new Error('alias property mismatch');
+      }
+    }
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     console.error('properties query failed', reason);

@@ -109,6 +109,7 @@ function fakeFetch(rest: { status: number; body?: unknown }, sign?: Reply, profi
     if (url.includes('/rest/v1/properties')) return respond(rest);
     if (url.includes('/storage/v1/object/sign/')) return respond(sign ?? { status: 500 });
     if (url.includes('/rest/v1/rpc/kh_public_profile')) return respond(profile);
+    if (url.includes('/rest/v1/rpc/kh_resolve_property_alias')) return respond({status:200,body:JSON.parse(String(init?.body)).p_property_id});
     throw new Error(`unexpected ${url}`);
   }) as typeof fetch;
   return { fetch, calls };
@@ -222,7 +223,7 @@ test('handle answers 404 for unknown, hidden or malformed ids without touching S
   const hidden = await handle(get(`/api/p?id=${row.id}`), env, missing.fetch);
   assert.equal(hidden.status, 404);
   assert.ok((await hidden.text()).includes('Ya no está disponible'));
-  assert.equal(missing.calls.length, 1);
+  assert.equal(missing.calls.length, 2);
   const bogus = fakeFetch({ status: 200, body: [dbRow] });
   for (const path of ['/api/p?id=not-a-uuid', '/api/p', `/api/p?id=${row.id}%27`]) assert.equal((await handle(get(path), env, bogus.fetch)).status, 404);
   assert.equal(bogus.calls.length, 0);

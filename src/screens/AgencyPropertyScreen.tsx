@@ -27,6 +27,7 @@ function Property({ id }: {
     const w = useAgencyWorkspace(), auth = useAuth(), market = useMarketplace(), { styles: s } = useAgencyFormStyles();
     const [item, setItem] = useState<AgencyProperty | null>(null), [issue, setIssue] = useState(''), [busy, setBusy] = useState(false), [loaded, setLoaded] = useState(id === 'new');
     const [source, setSource] = useState(''), [consent, setConsent] = useState('');
+    const [proposedPrice,setProposedPrice]=useState(''),[proposedDescription,setProposedDescription]=useState('');
     const focused = useRef(false), sequence = useRef(0), pending = useRef<{
         body: string;
         request: string;
@@ -94,6 +95,15 @@ function Property({ id }: {
         };
     }, [load]));
     const editable = allowed && loaded && (id === 'new' ? w.membership?.role === 'admin' : item?.canEditCommon), direct = item ? item.publicationPolicy === 'direct' : w.activeAgency?.verified === true;
+    async function propose(kind:'price'|'content'){
+        if(!repository||!item||busy||!allowed||w.membership?.role!=='admin')return;
+        const proposedPayload=kind==='price'?{price:Number(proposedPrice)}:{description:proposedDescription};
+        const body=JSON.stringify({kind,proposedPayload,version:item.property.version});if(pending.current?.body!==body)pending.current={body,request:randomUUID()};
+        let c:ReturnType<typeof w.captureAgencyContext>|undefined;const seq=sequence.current;const check=()=>{c?.checkpoint();if(!focused.current||seq!==sequence.current)throw Error('KH_AGENCY_CONTEXT_CHANGED')};setBusy(true);setIssue('');
+        try{c=w.captureAgencyContext();await repository.proposeChange({propertyId:item.property.id,kind,proposedPayload,expectedPropertyVersion:item.property.version??1,clientRequestId:pending.current.request},c);check();pending.current=null;router.push('/agency-property-requests')}
+        catch(e){try{check();setIssue(agencyError(e))}catch{}}
+        finally{try{check();setBusy(false)}catch{}c?.release()}
+    }
     async function save(draft: ListingDraft, intent: 'draft' | 'submit') {
         if (!repository || !editable || busy)
             throw Error('La vivienda no está disponible para editar.');
@@ -155,9 +165,16 @@ function Property({ id }: {
                 ) : item && (
                     <>
                         <Text style={s.copy}>{item.property.description}</Text>
-                        <Notice>La inmobiliaria de origen conserva la edición de los datos comunes y la confirmación de venta.</Notice>
+                        <Notice>El responsable de origen conserva la edición de los datos comunes y la confirmación de venta.</Notice>
+                        {w.membership?.role==='admin'&&item.property.status!=='sold'&&<>
+                            <AgencyTextField label="Proponer precio (USD)" value={proposedPrice} onChangeText={setProposedPrice} keyboardType="numeric" editable={!busy}/>
+                            <Button label="Proponer cambio de precio" secondary disabled={busy||!(Number(proposedPrice)>0)} onPress={()=>void propose('price')}/>
+                            <AgencyTextField label="Proponer descripción" value={proposedDescription} onChangeText={setProposedDescription} multiline maxLength={2000} editable={!busy}/>
+                            <Button label="Proponer cambio de descripción" secondary disabled={busy||proposedDescription.trim().length<20} onPress={()=>void propose('content')}/>
+                        </>}
                     </>
                 )}
+                {item&&w.membership?.role==='admin'&&<Button label="Ver autorizaciones y cambios" secondary onPress={()=>router.push('/agency-property-requests')}/>}
                 {!loaded && allowed && <Button label="Volver a cargar" secondary loading={busy} onPress={() => void load()} />}
             </View>
             {editable && (

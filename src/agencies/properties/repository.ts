@@ -7,6 +7,8 @@ import { createScopedRpc } from '../../transfers/repository.ts';
 import { decodeAgencyPage } from '../repository.ts';
 import type { AgencyRequestContext } from '../types.ts';
 import type { AgencyProperty, AgencyPropertyRepository } from './types.ts';
+import { decodeMandate, decodePropertyChange, decodeDuplicateCandidate } from './domain.ts';
+import type { MessagingRequestContext } from '../../messaging/types.ts';
 const invalid = () => Error('No se pudieron interpretar los datos de la vivienda empresarial.');
 function object(v: unknown): Record<string, unknown> {
     if (!v || typeof v !== 'object' || Array.isArray(v))
@@ -53,6 +55,33 @@ export interface AgencyPropertyMedia {
 }
 export function createAgencyPropertyRepository(client: SupabaseClient, media?: AgencyPropertyMedia): AgencyPropertyRepository {
     const rpc = createScopedRpc(client);
+    const page = async <T>(name: string, offset: number, agency: string | null, context: MessagingRequestContext, decoder: (v: unknown) => T) => {
+        if (!Number.isSafeInteger(offset) || offset < 0)
+            throw invalid();
+        return decodeAgencyPage(await rpc(name, { p_agency_id: agency, p_offset: offset }, context), decoder);
+    };
+    const decide = async <T>(name: string, input: {
+        requestId: string;
+        expectedVersion: number;
+        clientRequestId: string;
+    }, agency: string | null, context: MessagingRequestContext, decoder: (v: unknown) => T) => {
+        uuid(input.requestId);
+        uuid(input.clientRequestId);
+        version(input.expectedVersion);
+        const raw = await rpc(name, { p_agency_id: agency, p_payload: input }, context);
+        if (object(raw).id !== input.requestId)
+            throw invalid();
+        return decoder(raw);
+    };
+    const withdraw = async (input: import('./types.ts').MandateWithdrawal, agency: string | null, context: MessagingRequestContext) => {
+        uuid(input.propertyId);
+        uuid(input.requestingAgencyId);
+        uuid(input.clientRequestId);
+        version(input.expectedVersion);
+        const raw = object(await rpc('kh_withdraw_agency_mandate', { p_agency_id: agency, p_payload: input }, context));
+        if (raw.propertyId !== input.propertyId || raw.agencyId !== input.requestingAgencyId || raw.state !== 'withdrawn')
+            throw invalid();
+    };
     async function decode(value: unknown, context: AgencyRequestContext) {
         const item = decodeAgencyProperty(value, context.agencyId);
         const paths = [...(item.property.photos ?? []).map(p => p.storagePath!), ...(item.property.coverThumb ? [item.property.coverThumb.storagePath] : [])];
@@ -64,6 +93,29 @@ export function createAgencyPropertyRepository(client: SupabaseClient, media?: A
         return item;
     }
     return {
+        listMandates: (offset, c) => page('kh_list_agency_mandate_requests', offset, uuid(c.agencyId), c, decodeMandate),
+        listPersonalMandates: (offset, c) => page('kh_list_agency_mandate_requests', offset, null, c, decodeMandate),
+        listChanges: (offset, c) => page('kh_list_agency_property_changes', offset, uuid(c.agencyId), c, decodePropertyChange),
+        listPersonalChanges: (offset, c) => page('kh_list_agency_property_changes', offset, null, c, decodePropertyChange),
+        decideMandate: (input, c) => decide('kh_decide_agency_mandate', input, uuid(c.agencyId), c, decodeMandate),
+        decidePersonalMandate: (input, c) => decide('kh_decide_agency_mandate', input, null, c, decodeMandate),
+        decideChange: (input, c) => decide('kh_decide_agency_property_change', input, uuid(c.agencyId), c, decodePropertyChange),
+        decidePersonalChange: (input, c) => decide('kh_decide_agency_property_change', input, null, c, decodePropertyChange),
+        withdrawMandate: (input, c) => withdraw(input, uuid(c.agencyId), c),
+        withdrawPersonalMandate: (input, c) => withdraw(input, null, c),
+        async requestMandate(input, c) { uuid(input.propertyId); uuid(input.clientRequestId); const result = decodeMandate(await rpc('kh_request_agency_mandate', { p_agency_id: uuid(c.agencyId), p_payload: input }, c)); if (result.propertyId !== input.propertyId || result.agencyId !== c.agencyId)
+            throw invalid(); return result; },
+        async proposeChange(input, c) { uuid(input.propertyId); uuid(input.clientRequestId); version(input.expectedPropertyVersion); const result = decodePropertyChange(await rpc('kh_propose_agency_property_change', { p_agency_id: uuid(c.agencyId), p_payload: input }, c)); if (result.propertyId !== input.propertyId || result.agencyId !== c.agencyId)
+            throw invalid(); return result; },
+        async duplicateCandidates(id, offset, c) { uuid(id); if (!Number.isSafeInteger(offset) || offset < 0)
+            throw invalid(); const raw = object(await rpc('kh_admin_property_duplicate_candidates', { p_property_id: id, p_offset: offset }, c)); const canonical = decodeDuplicateCandidate(raw.canonical); if (canonical.id !== id)
+            throw invalid(); return { ...decodeAgencyPage(raw, decodeDuplicateCandidate), canonical }; },
+        async mergeDuplicates(input, c) { uuid(input.canonicalId); uuid(input.clientRequestId); if (input.duplicateIds.length < 1 || input.duplicateIds.length > 20 || new Set(input.duplicateIds).size !== input.duplicateIds.length)
+            throw invalid(); for (const id of [input.canonicalId, ...input.duplicateIds]) {
+            uuid(id);
+            version(input.expectedVersions[id]);
+        } const result = object(await rpc('kh_admin_merge_property_duplicates', { p_payload: input }, c)); if (result.canonicalId !== input.canonicalId || !Array.isArray(result.duplicateIds) || result.duplicateIds.length !== input.duplicateIds.length || result.duplicateIds.some(id => typeof id !== 'string' || !input.duplicateIds.includes(id)))
+            throw invalid(); },
         async list(offset, context) {
             if (!Number.isSafeInteger(offset) || offset < 0)
                 throw invalid();
