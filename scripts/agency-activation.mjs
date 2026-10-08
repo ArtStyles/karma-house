@@ -4,7 +4,12 @@ import {createHash} from 'node:crypto';
 import {isAbsolute} from 'node:path';
 export const migrationRoot=new URL('../supabase/migrations/',import.meta.url);
 export const manifestFile=new URL('../supabase/agency-activation-manifest.json',import.meta.url);
+export const administrationManifestFile=new URL('../supabase/agency-administration-activation-manifest.json',import.meta.url);
+const administrationFiles=['20261008000100_principal_agency.sql','20261008000200_administration_queries.sql'];
 export const digest=value=>createHash('sha256').update(value).digest('hex');
+// JSON manifests may be checked out with Git's CRLF conversion on Windows.
+// Only that conversion is accepted here; migration and ledger bytes use digest.
+export const agencyManifestDigest=value=>digest(value.toString('utf8').replaceAll('\r\n','\n'));
 export function parseAgencyCommand(args,verify=false){
  const result={action:verify?'verify':null,target:null,reason:null,config:null};
  const bad=()=>{throw Error('Invalid agency command. Explicit --target and exactly one action required; writes need --reason.');};
@@ -43,7 +48,7 @@ export async function migrationArtifacts(){
  return Promise.all(files.map(async file=>{const bytes=await readFile(new URL(file,migrationRoot));if(bytes.includes(13))throw Error('New agency migrations must use LF bytes');return {file,version:file.slice(0,14),sha256:digest(bytes),sql:bytes.toString('utf8')}}));
 }
 export function assertMigrationLedger(migrations,rows){
- if(migrations.length!==10||rows.length!==10)throw Error('Incomplete agency migration ledger');
+ if(![10,12].includes(migrations.length)||rows.length!==migrations.length||new Set(rows.map(r=>r.version)).size!==rows.length)throw Error('Incomplete agency migration ledger');
  for(const m of migrations){const row=rows.find(r=>r.version===m.version);if(!row||row.sha256!==m.sha256||!Array.isArray(row.statements)||row.statements.length!==1||row.statements[0]!==m.sql)throw Error('Agency migration ledger differs from reviewed bytes')}
 }
 export async function schemaInventory(db,names){
@@ -117,16 +122,33 @@ export async function reviewedAgencyManifest(profile='local'){
  if(JSON.stringify(inventoryNames(migrations))!==JSON.stringify(manifest.names))throw Error('Agency manifest omits required SQL inventory');
  return {migrations,manifest,schema:agencyProfileSchema(manifest,profile)};
 }
+export async function administrationMigrationArtifacts(){
+ const files=(await readdir(migrationRoot)).filter(n=>/^20261008\d{6}_.*\.sql$/.test(n)).sort();
+ if(JSON.stringify(files)!==JSON.stringify(administrationFiles))throw Error('Two ordered administration migrations required');
+ return Promise.all(files.map(async file=>{const bytes=await readFile(new URL(file,migrationRoot));if(bytes.includes(13))throw Error('New administration migrations must use LF bytes');return {file,version:file.slice(0,14),sha256:digest(bytes),sql:bytes.toString('utf8')}}));
+}
+export async function reviewedAdministrationManifest(profile='local'){
+ const baseline=await reviewedAgencyManifest(profile),extension=await administrationMigrationArtifacts();
+ const manifest=JSON.parse(await readFile(administrationManifestFile,'utf8'));
+ if(manifest.format!==1||manifest.extends?.file!=='agency-activation-manifest.json'||manifest.extends?.sha256!==agencyManifestDigest(await readFile(manifestFile)))throw Error('Administration manifest differs from historical agency manifest');
+ if(JSON.stringify(extension.map(({file,version,sha256})=>({file,version,sha256})))!==JSON.stringify(manifest.migrations))throw Error('Reviewed administration manifest differs from local bytes');
+ const migrations=[...baseline.migrations,...extension];
+ if(JSON.stringify(inventoryNames(migrations))!==JSON.stringify(manifest.names))throw Error('Administration manifest omits required SQL inventory');
+ return {migrations,manifest,schema:agencyProfileSchema(manifest,profile)};
+}
 export async function verifyAgencies(db,profile='local'){
- const {migrations,manifest,schema}=await reviewedAgencyManifest(profile);
- const rows=(await db.query('select m.version,m.statements,c.sha256 from supabase_migrations.schema_migrations m left join supabase_migrations.karmahouse_migration_checksums c using(version) where m.version=any($1) order by m.version',[migrations.map(m=>m.version)])).rows;
+ let {migrations,manifest,schema}=await reviewedAgencyManifest(profile);
+ // An extension prefix is never treated as a valid historical deployment. Check
+ // every 08 ledger entry, including unknown versions, before selecting inventory.
+ const rows=(await db.query("select m.version,m.statements,c.sha256 from supabase_migrations.schema_migrations m left join supabase_migrations.karmahouse_migration_checksums c using(version) where m.version=any($1) or m.version like '20261008%' order by m.version",[migrations.map(m=>m.version)])).rows;
+ if(rows.some(row=>row.version.startsWith('20261008')))({migrations,manifest,schema}=await reviewedAdministrationManifest(profile));
  assertMigrationLedger(migrations,rows);
  const actual=await schemaInventory(db,manifest.names);
  if(JSON.stringify(actual)!==JSON.stringify(schema))throw Error('Agency schema/function/grant inventory differs from reviewed manifest');
  const setting=(await db.query('select enabled from kh_private.agency_settings where singleton')).rows;
  if(setting.length!==1||typeof setting[0].enabled!=='boolean')throw Error('Agency flag missing');
  const bucket=(await db.query("select public from storage.buckets where id='agency-assets'")).rows[0];if(bucket?.public!==false)throw Error('Agency assets must remain private');
- return {complete:true,migrations:10,functions:actual.functions.length,tables:actual.tables.length,permissions:'reviewed',enabled:setting[0].enabled,profile};
+ return {complete:true,migrations:migrations.length,functions:actual.functions.length,tables:actual.tables.length,permissions:'reviewed',enabled:setting[0].enabled,profile};
 }
 export async function disableAgencies(db,reason){
  const flag=await db.query('update kh_private.agency_settings set enabled=false where singleton');
