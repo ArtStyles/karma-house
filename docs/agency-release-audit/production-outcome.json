@@ -1,0 +1,123 @@
+{
+  "at": "2026-10-08T18:23:40.158Z",
+  "sourceCommits": {
+    "nativeProduct": "b54abeb01833fdcf218a8669d0537e7fc8cce766",
+    "hostedOperator": "3fab84a85633f9b841c505335d8bd8c2f7a0c7d8",
+    "web": "280d75bd3ed849f0a8ed69e6137fa5d907c6284d"
+  },
+  "tests": {
+    "typecheck": true,
+    "passed": 617,
+    "failed": 0,
+    "skipped": 0,
+    "fullLogSha256": "efa967ca08ba5a566fb997d61fcb012f5fc1cfeb42c454da4e189c960de12be3",
+    "localSqlSuites": 43,
+    "localConcurrencyCases": 45,
+    "observedBarriers": 46,
+    "unchangedBusinessSqlMatricesNotRepeatedForWebFix": true
+  },
+  "backup": {
+    "at": "2026-10-08T17:08:04.589Z",
+    "originalTables": 77,
+    "storageObjects": 309,
+    "storageBytes": 27206040,
+    "authUsers": 2,
+    "historicalLedgerRows": 12,
+    "customDumpFullyDecoded": true,
+    "restorationRehearsed": false
+  },
+  "production": {
+    "migrations": 10,
+    "functions": 241,
+    "tables": 41,
+    "profile": "hosted",
+    "strictInventory": true,
+    "enabled": true,
+    "unintendedAnonymousGrantsRevoked": 2,
+    "historicalLedgerExact": true,
+    "ownerIdentityPreserved": true,
+    "migrationSqlReapplied": false
+  },
+  "android": {
+    "version": "0.1.20",
+    "versionCode": 21,
+    "package": "com.karmahouse.karmahouse",
+    "productCommit": "b54abeb01833fdcf218a8669d0537e7fc8cce766",
+    "releaseUrl": "https://github.com/ArtStyles/karma-house/releases/tag/v0.1.20",
+    "anonymousFullDownload": true,
+    "apkBytes": 84966607,
+    "apkSha256": "c49a96e1a9ff152890341f257be3215899ad4f5d319b49a161a113fa56abbd57",
+    "signingCertificateSha256": "1752d33a3fb6e45fada4e6adbbec99af851d9ae6716a73770c382c79d3356ac6",
+    "abis": [
+      "arm64-v8a",
+      "armeabi-v7a"
+    ],
+    "debuggable": false,
+    "aabPublished": false,
+    "inPlaceDeviceUpdate": true,
+    "activityLaunched": true,
+    "sessionPreservationIndependentlyProven": false,
+    "finalNativeCommercialJourneyRerun": false,
+    "pushReceptionTested": false
+  },
+  "web": {
+    "url": "https://karmahouse.vercel.app",
+    "artifact": "https://karmahouse-gb3say146-frank-james-hernandezs-projects.vercel.app",
+    "deploymentId": "dpl_6isxssjBQW7JpTgUVSnUxcCbL519",
+    "sourceCommit": "280d75bd3ed849f0a8ed69e6137fa5d907c6284d",
+    "inputFiles": 25,
+    "inputBytes": 776315,
+    "protectedArtifactChecks": 7,
+    "anonymousPublicChecks": 7,
+    "postCleanupAgencyAndDraftUnavailable": true,
+    "ownedAutomationAccessRemoved": true,
+    "protectionSettingsPreserved": true,
+    "buildTypeDiagnosticsRetained": true,
+    "initialUnpromotedPackagingFailurePreserved": true
+  },
+  "controlledSmoke": {
+    "realAuthRestStorage": true,
+    "fixtureEmailConfirmation": "Auth Admin setup; no email delivery claim",
+    "agencyApprovalAndSealSeparate": true,
+    "managerInvitationAccepted": true,
+    "publicSealRendered": true,
+    "privateOfficeExcluded": true,
+    "draftRemainedPrivateAfterSeal": true,
+    "removedManagerOldJwtDenied": true,
+    "productionPublishedHome": false,
+    "productionSale": false,
+    "providerSend": false,
+    "mailDeliveryTested": false,
+    "firstAttempt": {
+      "businessPassed": false,
+      "error": "KH_INVALID_PROPERTY: root fixture type null",
+      "cleanupPassed": true,
+      "usersRemoved": 3,
+      "objectsRemoved": 2,
+      "returnedOff": true
+    },
+    "finalAttempt": {
+      "businessPassed": true,
+      "cleanupPassed": true,
+      "usersRemoved": 3,
+      "objectsRemoved": 3,
+      "publicationKeyTombstoneRemoved": true,
+      "enabled": true
+    }
+  },
+  "preservation": {
+    "primarySourcePaths": 13,
+    "allUnchanged": true,
+    "protectedOwner": true,
+    "oldLedgerRows": 12,
+    "managedWorktreeRetainedForPr": true
+  },
+  "limits": [
+    "No production positive chat/offer/visit/sale was exercised: unpublished-draft commercial denials were verified; positive business flows retain local SQL/render/native fixture evidence.",
+    "Production database archive was fully decoded; a restoration rehearsal was not performed.",
+    "Official APK update and activity launch were checked; existing session/data preservation and final native commercial/provider delivery were not independently proven.",
+    "Nonfatal Vercel default-library/process type diagnostics and existing upstream toolchain diagnostics remain visible.",
+    "Execution policy blocked recursive removal of C:/kh-agency-release-20261008; four exact private input files were removed and retained Android caches contain zero exact signing-value matches.",
+    "One initial Browser Use error tab remains due URL policy; it contained no authenticated fixture session."
+  ]
+}

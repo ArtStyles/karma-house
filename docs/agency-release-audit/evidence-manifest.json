@@ -1,15 +1,15 @@
 {
-  "at": "2026-10-08T16:51:36.167Z",
+  "at": "2026-10-08T18:30:44.329Z",
   "source": ".superpowers/sdd",
   "privateArchive": "artifacts/agency-release-preparation/sdd-archive",
-  "files": 636,
+  "files": 666,
   "skipped": [
     "2026-10-07-agency-workspaces/node_modules-shared",
     "2026-10-07-agency-workspaces/postgres-data"
   ],
-  "ledgerRulings": 125,
-  "masterRulings": 72,
-  "phaseOccurrences": 53,
+  "ledgerRulings": 153,
+  "masterRulings": 86,
+  "phaseOccurrences": 67,
   "unmatched": 0,
   "entries": [
     {
@@ -33,6 +33,11 @@
       "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6"
     },
     {
+      "path": "2026-10-07-agency-workspaces/derive-platform-manifest.mjs",
+      "bytes": 2524,
+      "sha256": "68fe43d1a39096eebf922d51ea3df10aad7ab658c8f5322738ee2da252a298eb"
+    },
+    {
       "path": "2026-10-07-agency-workspaces/expo-web.pid",
       "bytes": 7,
       "sha256": "83df831132b4b28d6910ddbd54a6ddd3d6751c060ee525f442c2a0b817a522bb"
@@ -46,6 +51,11 @@
       "path": "2026-10-07-agency-workspaces/expo-web.stdout.log",
       "bytes": 192410,
       "sha256": "f3c189c1a935737e869dee8ee082b54941c623c9b29df13553b3e4ea3ea68996"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/finalize-platform-report.mjs",
+      "bytes": 433,
+      "sha256": "0d8d679a327e7de3cf60404f07939dfdaa71d584ac6a6fc9456c94f1590ad289"
     },
     {
       "path": "2026-10-07-agency-workspaces/hosted-auth-preflight-readonly.json",
@@ -63,9 +73,24 @@
       "sha256": "85f0c64b7bf5e98192352bf487244c07c41a21c7d13e4481593aa5f320bf9189"
     },
     {
+      "path": "2026-10-07-agency-workspaces/hosted-manifest-differences.json",
+      "bytes": 21061,
+      "sha256": "5249bf4abec65cd885523c8aa6f79c8b246d8fc19e2fa47aaa34029bac437c3d"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/hosted-platform-catalog.json",
+      "bytes": 4172,
+      "sha256": "11c6ef9399732787de1623d4f8de8ce1c35fc5bcc40a486b4c9428f32a5e445c"
+    },
+    {
       "path": "2026-10-07-agency-workspaces/hosted-preflight-readonly.json",
       "bytes": 568,
       "sha256": "6ce77511b3d2fba853fa2eca05c8d97bceb638a04abdf5fbe092be5ea6031ec2"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/hosted-schema-inventory-diagnostic.json",
+      "bytes": 164732,
+      "sha256": "d5b6b850c1b82028fade5e4274d9582d583546a877b28d49d45a46d8a5d3815b"
     },
     {
       "path": "2026-10-07-agency-workspaces/inspect-hosted-dependencies-readonly.mjs",
@@ -83,19 +108,129 @@
       "sha256": "518f267a50c2354e5cb42bc9e01f66b74a6d26fb159411d593b097ed656151e9"
     },
     {
+      "path": "2026-10-07-agency-workspaces/platform-compatibility-brief.md",
+      "bytes": 4836,
+      "sha256": "5d07012ee3f73aa0485d638739c0842d24787e36c5dd394c584808a42a5d5005"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-compatibility-report.md",
+      "bytes": 14238,
+      "sha256": "caa190820478ab355bb6b40d4bc3968ddb42937d6c60a0d72b860be5caeceed0"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-compatibility-review.md",
+      "bytes": 16056,
+      "sha256": "6538beeb3727e158bb34dcb732b14b9639830770dbedefe930a5b49aaca8c3ac"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-derivation.log",
+      "bytes": 137,
+      "sha256": "67417aa858d024171c24f9ea517aa571a841bbbafd2e880b11ba0cb25060ca55"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-derived-pins.json",
+      "bytes": 18199,
+      "sha256": "18e70ed1ba5120677206460386e1726d7219d2c541a3efd5d42d3866108ea648"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-final-evidence.json",
+      "bytes": 2385,
+      "sha256": "f9e27683a374424fdd86a5db25c4481b70d45d141a894266584917afcda052bf"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-final-evidence.log",
+      "bytes": 2452,
+      "sha256": "bf3a6cdaf3227e320a9c9b9cf8f2ffedf59d0add3cc3c8c6be77d839f1dee607"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-final-evidence.mjs",
+      "bytes": 2490,
+      "sha256": "e2560beff77e6613e6ed8675fce16749ea282d7dd07d69f8ea414a2c47612fcc"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-green-initial.log",
+      "bytes": 423,
+      "sha256": "6f650eef0a7519e46bca40bf3d8d1db7c6154eb20f9288571d5f85781bae8b15"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-green.log",
+      "bytes": 581,
+      "sha256": "a0a50379dcc5bb0e70197fabcfdffa59913545ebc78f530b28d28f2bf1d92616"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-migration-apply.log",
+      "bytes": 233,
+      "sha256": "5d1a71f1360291b2e9cf2f6d62053bddb3ae764c27869f8b07209d85ab5cb452"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-npm-check.log",
+      "bytes": 55168,
+      "sha256": "1e2db10903a6c33bcbfed4b7fe6497fc7902ff62663a11f927018b59ea960a3e"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-operator-tests-final.log",
+      "bytes": 664,
+      "sha256": "d53fc6c04963b79a566348fbb8936f01f4fe215434816e8bc811b4ec800ab1da"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-operator-tests.log",
+      "bytes": 665,
+      "sha256": "b1ba91cfc1a698e17110e0d4d237eb1961410f6429288977ea588f88010c8d8c"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-owned-hosted-inventory.json",
+      "bytes": 165570,
+      "sha256": "353f4faf6b2a79e240ece914691fcf07aed96c069cff9e374b7ed25646f4e9fa"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-parser-red.log",
+      "bytes": 956,
+      "sha256": "7d14c0c06e4f7efefa7f6a847d701546b3dbd5590f66e9b0a55586db7cb2d6a5"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-red.log",
+      "bytes": 1005,
+      "sha256": "9265553271a783e781f7dc37a54b8400d715a9898c636f9cb12dae70e871012a"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-review-ab8da39..3fab84a.diff",
+      "bytes": 60413,
+      "sha256": "4eb4e1ffc876428fba378dc515413c29d87f2cbbe4caec16c9970792381190c7"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-review-preflight.md",
+      "bytes": 2824,
+      "sha256": "91d00559adf4512b4084233f13b78b21c9429c739cf21161c333edc38db9c081"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/platform-source-baseline.json",
+      "bytes": 12292,
+      "sha256": "df6ab9ed63029bc6ebcad5d495fcd92eba5db2eb9cfb363d0d5a524bc199efc2"
+    },
+    {
       "path": "2026-10-07-agency-workspaces/postgres-init.log",
       "bytes": 1105,
       "sha256": "ce5027761d7c5130fbbd5a31a81b00eccdd2483e09d334dc23d37c2853995812"
     },
     {
       "path": "2026-10-07-agency-workspaces/postgres.log",
-      "bytes": 2326837,
-      "sha256": "1c3d901cd0fb864d235dfbd7ff134be398e67931aef59b7b52af1dcb517783b6"
+      "bytes": 2386287,
+      "sha256": "755fb3013e9b4fd4673c6f39a17edaf1a3e7473b468f3a6ef979fa26f1a71cf6"
     },
     {
       "path": "2026-10-07-agency-workspaces/progress.md",
-      "bytes": 98297,
-      "sha256": "f825cc7a2740013a72d331f540ff0a62bda9d85f9878187bc14e04594bb6a7db"
+      "bytes": 111775,
+      "sha256": "7b79d9abdeef91667555be8d2b6edbab09e275936cea0ae77b7e8268cc0791e6"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/prove-platform-parser-red.mjs",
+      "bytes": 920,
+      "sha256": "97fbf8f28c1502c162d842a27eb2bbeb3224f2307855f4b333908c951aa56d92"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/review-web-runtime-3fab..280d75b.diff",
+      "bytes": 13526,
+      "sha256": "1f1ebc1e38225bbe1480b65781cfa22f022d0d1b6082a67d9e386bb1065abbba"
     },
     {
       "path": "2026-10-07-agency-workspaces/rulings-snapshot.json",
@@ -151,6 +286,21 @@
       "path": "2026-10-07-agency-workspaces/task4-check.log",
       "bytes": 41841,
       "sha256": "f1c38ccd033355fc3d9f6f500b62bb4f481ab8e6caf51ccd420995e42ec63290"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/web-runtime-gate-brief.md",
+      "bytes": 2866,
+      "sha256": "5038b0c7bedab05f151a00ae21796a317159fdf136a8e3a195bb1a8b760957a6"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/web-runtime-gate-report.md",
+      "bytes": 12048,
+      "sha256": "34b6ac0ccfb6923ed005a4e71a6e4e0b09fe32d0dc341b1c84f7bbe837898749"
+    },
+    {
+      "path": "2026-10-07-agency-workspaces/web-runtime-gate-review.md",
+      "bytes": 4301,
+      "sha256": "5a5004f4598669f14dc2b36a5a798064c6e897195f2e542f1df10f62d88f1b9f"
     },
     {
       "path": "2026-10-07-agency-foundation/plan-path",
@@ -1084,8 +1234,8 @@
     },
     {
       "path": "2026-10-07-agency-closure-release/progress.md",
-      "bytes": 63160,
-      "sha256": "cdfe3041f8566e6e5be59a901626af7cd2a5a13b032488859eb78ea5651b92ff"
+      "bytes": 74704,
+      "sha256": "318d489c8c5260a409826c9a31e5a412e1c7016c62f010f3641974863c282dcd"
     },
     {
       "path": "2026-10-07-agency-closure-release/review-023b48a..aec0863.diff",

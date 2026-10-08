@@ -295,8 +295,11 @@ try {
     // table/column are the literal allowlist above, never receipt/user strings.
     assert.equal((await pauseDb.query(`delete from kh_private.${table} where ${column}=$1`,[id])).rowCount,plannedCounts[table]);
   }
+  const publicationKeys=(await pauseDb.query('select property_id,origin_actor_id,client_request_id from kh_private.property_publication_keys where property_id=$1 or (origin_actor_id=$2 and client_request_id=$3)',[p,publisher,saveRequest])).rows;
+  assert.deepEqual(publicationKeys,[{property_id:p,origin_actor_id:publisher,client_request_id:saveRequest}]);
   assert.equal((await pauseDb.query('delete from public.properties where id=$1 and moderation=\'draft\'',[p])).rowCount,1);
   assert.equal((await pauseDb.query('select 1 from kh_private.agency_property_identities where property_id=$1',[p])).rowCount,0);
+  assert.equal((await pauseDb.query('delete from kh_private.property_publication_keys where origin_actor_id=$1 and client_request_id=$2 and property_id is null',[publisher,saveRequest])).rowCount,1);
   assert.equal((await pauseDb.query('delete from kh_private.agency_applications where agency_id=$1',[a])).rowCount,1);
   // Lifecycle triggers may add events. Save exact IDs privately before deleting these owned rows.
   const eventRows=(await pauseDb.query('select * from kh_private.agency_events where agency_id=$1 order by id',[a])).rows;

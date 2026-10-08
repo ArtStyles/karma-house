@@ -509,3 +509,115 @@ Ruling: Retain the single Browser Use URL-policy-blocked tab as an explicit UI c
 Phase occurrence 2026-10-07-agency-closure-release:125:
 
 Ruling: Retain the single Browser Use URL-policy-blocked tab as an explicit UI cleanup residue and do not bypass the policy; its saved parsed document is the initial loopback ERR_CONNECTION_REFUSED page, and authentication occurred only in the successfully closed tabs2/4 — the independent final scoped review found no evidence of retained private app content in tab1 and accepted exact database/process/config cleanup — cost if wrong: one error tab remains visible until normal user closure; no claim of complete tab cleanup or automatic-approval rejection is made.
+
+## R73 — 2026-10-07-agency-workspaces:226
+
+Ruling: Correct the root backup validator for PostgreSQL17 default public-schema ownership: accept its preserved SCHEMA public ACL plus every inventoried table definition/nonempty data entry, and require full pg_restore decoding; resume the already successfully completed snapshot dump only after all baseline table hashes remain exact. Preserve the initial failed validation receipt — actual pg_dump exit0 created a complete2085250-byte archive, but PostgreSQL17 intentionally omits the default public schema definition; official REL_17_STABLE pg_dump.c confirms this special case — cost if wrong: stricter complete coverage/baseline checks abort before migration; restoration rehearsal remains explicitly untested and no managed schema is omitted.
+
+Phase occurrence 2026-10-07-agency-closure-release:126:
+
+Ruling: Correct the root backup validator for PostgreSQL17 default public-schema ownership: accept its preserved SCHEMA public ACL plus every inventoried table definition/nonempty data entry, and require full pg_restore decoding; resume the already successfully completed snapshot dump only after all baseline table hashes remain exact. Preserve the initial failed validation receipt — actual pg_dump exit0 created a complete2085250-byte archive, but PostgreSQL17 intentionally omits the default public schema definition; official REL_17_STABLE pg_dump.c confirms this special case — cost if wrong: stricter complete coverage/baseline checks abort before migration; restoration rehearsal remains explicitly untested and no managed schema is omitted.
+
+## R74 — 2026-10-07-agency-workspaces:227
+
+Ruling: Compile the official dual-ABI release in one ACL-restricted receipt-owned short Windows path, using byte-exact tracked final source and a physical copy of the isolated worktree dependencies; preserve official app/package/version/Firebase identity and certificate, with no fixture configuration. Local compilation may overlap the read-only backup, but publication waits for complete backup and strict migration OFF verification — the successful prior native preparation used this short-path procedure and Windows native tooling is sensitive to spaced/long paths; this avoids editing product identity or using unrelated primary source — cost if wrong: extra disk and rebuild work; source/dependency parity and final signature/config/privacy checks reject a divergent artifact before publication.
+
+Phase occurrence 2026-10-07-agency-closure-release:127:
+
+Ruling: Compile the official dual-ABI release in one ACL-restricted receipt-owned short Windows path, using byte-exact tracked final source and a physical copy of the isolated worktree dependencies; preserve official app/package/version/Firebase identity and certificate, with no fixture configuration. Local compilation may overlap the read-only backup, but publication waits for complete backup and strict migration OFF verification — the successful prior native preparation used this short-path procedure and Windows native tooling is sensitive to spaced/long paths; this avoids editing product identity or using unrelated primary source — cost if wrong: extra disk and rebuild work; source/dependency parity and final signature/config/privacy checks reject a divergent artifact before publication.
+
+## R75 — 2026-10-07-agency-workspaces:228
+
+Ruling: Resume the completed Storage backup by verifying every retained object byte/hash and comparing PostgreSQL Date values in their persisted JSON representation, then require every original table hash and Auth UUID to remain exact before declaring the backup complete — the raw deep comparison reproduced a Date-versus-string mismatch while normalized metadata remained identical; no object changed and no production write had occurred — cost if wrong: strict equality still aborts on any real change and restoration remains un-rehearsed; both earlier failed validator receipts are preserved, with no repeated download or fabricated restore claim.
+
+Phase occurrence 2026-10-07-agency-closure-release:128:
+
+Ruling: Resume the completed Storage backup by verifying every retained object byte/hash and comparing PostgreSQL Date values in their persisted JSON representation, then require every original table hash and Auth UUID to remain exact before declaring the backup complete — the raw deep comparison reproduced a Date-versus-string mismatch while normalized metadata remained identical; no object changed and no production write had occurred — cost if wrong: strict equality still aborts on any real change and restoration remains un-rehearsed; both earlier failed validator receipts are preserved, with no repeated download or fabricated restore claim.
+
+## R76 — 2026-10-07-agency-workspaces:230
+
+Ruling: Treat the observed production manifest mismatch as a new root release compatibility gate, keeping the module OFF and all ten already-applied migration bytes/ledgers immutable. Use one fresh narrowly scoped implementer and independent review to reconcile exact Supabase platform ACL/Auth-RLS expectations and explicitly harden any accidental anonymous grants; do not accept a live-generated manifest, disable Auth RLS, broadly revoke service access, or relax security drift checks — actual diagnostics show identical 238 function definitions and41 table inventories, but106 service-role EXECUTE differences, two anonymous EXECUTE differences and two Auth trigger security hashes; the approved activation cannot proceed through an unverified manifest — cost if wrong: an additional bounded security-operator review and covering tests; publication/activation wait for an independently checked platform profile and exact production re-verification.
+
+Phase occurrence 2026-10-07-agency-closure-release:129:
+
+Ruling: Treat the observed production manifest mismatch as a new root release compatibility gate, keeping the module OFF and all ten already-applied migration bytes/ledgers immutable. Use one fresh narrowly scoped implementer and independent review to reconcile exact Supabase platform ACL/Auth-RLS expectations and explicitly harden any accidental anonymous grants; do not accept a live-generated manifest, disable Auth RLS, broadly revoke service access, or relax security drift checks — actual diagnostics show identical 238 function definitions and41 table inventories, but106 service-role EXECUTE differences, two anonymous EXECUTE differences and two Auth trigger security hashes; the approved activation cannot proceed through an unverified manifest — cost if wrong: an additional bounded security-operator review and covering tests; publication/activation wait for an independently checked platform profile and exact production re-verification.
+
+## R77 — 2026-10-07-agency-workspaces:231
+
+Ruling: Extend the same bounded platform-verification repair to include the three observed rename-then-move historical helpers in the strict function inventory, preserving every existing238 pin and adding independently derived definition/effective-grant expectations plus parser/drift regression — the implementer traced an actual inventoryNames omission during Supabase ACL derivation, so an unpinned helper is part of the current activation-security gate rather than unrelated modernization — cost if wrong: three additional function pins and narrow covering verification; migration bytes, business behavior and client source remain unchanged and the same independent scoped review must accept the expansion.
+
+Phase occurrence 2026-10-07-agency-closure-release:130:
+
+Ruling: Extend the same bounded platform-verification repair to include the three observed rename-then-move historical helpers in the strict function inventory, preserving every existing238 pin and adding independently derived definition/effective-grant expectations plus parser/drift regression — the implementer traced an actual inventoryNames omission during Supabase ACL derivation, so an unpinned helper is part of the current activation-security gate rather than unrelated modernization — cost if wrong: three additional function pins and narrow covering verification; migration bytes, business behavior and client source remain unchanged and the same independent scoped review must accept the expansion.
+
+## R78 — 2026-10-07-agency-workspaces:232
+
+Ruling: Retain the receipt-owned official native short build copy after the execution policy rejected its recursive PowerShell removal; do not retry the same deletion through another tool or bypass the policy. The four exact temporary environment/Firebase/signing input files were already individually hash-checked and removed, and all nine official artifacts are hash-verified in the private receipt/worktree — safe release evidence is preserved and a blocked cleanup is not evidence of successful deletion — cost if wrong: the public source/generated build/dependency copy consumes local disk until manual cleanup; no private signing inputs remain there and publication verification continues independently.
+
+Phase occurrence 2026-10-07-agency-closure-release:131:
+
+Ruling: Retain the receipt-owned official native short build copy after the execution policy rejected its recursive PowerShell removal; do not retry the same deletion through another tool or bypass the policy. The four exact temporary environment/Firebase/signing input files were already individually hash-checked and removed, and all nine official artifacts are hash-verified in the private receipt/worktree — safe release evidence is preserved and a blocked cleanup is not evidence of successful deletion — cost if wrong: the public source/generated build/dependency copy consumes local disk until manual cleanup; no private signing inputs remain there and publication verification continues independently.
+
+## R79 — 2026-10-07-agency-workspaces:234
+
+Ruling: Extend only the anonymous public APK read timeout from120s to900s and stream/hash the full response into exclusive run-owned files, retaining the initial timeout receipt and never promoting the website from a partial download. Do not repeat publication or overwrite an existing release — the original request timed out while reading the84966607-byte public asset; the fresh read now reports byte progress and still requires exact asset size/full expectedSHA plus checksum/instructions — cost if wrong: a longer bounded read and extra local download file; no mutation is retried and the complete byte/hash gate remains mandatory.
+
+Phase occurrence 2026-10-07-agency-closure-release:132:
+
+Ruling: Extend only the anonymous public APK read timeout from120s to900s and stream/hash the full response into exclusive run-owned files, retaining the initial timeout receipt and never promoting the website from a partial download. Do not repeat publication or overwrite an existing release — the original request timed out while reading the84966607-byte public asset; the fresh read now reports byte progress and still requires exact asset size/full expectedSHA plus checksum/instructions — cost if wrong: a longer bounded read and extra local download file; no mutation is retried and the complete byte/hash gate remains mandatory.
+
+## R80 — 2026-10-07-agency-workspaces:237
+
+Ruling: Verify the SSO-protected deployment artifact through official Vercel CLI curl full-URL access, then require an independent anonymous runtime check on the public domain after promotion. Retain the initial redirect failure and CLI flag failures; the official CLI generated project automation access because no existing token was configured. Do not disable deployment protection or represent protected access as anonymous — actual anonymous artifact GET is302 while the existing public domain is200, and CLI63 passes unsupported global flags to curl — cost if wrong: temporary project automation access and several private request receipts; promotion still requires exact artifact readiness and public anonymous proof, and generated access must be removed through its documented exact-token control after verification.
+
+Phase occurrence 2026-10-07-agency-closure-release:133:
+
+Ruling: Verify the SSO-protected deployment artifact through official Vercel CLI curl full-URL access, then require an independent anonymous runtime check on the public domain after promotion. Retain the initial redirect failure and CLI flag failures; the official CLI generated project automation access because no existing token was configured. Do not disable deployment protection or represent protected access as anonymous — actual anonymous artifact GET is302 while the existing public domain is200, and CLI63 passes unsupported global flags to curl — cost if wrong: temporary project automation access and several private request receipts; promotion still requires exact artifact readiness and public anonymous proof, and generated access must be removed through its documented exact-token control after verification.
+
+## R81 — 2026-10-07-agency-workspaces:238
+
+Ruling: Treat the observed Vercel agency-route ERR_MODULE_NOT_FOUND as a new narrow Task16 web packaging gate: dispatch one fresh web-only implementer and independent scoped reviewer, reproduce the emitted-JS package failure, preserve public privacy/validation and WEB-only upload, then redeploy only after review. The official Android artifact/native source and all SQL remain unchanged — actual hosted artifact agency route fails500 before handler execution while its home/assets/existing personal listing succeed; the TS-strip local staging proof missed emitted package behavior — cost if wrong: one bounded web build/review/redeployment and a replaced unpromoted artifact; production stays OFF and the old public domain remains until real runtime proof.
+
+Phase occurrence 2026-10-07-agency-closure-release:134:
+
+Ruling: Treat the observed Vercel agency-route ERR_MODULE_NOT_FOUND as a new narrow Task16 web packaging gate: dispatch one fresh web-only implementer and independent scoped reviewer, reproduce the emitted-JS package failure, preserve public privacy/validation and WEB-only upload, then redeploy only after review. The official Android artifact/native source and all SQL remain unchanged — actual hosted artifact agency route fails500 before handler execution while its home/assets/existing personal listing succeed; the TS-strip local staging proof missed emitted package behavior — cost if wrong: one bounded web build/review/redeployment and a replaced unpromoted artifact; production stays OFF and the old public domain remains until real runtime proof.
+
+## R82 — 2026-10-07-agency-workspaces:239
+
+Ruling: Accept the independently reviewed self-contained web function and its small duplicated HTML escape primitive, preserving the exact existing decoder and deleting its unused module; retain both renderers five-character escape coverage and document the Minor for any future shared packaging change — scoped review approves spec and quality with no Important/Critical findings, and the emitted-JS regression reproduces both missing TS imports before passing; no native or SQL source changed — cost if wrong: a future escape change must keep two tiny helpers aligned; current real hosted redeploy remains mandatory and broader bundler/dependency configuration is avoided.
+
+Phase occurrence 2026-10-07-agency-closure-release:135:
+
+Ruling: Accept the independently reviewed self-contained web function and its small duplicated HTML escape primitive, preserving the exact existing decoder and deleting its unused module; retain both renderers five-character escape coverage and document the Minor for any future shared packaging change — scoped review approves spec and quality with no Important/Critical findings, and the emitted-JS regression reproduces both missing TS imports before passing; no native or SQL source changed — cost if wrong: a future escape change must keep two tiny helpers aligned; current real hosted redeploy remains mandatory and broader bundler/dependency configuration is avoided.
+
+## R83 — 2026-10-07-agency-workspaces:240
+
+Ruling: Retain and disclose the nonfatal Vercel built-in compiler diagnostics for default web library/process typings instead of broadening the runtime packaging fix with unrelated compiler/dependency configuration. Require the actual READY emitted artifact and all seven protected-runtime plus seven anonymous public-domain checks before accepting the client — Vercel built-in TypeScript5.9.3 emits while reporting .at/process type diagnostics, whereas project TypeScript and617 full tests are clean; actual agency and existing listing endpoints now load with correct statuses — cost if wrong: deployment logs remain diagnostically noisy and a future build configuration cleanup is needed; no diagnostics are suppressed or called pristine, and any real runtime failure still blocks activation.
+
+Phase occurrence 2026-10-07-agency-closure-release:136:
+
+Ruling: Retain and disclose the nonfatal Vercel built-in compiler diagnostics for default web library/process typings instead of broadening the runtime packaging fix with unrelated compiler/dependency configuration. Require the actual READY emitted artifact and all seven protected-runtime plus seven anonymous public-domain checks before accepting the client — Vercel built-in TypeScript5.9.3 emits while reporting .at/process type diagnostics, whereas project TypeScript and617 full tests are clean; actual agency and existing listing endpoints now load with correct statuses — cost if wrong: deployment logs remain diagnostically noisy and a future build configuration cleanup is needed; no diagnostics are suppressed or called pristine, and any real runtime failure still blocks activation.
+
+## R84 — 2026-10-07-agency-workspaces:241
+
+Ruling: Correct only the root unpublished smoke draft type from null to the existing valid Apartamento enum, then run one fresh explicitly authorized smoke with new identities/receipts after verified cleanup and OFF. Preserve the initial failed run and its exact KH_INVALID_PROPERTY result; do not relax the business guard or reuse its request IDs — the current shared save core requires a home type even for sale drafts, and the first complete teardown preserved owner/historical ledger and removed its3users/2objects — cost if wrong: a second bounded activation/push pause and fixture cycle; each run has only one enable, any failure returns OFF, no published fake home/real sale is permitted, and the first failed receipt is never relabeled success.
+
+Phase occurrence 2026-10-07-agency-closure-release:137:
+
+Ruling: Correct only the root unpublished smoke draft type from null to the existing valid Apartamento enum, then run one fresh explicitly authorized smoke with new identities/receipts after verified cleanup and OFF. Preserve the initial failed run and its exact KH_INVALID_PROPERTY result; do not relax the business guard or reuse its request IDs — the current shared save core requires a home type even for sale drafts, and the first complete teardown preserved owner/historical ledger and removed its3users/2objects — cost if wrong: a second bounded activation/push pause and fixture cycle; each run has only one enable, any failure returns OFF, no published fake home/real sale is permitted, and the first failed receipt is never relabeled success.
+
+## R85 — 2026-10-07-agency-workspaces:242
+
+Ruling: Repair exactly one legacy Windows-1252 en-dash byte in the verification Markdown to its UTF-8 encoding before adding the actual release outcome; preserve all other bytes and require strict UTF-8 decoding of the full repaired document — the documentation editor rejected byte0x96 between I1 and I7 at offset8690, while all remaining text decodes as UTF-8 — cost if wrong: one punctuation glyph could have been interpreted differently; no broad recoding, product change or evidence wording replacement is performed.
+
+Phase occurrence 2026-10-07-agency-closure-release:138:
+
+Ruling: Repair exactly one legacy Windows-1252 en-dash byte in the verification Markdown to its UTF-8 encoding before adding the actual release outcome; preserve all other bytes and require strict UTF-8 decoding of the full repaired document — the documentation editor rejected byte0x96 between I1 and I7 at offset8690, while all remaining text decodes as UTF-8 — cost if wrong: one punctuation glyph could have been interpreted differently; no broad recoding, product change or evidence wording replacement is performed.
+
+## R86 — 2026-10-07-agency-workspaces:243
+
+Ruling: Supersede the one-byte assumption in R85 with exactly two independently located legacy en-dash bytes from the Git source, requiring current bytes to equal only the known first repair, strict full-file UTF-8 decoding before writing, and an exact reread afterward. Preserve the initial failed attempt: its PowerShell decoder exception was nonterminating, so it wrote the first glyph before the second error was resolved — original Git bytes0x96 occur only between I1/I7 and browser tabs2/5; the narrow two-glyph transformation now passes the complete decoder without changing other text — cost if wrong: two punctuation glyphs could be misinterpreted; no broad text recoding, source rollback, product mutation or invented successful first check is permitted.
+
+Phase occurrence 2026-10-07-agency-closure-release:139:
+
+Ruling: Supersede the one-byte assumption in R85 with exactly two independently located legacy en-dash bytes from the Git source, requiring current bytes to equal only the known first repair, strict full-file UTF-8 decoding before writing, and an exact reread afterward. Preserve the initial failed attempt: its PowerShell decoder exception was nonterminating, so it wrote the first glyph before the second error was resolved — original Git bytes0x96 occur only between I1/I7 and browser tabs2/5; the narrow two-glyph transformation now passes the complete decoder without changing other text — cost if wrong: two punctuation glyphs could be misinterpreted; no broad text recoding, source rollback, product mutation or invented successful first check is permitted.

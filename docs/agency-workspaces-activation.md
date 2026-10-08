@@ -1,5 +1,7 @@
 # Secuencia de activación controlada
 
+Resultado efectivo de Task 16 (8 de octubre de 2026): **producción ON**, diez migraciones y perfil hosted de 241 funciones/41 tablas verificados; Android 0.1.20 y dominio público publicados y comprobados. La prueba real de Auth/REST/Storage y la limpieza exacta terminaron correctamente. Cada inmobiliaria continúa pendiente hasta aprobación del propietario y sin sello hasta una concesión separada. Véanse [resultado y límites](agency-release-audit/README.md) y [recibo público sanitizado](agency-release-audit/production-outcome.json).
+
 Estado al preparar Task 15 (8 de octubre de 2026): implementación y evidencia locales; **producción no activada por esta tarea**. El usuario autorizó posteriormente migraciones y activación. El controlador conserva esa autorización y ejecuta Task 16, revisión final de mayor capacidad y gates pendientes. La propuesta del 7 de octubre sigue siendo procedencia histórica del diseño.
 
 1. Fijar commit revisado y cliente compatible. Confirmar árbol/bytes exactos de las diez migraciones con `supabase/agency-activation-manifest.json`. `.gitattributes` fuerza LF para SQL; no convertir hashes históricos ni normalizar diferencias silenciosamente. Documentar destino, inventario previo, versión de PostgreSQL, roles, permisos, extensiones y trabajos existentes. Preparar el JSON privado/CA fuera del repositorio según operación. Ningún script toma credenciales implícitas.
