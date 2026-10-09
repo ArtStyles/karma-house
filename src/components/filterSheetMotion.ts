@@ -19,11 +19,15 @@ export function shouldDismissFilterSheet(position: number, velocity: number, hei
 export function createFilterDismissalGate(onClose: () => void) {
   let active = true;
   let closed = false;
+  let latestTicket = 0;
   let pending: { ticket: number; committed: boolean } | null = null;
   return {
     activate() { if (closed) return false; active = true; return true; },
     begin(ticket: number, commit?: () => void) {
-      if (!active || closed || pending || !Number.isSafeInteger(ticket) || ticket <= 0) return false;
+      if (!active || closed || pending?.committed || !Number.isSafeInteger(ticket) || ticket <= latestTicket) return false;
+      // A newer UI gesture supersedes a discardable close whose JS interruption
+      // has not arrived yet. A confirmed Apply is never superseded.
+      latestTicket = ticket;
       pending = { ticket, committed: !!commit };
       try { commit?.(); } catch (error) { pending = null; throw error; }
       return true;

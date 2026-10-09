@@ -101,3 +101,13 @@ test('a reduced-motion change completes an accepted gesture close before its JS 
   f.flush();
   assert.equal(f.closed(), 1);
 });
+
+test('a mode change settles a re-released panel even while JS retains the previous close ticket', () => {
+  const f = fixture(true); f.layout();
+  f.callbacks.onBegin({}); f.callbacks.onUpdate({ translationY: 240 }); f.callbacks.onEnd({ velocityY: 0 });
+  f.flush();
+  f.callbacks.onBegin({}); f.callbacks.onUpdate({ translationY: 20 }); f.callbacks.onEnd({ velocityY: 0 });
+  f.reduce(); f.render();
+  f.flush();
+  assert.equal(f.closed(), 1);
+});
