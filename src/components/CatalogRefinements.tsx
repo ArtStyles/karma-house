@@ -1,9 +1,10 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import type { ListingFilters } from '../domain/listings';
 import { PROVINCES } from '../domain/listingOptions';
 import { createThemedStyles } from '../theme';
 import { SelectionField } from './SelectionField';
 import { Icon } from './ui';
+import { MotionPressable } from './MotionPressable';
 
 const operations = [
   { value: 'offers', label: 'Venta y permuta' }, { value: 'sale', label: 'Venta' },
@@ -27,11 +28,11 @@ export function CatalogRefinements({ filters, onChange, disabled = false }: {
       return <View key={field.label} style={[styles.field, index === 0 && styles.operation]}>
         {index > 0 && <View style={styles.divider} />}
         <SelectionField label={field.label} value={field.value} options={field.options} onChange={field.change} disabled={disabled}
-          renderTrigger={open => <Pressable accessibilityRole="button" accessibilityLabel={`${field.label}: ${selected}`}
+          renderTrigger={open => <MotionPressable accessibilityRole="button" accessibilityLabel={`${field.label}: ${selected}`}
             accessibilityState={{ disabled }} disabled={disabled} onPress={open}
             style={({ pressed }) => [styles.trigger, pressed && { opacity: .65 }]}>
             <Text numberOfLines={1} style={styles.value}>{selected}</Text><Icon name="chevron-down" size={14} color={colors.muted} />
-          </Pressable>} />
+          </MotionPressable>} />
       </View>;
     })}
   </View>;

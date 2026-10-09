@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { createThemedStyles } from '../theme';
 import { Icon, type IconName } from './ui';
+import { MotionPressable } from './MotionPressable';
 
 type DiscoveryOperation = 'sale' | 'rent' | 'swap';
 const cards: { title: string; description: string; action: string; icon: IconName; accent: IconName; operation?: DiscoveryOperation }[] = [
@@ -37,7 +38,7 @@ export function ExploreDiscovery({ offline, onOperation, onPublish }: {
       onScroll={event => setPage(Math.max(0, Math.min(cards.length - 1, Math.round(event.nativeEvent.contentOffset.x / interval))))}>
       {cards.map(card => {
         const disabled = offline && !!card.operation;
-        return <Pressable key={card.action} accessibilityRole="button"
+        return <MotionPressable key={card.action} accessibilityRole="button"
           accessibilityLabel={`${card.action}: ${card.title}`}
           accessibilityHint={card.operation ? 'Selecciona esta operación para tu búsqueda' : 'Abre el formulario para publicar una vivienda'}
           accessibilityState={{ disabled }} disabled={disabled}
@@ -54,7 +55,7 @@ export function ExploreDiscovery({ offline, onOperation, onPublish }: {
             <Text style={styles.action}>{card.action}</Text>
           </View>
           <View style={styles.arrow}><Icon name="arrow-up-outline" size={14} color={colors.primary} /></View>
-        </Pressable>;
+        </MotionPressable>;
       })}
     </ScrollView>
     <View accessible accessibilityLabel={`Tarjeta ${page + 1} de ${cards.length}: ${cards[page].action}`} style={styles.status}>

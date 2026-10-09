@@ -5,6 +5,7 @@ import { SORT_OPTIONS } from '../catalog/sortOptions';
 import type { ListingFilters } from '../domain/listings';
 import { createThemedStyles } from '../theme';
 import { Icon } from './ui';
+import { MotionPressable } from './MotionPressable';
 
 /** A small menu anchored to the current order; choosing never touches the other filters. */
 export function CatalogSortMenu({ value, onChange, disabled = false }: {
@@ -38,12 +39,12 @@ export function CatalogSortMenu({ value, onChange, disabled = false }: {
     ? anchor.y + anchor.height + 6 : anchor.y - menuHeight - 6) : 0;
 
   return <>
-    <Pressable ref={trigger} accessibilityRole="button" accessibilityLabel={`Ordenar viviendas: ${selected.label}`}
+    <MotionPressable ref={trigger} accessibilityRole="button" accessibilityLabel={`Ordenar viviendas: ${selected.label}`}
       accessibilityState={{ expanded: !!anchor, disabled }} aria-haspopup="menu" disabled={disabled}
       onPress={() => trigger.current?.measureInWindow((x, y, width, height) => setAnchor({ x, y, width, height }))}
       style={({ pressed }) => [styles.trigger, pressed && { opacity: .7 }]}>
       <Text style={styles.triggerText}>{selected.label}</Text><Icon name={anchor ? 'chevron-up' : 'chevron-down'} size={13} color={colors.muted} />
-    </Pressable>
+    </MotionPressable>
     <Modal visible={!!anchor && !disabled} transparent animationType="fade" statusBarTranslucent onRequestClose={close}>
       <View style={styles.overlay}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cerrar opciones de orden" style={StyleSheet.absoluteFill} onPress={close} />
@@ -51,13 +52,13 @@ export function CatalogSortMenu({ value, onChange, disabled = false }: {
           style={[styles.menu, { top, left, width: menuWidth, maxHeight: Math.max(0, bottomLimit - top) }]}>
           <Text style={styles.heading}>Ordenar por</Text>
           <ScrollView keyboardShouldPersistTaps="handled">
-            {SORT_OPTIONS.map(option => <Pressable key={option.value} accessibilityRole="menuitem"
+            {SORT_OPTIONS.map(option => <MotionPressable key={option.value} accessibilityRole="menuitem"
               accessibilityLabel={option.label} accessibilityState={{ selected: value === option.value }}
               onPress={() => { if (!disabled) onChange(option.value); close(); }}
               style={({ pressed }) => [styles.option, value === option.value && styles.selected, pressed && { opacity: .7 }]}>
               <Text style={[styles.optionText, value === option.value && styles.selectedText]}>{option.label}</Text>
               {value === option.value && <Icon name="checkmark" size={19} color={colors.primary} />}
-            </Pressable>)}
+            </MotionPressable>)}
           </ScrollView>
         </View>
       </View>

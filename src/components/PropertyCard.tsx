@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { isNewListing, type Listing } from '../domain/listings';
 import { listingFacts, operationBadge, priceLabel, priceSuffix } from '../domain/operations';
 import { useAuth } from '../auth/AuthProvider';
@@ -10,6 +10,7 @@ import { useFavoriteHeart } from '../state/useFavoriteHeart';
 import { createThemedStyles, formatMoney } from '../theme';
 import { PropertyImage } from './PropertyImage';
 import { Icon, IconButton } from './ui';
+import { MotionPressable } from './MotionPressable';
 
 /** Photo first: the image carries the card, and the text sits on the screen's own background. */
 export function PropertyCard({ listing, horizontal = false, offline = false }: { listing: Listing; horizontal?: boolean; offline?: boolean }) {
@@ -38,7 +39,7 @@ export function PropertyCard({ listing, horizontal = false, offline = false }: {
     } catch { setError('No se pudo guardar el favorito. Inténtalo de nuevo.'); } finally { setSaving(false); }
   }
   return <View style={horizontal && styles.horizontalCard}>
-    <Pressable accessibilityRole="button" accessibilityLabel={`Ver ${listing.title}, ${priceLabel(listing)} ${formatMoney(listing.price)} USD${priceSuffix(listing)}, ${place}`} onPress={() => router.push(`/property/${listing.id}`)} style={({ pressed }) => [horizontal && styles.horizontal, pressed && { opacity: .85 }]}>
+    <MotionPressable pressedScale={.995} accessibilityRole="button" accessibilityLabel={`Ver ${listing.title}, ${priceLabel(listing)} ${formatMoney(listing.price)} USD${priceSuffix(listing)}, ${place}`} onPress={() => router.push(`/property/${listing.id}`)} style={({ pressed }) => [horizontal && styles.horizontal, pressed && { opacity: .85 }]}>
       <View style={horizontal && styles.wideImage}>
         {listing.operation === 'wanted' && !(listing.photos?.length)
           ? <View style={[horizontal ? styles.horizontalImage : styles.image, styles.wantedImage]}><Icon name="search-outline" size={37} color={colors.primary} /><Text style={styles.wantedText}>Busco vivienda</Text></View>
@@ -58,7 +59,7 @@ export function PropertyCard({ listing, horizontal = false, offline = false }: {
         <Text numberOfLines={1} style={styles.meta}>{facts}</Text>
         {horizontal && <View style={styles.detailsLink}><Text style={styles.detailsText}>{listing.operation === 'wanted' ? 'Ver esta búsqueda' : 'Conoce esta vivienda'}</Text><Icon name="arrow-forward" size={17} color={colors.primary} /></View>}
       </View>
-    </Pressable>
+    </MotionPressable>
     <IconButton name={favorite===null?'ellipsis-horizontal':favorite ? 'heart' : 'heart-outline'} label={favorite===null?`Comprobar favoritos: ${listing.title}`:`${favorite ? 'Quitar de' : 'Guardar en'} favoritos: ${listing.title}`} onPress={toggle} active={favorite??undefined} style={styles.heart} />
     {heart.error?<Text accessibilityRole="alert" style={styles.error}>{heart.error}</Text>:null}
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}

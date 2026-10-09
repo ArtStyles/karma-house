@@ -1,8 +1,5 @@
 import { useState } from 'react';
-import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
-import { useReducedMotion } from '../settings/useReducedMotion';
-import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { activeFilterCount, defaultFilters, filterRangeError, type ListingFilters } from '../domain/listings';
 import { AMENITY_GROUPS, CONDITIONS, PROVINCES } from '../domain/listingOptions';
 import { normalizeDecimalInput } from '../domain/numericInput';
@@ -10,23 +7,17 @@ import { createThemedStyles } from '../theme';
 import { Button, Icon, IconButton, Notice, Pill } from './ui';
 import { SelectionField } from './SelectionField';
 import { SORT_OPTIONS } from '../catalog/sortOptions';
+import { FilterSheet } from './FilterSheet';
 
 /** Mounted only while open, so dismissing never mutates the applied catalogue. */
 export function CatalogFilters({ filters, onApply, onClose }: { filters: ListingFilters; onApply(next: ListingFilters): void; onClose(): void }) {
   const { colors, styles } = useStyles();
   const [draft, setDraft] = useState<ListingFilters>(() => ({ ...filters, amenities: [...(filters.amenities ?? [])] }));
-  const reducedMotion = useReducedMotion();
-  const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
   const change = (next: Partial<ListingFilters>) => setDraft(old => ({ ...old, ...next }));
   const error = filterRangeError(draft);
   const selectedCount = activeFilterCount({ ...draft, query: '' });
-  return <Modal transparent visible animationType="none" onRequestClose={onClose}>
-    <KeyboardAvoidingView style={styles.flex} behavior="padding">
-      <View style={[styles.overlay, width >= 700 && { justifyContent: 'center' }, { paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Cancelar filtros" onPress={onClose} style={StyleSheet.absoluteFill} />
-        <Animated.View accessibilityViewIsModal style={styles.sheet} entering={FadeIn.duration(180).reduceMotion(reducedMotion ? ReduceMotion.Always : ReduceMotion.System)}>
-          <View style={styles.header}><View style={styles.headerIcon}><Icon name="options-outline" color={colors.primary} size={23} /></View><View style={styles.heading}><Text accessibilityRole="header" style={styles.title}>Tu búsqueda, a medida</Text><Text style={styles.subtitle}>{selectedCount ? `${selectedCount} ${selectedCount === 1 ? 'filtro seleccionado' : 'filtros seleccionados'}` : 'Elige lo que importa para tu hogar'}</Text></View><IconButton name="close" label="Cerrar filtros sin aplicar" onPress={onClose} style={{ backgroundColor: colors.paper }} /></View>
+  return <FilterSheet onClose={onClose}>{close => <>
+          <View style={styles.header}><View style={styles.headerIcon}><Icon name="options-outline" color={colors.primary} size={23} /></View><View style={styles.heading}><Text accessibilityRole="header" style={styles.title}>Tu búsqueda, a medida</Text><Text style={styles.subtitle}>{selectedCount ? `${selectedCount} ${selectedCount === 1 ? 'filtro seleccionado' : 'filtros seleccionados'}` : 'Elige lo que importa para tu hogar'}</Text></View><IconButton name="close" label="Cerrar filtros sin aplicar" onPress={() => close()} style={{ backgroundColor: colors.paper }} /></View>
           <ScrollView keyboardShouldPersistTaps="handled" style={styles.scroll} contentContainerStyle={styles.content}>
             {!!draft.query && <View style={styles.query}><Icon name="search-outline" size={17} color={colors.primary} /><Text style={styles.queryText}>Buscando «{draft.query}»</Text></View>}
             <View style={styles.section}><Text style={styles.sectionTitle}>Vivienda y ubicación</Text>
@@ -55,12 +46,9 @@ export function CatalogFilters({ filters, onApply, onClose }: { filters: Listing
           </ScrollView>
           <View style={styles.footer}>
             {error ? <Notice error>{error}</Notice> : <Text style={styles.resultText}>Actualizaremos los resultados al aplicar los filtros.</Text>}
-            <View style={styles.actions}><Button secondary label="Limpiar" onPress={() => setDraft({ ...defaultFilters, query: filters.query, amenities: [] })} style={styles.clear} /><Button disabled={!!error} label="Aplicar filtros" onPress={() => { if (!error) { onApply(draft); onClose(); } }} style={styles.apply} /></View>
+            <View style={styles.actions}><Button secondary label="Limpiar" onPress={() => setDraft({ ...defaultFilters, query: filters.query, amenities: [] })} style={styles.clear} /><Button disabled={!!error} label="Aplicar filtros" onPress={() => { if (!error) close(() => onApply(draft)); }} style={styles.apply} /></View>
           </View>
-        </Animated.View>
-      </View>
-    </KeyboardAvoidingView>
-  </Modal>;
+  </>}</FilterSheet>;
 }
 
 function RangeFields({ label, unit, min, max, onMin, onMax }: { label: string; unit: string; min: string; max: string; onMin(value: string): void; onMax(value: string): void }) {
@@ -72,8 +60,6 @@ function RangeFields({ label, unit, min, max, onMin, onMax }: { label: string; u
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  flex: { flex: 1 }, overlay: { flex: 1, backgroundColor: colors.overlay, paddingHorizontal: 12, justifyContent: 'flex-end' },
-  sheet: { width: '100%', maxWidth: 640, maxHeight: '100%', flexShrink: 1, alignSelf: 'center', borderRadius: 28, backgroundColor: colors.surface, overflow: 'hidden' },
   header: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 12, borderBottomWidth: 1, borderBottomColor: colors.border }, headerIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' }, heading: { flex: 1, gap: 5 }, title: { fontSize: 20, fontWeight: '700', letterSpacing: -.5, color: colors.ink }, subtitle: { fontSize: 12, lineHeight: 17, color: colors.muted },
   scroll: { flexShrink: 1 }, content: { padding: 20, gap: 24 }, section: { gap: 13, paddingBottom: 22, borderBottomWidth: 1, borderBottomColor: colors.border }, sectionTitle: { color: colors.ink, fontSize: 17, fontWeight: '600', letterSpacing: -.25 }, choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, backgroundColor: colors.paper, borderRadius: 18, padding: 6 }, label: { color: colors.ink, fontSize: 14, fontWeight: '600' }, help: { color: colors.muted, fontSize: 12, lineHeight: 18 },
   group: { gap: 10 }, range: { gap: 10 }, rangeRow: { flexDirection: 'row', gap: 10 }, rangeField: { flex: 1, minWidth: 0, backgroundColor: colors.paper, borderRadius: 15, borderWidth: 1, borderColor: colors.border, paddingTop: 11, paddingHorizontal: 13 }, rangeCaption: { fontSize: 11, color: colors.muted }, input: { color: colors.ink, fontSize: 16, minHeight: 43, minWidth: 0, width: '100%' },

@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { activeFilterCount, defaultFilters, type ListingFilters } from '../domain/listings';
 import { useCatalogPage } from '../catalog/useCatalog';
@@ -12,6 +12,7 @@ import { createThemedStyles, layout } from '../theme';
 import { PropertyCard } from '../components/PropertyCard';
 import { ExploreDiscovery } from '../components/ExploreDiscovery';
 import { CatalogRefinements } from '../components/CatalogRefinements';
+import { MotionPressable } from '../components/MotionPressable';
 import { Brand, Button, EmptyState, Icon, IconButton, Notice } from '../components/ui';
 import { CatalogFilters } from '../components/CatalogFilters';
 import { CatalogSortMenu } from '../components/CatalogSortMenu';
@@ -113,10 +114,10 @@ export default function ExploreScreen() {
               <Icon name="search" size={20} color={colors.muted} />
               <TextInput accessibilityLabel="Buscar por barrio, municipio o calle" placeholder="Barrio, municipio o calle" placeholderTextColor={colors.muted} style={styles.searchInput} editable={!offline} value={filters.query} onChangeText={query => change({ query })} returnKeyType="search" />
               {filters.query ? <IconButton name="close-circle" label="Borrar búsqueda" onPress={() => change({ query: '' })} style={styles.clearSearch} /> : null}
-              <Pressable accessibilityRole="button" accessibilityLabel={filterCount ? `Filtros, ${filterCount} ${filterCount === 1 ? 'activo' : 'activos'}` : 'Abrir filtros'} onPress={openFilters} style={({ pressed }) => [styles.filterButton, filterCount > 0 && styles.filterActive, pressed && { opacity: .7 }]}>
+              <MotionPressable accessibilityRole="button" accessibilityLabel={filterCount ? `Filtros, ${filterCount} ${filterCount === 1 ? 'activo' : 'activos'}` : 'Abrir filtros'} onPress={openFilters} style={({ pressed }) => [styles.filterButton, filterCount > 0 && styles.filterActive, pressed && { opacity: .7 }]}>
                 <Icon name="options-outline" size={21} color={filterCount > 0 ? colors.onPrimary : colors.primary} />
                 {filterCount > 0 && <View style={styles.filterCount}><Text style={styles.filterCountText}>{filterCount}</Text></View>}
-              </Pressable>
+              </MotionPressable>
             </View>
           </View>
           <View style={styles.refinements}>
@@ -124,7 +125,7 @@ export default function ExploreScreen() {
           </View>
           {filterTags.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={locked} contentContainerStyle={styles.activeFilters}>
             {filterTags.map(tag => <FilterTag key={tag.key} label={tag.label} onRemove={() => removeFilter(tag.key)} />)}
-            <Pressable accessibilityRole="button" accessibilityLabel="Limpiar búsqueda y filtros" disabled={offline} onPress={clearFilters} style={styles.clear}><Text style={styles.clearText}>Limpiar</Text></Pressable>
+            <MotionPressable accessibilityRole="button" accessibilityLabel="Limpiar búsqueda y filtros" disabled={offline} onPress={clearFilters} style={styles.clear}><Text style={styles.clearText}>Limpiar</Text></MotionPressable>
           </ScrollView>}
           <View style={[styles.resultMeta, compactMeta && styles.compactMeta]}>
             <Text accessibilityLiveRegion="polite" style={styles.resultCount}>{count}</Text>
@@ -146,9 +147,9 @@ export default function ExploreScreen() {
             : loading && ready ? <View style={styles.skeletons}><CardSkeleton /></View>
             : current && !updating && !hasMore && result.length > 0 && !offline ? <Text style={styles.listEnd}>{total === 1 ? 'Has visto la única vivienda que coincide.' : `Has visto las ${total} viviendas que coinciden.`}</Text> : null}
           {/* The seller invitation closes a real list; under an empty or failed one it reads as the answer. */}
-          {result.length > 0 && !storageError && <Pressable accessibilityRole="button" accessibilityLabel="Publicar una vivienda" onPress={() => router.push('/publish')} style={({ pressed }) => [styles.sellerBanner, pressed && { opacity: .85 }]}>
+          {result.length > 0 && !storageError && <MotionPressable accessibilityRole="button" accessibilityLabel="Publicar una vivienda" onPress={() => router.push('/publish')} style={({ pressed }) => [styles.sellerBanner, pressed && { opacity: .85 }]}>
             <View style={styles.sellerIcon}><Icon name="key-outline" size={25} color={colors.onPrimary} /></View><View style={{ flex: 1 }}><Text style={styles.sellerTitle}>Tu vivienda, aquí.</Text><Text style={styles.sellerText}>Dale su próximo capítulo.</Text></View><Icon name="arrow-forward" size={21} color={colors.onPrimary} />
-          </Pressable>}
+          </MotionPressable>}
           {mode === 'demo' && <Notice>Viviendas e imágenes de demostración. Tus anuncios y favoritos se guardan solo en este dispositivo.</Notice>}
         </View>}
       />
@@ -186,7 +187,7 @@ function CardSkeleton() {
 
 function FilterTag({ label, onRemove }: { label: string; onRemove(): void }) {
   const { colors, styles } = useStyles();
-  return <Pressable accessibilityRole="button" accessibilityLabel={`Quitar filtro: ${label}`} onPress={onRemove} hitSlop={{ top: 4, bottom: 4 }} style={styles.filterTag}><Text style={styles.filterTagText}>{label}</Text><Icon name="close-circle" size={16} color={colors.primary} /></Pressable>;
+  return <MotionPressable accessibilityRole="button" accessibilityLabel={`Quitar filtro: ${label}`} onPress={onRemove} hitSlop={{ top: 4, bottom: 4 }} style={styles.filterTag}><Text style={styles.filterTagText}>{label}</Text><Icon name="close-circle" size={16} color={colors.primary} /></MotionPressable>;
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
