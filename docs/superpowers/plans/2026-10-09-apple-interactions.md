@@ -65,7 +65,7 @@
 
 El usuario pidió «hazlo» después de la entrega local y de indicar integración al principal, APK y comprobación Android como pendientes. Ejecutar integración local y empaquetado firmado; probar el dispositivo si está conectado. Conservar los cambios ajenos. No publicar en remoto como parte de esta continuación.
 
-- [ ] Estabilizar el reloj del fixture de recuperación de propuestas: el fallo previo se debe a una visita fija que ya pasó. Conservar la validación real y comprobar que el envío llega al límite de red fallido.
-- [ ] Ejecutar la suite completa y TypeScript, integrar por avance directo en `main` y verificar el resultado integrado.
-- [ ] Preparar 0.1.22 / versionCode 23, generar APK firmada y verificar firma, metadatos, configuración y hash.
-- [ ] Instalar conservando los datos y probar filtros, teclado y Atrás si hay un teléfono conectado; documentar el límite si no lo hay. Entregar APK local y evidencia.
+- [x] Estabilizar el reloj del fixture de recuperación de propuestas: el fallo previo se debe a una visita fija que ya pasó. Conservar la validación real y comprobar que el envío llega al límite de red fallido.
+- [x] Ejecutar la suite completa y TypeScript, integrar por avance directo en `main` y verificar el resultado integrado.
+- [x] Preparar 0.1.22 / versionCode 23, generar APK firmada y verificar firma, metadatos, configuración y hash.
+- [x] Instalar conservando los datos y probar filtros, teclado y Atrás si hay un teléfono conectado; documentar el límite si no lo hay. Entregar APK local y evidencia.

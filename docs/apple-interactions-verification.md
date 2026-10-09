@@ -2,6 +2,8 @@
 
 Primera fase implementada localmente en `codex/apple-interactions`, sobre `2435e2d` (KarmaHouse 0.1.21). Conserva apariencia, navegación y la franja de cuatro tarjetas de Explorar. No agrega dependencias.
 
+La continuación autorizada se integró después en `main` como 0.1.22 / código 23. La suite integrada pasó con 678 pruebas correctas y 4 omitidas. Los fallos de esta primera comprobación eran temporales del fixture: su visita fija dejó de ser futura; se fijó el reloj inyectado al validador real, conservando las reglas de negocio. La entrega Android y su evidencia posterior se documentan en [apple-interactions-release.md](apple-interactions-release.md).
+
 ## Resultado
 
 - Botones: compresión al tocar y retorno amortiguado desde el valor actual. Las tarjetas de vivienda usan una compresión menor. Una pulsación nueva puede interrumpir el retorno.
@@ -9,7 +11,7 @@ Primera fase implementada localmente en `codex/apple-interactions`, sobre `2435e
 - El formulario conserva su borrador hasta aplicar; cerrar o arrastrar no confirma. Aplicar se ejecuta una sola vez.
 - Escritorio: diálogo centrado desde 700 puntos, sin agarre. Movimiento reducido: fundidos cortos y sin compresión o desplazamiento.
 
-## Comprobaciones
+## Comprobaciones de la primera entrega local
 
 | Comprobación | Resultado y alcance |
 | --- | --- |
@@ -30,7 +32,7 @@ Las pruebas TSX ejecutan los componentes reales con adaptadores de hooks, gestos
 
 ## Fallos previos
 
-En `tests/agency-refresh-recovery.test.ts:158`, las tres variantes de recuperación transitoria de `kh_read_agency_conversation`, `kh_get_agency_conversation` y `kh_list_agency_messages` fallan por `Missing control Reintentar propuesta`. No se modificó ese flujo. La suite completa sigue sin estar verde.
+En aquella comprobación, las tres variantes de recuperación transitoria de `kh_read_agency_conversation`, `kh_get_agency_conversation` y `kh_list_agency_messages` de `tests/agency-refresh-recovery.test.ts` fallaban por `Missing control Reintentar propuesta`. La continuación diagnosticó y corrigió el reloj del fixture; el flujo de producción no se modificó y la suite integrada pasó sin fallos.
 
 El log completo se conserva localmente en `artifacts/apple-tests.log`; la exportación en `artifacts/apple-export`. Capturas reales: `artifacts/apple-mobile.jpg` y `artifacts/apple-desktop.jpg`. Estos archivos de verificación son locales e ignorados por Git.
 
@@ -45,7 +47,7 @@ El log completo se conserva localmente en `artifacts/apple-tests.log`; la export
 
 ## Pendiente de dispositivo
 
-No se ha generado ni instalado una APK para esta fase. Falta comprobar teclado y botón Atrás físicos, interrupción mediante toque real, lector de pantalla, safe areas reales y fluidez/percepción en Android. No se afirma una tasa de frames ni una sensación idéntica a iOS. No se ha integrado esta rama al checkout principal ni publicado en remoto.
+En la primera entrega local aún no se había generado o instalado una APK ni integrado la rama al checkout principal. Los resultados posteriores están en el documento de entrega Android enlazado arriba. El lector de pantalla, la percepción humana de fluidez y la equivalencia con iOS no se deducen de las pruebas de componentes o de capturas.
 
 ## Referencias consultadas antes de implementar
 
