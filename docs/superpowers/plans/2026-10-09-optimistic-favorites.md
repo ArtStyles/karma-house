@@ -15,7 +15,7 @@ La comprobación del corazón ocurre en segundo plano, conserva el estado conoci
 - [x] Ajustar `useFavoriteHeart`, `PropertyCard` y `DetailScreen`; probar TSX real y avisos de fallo vigentes.
 - [x] Ejecutar pruebas enfocadas, `npm run check` y revisión independiente antes de integrar en main local.
 - [x] Preparar APK firmada 0.1.23 y verificar firma y actualización en el Pixel conectado, conservando la instalación y sin borrar datos.
-- [ ] Probar favoritos en el Pixel tras desbloquear la pantalla y restaurar los favoritos utilizados. La pregunta de desbloqueo está pendiente.
+- [x] Probar favoritos en el Pixel desbloqueado y restaurar los favoritos utilizados: dos toques consecutivos, guardado, lista, reapertura, ficha, retirada y segunda reapertura con lista vacía.
 
 ## Casos de revisión
 
@@ -30,3 +30,5 @@ La comprobación del corazón ocurre en segundo plano, conserva el estado conoci
 Se reutiliza el worktree ya autorizado, actualizado desde `bdf491d`, en `codex/optimistic-favorites`. Los cambios ajenos del checkout principal permanecen intactos. La petición del usuario especifica el comportamiento y autoriza ejecutar la corrección sin otro paso de aprobación.
 
 La revisión encontró carreras de hidratación, aliases y avisos entre tarjeta/ficha. Se reprodujeron y corrigieron en `eac3f9e`; segunda revisión sin hallazgos accionables. La continuación visual autorizada se integra en la misma 0.1.23 para entregar una sola actualización. `npm run check` integrado: 703 correctas, 0 fallos y 4 omitidas.
+
+La comprobación Android por ADB y jerarquía nativa terminó después del desbloqueo. Estado inicial restaurado; evidencia y límites de latencia en `docs/apple-refinement-release.md`. No se afirma medición de latencia física ni prueba de red artificialmente lenta en el teléfono.

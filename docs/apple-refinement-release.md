@@ -39,10 +39,22 @@ Compilación firmada correcta: **4 min 55 s**, 593 tareas (62 ejecutadas, 531 en
 
 Se lanzó la actividad actualizada y se comprobó el proceso. El log filtrado de AndroidRuntime/ReactNativeJS/Reanimated/Worklets no contiene errores capturados. Evidencia: `artifacts/apple-refinement/build.log`, `apk-verification.log`, `install.log`, `device-before.txt`, `device-after.txt` y `runtime-errors.log`.
 
-**Prueba táctil física pendiente:** el dispositivo muestra la pantalla de bloqueo y UIAutomator solo expone SystemUI. Se solicitó desbloquearlo mediante la pregunta pendiente. No se intentó omitir su autenticación. La instalación y el proceso iniciado no verifican los toques, la persistencia real de favoritos, el material Android, la sesión visible ni la fluidez física de esta versión.
+## Comprobación en el Pixel desbloqueado
+
+La pantalla de bloqueo dejó de impedir la prueba. Se ejecutaron acciones por ADB sobre la APK instalada y se comprobaron la jerarquía nativa y las capturas del Pixel 7 Pro; esta evidencia corresponde a Android, separada de la revisión web DEMO.
+
+- La cuenta y el acceso a Administración siguen visibles tras actualizar y volver a abrir la aplicación.
+- Dos toques consecutivos sobre el corazón de «Casa amueblada de tres habitaciones en Las Minas» dejaron la vivienda sin guardar. Un tercer toque la guardó y apareció en Favoritos. Tras cerrar completamente y abrir la app, el corazón y la lista seguían guardados.
+- La ficha mostró el mismo favorito. Quitar desde ella actualizó su corazón y el de la tarjeta. Un segundo cierre y apertura confirmó el corazón vacío y la lista de Favoritos vacía, restaurando el estado inicial utilizado para la prueba.
+- La secuencia Favoritos → Publicar → Mi espacio → Explorar terminó en la ruta correcta, con Explorar seleccionado. No se publicó ningún anuncio.
+- Deslizar la franja mostró «Tarjeta 2 de 4: Alquilar» y mantuvo «Operación: Venta y permuta». Se volvió a la primera tarjeta.
+- Se comprobó Explorar en Claro y en el modo oscuro de Sistema. Al desplazar las fotos por detrás de la barra se observa el material desenfocado y el indicador permanece alineado. Capturas: `artifacts/apple-refinement/qa-light-explore.png`, `qa-light-scrolled.png` y `qa-dark-final.png`.
+- Con ahorro de datos activado las fotos quedaron ocultas; tocar la primera reveló esa foto y mantuvo la siguiente oculta. Se restauraron ahorro desactivado y apariencia Sistema, sus valores iniciales.
+- La hoja de filtros abrió y Atrás la cerró sin aplicar cambios, regresando al catálogo.
+- El log posterior de AndroidRuntime/ReactNativeJS/Reanimated/Worklets no contiene entradas de error capturadas: `artifacts/apple-refinement/runtime-after-qa.log`. Los XML `qa-*.xml` registran los estados observados.
 
 ## Límites
 
-Los tests TSX ejecutan componentes reales con adaptadores deterministas; no miden percepción, latencia física ni frames. Los fallos de red lentos se prueban con promesas suspendidas. No se publica una release remota ni se modifica el backend. El desempeño del desenfoque en otros teléfonos y la equivalencia visual iOS requieren comprobación en esos dispositivos.
+Los tests TSX ejecutan componentes reales con adaptadores deterministas; no miden percepción, latencia física ni frames. Los fallos de red lentos se prueban con promesas suspendidas; la prueba del Pixel no impuso una latencia de red artificial. Las acciones por ADB y capturas verifican estados y recorridos, sin cuantificar la sensación al tocar con el dedo ni la continuidad de cada frame. Movimiento reducido, contraste alto y transparencia reducida tienen cobertura automatizada; no se cambiaron los ajustes globales de accesibilidad del teléfono para esta comprobación. No se publica una release remota ni se modifica el backend. El desempeño del desenfoque en teléfonos menos potentes y la equivalencia visual iOS requieren comprobación en esos dispositivos.
 
 Referencias consultadas: [Apple Design](https://github.com/emilkowalski/skills/blob/main/skills/apple-design/SKILL.md), [documentación exacta Expo 57](https://docs.expo.dev/versions/v57.0.0/), [BlurView 57](https://docs.expo.dev/versions/v57.0.0/sdk/blur-view/).

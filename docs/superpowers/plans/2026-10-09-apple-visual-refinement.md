@@ -18,7 +18,8 @@ No se añaden sonidos, hápticos ni Liquid Glass: la continuación solicitada es
 - [x] Implementar componentes compartidos de indicador, material y fotografía; integrar en navegación y Explorar.
 - [x] TypeScript, suite completa, revisión independiente y exportación/render móvil/escritorio.
 - [x] Integrar main local y generar una sola APK 0.1.23 con favoritos y esta continuación; verificar firma e instalar conservando la instalación y sin borrar datos.
-- [ ] Probar favoritos, navegación, franja, fotos, ambos temas y movimiento reducido en Android; registrar limitaciones de rendimiento y de otras plataformas.
+- [x] Probar favoritos, navegación, franja, fotos, ahorro de datos, filtros y ambos temas en el Pixel; restaurar preferencias y favoritos, y registrar limitaciones de rendimiento y de otras plataformas.
+- [x] Verificar movimiento reducido mediante las pruebas automatizadas; registrar que su activación real, contraste alto y transparencia reducida siguen sin comprobarse en el Pixel.
 
 ## Revisión
 
@@ -28,4 +29,4 @@ Referencias: [apple-design](https://github.com/emilkowalski/skills/blob/main/ski
 
 Revisión visual: sin P1/P2; un P3 de carga inicial con preferencia de movimiento reducido se reprodujo y corrigió en `b9add6f`. Verificación integrada: 703 correctas, 0 fallos y 4 omitidas. Evidencia y límites en `docs/apple-refinement-release.md`.
 
-APK firmada, verificada e instalada como 0.1.23 / 24. La prueba física está pendiente del desbloqueo solicitado: el Pixel conectado sigue en la pantalla de bloqueo. No se afirma verificación táctil ni de rendimiento Android.
+APK firmada, verificada e instalada como 0.1.23 / 24. Con el Pixel desbloqueado se comprobaron acciones por ADB, estados nativos y material visible en Claro/Oscuro; no se encontraron errores en el log filtrado posterior. El favorito de prueba, ahorro de datos y apariencia quedaron restaurados. Esta comprobación no mide frames ni percepción táctil, y no activa los ajustes globales de accesibilidad. Evidencia y comprobaciones pendientes en `docs/apple-refinement-release.md`.
