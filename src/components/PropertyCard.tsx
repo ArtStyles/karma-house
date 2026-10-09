@@ -15,7 +15,7 @@ import { MotionPressable } from './MotionPressable';
 /** Photo first: the image carries the card, and the text sits on the screen's own background. */
 export function PropertyCard({ listing, horizontal = false, offline = false }: { listing: Listing; horizontal?: boolean; offline?: boolean }) {
   const { colors, styles } = useStyles();
-  const { toggleFavorite, mode } = useMarketplace();
+  const { mode } = useMarketplace();
   const { user, ready } = useAuth();
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -29,13 +29,13 @@ export function PropertyCard({ listing, horizontal = false, offline = false }: {
   async function toggle() {
     if (offline) { setError('Necesitas conexión para guardar favoritos.'); return; }
     if (saving || !ready) return;
-    if(favorite===null){if(!heart.checking)void heart.retry();return;}
-    setSaving(true); setError('');
+    setError('');
     try {
       if (mode === 'cloud' && !user) {
+        setSaving(true);
         await pendingIntentStore.write({ kind: 'favorite', propertyId: listing.id });
         router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } });
-      } else await toggleFavorite(listing.id,!favorite);
+      } else await heart.toggle();
     } catch { setError('No se pudo guardar el favorito. Inténtalo de nuevo.'); } finally { setSaving(false); }
   }
   return <View style={horizontal && styles.horizontalCard}>
@@ -60,7 +60,7 @@ export function PropertyCard({ listing, horizontal = false, offline = false }: {
         {horizontal && <View style={styles.detailsLink}><Text style={styles.detailsText}>{listing.operation === 'wanted' ? 'Ver esta búsqueda' : 'Conoce esta vivienda'}</Text><Icon name="arrow-forward" size={17} color={colors.primary} /></View>}
       </View>
     </MotionPressable>
-    <IconButton name={favorite===null?'ellipsis-horizontal':favorite ? 'heart' : 'heart-outline'} label={favorite===null?`Comprobar favoritos: ${listing.title}`:`${favorite ? 'Quitar de' : 'Guardar en'} favoritos: ${listing.title}`} onPress={toggle} active={favorite??undefined} style={styles.heart} />
+    <IconButton name={favorite ? 'heart' : 'heart-outline'} label={`${favorite ? 'Quitar de' : 'Guardar en'} favoritos: ${listing.title}`} onPress={toggle} active={favorite} style={styles.heart} />
     {heart.error?<Text accessibilityRole="alert" style={styles.error}>{heart.error}</Text>:null}
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
   </View>;

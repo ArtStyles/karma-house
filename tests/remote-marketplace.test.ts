@@ -98,8 +98,10 @@ test('cloud errors remain visible and never replace the catalog with demos', asy
 
 test('a refresh started before a favorite mutation cannot undo the confirmed favorite', async () => {
   const oldRead = deferred();
-  const controller = createRemoteMarketplaceController(fakeRepository({ load: async () => oldRead.promise }));
+  let initial=true;
+  const controller = createRemoteMarketplaceController(fakeRepository({ load: async () => {if(initial){initial=false;return {ownListings:[],favoriteIds:[]}}return oldRead.promise;} }));
   controller.setSession('owner-a', false);
+  await controller.refresh();
   const refresh = controller.refresh();
   await controller.toggleFavorite('property-1');
   oldRead.resolve({ ownListings: [], favoriteIds: [] });

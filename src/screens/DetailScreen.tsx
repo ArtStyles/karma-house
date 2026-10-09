@@ -39,7 +39,7 @@ const NEEDS_CONNECTION = 'Necesitas conexión para esto.';
 export default function DetailScreen() {
   const { colors, styles } = useStyles();
   const { id,agencyId,managerId } = useLocalSearchParams<{ id: string;agencyId?:string;managerId?:string }>();
-  const { toggleFavorite, isOwnListing, mode, storageError } = useMarketplace();
+  const { isOwnListing, mode, storageError } = useMarketplace();
   const auth = useAuth();
   const messaging = useMessaging();
   const workspace=useAgencyWorkspace();
@@ -97,13 +97,13 @@ export default function DetailScreen() {
   async function toggle() {
     if (busy || !listing || !auth.ready) return;
     if (offline) { setError(NEEDS_CONNECTION); return; }
-    if(favorite===null){if(!heart.checking)void heart.retry();return;}
-    setBusy(true); setError('');
+    setError('');
     try {
       if (mode === 'cloud' && !auth.user) {
+        setBusy(true);
         await pendingIntentStore.write({ kind: 'favorite', propertyId: listing.id });
         router.push({ pathname: '/auth', params: { returnTo: `/property/${listing.id}` } });
-      } else { setIntentNotice(''); await toggleFavorite(listing.id,!favorite); }
+      } else { setIntentNotice(''); await heart.toggle(); }
     }
     catch { setError('No pudimos guardar tu favorito. Inténtalo de nuevo.'); }
     finally { setBusy(false); }
@@ -180,7 +180,7 @@ export default function DetailScreen() {
           <View style={styles.navigationTitle}><Text style={styles.navText}>{operationBadge(listing) || listing.type}</Text></View>
           <View style={styles.navigationActions}>
             <IconButton name="share-social-outline" label="Compartir vivienda" onPress={() => void share()} style={styles.floatingButton} />
-            <IconButton name={favorite===null?'ellipsis-horizontal':favorite ? 'heart' : 'heart-outline'} label={favorite===null?'Comprobar favoritos':favorite ? 'Quitar de favoritos' : 'Guardar en favoritos'} onPress={toggle} active={favorite??undefined} style={styles.floatingButton} />
+            <IconButton name={favorite ? 'heart' : 'heart-outline'} label={favorite ? 'Quitar de favoritos' : 'Guardar en favoritos'} onPress={toggle} active={favorite} style={styles.floatingButton} />
           </View>
         </View>
         {photoCount > 1 && <View style={styles.photoControls}>

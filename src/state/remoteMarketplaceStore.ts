@@ -42,18 +42,29 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
   let mutationQueue: Promise<void> = Promise.resolve();
   let favoriteAliases=new Map<string,string>();
   let resolvedHearts=new Set<string>();
+  let preparingHearts=new Map<string,Promise<void>>();
+  let confirmedFavoriteIds:string[]=[];
+  let pendingFavorites:{id:string;favorite:boolean}[]=[];
   const canonicalFrom=(id:string,aliases:ReadonlyMap<string,string>)=>{const seen=new Set<string>();while(aliases.has(id)){if(seen.has(id))throw Error('El servidor devolvió un enlace de vivienda no válido.');seen.add(id);id=aliases.get(id)!}return id};
   const canonicalFavoriteId=(id:string)=>canonicalFrom(id,favoriteAliases);
+  // Every consumer sees the same optimistic state; acknowledgements only change its base.
+  const publishFavorites=(next:Partial<RemoteMarketplaceState>={})=>{
+    const ids=new Set(confirmedFavoriteIds.map(canonicalFavoriteId));
+    for(const intent of pendingFavorites){const id=canonicalFavoriteId(intent.id);if(intent.favorite)ids.add(id);else ids.delete(id)}
+    publish({...state,...next,favoriteIds:[...ids]});
+  };
   const resolveFavorites=async(extra:string[],checkpoint:()=>void)=>{
-    checkpoint();const ids=[...new Set([...state.favoriteIds,...extra])],resolved=new Map(favoriteAliases);
+    checkpoint();const ids=[...new Set([...confirmedFavoriteIds,...pendingFavorites.map(intent=>intent.id),...extra])],pairsToMerge:(readonly [string,string])[]=[];
     for(let start=0;start<ids.length;start+=50){
       const pairs=await Promise.all(ids.slice(start,start+50).map(async id=>{const canonical=repository.resolvePropertyAlias?await repository.resolvePropertyAlias(id,checkpoint):id;checkpoint();if(repository.resolvePropertyAlias&&!isUuid(canonical))throw Error('El servidor devolvió un enlace de vivienda no válido.');return [id,canonical] as const}));
-      for(const [id,canonical]of pairs)if(id!==canonical)resolved.set(id,canonical);
+      pairsToMerge.push(...pairs);
     }
+    const resolved=new Map(favoriteAliases);
+    for(const [id,canonical]of pairsToMerge)if(id!==canonical)resolved.set(id,canonical);
     checkpoint();for(const id of resolved.keys())canonicalFrom(id,resolved);
     favoriteAliases=resolved;refreshSequence+=1;
-    const favoriteIds=[...new Set(state.favoriteIds.map(canonicalFavoriteId))];
-    publish({...state,favoriteIds});return favoriteIds;
+    confirmedFavoriteIds=[...new Set(confirmedFavoriteIds.map(canonicalFavoriteId))];
+    publishFavorites();return state.favoriteIds;
   };
   const listeners = new Set<() => void>();
   const publish = (next: RemoteMarketplaceState) => { state = next; listeners.forEach((listener) => listener()); };
@@ -72,7 +83,8 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
       const result = await repository.load(userId, checkpoint);
       if (epoch !== generation || sequence !== refreshSequence) return;
       resolvedHearts.clear();
-      publish({ ...state, ...result, favoriteIds:[...new Set(result.favoriteIds.map(canonicalFavoriteId))], ready: true, storageError: null });
+      confirmedFavoriteIds=[...new Set(result.favoriteIds.map(canonicalFavoriteId))];
+      publishFavorites({ ...result, ready: true, storageError: null });
     } catch (error) {
       if (epoch !== generation || sequence !== refreshSequence) return;
       reportError(error, epoch);
@@ -123,6 +135,7 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
     setSession(nextUserId: string | null, nextAdmin: boolean) {
       if (userId === nextUserId && isAdmin === nextAdmin) return;
       userId = nextUserId; isAdmin = nextAdmin; generation += 1;favoriteAliases=new Map();resolvedHearts=new Set();
+      preparingHearts=new Map();confirmedFavoriteIds=[];pendingFavorites=[];
       refreshSequence += 1; reviewSequence += 1;
       // A new account must never wait behind another account's pending network request.
       mutationQueue = Promise.resolve();
@@ -132,33 +145,50 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
     invalidateListingManagement(ids:readonly string[]) {
       generation += 1; refreshSequence += 1; reviewSequence += 1;
       mutationQueue = Promise.resolve();
-      publish({...state,ownListings:state.ownListings.filter(row=>!ids.includes(row.id)),moderationQueue:state.moderationQueue.filter(row=>!ids.includes(row.id))});
+      preparingHearts=new Map();pendingFavorites=[];
+      publishFavorites({ownListings:state.ownListings.filter(row=>!ids.includes(row.id)),moderationQueue:state.moderationQueue.filter(row=>!ids.includes(row.id))});
       return refresh();
     },
     isOwnListing: (listing: Listing) => !!userId && listing.owner === 'remote' && listing.ownerId === userId,
     canonicalFavoriteId,
     favoriteMembership(id:string):boolean|null {
-      return resolvedHearts.has(id)?state.favoriteIds.includes(canonicalFavoriteId(id)):null;
+      return resolvedHearts.has(id)||pendingFavorites.some(intent=>canonicalFavoriteId(intent.id)===canonicalFavoriteId(id))?state.favoriteIds.includes(canonicalFavoriteId(id)):null;
     },
     prepareFavoriteHeart(id:string) {
-      resolvedHearts.delete(id);
-      publish({...state});
-      return enqueue(async(_ownerId,checkpoint)=>{
+      if(resolvedHearts.has(id))return Promise.resolve();
+      const existing=preparingHearts.get(id);if(existing)return existing;
+      const checkpoint=checkpointFor(generation);
+      if(!userId)return Promise.reject(Error('Inicia sesión para guardar favoritos.'));
+      // Read-only reconciliation must not put a catalogue of hearts ahead of a tap.
+      const preparing=(async()=>{
         await resolveFavorites([id],checkpoint);checkpoint();
-        resolvedHearts.add(id);publish({...state});
-      },false);
+        resolvedHearts.add(id);publishFavorites();
+      })().finally(()=>{if(preparingHearts.get(id)===preparing)preparingHearts.delete(id)});
+      preparingHearts.set(id,preparing);return preparing;
     },
     normalizeFavoriteIds(externalCheckpoint:()=>void=()=>{}) {
       return enqueue(async(_ownerId,checkpoint)=>resolveFavorites([],()=>{checkpoint();externalCheckpoint()}),false);
     },
     toggleFavorite(id: string, intendedFavorite?:boolean) {
+      if(!userId)return Promise.reject(Error('Inicia sesión para guardar favoritos o publicar anuncios.'));
+      const epoch=generation,intent={id,favorite:intendedFavorite??!state.favoriteIds.includes(canonicalFavoriteId(id))};
+      pendingFavorites.push(intent);publishFavorites({storageError:null});
       return enqueue(async (ownerId, checkpoint) => {
-        await resolveFavorites([id],checkpoint);checkpoint();id=canonicalFavoriteId(id);
-        const favorite = intendedFavorite ?? !state.favoriteIds.includes(id);
-        await repository.setFavorite(ownerId, id, favorite, checkpoint); checkpoint();
-        refreshSequence += 1;
-        publish({ ...state, storageError: null, favoriteIds: favorite ? [...new Set([...state.favoriteIds, id])] : state.favoriteIds.filter((value) => value !== id) });
-      });
+        try{
+          if(!state.ready){await refresh();checkpoint();if(!state.ready||state.storageError)throw Error(state.storageError??'No pudimos cargar tus favoritos. Inténtalo de nuevo.')}
+          await resolveFavorites([id],checkpoint);checkpoint();const canonical=canonicalFavoriteId(id);
+          await repository.setFavorite(ownerId,canonical,intent.favorite,checkpoint);checkpoint();
+          confirmedFavoriteIds=intent.favorite?[...new Set([...confirmedFavoriteIds,canonical])]:confirmedFavoriteIds.filter(value=>value!==canonical);
+          resolvedHearts.add(id);refreshSequence+=1;
+          publishFavorites({storageError:null});
+        }catch(error){
+          const later=pendingFavorites.slice(pendingFavorites.indexOf(intent)+1);
+          if(epoch===generation&&!later.some(value=>canonicalFavoriteId(value.id)===canonicalFavoriteId(id)))reportError(error,epoch);
+          throw error;
+        }finally{
+          if(epoch===generation){pendingFavorites=pendingFavorites.filter(value=>value!==intent);publishFavorites()}
+        }
+      },false);
     },
     saveListing(draft: ListingDraft, id?: string, moderation: SaveModeration = 'pending') {
       return enqueue(async (ownerId, checkpoint) => {
