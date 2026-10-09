@@ -14,10 +14,10 @@ No se añaden sonidos, hápticos ni Liquid Glass: la continuación solicitada es
 
 ## Ejecución
 
-- [ ] Pruebas fallidas de selección/rotación/movimiento reducido y de carga/error/ahorro de fotos antes de implementar.
-- [ ] Implementar componentes compartidos de indicador, material y fotografía; integrar en navegación y Explorar.
-- [ ] TypeScript, suite completa, revisión independiente y exportación/render móvil/escritorio.
-- [ ] Integrar main local y generar una sola APK 0.1.23 con favoritos y esta continuación; verificar firma e instalar conservando datos.
+- [x] Pruebas fallidas de selección/rotación/movimiento reducido y de carga/error/ahorro de fotos antes de implementar.
+- [x] Implementar componentes compartidos de indicador, material y fotografía; integrar en navegación y Explorar.
+- [x] TypeScript, suite completa, revisión independiente y exportación/render móvil/escritorio.
+- [x] Integrar main local y generar una sola APK 0.1.23 con favoritos y esta continuación; verificar firma e instalar conservando la instalación y sin borrar datos.
 - [ ] Probar favoritos, navegación, franja, fotos, ambos temas y movimiento reducido en Android; registrar limitaciones de rendimiento y de otras plataformas.
 
 ## Revisión
@@ -25,3 +25,7 @@ No se añaden sonidos, hápticos ni Liquid Glass: la continuación solicitada es
 Cambios rápidos de pestaña no pueden bloquear eventos; cada destino de blur pertenece a su pantalla y nunca captura la barra; un cambio de tamaño no deja el indicador fuera del botón; ahorro de datos no monta la imagen oculta; una carga/error antiguo no afecta otra fotografía; preferencias de accesibilidad cambian sin remontar navegación.
 
 Referencias: [apple-design](https://github.com/emilkowalski/skills/blob/main/skills/apple-design/SKILL.md), [Expo 57 BlurView](https://docs.expo.dev/versions/v57.0.0/sdk/blur-view/). La primera fase queda concluida; esta autorización amplía su alcance a materiales, indicadores y fotografías.
+
+Revisión visual: sin P1/P2; un P3 de carga inicial con preferencia de movimiento reducido se reprodujo y corrigió en `b9add6f`. Verificación integrada: 703 correctas, 0 fallos y 4 omitidas. Evidencia y límites en `docs/apple-refinement-release.md`.
+
+APK firmada, verificada e instalada como 0.1.23 / 24. La prueba física está pendiente del desbloqueo solicitado: el Pixel conectado sigue en la pantalla de bloqueo. No se afirma verificación táctil ni de rendimiento Android.
