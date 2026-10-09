@@ -4,14 +4,14 @@ import {control, elements, executeComponent, Hooks} from './helpers/tsxHooks.ts'
 function deferred(){let resolve!:()=>void,reject!:(error:unknown)=>void;const promise=new Promise<void>((yes,no)=>{resolve=yes;reject=no});return {promise,resolve,reject}}
 function heartFixture(){
   const hooks=new Hooks(),reads=deferred(),writes:ReturnType<typeof deferred>[]=[];
-  let favorite=false,member:boolean|null=null,user='account-a';
-  const toggleFavorite=()=>{favorite=!favorite;const gate=deferred();writes.push(gate);return gate.promise};
+  let favorite=false,member:boolean|null=null,user='account-a',revision=0;
+  const toggleFavorite=()=>{revision++;favorite=!favorite;const gate=deferred();writes.push(gate);return gate.promise};
   const auth=()=>({ready:true,user:{id:user},session:{access_token:user}});
-  const useMarketplace=()=>({mode:'cloud',ready:true,favoriteIds:favorite?['property']:[],canonicalFavoriteId:(id:string)=>id,favoriteMembership:()=>member,prepareFavoriteHeart:()=>reads.promise,toggleFavorite});
+  const useMarketplace=()=>({mode:'cloud',ready:true,favoriteIds:favorite?['property']:[],canonicalFavoriteId:(id:string)=>id,favoriteMembership:()=>member,favoriteRevision:()=>revision,prepareFavoriteHeart:()=>reads.promise,toggleFavorite});
   // useFocusEffect takes a single callback; model its effect/cleanup using stable callback identity.
   const focus=(work:any)=>hooks.useEffect(work,[work]);
   const actual=executeComponent('src/state/useFavoriteHeart.ts','useFavoriteHeart',hooks,{useMarketplace,useAuth:auth,useFocusEffect:focus});
-  return {render:()=>hooks.render(()=>actual('property')),reads,writes,resolveMember:()=>{member=true;favorite=true},changeAccount:()=>{user='account-b';member=null;favorite=false},dispose:()=>hooks.dispose()};
+  return {render:()=>hooks.render(()=>actual('property')),reads,writes,externalToggle:toggleFavorite,resolveMember:()=>{member=true;favorite=true},changeAccount:()=>{user='account-b';member=null;favorite=false},dispose:()=>hooks.dispose()};
 }
 test('a heart exposes a visible cached boolean during background reconciliation',async()=>{
   const f=heartFixture();assert.equal(f.render().favorite,false);f.resolveMember();f.reads.resolve();await Promise.resolve();assert.equal(f.render().favorite,true);
@@ -28,6 +28,12 @@ test('an obsolete failure has no alert; the latest failure gives retry feedback'
 test('late favorite feedback cannot cross accounts or survive an unmount',async()=>{
   const f=heartFixture();const save=f.render().toggle();f.changeAccount();assert.equal(f.render().favorite,false);f.writes[0].reject(Error('network'));await save;assert.equal(f.render().error,'');
   const next=f.render().toggle();f.dispose();f.writes[1].reject(Error('network'));await next;
+});
+test('another heart instance supersedes a pending failure and clears a previously shown failure',async()=>{
+  const f=heartFixture(),save=f.render().toggle(),other=f.externalToggle();f.writes[0].reject(Error('network'));await save;
+  assert.equal(f.render().error,'');f.writes[1].resolve();await other;
+  const failure=f.render().toggle();f.writes[2].reject(Error('network'));await failure;assert.match(f.render().error,/No pudimos guardar/);
+  const retry=f.externalToggle();assert.equal(f.render().error,'');f.writes[3].resolve();await retry;
 });
 test('PropertyCard always renders a heart and accepts taps while a favorite write is pending',async()=>{
   const hooks=new Hooks(),gate=deferred();let favorite=false,calls=0;

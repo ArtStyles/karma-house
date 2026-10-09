@@ -35,6 +35,7 @@ export interface MarketplaceContextValue {
   canonicalFavoriteId(id:string):string;
   normalizeFavoriteIds(checkpoint?:()=>void):Promise<string[]>;
   favoriteMembership(id:string):boolean|null;
+  favoriteRevision(id:string):number;
   prepareFavoriteHeart(id:string):Promise<void>;
   ownListings: Listing[];
   moderationQueue: Listing[];
@@ -85,6 +86,7 @@ function DemoMarketplaceProvider({ children }: PropsWithChildren) {
       canonicalFavoriteId:(id)=>id,
       normalizeFavoriteIds:async(checkpoint)=>{checkpoint?.();return controller.getState().favoriteIds;},
       favoriteMembership:(id)=>state.favoriteIds.includes(id),
+      favoriteRevision:()=>0,
       prepareFavoriteHeart:async()=>{},
       saveListing: controller.saveListing,
       setStatus: controller.setStatus,
@@ -134,6 +136,7 @@ function CloudMarketplaceProvider({ children }: PropsWithChildren) {
       canonicalFavoriteId:(id)=>state.sessionUserId===userId?controller.canonicalFavoriteId(id):id,
       normalizeFavoriteIds:controller.normalizeFavoriteIds,
       favoriteMembership:(id)=>auth.ready&&state.sessionUserId===userId?controller.favoriteMembership(id):null,
+      favoriteRevision:(id)=>auth.ready&&state.sessionUserId===userId?controller.favoriteRevision(id):0,
       prepareFavoriteHeart:controller.prepareFavoriteHeart,
       saveListing: controller.saveListing,
       setStatus: controller.setStatus,

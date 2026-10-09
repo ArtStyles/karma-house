@@ -73,3 +73,16 @@ test('a tap during the initial account read survives hydration and preserves oth
   assert.deepEqual(f.store.getState().favoriteIds,[A]);initial.resolve({ownListings:[],favoriteIds:[B]});await loading;await tick();
   assert.deepEqual(new Set(f.store.getState().favoriteIds),new Set([A,B]));f.gates[0].resolve();await save;
 });
+test('initial hydration is shared with refreshes so an active-app refresh cannot discard a tap',async()=>{
+  const initial=deferred<{ownListings:never[];favoriteIds:string[]}>();let reads=0;
+  const f=fixture([],{load:()=>{reads++;return initial.promise}}),save=f.store.toggleFavorite(A,true);await tick();
+  const refresh=f.store.refresh();assert.equal(reads,1);initial.resolve({ownListings:[],favoriteIds:[B]});await refresh;await tick();
+  assert.equal(f.writes.length,1);f.gates[0].resolve();await save;assert.deepEqual(new Set(f.store.getState().favoriteIds),new Set([A,B]));
+});
+test('a delayed alias read cannot overwrite the newer identity used for a favorite write',async()=>{
+  const C='45000000-0000-4000-8001-000000000003',old=deferred<string>();let calls=0;
+  const f=fixture([],{resolvePropertyAlias:async id=>id===A&&++calls===1?old.promise:id===A?C:id});await f.store.refresh();
+  const opening=f.store.prepareFavoriteHeart(A),save=f.store.toggleFavorite(A,true);await tick();f.gates[0].resolve();await save;
+  assert.equal(f.store.canonicalFavoriteId(A),C);old.resolve(B);await opening;
+  assert.equal(f.store.canonicalFavoriteId(A),C);assert.equal(f.store.favoriteMembership(A),true);assert.deepEqual(f.store.getState().favoriteIds,[C]);
+});

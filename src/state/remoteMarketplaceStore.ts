@@ -43,10 +43,16 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
   let favoriteAliases=new Map<string,string>();
   let resolvedHearts=new Set<string>();
   let preparingHearts=new Map<string,Promise<void>>();
+  let initialRefresh:Promise<void>|null=null;
+  let aliasReadSequence=0;
+  let aliasVersions=new Map<string,number>();
+  let favoriteSequence=0;
+  let favoriteVersions=new Map<string,number>();
   let confirmedFavoriteIds:string[]=[];
   let pendingFavorites:{id:string;favorite:boolean}[]=[];
   const canonicalFrom=(id:string,aliases:ReadonlyMap<string,string>)=>{const seen=new Set<string>();while(aliases.has(id)){if(seen.has(id))throw Error('El servidor devolvió un enlace de vivienda no válido.');seen.add(id);id=aliases.get(id)!}return id};
   const canonicalFavoriteId=(id:string)=>canonicalFrom(id,favoriteAliases);
+  const favoriteRevision=(id:string)=>{const canonical=canonicalFavoriteId(id);let latest=0;for(const [key,version]of favoriteVersions)if(canonicalFavoriteId(key)===canonical)latest=Math.max(latest,version);return latest};
   // Every consumer sees the same optimistic state; acknowledgements only change its base.
   const publishFavorites=(next:Partial<RemoteMarketplaceState>={})=>{
     const ids=new Set(confirmedFavoriteIds.map(canonicalFavoriteId));
@@ -54,14 +60,16 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
     publish({...state,...next,favoriteIds:[...ids]});
   };
   const resolveFavorites=async(extra:string[],checkpoint:()=>void)=>{
-    checkpoint();const ids=[...new Set([...confirmedFavoriteIds,...pendingFavorites.map(intent=>intent.id),...extra])],pairsToMerge:(readonly [string,string])[]=[];
+    checkpoint();const ticket=++aliasReadSequence,ids=[...new Set([...confirmedFavoriteIds,...pendingFavorites.map(intent=>intent.id),...extra])],pairsToMerge:(readonly [string,string])[]=[];
     for(let start=0;start<ids.length;start+=50){
       const pairs=await Promise.all(ids.slice(start,start+50).map(async id=>{const canonical=repository.resolvePropertyAlias?await repository.resolvePropertyAlias(id,checkpoint):id;checkpoint();if(repository.resolvePropertyAlias&&!isUuid(canonical))throw Error('El servidor devolvió un enlace de vivienda no válido.');return [id,canonical] as const}));
       pairsToMerge.push(...pairs);
     }
     const resolved=new Map(favoriteAliases);
-    for(const [id,canonical]of pairsToMerge)if(id!==canonical)resolved.set(id,canonical);
+    const currentPairs=pairsToMerge.filter(([id])=>ticket>=(aliasVersions.get(id)??0));
+    for(const [id,canonical]of currentPairs)if(id!==canonical)resolved.set(id,canonical);
     checkpoint();for(const id of resolved.keys())canonicalFrom(id,resolved);
+    for(const [id]of currentPairs)aliasVersions.set(id,ticket);
     favoriteAliases=resolved;refreshSequence+=1;
     confirmedFavoriteIds=[...new Set(confirmedFavoriteIds.map(canonicalFavoriteId))];
     publishFavorites();return state.favoriteIds;
@@ -75,10 +83,12 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
     if (epoch === generation) publish({ ...state, ready: true, storageError: remoteErrorMessage(error) });
   };
 
-  const refresh = async (): Promise<void> => {
+  const refresh = (): Promise<void> => {
+    if(!state.ready&&initialRefresh)return initialRefresh;
     const epoch = generation;
     const sequence = ++refreshSequence;
     const checkpoint = checkpointFor(epoch);
+    const loading=(async()=>{
     try {
       const result = await repository.load(userId, checkpoint);
       if (epoch !== generation || sequence !== refreshSequence) return;
@@ -90,6 +100,9 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
       reportError(error, epoch);
       throw new Error(remoteErrorMessage(error));
     }
+    })();
+    if(!state.ready){initialRefresh=loading;void loading.finally(()=>{if(initialRefresh===loading)initialRefresh=null}).catch(()=>{})}
+    return loading;
   };
 
   const enqueue = <T>(operation: (ownerId: string, checkpoint: () => void) => Promise<T>,report=true): Promise<T> => {
@@ -136,6 +149,7 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
       if (userId === nextUserId && isAdmin === nextAdmin) return;
       userId = nextUserId; isAdmin = nextAdmin; generation += 1;favoriteAliases=new Map();resolvedHearts=new Set();
       preparingHearts=new Map();confirmedFavoriteIds=[];pendingFavorites=[];
+      initialRefresh=null;aliasVersions=new Map();favoriteVersions=new Map();
       refreshSequence += 1; reviewSequence += 1;
       // A new account must never wait behind another account's pending network request.
       mutationQueue = Promise.resolve();
@@ -146,11 +160,13 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
       generation += 1; refreshSequence += 1; reviewSequence += 1;
       mutationQueue = Promise.resolve();
       preparingHearts=new Map();pendingFavorites=[];
+      initialRefresh=null;
       publishFavorites({ownListings:state.ownListings.filter(row=>!ids.includes(row.id)),moderationQueue:state.moderationQueue.filter(row=>!ids.includes(row.id))});
       return refresh();
     },
     isOwnListing: (listing: Listing) => !!userId && listing.owner === 'remote' && listing.ownerId === userId,
     canonicalFavoriteId,
+    favoriteRevision,
     favoriteMembership(id:string):boolean|null {
       return resolvedHearts.has(id)||pendingFavorites.some(intent=>canonicalFavoriteId(intent.id)===canonicalFavoriteId(id))?state.favoriteIds.includes(canonicalFavoriteId(id)):null;
     },
@@ -172,6 +188,7 @@ export function createRemoteMarketplaceController(repository: RemoteMarketplaceR
     toggleFavorite(id: string, intendedFavorite?:boolean) {
       if(!userId)return Promise.reject(Error('Inicia sesión para guardar favoritos o publicar anuncios.'));
       const epoch=generation,intent={id,favorite:intendedFavorite??!state.favoriteIds.includes(canonicalFavoriteId(id))};
+      favoriteVersions.set(id,++favoriteSequence);
       pendingFavorites.push(intent);publishFavorites({storageError:null});
       return enqueue(async (ownerId, checkpoint) => {
         try{
