@@ -47,6 +47,9 @@ class Hooks {
 }
 const id = (n: number) => `45000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const actor = id(1), agency = id(2), chat = id(3);
+// The fixture's visit is on 2026-10-09. Use the validator's clock boundary so
+// these recovery tests exercise a failed send even after that date has passed.
+const proposalNow = new Date('2026-10-08T12:00:00Z');
 const message = (seq: number) => ({ id: id(100 + seq), conversationId: chat, seq, clientMessageId: id(200 + seq), senderId: actor, body: `Message ${seq}`, createdAt: '2026-10-08T00:00:00Z' });
 const conversation = (n = 0) => ({ id: n ? id(1000 + n) : chat, agencyId: agency, dealId: id(4), propertyId: id(5), buyerId: actor, canSend: true, closedReason: null, lastSeq: 90, agencyName: 'Agency', propertyTitle: `Home ${n}`, assigneeId: actor, dealVersion: 1, unreadCount: 0, blockedUserIds: [] });
 function elements(root: any): Element[] {
@@ -99,7 +102,7 @@ async function fixture(staff = false, inbox = false) {
     bindings.RefreshControl='RefreshControl';
     const inboxRefresh={current:async()=>{}};
     const component = execute(inbox ? 'src/screens/InboxScreen.tsx' : 'src/screens/AgencyConversationScreen.tsx', inbox ? 'AgencyInbox' : 'AgencyConversationScreen', hooks, bindings);
-    const panel = execute('src/components/agencies/AgencyProposalPanel.tsx', 'AgencyProposalPanel', panelHooks, { ...bindings, useAgencyFormStyles: bindings.useStyles, havanaDateTime: () => ({ date: '2026-10-09', time: '10:00' }), validateAgencyProposal, schedulingError, VisitDateTimeFields: 'DateTime', statusLabel: {}, repository: { list: async () => ({ items: [], hasMore: false }), create: async (payload: any) => { proposalPayloads.push(payload); throw Error('temporary proposal failure'); } } });
+    const panel = execute('src/components/agencies/AgencyProposalPanel.tsx', 'AgencyProposalPanel', panelHooks, { ...bindings, useAgencyFormStyles: bindings.useStyles, havanaDateTime: () => ({ date: '2026-10-09', time: '10:00' }), validateAgencyProposal: (input: Parameters<typeof validateAgencyProposal>[0]) => validateAgencyProposal(input, proposalNow), schedulingError, VisitDateTimeFields: 'DateTime', statusLabel: {}, repository: { list: async () => ({ items: [], hasMore: false }), create: async (payload: any) => { proposalPayloads.push(payload); throw Error('temporary proposal failure'); } } });
     let tree: Element, panelTree: Element | undefined, childKey: string | undefined, mounts = 0;
     function render() {
         tree = hooks.render(() => inbox ? component({refreshRef:inboxRefresh}) : component());
@@ -163,6 +166,8 @@ for (const method of ['kh_read_agency_conversation', 'kh_get_agency_conversation
     await f.press('Enviar mensaje');
     f.input('Nota de la propuesta', 'Unsent offer', true);
     await f.press('Enviar propuesta', true);
+    assert.equal(f.proposals, 1, 'the visit must reach the failed-send boundary before refreshing');
+    control(f.panelTree!, 'Reintentar propuesta');
     const initialMounts = f.mounts;
     f.fail(method, method === 'kh_get_agency_conversation' ? { status: 503, message: 'upstream unavailable' } : Error('temporary network failure'));
     await f.refresh();
