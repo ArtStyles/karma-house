@@ -10,7 +10,7 @@ function animatedFixture(path:string,name:string,bindings:Record<string,unknown>
     withSpring:(value:number)=>{commands.push({kind:'spring',value});return value},withTiming:(value:number)=>{commands.push({kind:'timing',value});return value},
     ReduceMotion:{System:'system'},...bindings,
   });
-  return {commands,render:(props:any)=>hooks.render(()=>component(props)),reduce:()=>{reduced=true}};
+  return {commands,render:(props:any)=>hooks.render(()=>component(props)),reduce:(value=true)=>{reduced=value}};
 }
 test('selection indicator follows the latest tab without intercepting touches and settles on resize',()=>{
   const f=animatedFixture('src/components/SelectionIndicator.tsx','SelectionIndicator');
@@ -32,6 +32,11 @@ test('a photograph keeps its frame, reveals only after load, and has a clear fai
 test('photos remain immediately visible when reduced motion is enabled during loading',()=>{
   const f=animatedFixture('src/components/LoadedPropertyPhoto.tsx','LoadedPropertyPhoto');const props={source:{uri:'https://photo.test/one'},label:'Casa'};f.render(props);f.reduce();
   const tree=f.render(props),photo=elements(tree).find(x=>x.type==='AnimatedImage')!;assert.equal(photo.props.style.at(-1).evaluate().opacity,1);assert.equal(f.commands.at(-1)?.kind,'cancel');
+});
+test('a photo still fades if the reduced-motion preference resolves before it finishes loading',()=>{
+  const f=animatedFixture('src/components/LoadedPropertyPhoto.tsx','LoadedPropertyPhoto'),props={source:{uri:'https://photo.test/one'},label:'Casa'};
+  f.reduce();f.render(props);f.reduce(false);let tree=f.render(props),photo=elements(tree).find(x=>x.type==='AnimatedImage')!;
+  assert.equal(photo.props.style.at(-1).evaluate().opacity,0);photo.props.onLoad();tree=f.render(props);assert.equal(elements(tree).find(x=>x.type==='AnimatedImage')!.props.style.at(-1).evaluate().opacity,1);
 });
 test('data saver does not mount a photo until reveal; changing its source resets the photo component',()=>{
   const hooks=new Hooks(),revealed=new Set<string>();let saver=true;
