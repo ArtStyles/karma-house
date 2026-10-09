@@ -4,6 +4,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle, type ColorValue } from 'react-native';
 import { createThemedStyles, typefaces } from '../theme';
 import { MotionPressable } from './MotionPressable';
+import { HeartIcon } from './HeartIcon';
 
 /** Back that never dead-ends: history first, then the screen's own parent. */
 export function goBack(fallback: Href = '/') {
@@ -37,7 +38,7 @@ export function Button({ label, onPress, secondary = false, loading = false, dis
 export function IconButton({ name, label, onPress, active, style }: { name: IconName; label: string; onPress: () => void; active?: boolean; style?: StyleProp<ViewStyle> }) {
   const { colors, styles } = useStyles();
   return <MotionPressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: active }} aria-pressed={active} style={({ pressed }) => [styles.iconButton, pressed && { opacity: .7 }, style]}>
-    <Icon name={name} size={22} color={active ? colors.primary : colors.ink} />
+    {(name==='heart'||name==='heart-outline')&&typeof active==='boolean'?<HeartIcon active={active}><Icon name={name} size={22} color={active ? colors.primary : colors.ink}/></HeartIcon>:<Icon name={name} size={22} color={active ? colors.primary : colors.ink} />}
   </MotionPressable>;
 }
 export function Pill({ label, active = false, onPress, icon, accessibilityLabel }: { label: string; active?: boolean; onPress: () => void; icon?: IconName; accessibilityLabel?: string }) {

@@ -1,7 +1,9 @@
 import { Tabs } from 'expo-router';
-import { useWindowDimensions, type ColorValue } from 'react-native';
+import { Platform,useWindowDimensions,View, type ColorValue } from 'react-native';
+import {createRef,useCallback,useRef} from 'react';
+import {BlurTargetView} from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { NavigationMaterial } from '../../components/NavigationMaterial';
+import {TabBarMaterial,TabMaterialContext} from '../../components/TabBarMaterial';
 import { Icon, type IconName } from '../../components/ui';
 import { useTheme } from '../../theme';
 import { useMessaging } from '../../messaging/MessagingProvider';
@@ -16,16 +18,20 @@ export default function TabLayout() {
   const unreadCount = messageUnread + noticeUnread;
   const { width } = useWindowDimensions();
   const inset = Math.max(16, (width - 520) / 2);
+  const targets=useRef(new Map<string,ReturnType<typeof createRef<View>>>());
+  const targetFor=useCallback((key:string)=>{let target=targets.current.get(key);if(!target){target=createRef<View>();targets.current.set(key,target)}return target},[]);
   const tabIcon = (name: IconName, active: IconName) =>
     ({ color, focused }: { color: ColorValue; focused: boolean }) => <Icon name={focused ? active : name} color={color} size={24} />;
   return (
-    <Tabs screenOptions={{
+    <Tabs layout={({state,children})=><TabMaterialContext.Provider value={{index:state.index,count:state.routes.length,target:targetFor(state.routes[state.index].key)}}>{children}</TabMaterialContext.Provider>}
+      screenLayout={({route,children})=>Platform.OS==='android'&&Number(Platform.Version)>=31?<BlurTargetView ref={targetFor(route.key)} style={{flex:1}}>{children}</BlurTargetView>:<>{children}</>}
+      screenOptions={{
       headerShown: false,
       tabBarActiveTintColor: colors.primary,
       tabBarInactiveTintColor: colors.muted,
-      tabBarActiveBackgroundColor: colors.navigationActive,
+      tabBarActiveBackgroundColor: 'transparent',
       tabBarHideOnKeyboard: true,
-      tabBarBackground: () => <NavigationMaterial />,
+      tabBarBackground: () => <TabBarMaterial />,
       tabBarStyle: {
         // Override the navigator's logical edges and axis-specific padding on Android.
         position: 'absolute', start: inset, end: inset, bottom: Math.max(insets.bottom + 8, 16),

@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, StyleSheet, Text, useWindowDimensions, View,type ScrollView } from 'react-native';
+import Animated,{useAnimatedReaction,useAnimatedScrollHandler,useAnimatedStyle,useSharedValue} from 'react-native-reanimated';
+import {scheduleOnRN} from 'react-native-worklets';
+import {useReducedMotion} from '../settings/useReducedMotion';
 import { createThemedStyles } from '../theme';
 import { Icon, type IconName } from './ui';
 import { MotionPressable } from './MotionPressable';
@@ -24,18 +27,21 @@ export function ExploreDiscovery({ offline, onOperation, onPublish }: {
   const cardWidth = Math.max(1, viewport - 24);
   const interval = cardWidth + 10;
   const narrow = viewport < 320;
+  const reduced=useReducedMotion(),progress=useSharedValue(0);
+  const trackScroll=useAnimatedScrollHandler(event=>{progress.value=Math.max(0,Math.min(cards.length-1,event.contentOffset.x/interval))},[interval]);
+  useAnimatedReaction(()=>Math.round(progress.value),(next,previous)=>{if(next!==previous)scheduleOnRN(setPage,next)});
+  const indicator=useAnimatedStyle(()=>({transform:[{translateX:(reduced?Math.round(progress.value):progress.value)*10}]}));
   // Rotation and desktop breakpoints keep the same option at the front.
-  useEffect(() => { scroll.current?.scrollTo({ x: page * interval, animated: false }); }, [interval]);
+  useEffect(() => { progress.value=page;scroll.current?.scrollTo({ x: page * interval, animated: false }); }, [interval]);
   return <View style={styles.root} onLayout={event => {
     const next = event.nativeEvent.layout.width;
     if (next > 0) setViewport(next);
   }}>
-    <ScrollView ref={scroll} horizontal showsHorizontalScrollIndicator={false}
+    <Animated.ScrollView ref={scroll} horizontal showsHorizontalScrollIndicator={false}
       directionalLockEnabled nestedScrollEnabled keyboardShouldPersistTaps="handled"
       pagingEnabled={Platform.OS === 'web'}
       snapToInterval={interval} snapToAlignment="start" decelerationRate="fast"
-      contentContainerStyle={styles.track} scrollEventThrottle={32}
-      onScroll={event => setPage(Math.max(0, Math.min(cards.length - 1, Math.round(event.nativeEvent.contentOffset.x / interval))))}>
+      contentContainerStyle={styles.track} scrollEventThrottle={16} onScroll={trackScroll}>
       {cards.map(card => {
         const disabled = offline && !!card.operation;
         return <MotionPressable key={card.action} accessibilityRole="button"
@@ -57,9 +63,9 @@ export function ExploreDiscovery({ offline, onOperation, onPublish }: {
           <View style={styles.arrow}><Icon name="arrow-up-outline" size={14} color={colors.primary} /></View>
         </MotionPressable>;
       })}
-    </ScrollView>
+    </Animated.ScrollView>
     <View accessible accessibilityLabel={`Tarjeta ${page + 1} de ${cards.length}: ${cards[page].action}`} style={styles.status}>
-      <View style={styles.dots}>{cards.map(card => <View key={card.action} style={[styles.dot, cards[page] === card && styles.currentDot]} />)}</View>
+      <View pointerEvents="none" aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.dots}>{cards.map(card => <View key={card.action} style={styles.dot} />)}<Animated.View style={[styles.currentDot,indicator]}/></View>
       <View style={styles.cue}><Text style={styles.cueText}>Desliza</Text><Icon name="arrow-back" size={12} color={colors.muted} /></View>
     </View>
   </View>;
@@ -79,8 +85,8 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   description: { color: colors.muted, fontSize: 12, lineHeight: 17 },
   action: { color: colors.primary, fontSize: 12, lineHeight: 17, fontWeight: '500' },
   status: { minHeight: 18, marginTop: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },
-  dots: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  dots: { width:44,height:4,flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.border },
-  currentDot: { width: 14, backgroundColor: colors.primary },
+  currentDot: { position:'absolute',left:0,top:0,width: 14,height:4,borderRadius:2, backgroundColor: colors.primary },
   cue: { flexDirection: 'row', alignItems: 'center', gap: 5 }, cueText: { color: colors.muted, fontSize: 11, lineHeight: 16 },
 }));
