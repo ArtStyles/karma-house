@@ -33,11 +33,11 @@
 
 **Interfaces:** producir `filterSheetPosition(position, height)`, `shouldDismissFilterSheet(position, velocity, height)` y `createFilterDismissalGate(onClose)`; mantener `PressableProps` y añadir `pressedScale?: number`.
 
-- [ ] Escribir pruebas que distingan un arrastre corto, un lanzamiento hacia abajo, una reversión hacia arriba y datos inválidos. Probar cancelación de callbacks antiguos, cierre único y confirmación única.
-- [ ] Ejecutar las pruebas y comprobar el fallo antes de implementación.
-- [ ] Implementar las reglas con funciones compatibles con worklets.
-- [ ] Probar el componente real de pulsación con eventos rápidos, estado deshabilitado y movimiento reducido; implementar compresión corta y retorno con resorte amortiguado.
-- [ ] Ejecutar pruebas focalizadas y typecheck. Commit local de este bloque.
+- [x] Escribir pruebas que distingan un arrastre corto, un lanzamiento hacia abajo, una reversión hacia arriba y datos inválidos. Probar cancelación de callbacks antiguos, cierre único y confirmación única.
+- [x] Ejecutar las pruebas y comprobar el fallo antes de implementación.
+- [x] Implementar las reglas con funciones compatibles con worklets.
+- [x] Probar el componente real de pulsación con eventos rápidos, estado deshabilitado y movimiento reducido; implementar compresión corta y retorno con resorte amortiguado.
+- [x] Ejecutar pruebas focalizadas y typecheck. Commit local de este bloque.
 
 ## Task 2: Panel de filtros y controles de Explorar
 
@@ -45,18 +45,18 @@
 
 **Interfaces:** consumir reglas del bloque 1; `FilterSheet({ onClose, children })`, con `children(close)` y `close(commit?)` para aplicar o descartar. Root de Gesture Handler dentro del Modal, zona de agarre independiente y transformaciones/opacidad en el hilo UI.
 
-- [ ] Probar el formulario real: editar y cancelar no aplica; aplicar una vez transmite el borrador; un rango inválido no confirma.
-- [ ] Verificar fallo antes de sustituir el contenedor.
-- [ ] Implementar entrada, seguimiento del dedo, salida interrumpible, fundido reducido/escritorio y cancelación segura al desmontar.
-- [ ] Integrar la respuesta táctil en Explorar sin cambiar acciones, carga de fotos ni filtros.
-- [ ] Ejecutar pruebas focalizadas y typecheck. Commit local de este bloque.
+- [x] Probar el formulario real: editar y cancelar no aplica; aplicar una vez transmite el borrador; un rango inválido no confirma.
+- [x] Verificar fallo antes de sustituir el contenedor.
+- [x] Implementar entrada, seguimiento del dedo, salida interrumpible, fundido reducido/escritorio y cancelación segura al desmontar.
+- [x] Integrar la respuesta táctil en Explorar sin cambiar acciones, carga de fotos ni filtros.
+- [x] Ejecutar pruebas focalizadas y typecheck. Commit local de este bloque.
 
 ## Task 3: Boceto y verificación visual
 
 **Files:** boceto en la carpeta de visualizaciones de este chat; crear `docs/apple-interactions-verification.md`.
 
-- [ ] Crear un boceto interactivo de pulsaciones y filtros, respetando el aspecto existente y movimiento reducido.
-- [ ] Exportar Expo para Android/web y probar la aplicación real en navegador móvil y escritorio, incluyendo cierre sin aplicar, aplicación, gesto y teclado web.
-- [ ] Ejecutar toda la suite y comparar con los tres fallos de base, sin omitirlos.
-- [ ] Solicitar una revisión independiente del cambio; resolver hallazgos funcionales y repetir solo las comprobaciones afectadas.
-- [ ] Documentar resultados, limitaciones físicas y commits. Mostrar el boceto y el cambio local al usuario.
+- [x] Crear un boceto interactivo de pulsaciones y filtros, respetando el aspecto existente y movimiento reducido.
+- [x] Exportar Expo para Android/web y probar la aplicación real en navegador móvil y escritorio, incluyendo cierre sin aplicar, aplicación, gesto y teclado web.
+- [x] Ejecutar toda la suite y comparar con los tres fallos de base, sin omitirlos.
+- [x] Solicitar una revisión independiente del cambio; resolver hallazgos funcionales y repetir solo las comprobaciones afectadas.
+- [x] Documentar resultados, limitaciones físicas y commits. Mostrar el boceto y el cambio local al usuario.
