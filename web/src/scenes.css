@@ -93,3 +93,31 @@ html:not(.js) .cuba-figure { display: none }
   .js .cuba-list li:not(.lit) { color: var(--color-body) }
   .js .cuba-list li:not(.lit)::before { opacity: .2 }
 }
+
+/* Tagline ----------------------------------------------------------------------------------------------- */
+.tagline .stage { display: grid; place-items: center; padding-block: 6rem }
+@media (prefers-reduced-motion: no-preference) {
+  .js .tagline .stage { padding-block: 0 }
+  .js .tagline-word { opacity: .3 }
+}
+
+/* Publish ----------------------------------------------------------------------------------------------- */
+.publish .stage { padding-block: 5rem 3rem }
+.publish-layout { display: grid; gap: 3rem; align-items: center }
+@media (min-width: 1024px) { .publish-layout { grid-template-columns: 1fr 1fr } }
+.publish-steps { display: grid; gap: 2rem; margin: 0; padding: 0; list-style: none }
+.publish-phone { width: min(300px, 80vw); margin-inline: auto }
+@media (prefers-reduced-motion: no-preference) {
+  .js .publish .stage { padding-block: 1.25rem }
+  .js .publish-layout { height: 100%; grid-template-rows: auto minmax(0, 1fr); gap: 1.25rem; align-items: stretch }
+  .js .publish-steps { gap: 0 }
+  .js .publish-steps li { grid-area: 1 / 1; opacity: 0; transform: translateY(12px); transition: opacity .45s var(--ease-out-soft), transform .45s var(--ease-out-soft) }
+  .js .publish-steps li.on { opacity: 1; transform: none }
+  .js .publish-visual { display: grid; min-height: 0; place-items: center }
+  .js .publish-phone { width: auto; height: 100%; max-height: 600px }
+  .js .publish .phone-note, .js .publish .phone-pin { opacity: 0 }
+  .js .publish .phone-fill { clip-path: inset(0 100% 0 0) }
+  .js .publish .phone-status { transform: translateY(140%) }
+  .js .publish .phone-pubmap { transform: translateX(102%) }
+  @media (min-width: 1024px) { .js .publish-layout { grid-template-rows: none; grid-template-columns: 1fr 1fr; align-items: center } }
+}

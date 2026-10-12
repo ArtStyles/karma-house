@@ -3,6 +3,8 @@ import { LazyMotion, MotionConfig, domAnimation } from 'motion/react';
 import { ArrowRight, Menu, MessageCircle, Plus, ShieldCheck, Smartphone } from 'lucide-react';
 import { Cenefa, Mediopunto, Reveal, Stagger, StaggerItem } from './ui';
 import { Cuba } from './scenes/Cuba';
+import { Publish } from './scenes/Publish';
+import { Tagline } from './scenes/Tagline';
 import { Journey } from './scenes/Journey';
 
 const RELEASE = 'https://github.com/ArtStyles/karma-house/releases';
@@ -192,30 +194,6 @@ function Questions() {
   );
 }
 
-function Publication() {
-  return (
-    <section className="py-20 lg:py-28" id="publicar" aria-labelledby="publication-title">
-      <div className={WRAP}>
-        <SectionHeading eyebrow="Dale un lugar a tu vivienda" title="Publica a tu manera." id="publication-title" aside={<>Prepara tu anuncio en la app<br />o pide ayuda para dar el primer paso.</>} />
-        <div className="mt-10 grid gap-6 md:grid-cols-2">
-          <article className="min-w-0 rounded-3xl border border-line bg-paper p-6 sm:p-8">
-            <h3 className="text-2xl">Publicar por mi cuenta</h3>
-            <p className="mt-5 text-[15px] leading-relaxed text-body">Entra en «Publicar» desde la app. Completa los datos y añade tus fotos; si ya tienes el texto, usa «Pegar anuncio» y revisa el resultado antes de enviarlo.</p>
-            <a className={`${BUTTON} group mt-6 max-w-full`} href="#descargar">Empezar en la app <ArrowRight className={ARROW} aria-hidden="true" /></a>
-          </article>
-          <article className="min-w-0 rounded-3xl border border-line bg-paper p-6 sm:p-8">
-            <h3 className="text-2xl">Publicar con ayuda de KarmaHouse</h3>
-            <p className="mt-5 text-[15px] leading-relaxed text-body">Escríbenos con la operación, provincia, zona aproximada, características, precio y moneda o condiciones. Adjunta fotos propias y nítidas si ofreces una vivienda.</p>
-            <p className="mt-5 text-[15px] leading-relaxed text-body">Revisamos el anuncio contigo. La cuenta oficial necesita tu autorización expresa antes de publicarlo. Si después solicitas gestionarlo, podrás aceptar o rechazar una invitación de traspaso que conserva el enlace, las fotos y los favoritos.</p>
-            <a className={`${BUTTON} group mt-6 max-w-full`} href={ASSISTED_CONTACT}>Escribir para pedir ayuda <MessageCircle className="size-4 shrink-0" aria-hidden="true" /></a>
-            <p className="mt-5 break-words text-sm leading-relaxed text-body">Se abrirá tu aplicación de correo. Revisa y envía el mensaje desde allí. También puedes escribir directamente a <a className="text-blue underline underline-offset-4" href={`mailto:${ASSISTED_EMAIL}`}>{ASSISTED_EMAIL}</a>.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function Footer() {
   const column = 'flex flex-col items-start gap-0.5 text-sm [&_a]:flex [&_a]:min-h-11 [&_a]:items-center [&_a]:text-body [&_a:hover]:text-blue';
   return (
@@ -243,7 +221,8 @@ export default function App() {
         <main id="contenido">
           <Journey />
           <Cuba />
-          <Publication />
+          <Tagline />
+          <Publish />
           <Trust />
           <Download />
           <Questions />

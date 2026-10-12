@@ -131,8 +131,7 @@ export function PublishScreen({ part }: { part?: string }) {
       <span className="phone-send mt-auto" data-part={dp(part, 'send')}>Enviar a revisión</span>
       <p className="py-2.5 text-center text-[10px] text-[#68686D]">Ejemplo de uso</p>
       <div className="phone-status pinned-only" data-part={dp(part, 'status')}>
-        <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-[#EAF3FF] text-[#0153A8]"><House className="size-4" /></span>
-        <span className="min-w-0 flex-1 leading-tight"><strong className="block">Tu anuncio</strong><span className="text-[10px] text-[#68686D]">Casa · Venta · La Habana</span></span>
+        <span className="min-w-0 flex-1 leading-tight"><strong className="block">Tu anuncio</strong><span className="block truncate text-[10px] text-[#68686D]">Casa · Venta · La Habana</span></span>
         <span className="grid text-[10px] font-bold">
           <span className="col-start-1 row-start-1 rounded-full bg-[#F7EAD0] px-2 py-0.5 text-[#7A5212]" data-part={dp(part, 'review')}>En revisión</span>
           <span className="col-start-1 row-start-1 rounded-full bg-[#E1EEE4] px-2 py-0.5 text-[#2C5638] opacity-0" data-part={dp(part, 'live')}>Publicado</span>
