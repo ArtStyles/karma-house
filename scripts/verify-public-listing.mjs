@@ -1,10 +1,10 @@
 // scripts/verify-public-listing.mjs
 // Checks the deployed public pages (web/ on Vercel): an approved listing renders as HTML with
 // open graph tags, a non-public one and a bogus id return 404, and POST is rejected. Reads
-// nothing private. Usage: node scripts/verify-public-listing.mjs [https://karmahouse.vercel.app]
+// nothing private. Usage: node scripts/verify-public-listing.mjs [https://www.karmahouse.site]
 import { createDatabaseClient } from './cloud-db.mjs';
 
-const base = `${(process.argv[2] ?? 'https://karmahouse.vercel.app').replace(/\/+$/, '')}/p/`;
+const base = `${(process.argv[2] ?? 'https://www.karmahouse.site').replace(/\/+$/, '')}/p/`;
 
 const db = createDatabaseClient();
 await db.connect();

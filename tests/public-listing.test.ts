@@ -27,7 +27,7 @@ test('describeListing is the og:description line', () => {
   assert.equal(describeListing(row), '85,000 USD · Vedado, La Habana · 3 hab · 2 baños · 120.5 m²');
 });
 
-const site = 'https://karmahouse.vercel.app/';
+const site = 'https://www.karmahouse.site/';
 const self = `https://example.supabase.co/functions/v1/p/${row.id}`;
 const photos = ['https://example.supabase.co/storage/v1/object/sign/a.jpg?token=x&y=1', 'https://example.supabase.co/storage/v1/object/sign/b.jpg?token=z'];
 
@@ -91,7 +91,7 @@ test('renderListing names the seller, their level and the verification, escaped'
   assert.ok(!without.includes('Publicado por') && !without.includes('Verificado por KarmaHouse'));
 });
 
-const env: Env = { supabaseUrl: 'https://example.supabase.co/', anonKey: 'anon-key', publicOrigin: 'https://karmahouse.vercel.app' };
+const env: Env = { supabaseUrl: 'https://example.supabase.co/', anonKey: 'anon-key', publicOrigin: 'https://www.karmahouse.site' };
 const ownerId = '44000000-0000-4000-8000-000000000004';
 const dbRow = { ...row, owner_id: ownerId, photo_paths: ['u/a/one.jpg', 'u/a/two.jpg'] };
 const PROFILE_URL = 'https://example.supabase.co/rest/v1/rpc/kh_public_profile';
@@ -117,10 +117,10 @@ function fakeFetch(rest: { status: number; body?: unknown }, sign?: Reply, profi
 }
 const profile = { id: ownerId, displayName: 'Ana <b>López</b>', level: 'trusted', verified: true, responseMinutes: 30 };
 const listed = { status: 200, body: [dbRow] };
-const get = (path: string) => new Request(`https://karmahouse.vercel.app${path}`);
+const get = (path: string) => new Request(`https://www.karmahouse.site${path}`);
 
 test('public journeys use the official landing while legal documents retain their existing locations', () => {
-  assert.equal(APP_SITE_URL, 'https://karmahouse.vercel.app/');
+  assert.equal(APP_SITE_URL, 'https://www.karmahouse.site/');
   assert.equal(PUBLIC_PAGES_URL, APP_SITE_URL);
   assert.equal(PRIVACY_URL, 'https://artstyles.github.io/karma-house/privacidad.html');
   assert.equal(TERMS_URL, 'https://artstyles.github.io/karma-house/terminos.html');
@@ -133,7 +133,7 @@ test('valid and unavailable public pages offer the official download instead of 
   assert.equal(missing.status, 404);
   for (const response of [available, missing]) {
     const html = await response.text();
-    assert.ok(html.includes('href="https://karmahouse.vercel.app/#descargar"'));
+    assert.ok(html.includes('href="https://www.karmahouse.site/#descargar"'));
     assert.ok(html.includes('Descargar KarmaHouse'));
     assert.ok(!html.includes('Ver más viviendas'));
     assert.ok(!html.includes('artstyles.github.io/karma-house/'));
@@ -141,12 +141,26 @@ test('valid and unavailable public pages offer the official download instead of 
 });
 
 test('opening a shared listing keeps an explicit download fallback without timed navigation away', () => {
-  const html = renderListing(row, [], site, `https://karmahouse.vercel.app/p/${row.id}`);
+  const html = renderListing(row, [], site, `https://www.karmahouse.site/p/${row.id}`);
   assert.ok(html.includes(`href="karmahouse://property/${row.id}"`));
-  assert.ok(html.includes(`<link rel="canonical" href="https://karmahouse.vercel.app/p/${row.id}">`));
+  assert.ok(html.includes(`<link rel="canonical" href="https://www.karmahouse.site/p/${row.id}">`));
   assert.ok(html.includes('después vuelve a este enlace'));
-  assert.match(html, /href="https:\/\/karmahouse\.vercel\.app\/#descargar"[^>]*target="_blank"[^>]*rel="noopener"/);
+  assert.match(html, /href="https:\/\/www\.karmahouse\.site\/#descargar"[^>]*target="_blank"[^>]*rel="noopener"/);
   assert.ok(!html.includes('setTimeout(') && !html.includes('location.href='));
+});
+
+test('legacy listing links still render with the official canonical and download URLs', async () => {
+  const response = await handle(
+    new Request(`https://karmahouse.vercel.app/p/${row.id}`),
+    { ...env, publicOrigin: 'https://karmahouse.vercel.app' },
+    fakeFetch(listed, { status: 200, body: [] }).fetch,
+  );
+  const html = await response.text();
+  assert.equal(response.status, 200);
+  assert.ok(html.includes(`<link rel="canonical" href="https://www.karmahouse.site/p/${row.id}">`));
+  assert.ok(html.includes(`<meta property="og:url" content="https://www.karmahouse.site/p/${row.id}">`));
+  assert.ok(html.includes('href="https://www.karmahouse.site/#descargar"'));
+  assert.ok(html.includes(`href="karmahouse://property/${row.id}"`));
 });
 
 test('handle renders an approved listing with signed photos and the canonical page url', async () => {
@@ -158,7 +172,7 @@ test('handle renders an approved listing with signed photos and the canonical pa
   assert.equal(response.headers.get('cache-control'), 'public, s-maxage=300, stale-while-revalidate=60');
   assert.ok(html.includes('<meta property="og:image" content="https://example.supabase.co/storage/v1/object/sign/property-photos/u/a/one.jpg?token=1">'));
   assert.equal((html.match(/<img loading="lazy"/g) ?? []).length, 2);
-  assert.ok(html.includes(`<link rel="canonical" href="https://karmahouse.vercel.app/p/${row.id}">`));
+  assert.ok(html.includes(`<link rel="canonical" href="https://www.karmahouse.site/p/${row.id}">`));
   assert.equal(calls.length, 4);
   assert.ok(calls[0].url.startsWith(`https://example.supabase.co/rest/v1/properties?select=`));
   assert.ok(calls[0].url.includes(`id=eq.${row.id}&moderation=eq.approved&availability=eq.active`));
@@ -247,7 +261,7 @@ test('handle answers 503 when the REST call fails and 405 for other methods', as
   assert.equal(await unconfigured.text(), 'Service Unavailable: missing SUPABASE_URL or SUPABASE_ANON_KEY');
   const offline = await expectedDiagnostics(/^properties query failed offline$/,()=>handle(get(`/api/p?id=${row.id}`), env, (async () => { throw new Error('offline'); }) as unknown as typeof fetch));
   assert.equal(offline.status, 503);
-  const post = await handle(new Request(`https://karmahouse.vercel.app/api/p?id=${row.id}`, { method: 'POST' }), env, fakeFetch({ status: 200, body: [dbRow] }).fetch);
+  const post = await handle(new Request(`https://www.karmahouse.site/api/p?id=${row.id}`, { method: 'POST' }), env, fakeFetch({ status: 200, body: [dbRow] }).fetch);
   assert.equal(post.status, 405);
 });
 

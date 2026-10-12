@@ -22,7 +22,7 @@ export function sharedPropertyId(value:string):string{
  const invalid=()=>Error('Introduce el UUID o el enlace público de la vivienda.');
  let url:URL;try{url=new URL(raw)}catch{throw invalid()}
  if(url.username||url.password||url.search||url.hash||url.port)throw invalid();
- const path=url.protocol==='karmahouse:'&&url.hostname==='property'?url.pathname.match(/^\/([0-9a-f-]+)\/?$/i):url.protocol==='https:'&&url.hostname==='karmahouse.vercel.app'?url.pathname.match(/^\/(?:p|property)\/([0-9a-f-]+)\/?$/i):null;
+ const path=url.protocol==='karmahouse:'&&url.hostname==='property'?url.pathname.match(/^\/([0-9a-f-]+)\/?$/i):url.protocol==='https:'&&['karmahouse.site','www.karmahouse.site','karmahouse.vercel.app'].includes(url.hostname)?url.pathname.match(/^\/(?:p|property)\/([0-9a-f-]+)\/?$/i):null;
  if(!path||!isUuid(path[1]))throw invalid();return path[1];
 }
 export function decodeCurrentMandate(value:unknown):import('./types.ts').CurrentAgencyMandate{const v=object(value);return {propertyId:uuid(v.propertyId),agencyId:uuid(v.agencyId),agencyName:text(v.agencyName),version:version(v.version),...(v.internalReference===undefined?{}:{internalReference:text(v.internalReference,100)})}}

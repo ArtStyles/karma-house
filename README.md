@@ -87,7 +87,7 @@ Lee `credentials/android-release.properties` (ignorado por Git) y deja en `artif
 
 Las páginas públicas (`site/`) se publican con GitHub Pages en https://artstyles.github.io/karma-house/: privacidad, términos y eliminación de cuenta, que son las URL que pide la ficha de Play. El despliegue falla mientras quede el marcador `CORREO_DE_CONTACTO`.
 
-La ficha pública de cada anuncio (`https://karmahouse.vercel.app/p/<id>`) la sirve el proyecto Vercel de `web/` (Root Directory `web`, sin build, variables `SUPABASE_URL` y `SUPABASE_ANON_KEY`), desplegado desde `main` por la integración Git de Vercel. Supabase reescribe a `text/plain` cualquier HTML servido desde `*.supabase.co`, por eso no va en una Edge Function. `scripts/verify-public-listing.mjs` la comprueba; [evidencia](docs/public-listing-verification.md).
+La ficha pública de cada anuncio (`https://www.karmahouse.site/p/<id>`) la sirve el proyecto Vercel de `web/` (Root Directory `web`, portada Vite compilada, variables `SUPABASE_URL` y `SUPABASE_ANON_KEY`), desplegado desde `main` por la integración Git de Vercel. Supabase reescribe a `text/plain` cualquier HTML servido desde `*.supabase.co`, por eso no va en una Edge Function. `scripts/verify-public-listing.mjs` la comprueba; [evidencia](docs/public-listing-verification.md).
 
 ## Verificación
 

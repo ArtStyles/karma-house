@@ -17,9 +17,30 @@ import {sharedPropertyId} from '../src/agencies/properties/domain.ts';
 test('shared old UUID page renders canonical URL and deep link',async()=>{
  const canonical=b,old=a;const row={id:canonical,title:'Casa canónica',location:'Vedado',province:'La Habana',type:'Casa',description:'Vivienda comprobada con origen conservado.',price:30000,area:null,bedrooms:2,bathrooms:1,amenities:[],photo_paths:[],owner_id:actor};
  const fetcher:typeof fetch=async(url)=>{const u=String(url);if(u.includes('kh_resolve_property_alias'))return Response.json(canonical);if(u.includes('/properties?'))return Response.json(u.includes(`id=eq.${canonical}`)?[row]:[]);if(u.includes('kh_public_profile'))return Response.json({id:actor,displayName:'Ana Pérez',level:'trusted',verified:false});throw Error(u)};
- const response=await handle(new Request(`https://fixture.invalid/p/${old}`),{supabaseUrl:'https://supabase.invalid',anonKey:'key',publicOrigin:'https://fixture.invalid'},fetcher);assert.equal(response.status,200);const html=await response.text();assert.ok(html.includes(`https://fixture.invalid/p/${canonical}`));assert.ok(html.includes(`karmahouse://property/${canonical}`));
+ const response=await handle(new Request(`https://fixture.invalid/p/${old}`),{supabaseUrl:'https://supabase.invalid',anonKey:'key',publicOrigin:'https://fixture.invalid'},fetcher);assert.equal(response.status,200);const html=await response.text();assert.ok(html.includes(`https://www.karmahouse.site/p/${canonical}`));assert.ok(html.includes(`karmahouse://property/${canonical}`));
 });
 test('public UUID request parser accepts dwelling links and rejects malformed paths',()=>{assert.equal(sharedPropertyId(a),a);assert.equal(sharedPropertyId(`https://karmahouse.vercel.app/p/${a}`),a);assert.throws(()=>sharedPropertyId('https://fixture.invalid/admin/anything'),/UUID/)});
+
+test('public UUID request parser accepts the official domain and keeps legacy links valid', () => {
+ for (const host of ['karmahouse.site', 'www.karmahouse.site', 'karmahouse.vercel.app']) {
+  for (const path of ['p', 'property']) {
+   assert.equal(sharedPropertyId(`https://${host}/${path}/${a}`), a);
+  }
+ }
+});
+
+test('official domain parser rejects lookalike hosts and altered dwelling links', () => {
+ for (const link of [
+  `https://karmahouse.site.evil.invalid/p/${a}`,
+  `https://evilkarmahouse.site/p/${a}`,
+  `http://karmahouse.site/p/${a}`,
+  `https://user@karmahouse.site/p/${a}`,
+  `https://karmahouse.site:8443/p/${a}`,
+  `https://karmahouse.site/p/${a}?unexpected=1`,
+  `https://karmahouse.site/p/${a}#unexpected`,
+  `https://karmahouse.site/admin/${a}`,
+ ]) assert.throws(() => sharedPropertyId(link), /UUID/);
+});
 
 
 test('duplicate review receives server canonical version instead of asking users for concurrency tokens',async()=>{const candidate={id,title:'Casa',location:'Vedado',version:7};const result=await repo({canonical:candidate,items:[],hasMore:false}).duplicateCandidates(id,0,context);assert.equal(result.canonical.version,7)});

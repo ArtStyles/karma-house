@@ -13,7 +13,7 @@ const client=(fetcher:typeof fetch)=>createClient('https://fixture.invalid','key
 test('share producer pins current agency JWT and renders canonical link; public stale context returns fallback',async()=>{
  const canonical=other;let calls=0;
  const db=client(async(url,init)=>{calls++;const args=JSON.parse(String(init?.body));if(String(url).endsWith('/kh_agency_share_context')){assert.equal(new Headers(init?.headers).get('authorization'),'Bearer captured');assert.deepEqual(args,{p_actor_id:actor,p_agency_id:agency,p_property_id:id,p_manager_id:actor});return Response.json({propertyId:canonical,agencyId:agency,managerId:actor});}return Response.json(null);});
- assert.equal(agencyShareUrl(await prepareAgencyShare(db,id,c)),`https://karmahouse.vercel.app/p/${canonical}?agencyId=${agency}&managerId=${actor}`);
+ assert.equal(agencyShareUrl(await prepareAgencyShare(db,id,c)),`https://www.karmahouse.site/p/${canonical}?agencyId=${agency}&managerId=${actor}`);
  assert.equal(await validatePublicAgencyShare(db,id,agency,actor),null);assert.equal(calls,2);
 });
 test('commercial edit cannot send private application fields and rejects cross-agency return',async()=>{
