@@ -67,8 +67,6 @@
 .glass { animation: glass .5s ease both; }
 @media (prefers-reduced-motion: reduce) {
   .rise, .door, .glass { animation: none; }
-  /* Scroll-linked effects write inline transforms; this keeps them still. */
-  .tilt, .parallax { transform: none !important; }
 }
 
 /* Soft grain, full mode only (see useMode in motion.ts). */

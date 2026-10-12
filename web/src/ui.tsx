@@ -78,7 +78,8 @@ const PANES = RINGS.flatMap(([r0, r1, n], ring) =>
  *  into view, `"always"` shows it lit. Under reduced motion the CSS animation is off and the panes show lit. */
 export function Mediopunto({ className, delay = 0, lit = 'load' }: { className?: string; delay?: number; lit?: 'load' | 'view' | 'always' }) {
   const ref = useRef<SVGSVGElement>(null);
-  const inView = useInView(ref, { once: true, amount: 0.3 });
+  // Any visible part counts: the large window behind the download panel is mostly clipped by the panel.
+  const inView = useInView(ref, { once: true, margin: '0px 0px -15% 0px' });
   const [below, setBelow] = useState(false);
   useEffect(() => { if (lit === 'view' && ref.current!.getBoundingClientRect().top > innerHeight) setBelow(true); }, [lit]);
   const animate = lit === 'load' || (lit === 'view' && below && inView);
