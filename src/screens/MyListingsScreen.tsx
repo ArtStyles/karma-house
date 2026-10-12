@@ -15,7 +15,7 @@ import { createThemedStyles, formatMoney, internalLayout } from '../theme';
 import {useIncomingTransferCount} from '../transfers/useIncomingTransferCount';
 
 const boardLabels: Record<ListingBoardState, string> = {
-  sold: 'Vendido', rejected: 'Necesita cambios', draft: 'Borrador',
+  sold: 'Cerrado', rejected: 'Necesita cambios', draft: 'Borrador',
   pending: 'En revisión', paused: 'En pausa', live: 'En el catálogo',
 };
 
@@ -117,7 +117,7 @@ export default function MyListingsScreen() {
           </ActionGroup>
           {state !== 'sold' && <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!pending }} disabled={!!pending} onPress={() => setConfirm({ listing: item, next: 'sold' })} style={({ pressed }) => [styles.soldButton, pressed && styles.pressed, !!pending && styles.disabled]}>
             <Icon name="checkmark-circle-outline" color={colors.primary} size={19} />
-            <Text style={styles.soldText}>Marcar como vendido</Text>
+            <Text style={styles.soldText}>Cerrar anuncio</Text>
           </Pressable>}
         </View>;
         })}
@@ -130,13 +130,13 @@ export default function MyListingsScreen() {
       <SafeAreaView style={styles.backdrop} edges={['top', 'bottom', 'left', 'right']}>
         <ScrollView contentContainerStyle={styles.modalScroll}>
         <View accessibilityViewIsModal style={styles.modal}>
-          <Text accessibilityRole="header" style={styles.modalTitle}>{sellingOff ? '¿Marcar como vendido?' : '¿Volver a poner en venta?'}</Text>
+          <Text accessibilityRole="header" style={styles.modalTitle}>{sellingOff ? '¿Cerrar este anuncio?' : '¿Reactivar este anuncio?'}</Text>
           <Text style={styles.modalText}>{sellingOff
-            ? 'El anuncio saldrá del catálogo y quedará como vendido en Mis anuncios. Podrás reactivarlo cuando quieras.'
-            : 'El anuncio dejará de estar vendido y volverá al catálogo mientras esté aprobado.'}</Text>
+            ? 'El anuncio saldrá del catálogo y quedará como cerrado en Mis anuncios. Podrás reactivarlo cuando quieras.'
+            : 'El anuncio volverá al catálogo mientras esté aprobado.'}</Text>
           {error ? <Notice error>{error}</Notice> : null}
           <ActionGroup direction="vertical">
-            <Button label={sellingOff ? 'Confirmar vendido' : 'Confirmar reactivación'} loading={!!pending} onPress={() => effectiveConfirm && update(effectiveConfirm.listing.id, effectiveConfirm.next)} />
+            <Button label={sellingOff ? 'Confirmar cierre' : 'Confirmar reactivación'} loading={!!pending} onPress={() => effectiveConfirm && update(effectiveConfirm.listing.id, effectiveConfirm.next)} />
             <Button label="Cancelar" secondary disabled={!!pending} onPress={() => setConfirm(null)} />
           </ActionGroup>
         </View>
