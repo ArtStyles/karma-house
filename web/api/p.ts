@@ -202,7 +202,7 @@ export function renderUnavailable(siteUrl: string): string {
 <nav class="bar" aria-label="Descargar KarmaHouse"><a class="more" href="${download}" target="_blank" rel="noopener" aria-label="Descargar KarmaHouse (se abre en otra pestaña)">Descargar KarmaHouse</a></nav>`);
 }
 
-export const SITE_URL = 'https://karmahouse.vercel.app/';
+export const SITE_URL = 'https://www.karmahouse.site/';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const COLUMNS = 'id,title,location,province,type,description,price,area,bedrooms,bathrooms,amenities,photo_paths,condition,floor,price_negotiable,operation,swap_wants,swap_provinces,swap_balance,swap_amount,rent_period,rent_min_stay,wanted_operations,owner_id';
 const HTML = { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60' };
@@ -293,7 +293,7 @@ export async function handle(request: Request, env: Env, fetchImpl: typeof fetch
   let contact:PublicContact|undefined;
   try{const response=await post('/rest/v1/rpc/kh_public_property_contact',{p_property_id:listing.id});if(response.ok){contact=decodePublicContact(await response.json());if(contact.propertyId!==listing.id)contact=undefined}}catch{/* Missing contact metadata never authorizes a custody fallback. */}
   const [photoUrls, seller] = await Promise.all([signPhotos(), contact?.personalContact?loadSeller():Promise.resolve(undefined)]);
-  return new Response(renderListing(listing, photoUrls, SITE_URL, `${env.publicOrigin}/p/${listing.id}`, seller,contact,agencyId?{agencyId,...(managerId?{managerId}:{})}:undefined), { status: 200, headers: HTML });
+  return new Response(renderListing(listing, photoUrls, SITE_URL, `${SITE_URL}p/${listing.id}`, seller,contact,agencyId?{agencyId,...(managerId?{managerId}:{})}:undefined), { status: 200, headers: HTML });
 }
 
 export function GET(request: Request): Promise<Response> {

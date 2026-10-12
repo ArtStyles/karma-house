@@ -1,6 +1,6 @@
 KarmaHouse para Android - instalación desde la web oficial
 
-1. Descarga KarmaHouse.apk desde https://karmahouse.vercel.app/.
+1. Descarga KarmaHouse.apk desde https://www.karmahouse.site/.
 2. Abre el archivo. Si Android lo solicita, autoriza a ese navegador o a la
    aplicación Archivos para instalar aplicaciones de esta fuente.
 3. Si Google Play Protect solicita analizar la app, acepta el análisis y espera
