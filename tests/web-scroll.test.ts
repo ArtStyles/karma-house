@@ -29,7 +29,7 @@ test('pickMode: static for reduced motion, lite for data saver or low memory', (
 test('cardSizes fits the arch in the visual area and keeps the phone at 9:19.5', () => {
   for (const [w, h] of [[560, 640], [343, 380], [300, 900]]) {
     const s = cardSizes(w, h);
-    assert.ok(s.archH <= h - 28 + 1e-6, `arch height for ${w}x${h}`);
+    assert.ok(s.archH <= h - 40 + 1e-6, `arch height for ${w}x${h}`);
     assert.ok(s.archW <= w, `arch width for ${w}x${h}`);
     assert.equal(Math.round((s.phoneW / s.phoneH) * 1000), Math.round((9 / 19.5) * 1000));
   }

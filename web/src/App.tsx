@@ -1,10 +1,8 @@
 import { useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
-import { LazyMotion, MotionConfig, domAnimation, m, useScroll, useTransform } from 'motion/react';
-import {
-  ArrowLeftRight, ArrowRight, Bell, Bookmark, CalendarDays, Check, ChevronDown, CirclePlus, CircleUser, Compass, Heart, House,
-  KeyRound, Map as MapIcon, MapPin, Menu, MessageCircle, Plus, Search, ShieldCheck, SlidersHorizontal, Smartphone,
-} from 'lucide-react';
-import { Cenefa, Mediopunto, ProvinceMarquee, Reveal, Stagger, StaggerItem, VerbRotator } from './ui';
+import { LazyMotion, MotionConfig, domAnimation } from 'motion/react';
+import { ArrowLeftRight, ArrowRight, CalendarDays, House, KeyRound, Menu, MessageCircle, Plus, ShieldCheck, Smartphone } from 'lucide-react';
+import { Cenefa, Mediopunto, ProvinceMarquee, Reveal, Stagger, StaggerItem } from './ui';
+import { Journey } from './scenes/Journey';
 
 const RELEASE = 'https://github.com/ArtStyles/karma-house/releases';
 const APK = `${RELEASE}/download/v0.1.20/KarmaHouse.apk`;
@@ -76,66 +74,6 @@ function Header() {
   );
 }
 
-function HeroVisual() {
-  const ref = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
-  const y = useTransform(scrollYProgress, [0, 1], [0, 30]);
-  const scale = useTransform(scrollYProgress, [0, 1], [1.06, 1.16]);
-  return (
-    <figure ref={ref} className="relative mx-auto w-full max-w-[480px]">
-      {/* A Cuban doorway: mediopunto transom over the door, the house seen through it. */}
-      <div className="rounded-t-[999px] rounded-b-[34px] border border-line bg-paper p-2.5 shadow-[0_40px_80px_-40px_rgba(26,43,59,.45)]">
-        <Mediopunto className="block w-full" delay={0.35} />
-        <div className="my-1.5 h-2.5 rounded-full bg-ink/85" aria-hidden="true" />
-        <div className="door relative aspect-[5/4] overflow-hidden rounded-b-[26px] rounded-t-md">
-          <m.picture className="parallax absolute inset-0 block" style={{ y, scale }}>
-            <source type="image/avif" srcSet="/vedado-640.avif 640w, /vedado-1200.avif 1200w" sizes="(min-width: 1024px) 460px, 92vw" />
-            <img src="/vedado.jpg" width="1200" height="800" alt="Vivienda con portal, vegetación y jardín. Imagen ilustrativa." fetchPriority="high" className="size-full object-cover object-[58%_center]" />
-          </m.picture>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0" aria-hidden="true" />
-          <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-cal/90 px-3 py-1.5 text-xs font-semibold text-ink backdrop-blur"><MapPin className="size-3.5 text-terracota" aria-hidden="true" />Hecho para Cuba</span>
-          <p className="absolute bottom-5 left-5 font-display text-[1.6rem] leading-tight text-white">Cada hogar,<br />un nuevo comienzo.</p>
-        </div>
-      </div>
-      <div className="rise absolute -right-3 bottom-28 hidden max-w-[17rem] items-center gap-3 rounded-2xl border border-line bg-paper/95 p-3.5 shadow-xl backdrop-blur sm:flex lg:-right-10" style={{ animationDelay: '1.2s' }}>
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-soft-blue text-blue"><MessageCircle className="size-5" aria-hidden="true" /></span>
-        <span className="text-sm leading-snug"><strong className="block">Más cerca de tu próximo hogar</strong><span className="text-xs text-body">Mapa y conversación, en un mismo lugar.</span></span>
-      </div>
-      <figcaption className="mt-4 text-center text-xs text-body">Imagen ilustrativa. No corresponde a un anuncio.</figcaption>
-    </figure>
-  );
-}
-
-function Hero() {
-  return (
-    <section className="relative overflow-clip" aria-labelledby="hero-title">
-      <div className={`${WRAP} grid items-center gap-14 pb-16 pt-10 lg:grid-cols-[1.2fr_1fr] lg:gap-14 lg:pb-24 lg:pt-14`}>
-        <div>
-          <div className="rise"><Eyebrow>Viviendas en Cuba</Eyebrow></div>
-          <div className="rise" style={{ animationDelay: '80ms' }}>
-            <h1 id="hero-title" className="mt-6 text-[clamp(2.6rem,5.4vw,4.6rem)] leading-[1.05]">
-              Tu casa en Cuba,<br />para <span className="sr-only">comprar, vender, permutar o alquilar</span><VerbRotator />
-            </h1>
-          </div>
-          <div className="rise" style={{ animationDelay: '160ms' }}><p className="mt-7 max-w-[30rem] text-[1.075rem] leading-relaxed text-body">Compra, vende, permuta o alquila. Un espacio para encontrar tu lugar en Cuba y hablar directamente con quien publica.</p></div>
-          <div className="rise mt-9 flex flex-wrap items-center gap-x-7 gap-y-3" style={{ animationDelay: '240ms' }}>
-            <a className={`${BUTTON} group`} href="#descargar">Descargar para Android <ArrowRight className={ARROW} aria-hidden="true" /></a>
-            <a className={LINK} href="#publicar">Publica tu vivienda <ArrowRight className={ARROW} aria-hidden="true" /></a>
-          </div>
-          <div className="rise" style={{ animationDelay: '320ms' }}>
-            <ul className="mt-9 flex flex-wrap gap-x-6 gap-y-2 text-sm text-body" aria-label="Características de KarmaHouse">
-              {['Publicación gratuita', 'Chat privado', 'Anuncios revisados antes de publicarse'].map((text) => (
-                <li key={text} className="flex items-center gap-2"><Check className="size-4 text-persiana" aria-hidden="true" />{text}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-        <HeroVisual />
-      </div>
-    </section>
-  );
-}
-
 function SectionHeading({ eyebrow, title, id, aside }: { eyebrow: string; title: ReactNode; id: string; aside: ReactNode }) {
   return (
     <Reveal className="grid items-end gap-6 md:grid-cols-[1.3fr_1fr]">
@@ -168,147 +106,6 @@ function Possibilities() {
             </StaggerItem>
           ))}
         </Stagger>
-      </div>
-    </section>
-  );
-}
-
-// The phone mirrors the real Android interface (same labels, colours and layout as the app's Explorar tab),
-// with an illustrative photo and placeholder bars instead of an invented listing.
-const APP = { paper: 'bg-[#F5F5F7]', ink: 'text-[#1D1D1F]', muted: 'text-[#68686D]', border: 'border-[#E5E5EA]' };
-
-function PhoneScreen() {
-  return (
-    <div className={`relative h-full overflow-hidden ${APP.paper} ${APP.ink} px-3.5 pt-5 text-[11px]`}>
-      <div className="flex items-center justify-between">
-        <span className="flex items-center gap-1.5 text-[13px] tracking-[-.03em] text-[#0153A8]"><img src="/karmahouse-mark.png" alt="" width="20" height="16" className="h-4 w-5 object-contain" /><span><b className="font-extrabold">Karma</b>House</span></span>
-        <span className="flex gap-1.5">{[Bell, MessageCircle].map((Icon, i) => <span key={i} className="grid size-7 place-items-center rounded-full bg-white"><Icon className="size-3.5" /></span>)}</span>
-      </div>
-      <p className="mt-3 text-[17px] font-bold tracking-[-.02em]">Encuentra tu casa en Cuba</p>
-      <div className={`mt-2.5 flex items-center gap-2 rounded-full border ${APP.border} bg-white py-1 pl-3 pr-1`}>
-        <Search className="size-3.5" /><span className={`flex-1 ${APP.muted}`}>Barrio, municipio o calle</span>
-        <span className="grid size-6 place-items-center rounded-full bg-[#EAF3FF] text-[#0153A8]"><SlidersHorizontal className="size-3" /></span>
-      </div>
-      <div className="mt-2.5 flex gap-1.5 overflow-hidden whitespace-nowrap">
-        <span className={`flex shrink-0 items-center gap-1 rounded-full border ${APP.border} bg-white px-2.5 py-1`}><MapPin className="size-3" />Toda Cuba<ChevronDown className="size-3" /></span>
-        {['Casas', 'Apartamentos', 'Permutas'].map((chip) => <span key={chip} className={`shrink-0 rounded-full border ${APP.border} bg-white px-2.5 py-1`}>{chip}</span>)}
-      </div>
-      <div className="mt-2.5 flex items-center justify-end gap-2">
-        <span className="flex items-center gap-0.5 text-[#0153A8]">Más recientes<ChevronDown className="size-3" /></span>
-        <Bookmark className="size-3.5" />
-        <span className={`flex items-center gap-1 rounded-full border ${APP.border} bg-white px-2 py-0.5`}><MapIcon className="size-3" />Mapa</span>
-      </div>
-      {[['/vedado-640.avif', '/vedado.jpg'], ['/interior-640.avif', '/interior.jpg']].map(([avif, jpg]) => (
-        <div key={jpg} className="mt-2.5">
-          <div className="relative h-[118px] overflow-hidden rounded-xl">
-            <picture><source type="image/avif" srcSet={avif} /><img src={jpg} alt="" loading="lazy" className="size-full object-cover" /></picture>
-            <span className="absolute right-2 top-2 grid size-6 place-items-center rounded-full bg-white"><Heart className="size-3" /></span>
-          </div>
-          <div className="mt-2 space-y-1.5" aria-hidden="true">
-            <span className="block h-2.5 w-1/2 rounded-full bg-[#DCDCE0]" /><span className="block h-2 w-4/5 rounded-full bg-[#E5E5EA]" /><span className="block h-2 w-3/5 rounded-full bg-[#E5E5EA]" />
-          </div>
-        </div>
-      ))}
-      <div className="absolute inset-x-3 bottom-3 flex justify-between rounded-full bg-white p-1 shadow-[0_6px_20px_rgba(0,0,0,.12)]">
-        {[[Compass, 'Explorar'], [Heart, 'Favoritos'], [CirclePlus, 'Publicar'], [CircleUser, 'Mi espacio']].map(([Icon, label], i) => {
-          const Glyph = Icon as typeof Compass;
-          return <span key={label as string} className={`flex flex-1 flex-col items-center gap-0.5 rounded-full py-1 text-[9px] ${i ? APP.muted : 'bg-[#EAF3FF] font-semibold text-[#0153A8]'}`}><Glyph className="size-3.5" />{label as string}</span>;
-        })}
-      </div>
-    </div>
-  );
-}
-
-function PhoneShowcase() {
-  const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'center center'] });
-  const rotateX = useTransform(scrollYProgress, [0, 1], [22, 0]);
-  const scale = useTransform(scrollYProgress, [0, 1], [0.9, 1]);
-  return (
-    <div ref={ref} className="relative mx-auto w-full max-w-[420px] pb-6 [perspective:1400px]">
-      <m.div style={{ rotateX, scale }} className="tilt mx-auto aspect-[9/19] w-[min(290px,78vw)] origin-bottom overflow-hidden rounded-[44px] border-[9px] border-[#14202c] shadow-[0_50px_90px_-40px_rgba(14,34,54,.6)]"
-        role="img" aria-label="Pantalla Explorar de la app KarmaHouse para Android: búsqueda por barrio, municipio o calle, filtros y viviendas. Imagen y datos ilustrativos.">
-        <PhoneScreen />
-      </m.div>
-      <Reveal className="relative z-10 -mt-32 ml-auto w-[min(260px,76vw)] sm:absolute sm:-right-6 sm:bottom-16 sm:mt-0" hidden={{ opacity: 0, x: 30 }} amount={0.8} delay={0.2}>
-      <div className="rounded-[22px] border border-line bg-paper p-3.5 shadow-2xl"
-        role="img" aria-label="Ejemplo ilustrativo de una conversación: consulta de disponibilidad y propuesta de visita pendiente de respuesta.">
-        <div className="flex items-center gap-2.5" aria-hidden="true">
-          <span className="grid size-8 place-items-center rounded-full bg-soft-blue text-blue"><House className="size-4" /></span>
-          <span className="flex-1 text-xs leading-tight"><strong className="block">Tu próxima vivienda</strong><span className="text-[11px] text-body">Conversación privada</span></span>
-          <span className="size-2 rounded-full bg-persiana" />
-        </div>
-        <div className="mt-3 grid gap-1.5 text-[11.5px]" aria-hidden="true">
-          <p className="w-fit max-w-[92%] rounded-2xl rounded-tl-sm bg-arena px-3 py-2">Hola, ¿podemos coordinar una visita?</p>
-          <p className="w-fit max-w-[92%] justify-self-end rounded-2xl rounded-tr-sm bg-blue px-3 py-2 text-on-blue">Claro. ¿Te viene bien el sábado?</p>
-          <div className="mt-1 flex items-center gap-2 rounded-xl border border-line p-2">
-            <CalendarDays className="size-4 text-blue" /><span className="flex-1 leading-tight"><strong className="block">Propuesta de visita</strong><span className="text-body">Sábado · 10:30 a. m.</span></span>
-            <span className="rounded-full bg-sol/25 px-2 py-0.5 text-[10px] font-semibold text-ocre">Pendiente</span>
-          </div>
-        </div>
-        <p className="mt-2.5 text-center text-[10px] text-body" aria-hidden="true">Ejemplo de uso · No es una conversación real</p>
-      </div>
-      </Reveal>
-      <p className="mt-6 text-center text-xs text-body">Interfaz de KarmaHouse para Android. Imagen y datos ilustrativos.</p>
-    </div>
-  );
-}
-
-function Experience() {
-  return (
-    <section className="relative overflow-clip bg-arena py-20 lg:py-28" id="app" aria-labelledby="experience-title">
-      <div className="losa absolute inset-0 text-ocre opacity-[.06]" aria-hidden="true" />
-      <div className={`${WRAP} relative grid items-center gap-16 lg:grid-cols-2`}>
-        <PhoneShowcase />
-        <div>
-          <Reveal>
-            <Eyebrow>La experiencia KarmaHouse</Eyebrow>
-            <h2 id="experience-title" className="mt-5 text-[clamp(2.1rem,4vw,3.4rem)]">Del mapa a la conversación. <span className="text-blue">Todo más cerca.</span></h2>
-            <p className="mt-6 max-w-[28rem] leading-relaxed text-body">Una vivienda es mucho más que una foto. Conoce la zona, revisa sus detalles y conversa antes de dar el siguiente paso.</p>
-          </Reveal>
-          <Stagger as="ul" className="mt-10 grid gap-3">
-            {[
-              [MapPin, 'Busca con contexto', 'Filtra por precio, habitaciones y estado. Ubica las viviendas en el mapa.'],
-              [MessageCircle, 'Habla directamente', 'Cada anuncio tiene su conversación. Tu teléfono y tu correo no se muestran a otros usuarios.'],
-              [CalendarDays, 'Organiza visitas y ofertas', 'Envía propuestas y consulta sus respuestas dentro del chat, sin perder el hilo.'],
-            ].map(([Icon, title, text]) => {
-              const Glyph = Icon as typeof MapPin;
-              return (
-                <StaggerItem key={title as string} as="li" className="flex gap-4 rounded-3xl border border-line bg-paper/80 p-5">
-                  <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-soft-blue text-blue"><Glyph className="size-5" aria-hidden="true" /></span>
-                  <div><h3 className="font-sans text-base font-semibold tracking-normal">{title as string}</h3><p className="mt-1 text-sm leading-relaxed text-body">{text as string}</p></div>
-                </StaggerItem>
-              );
-            })}
-          </Stagger>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function HowItWorks() {
-  return (
-    <section className="py-20 lg:py-28" id="como-funciona" aria-labelledby="steps-title">
-      <div className={WRAP}>
-        <SectionHeading eyebrow="Así funciona" id="steps-title" title="De una idea a tu próxima visita."
-          aside={<>Busca una vivienda o publica la tuya.<br />El siguiente paso empieza con una conversación.</>} />
-        <div className="relative mt-14">
-          <Reveal className="absolute inset-x-[8%] top-[1.9rem] hidden h-px origin-left bg-gradient-to-r from-sol via-terracota to-blue md:block" hidden={{ scaleX: 0 }} amount={0.8} />
-          <Stagger as="ol" className="relative grid gap-10 md:grid-cols-3 md:gap-8">
-            {[
-              ['Explora o publica', 'Encuentra lo que buscas o presenta tu vivienda con fotos, ubicación y detalles.'],
-              ['Conoce y compara', 'Consulta las características, guarda tus favoritos y pregunta lo que necesites.'],
-              ['Acuerda el siguiente paso', 'Propón una visita o una oferta. La negociación y el cierre se realizan entre las partes.'],
-            ].map(([title, text], i) => (
-              <StaggerItem key={title} as="li" className="md:text-center">
-                <span className="grid size-[3.8rem] place-items-center rounded-full border border-line bg-cal font-display text-2xl text-ocre md:mx-auto">0{i + 1}</span>
-                <h3 className="mt-6 text-2xl">{title}</h3>
-                <p className="mt-3 max-w-[22rem] text-[15px] leading-relaxed text-body md:mx-auto">{text}</p>
-              </StaggerItem>
-            ))}
-          </Stagger>
-        </div>
       </div>
     </section>
   );
@@ -471,12 +268,10 @@ export default function App() {
         <a className="fixed left-4 top-3 z-[60] -translate-y-24 rounded-full bg-paper px-5 py-3 text-sm font-semibold shadow-lg focus:translate-y-0" href="#contenido">Saltar al contenido</a>
         <Header />
         <main id="contenido">
-          <Hero />
+          <Journey />
           <ProvinceMarquee />
           <Possibilities />
-          <Experience />
           <Publication />
-          <HowItWorks />
           <Trust />
           <Download />
           <Questions />

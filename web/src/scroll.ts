@@ -21,7 +21,7 @@ export function pickMode({ reduce, saveData, deviceMemory }: { reduce: boolean; 
 /** Journey card sizes: the arch window of the hero (10 px frame, mediopunto, bar, 5:4 photo) and the phone it becomes. */
 export function cardSizes(w: number, h: number) {
   const pad = 10;
-  const iw = Math.max(160, Math.min(w * 0.94 - 2 * pad, 420, (h - 64) / 1.31));
+  const iw = Math.max(160, Math.min(w * 0.94 - 2 * pad, 420, (h - 76) / 1.31));
   const phoneH = Math.min(h - 8, 640);
   return { pad, iw, archW: iw + 2 * pad, archH: 36 + 1.31 * iw, transom: iw * 0.51 + 16, phoneH, phoneW: (phoneH * 9) / 19.5 };
 }

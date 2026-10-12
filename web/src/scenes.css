@@ -4,7 +4,7 @@
 
 html:not(.js) .pinned-only { display: none }
 @media (prefers-reduced-motion: reduce) { .pinned-only { display: none } }
-.track { position: relative }
+.track, .stage { position: relative }
 
 .glow { display: none; position: absolute; width: 80vmin; aspect-ratio: 1; border-radius: 50%; right: -10vmin; top: 50%; translate: 0 -50%; pointer-events: none }
 html[data-mode="full"] .glow { display: block }
@@ -34,4 +34,47 @@ html[data-mode="full"] .glow { display: block }
   .js .track { height: calc(var(--screens) * 100vh); height: calc(var(--screens) * 100svh) }
   .js .stage { position: sticky; top: 76px; height: calc(100vh - 76px); height: calc(100svh - 76px); overflow: clip }
   .js .static-only { display: none }
+}
+
+/* Journey ----------------------------------------------------------------------------------------------- */
+.journey .stage { padding-block: 2.5rem 4rem }
+.journey-layout { position: relative; display: grid; gap: 3.5rem; align-items: center }
+@media (min-width: 1024px) { .journey-layout { grid-template-columns: 1.15fr 1fr } }
+.journey-steps ol { display: grid; gap: 2.5rem; margin: 3.5rem 0 0; padding: 0; list-style: none }
+.journey-card { position: relative; width: min(440px, 100%); margin-inline: auto; padding: 10px; border: 1px solid var(--color-line); border-radius: 999px 999px 34px 34px; background: var(--color-paper); box-shadow: 0 40px 80px -40px rgba(26, 43, 59, .45) }
+.journey-transom i { display: block; height: 10px; margin-block: 6px; border-radius: 999px; background: var(--color-ink); opacity: .85 }
+.journey-screen { position: relative; aspect-ratio: 5 / 4; overflow: hidden; isolation: isolate; border-radius: 6px 6px 26px 26px; background: #F6F1E7 }
+.journey-photo { position: absolute; inset: 0; z-index: 2; transform-origin: 64% 55% }
+.journey-caption { margin-top: 1rem; text-align: center; font-size: .75rem; color: var(--color-body) }
+.journey-plane { position: absolute; inset: -8%; transform-origin: 62% 58% }
+.journey-ui { position: absolute; inset: 0; z-index: 3 }
+.journey-sheet { position: absolute; inset: auto 0 0; z-index: 4 }
+.journey-chat { position: absolute; inset: 0; z-index: 5; background: #F5F5F7 }
+.journey-line { position: relative; height: 3px; max-width: 30rem; margin-top: 1.25rem; overflow: hidden; border-radius: 3px; background: var(--color-line) }
+.journey-line span { position: absolute; inset: 0; transform: scaleX(0); transform-origin: left; background: linear-gradient(90deg, var(--color-sol), var(--color-terracota), var(--color-blue)) }
+.journey-losa { position: absolute; inset: 0; color: var(--color-ocre); opacity: 0 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .js .journey .stage { padding-block: 1.25rem }
+  .js .journey-layout { height: 100%; grid-template-rows: auto minmax(0, 1fr); gap: 1.25rem; align-items: stretch }
+  .js .journey-text { display: grid; align-items: start }
+  .js .journey-text > * { grid-area: 1 / 1 }
+  .js .journey-steps ol { margin: 0; gap: 0 }
+  .js .journey-steps li { grid-area: 1 / 1; opacity: 0; transform: translateY(12px); transition: opacity .45s var(--ease-out-soft), transform .45s var(--ease-out-soft) }
+  .js .journey-steps li.on { opacity: 1; transform: none }
+  .js .journey-visual { position: relative; min-height: 0; align-self: stretch; perspective: 1400px; container-type: size }
+  .js .journey-card { --iw: min(420px, 86vw - 20px); position: absolute; left: 50%; top: 50%; margin: 0; padding: 0; contain: layout paint;
+    width: calc(var(--iw) + 20px); height: calc(var(--iw) * 1.31 + 36px); transform: translate(-50%, -50%); will-change: transform }
+  .js .journey-transom { position: absolute; left: 10px; top: 10px; width: var(--iw) }
+  .js .journey-screen { position: absolute; aspect-ratio: auto; left: 10px; right: 10px; bottom: 10px; top: calc(26px + var(--iw) * .51) }
+  .js .journey-caption { position: absolute; inset-inline: 0; bottom: 0; margin: 0 }
+  .js .journey-plane, .js .journey-ui, .js .journey-line, .js .journey .phone-pin, .js .journey .phone-bubble, .js .journey .phone-visit { opacity: 0 }
+  .js .journey-sheet { transform: translateY(105%) }
+  .js .journey-chat { transform: translateX(102%) }
+  .js .journey .phone-tick { clip-path: inset(0 100% 0 0) }
+  @media (min-width: 1024px) {
+    .js .journey-layout { grid-template-rows: none; grid-template-columns: 1.05fr 1fr; align-items: center; gap: 3.5rem }
+    .js .journey-text { align-items: center }
+  }
+  @supports (width: 1cqw) { .js .journey-card { --iw: min(94cqw - 20px, 420px, (100cqh - 76px) / 1.31) } }
 }
