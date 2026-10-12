@@ -18,7 +18,7 @@ La elección de la barra clásica quedó confirmada en «si la clasica, pero aun
 
 ## Base existente
 
-Las mejoras de respuesta de botones, hoja de filtros, favoritos optimistas, indicadores y fotos de la 0.1.23 ya están en la base local. Su evidencia está en [la verificación de la 0.1.23](apple-refinement-release.md). La barra flotante de esa versión todavía permanece en el código; la clásica integrada es el diseño aprobado para una implementación posterior.
+Las mejoras de respuesta de botones, hoja de filtros, favoritos optimistas, indicadores y fotos de la 0.1.23 ya están en la base local. Su evidencia está en [la verificación de la 0.1.23](apple-refinement-release.md). Esta entrega sustituye la barra flotante de esa base por la clásica integrada aprobada.
 
 Se conservan la identidad azul de KarmaHouse, Claro/Oscuro/Sistema y la franja de cuatro tarjetas de Explorar sin mapa. El rediseño de las entradas no incorpora funciones comerciales nuevas.
 
@@ -140,6 +140,8 @@ El boceto ofrece estados de muestra mediante los controles de diseño del visor:
 
 ## Continuación
 
-La implementación local está en curso, con versión prevista 0.1.24 / Android 25. Se conservan los bocetos como referencia y se distingue su evidencia de la app, la exportación y la APK. Las pantallas futuras se revisarán por separado.
+La implementación local está terminada en `codex/visual-redesign`: 0.1.24 / Android 25, APK firmada y actualizada en el Pixel 7 Pro. El [registro de verificación](visual-redesign-verification.md) distingue pruebas, navegador, APK y teléfono, con sus límites. Se conservan los bocetos como referencia. Las pantallas futuras se revisarán por separado.
 
-Al implementar se revisarán [FavoritesScreen](../src/screens/FavoritesScreen.tsx), [PublishScreen](../src/screens/PublishScreen.tsx), [ProfileScreen](../src/screens/ProfileScreen.tsx), el formulario, las hojas de contacto y la distribución de espacio del navegador. El ajuste del avatar se limitará a Mi espacio y deberá preservar [AccountMenu](../src/components/account/AccountMenu.tsx) en sus otros usos. Se leerá nuevamente la [documentación exacta de Expo 57](https://docs.expo.dev/versions/v57.0.0/) según AGENTS.md. La referencia de sensaciones e interacción continúa siendo [Apple Design](https://github.com/emilkowalski/skills/blob/main/skills/apple-design/SKILL.md).
+Se implementaron [FavoritesScreen](../src/screens/FavoritesScreen.tsx), [PublishScreen](../src/screens/PublishScreen.tsx), [ProfileScreen](../src/screens/ProfileScreen.tsx), el formulario, las hojas de contacto y la distribución de espacio del navegador. El avatar se ajustó únicamente en Mi espacio y se preserva [AccountMenu](../src/components/account/AccountMenu.tsx) en sus otros usos. Se leyó la [documentación exacta de Expo 57](https://docs.expo.dev/versions/v57.0.0/) según AGENTS.md antes de modificar código. La referencia de sensaciones e interacción continúa siendo [Apple Design](https://github.com/emilkowalski/skills/blob/main/skills/apple-design/SKILL.md).
+
+Durante la prueba final se incorporó la petición de un divisor muy fino entre publicaciones de Explorar. La línea usa el color de borde del tema, se coloca entre tarjetas o filas y mantiene el espaciado existente. Se observó en la exportación web y en el Pixel.

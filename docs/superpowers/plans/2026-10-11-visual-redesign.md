@@ -1,6 +1,6 @@
 # Rediseño visual de KarmaHouse — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Implementar los bocetos revisados: ficha Fotografía protagonista, contacto contextual, navegación Clásica integrada, Favoritos Directa, Publicar Guiada y Mi espacio Lista compacta.
 
@@ -37,11 +37,11 @@
 
 **Interfaces:** Consume los contadores existentes de mensajes y notificaciones. Produce `layout.tabContentBottom = 24`, apropiado para contenido dentro de un navegador que reserva la barra.
 
-- [ ] Sustituir geometría absoluta, material flotante y cápsula por barra sólida del navegador, de 64 px más área segura; conservar selección y badge.
-- [ ] Sustituir únicamente el vacío confirmado de Favoritos por título, explicación e Ir a Explorar alineados a la izquierda; distinguir indisponibles y carga de cuenta.
-- [ ] Ejecutar typecheck y las pruebas existentes de presentación, favoritos optimistas y corazón. Expected: sin errores ni regresiones.
-- [ ] Comprobar en navegador las cuatro pestañas, vacío, retirada/Deshacer y anchuras de 320/390 px.
-- [ ] Guardar el cambio en un commit de alcance explícito.
+- [x] Sustituir geometría absoluta, material flotante y cápsula por barra sólida del navegador, de 64 px más área segura; conservar selección y badge.
+- [x] Sustituir únicamente el vacío confirmado de Favoritos por título, explicación e Ir a Explorar alineados a la izquierda; distinguir indisponibles y carga de cuenta.
+- [x] Ejecutar typecheck y las pruebas existentes de presentación, favoritos optimistas y corazón. Expected: sin errores ni regresiones.
+- [x] Comprobar en navegador las cuatro pestañas, vacío, retirada/Deshacer y anchuras de 320/390 px.
+- [x] Guardar el cambio en un commit de alcance explícito.
 
 ## Task 2: Mi espacio Lista compacta
 
@@ -49,11 +49,11 @@
 
 **Interfaces:** Consume la separación de espacio del navegador de Task 1; conserva hooks y rutas actuales. Usa `UserAvatar` como identidad; no modifica `AccountMenu` en otros usos.
 
-- [ ] Reducir identidad y filas, organizar Actividad/Viviendas/Cuenta, mantener Ahorro de datos antes de la actividad, quitar duplicación de Ajustes y bloque promocional.
-- [ ] Conservar todas las condiciones documentadas de inmobiliaria, administración, transferencias, perfil público, invitado, demo y suspensión.
-- [ ] Ejecutar typecheck y pruebas existentes de retención de perfil/acceso administrativo. Expected: pasan.
-- [ ] Revisar la pantalla y el interruptor en navegador, incluyendo tema oscuro y tamaño estrecho.
-- [ ] Guardar el cambio en un commit de alcance explícito.
+- [x] Reducir identidad y filas, organizar Actividad/Viviendas/Cuenta, mantener Ahorro de datos antes de la actividad, quitar duplicación de Ajustes y bloque promocional.
+- [x] Conservar todas las condiciones documentadas de inmobiliaria, administración, transferencias, perfil público, invitado, demo y suspensión.
+- [x] Ejecutar typecheck y pruebas existentes de retención de perfil/acceso administrativo. Expected: pasan.
+- [x] Revisar la pantalla y el interruptor en navegador, incluyendo tema oscuro y tamaño estrecho.
+- [x] Guardar el cambio en un commit de alcance explícito.
 
 ## Task 3: Publicar Guiada y conservación del contexto
 
@@ -61,13 +61,13 @@
 
 **Interfaces:** `readPublicationEntry({ operation?: unknown, import?: unknown }): { operation?: ListingOperation; import: boolean }`; `publicationReturnTo(entry): string`; `restorePublicationDraft(raw: string | null, fallback: ListingDraft, operation?: ListingOperation): ListingDraft`. ListingForm recibe `initialOperation?`, `importRequest?`, `active?` y `onOperationChange?`, sin usar initialDraft para simular una edición. active impide abrir la importación desde el formulario oculto.
 
-- [ ] Escribir y ejecutar pruebas de entrada para las cuatro operaciones, rechazo de parámetros inválidos, retorno seguro de autenticación, conservación de operación/datos de un borrador existente y valores iniciales para búsqueda/alquiler. Expected: fallan por la función o comportamiento todavía ausente.
-- [ ] Implementar las funciones y ampliar únicamente los retornos `/publish` con parámetros estrictamente enumerados.
-- [ ] Crear la lista de operaciones; Pegar anuncio y ayuda son acciones secundarias. Un formulario empezado ofrece Continuar anuncio al volver a opciones.
-- [ ] Aplicar initialOperation a un anuncio sin operación después de recuperar el borrador; abrir importación mediante una solicitud local después de hidratar. Mantener formulario montado al cambiar de opción y por cuenta al cambiar de identidad.
-- [ ] Ejecutar pruebas nuevas, persistencia/importación/autenticación y typecheck. Expected: pasan.
-- [ ] Revisar cuatro entradas, borrador al volver, Pegar anuncio y ayuda en navegador sin enviar correo ni publicar datos reales.
-- [ ] Guardar el cambio en un commit de alcance explícito.
+- [x] Escribir y ejecutar pruebas de entrada para las cuatro operaciones, rechazo de parámetros inválidos, retorno seguro de autenticación, conservación de operación/datos de un borrador existente y valores iniciales para búsqueda/alquiler. Expected: fallan por la función o comportamiento todavía ausente.
+- [x] Implementar las funciones y ampliar únicamente los retornos `/publish` con parámetros estrictamente enumerados.
+- [x] Crear la lista de operaciones; Pegar anuncio y ayuda son acciones secundarias. Un formulario empezado ofrece Continuar anuncio al volver a opciones.
+- [x] Aplicar initialOperation a un anuncio sin operación después de recuperar el borrador; abrir importación mediante una solicitud local después de hidratar. Mantener formulario montado al cambiar de opción y por cuenta al cambiar de identidad.
+- [x] Ejecutar pruebas nuevas, persistencia/importación/autenticación y typecheck. Expected: pasan.
+- [x] Revisar cuatro entradas, borrador al volver, Pegar anuncio y ayuda en navegador sin enviar correo ni publicar datos reales.
+- [x] Guardar el cambio en un commit de alcance explícito.
 
 ## Task 4: Ficha y hoja de contacto contextual
 
@@ -75,12 +75,12 @@
 
 **Interfaces:** Reutiliza `contactSeller(choice?, personal?)` y sus comprobaciones actuales; la acción inicial abre la hoja contextual. No cambia repositorios, permisos ni destinatarios.
 
-- [ ] Priorizar foto, precio, ubicación y características; colocar contactos comerciales después del resumen. Reducir contenedores y texto ornamental sin retirar datos del anuncio.
-- [ ] Incorporar el contexto de la vivienda en las hojas demo y real, con cierre accesible y área segura. Abrir antes de esperas de red y mostrar carga/disponibilidad reales dentro de la hoja.
-- [ ] Preservar comprobaciones de gestor/inmobiliaria, intentos idempotentes, errores y retorno de acceso; respetar reducción de movimiento.
-- [ ] Ejecutar typecheck y pruebas existentes de contacto/autorización, alias de favoritos y fotografía. Expected: pasan.
-- [ ] Revisar ficha, contacto demo, regreso y corazón en navegador.
-- [ ] Guardar el cambio en un commit de alcance explícito.
+- [x] Priorizar foto, precio, ubicación y características; colocar contactos comerciales después del resumen. Reducir contenedores y texto ornamental sin retirar datos del anuncio.
+- [x] Incorporar el contexto de la vivienda en las hojas demo y real, con cierre accesible y área segura. Abrir antes de esperas de red y mostrar carga/disponibilidad reales dentro de la hoja.
+- [x] Preservar comprobaciones de gestor/inmobiliaria, intentos idempotentes, errores y retorno de acceso; respetar reducción de movimiento.
+- [x] Ejecutar typecheck y pruebas existentes de contacto/autorización, alias de favoritos y fotografía. Expected: pasan.
+- [x] Revisar ficha, contacto demo, regreso y corazón en navegador.
+- [x] Guardar el cambio en un commit de alcance explícito.
 
 ## Task 5: Verificación y entrega
 
@@ -88,12 +88,12 @@
 
 **Interfaces:** Consume todos los cambios anteriores; no publica ni modifica servicios externos.
 
-- [ ] Ejecutar `npm run check` completo y exportaciones web/Android. Expected: exit 0; registrar recuentos reales.
-- [ ] Preparar la APK local 0.1.24 / Android 25 con la configuración pública y el certificado existentes; verificar antes de entregar. No publicar la release.
-- [ ] Revisar la app exportada, tamaños estrechos, apariencia y recorridos sin datos reales de cuenta. Guardar capturas de las pantallas implementadas.
-- [ ] Pedir una revisión independiente de toda la rama con contexto limpio; resolver hallazgos relevantes con pruebas de reproducción cuando modifiquen comportamiento.
-- [ ] Si hay dispositivo disponible, comprobar la instalación y los recorridos locales; distinguir esta evidencia de permisos y conversaciones reales no probados.
-- [ ] Actualizar decisiones, límites y comandos en documentación; entregar cambios locales verificables sin publicación remota.
+- [x] Ejecutar `npm run check` completo y exportaciones web/Android. Expected: exit 0; registrar recuentos reales.
+- [x] Preparar la APK local 0.1.24 / Android 25 con la configuración pública y el certificado existentes; verificar antes de entregar. No publicar la release.
+- [x] Revisar la app exportada, tamaños estrechos, apariencia y recorridos sin datos reales de cuenta. Guardar capturas de las pantallas implementadas.
+- [x] Pedir una revisión independiente de toda la rama con contexto limpio; resolver hallazgos relevantes con pruebas de reproducción cuando modifiquen comportamiento.
+- [x] Si hay dispositivo disponible, comprobar la instalación y los recorridos locales; distinguir esta evidencia de permisos y conversaciones reales no probados.
+- [x] Actualizar decisiones, límites y comandos en documentación; entregar cambios locales verificables sin publicación remota.
 
 ## Criterio de pruebas
 
