@@ -11,16 +11,16 @@ import { NotificationCard } from '../components/notifications/NotificationCard';
 import { Button, EmptyState, IconButton, Notice, PageTitle, Pill } from '../components/ui';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { useNotificationCenter } from '../notifications/useNotificationCenter';
-import { createThemedStyles } from '../theme';
+import { createThemedStyles, internalLayout } from '../theme';
 
 export default function NotificationsScreen() {
   const { colors, styles } = useStyles();
   const auth = useAuth();
   const store = useNotifications();
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}><View style={styles.shell}>
-    <View style={styles.inset}><PageTitle title="Notificaciones" subtitle="Avisos dentro de KarmaHouse" back fallback="/profile" right={<IconButton name="options-outline" label="Preferencias de notificaciones" onPress={() => router.push('/notification-settings')} />} /></View>
+    <View style={styles.inset}><PageTitle compact title="Notificaciones" subtitle="Avisos y novedades de tu actividad." back fallback="/profile" right={<IconButton name="options-outline" label="Preferencias de notificaciones" onPress={() => router.push('/notification-settings')} />} /></View>
     {!auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} />
-      : !store.available ? <View style={styles.inset}><EmptyState icon="notifications-outline" title="Cada novedad, en su lugar" description="Los avisos estarán disponibles cuando conectes una cuenta." /></View>
+      : !store.available ? <View style={styles.inset}><EmptyState plain title="Notificaciones no disponibles" description="Los avisos estarán disponibles con el servicio conectado." /></View>
       : !auth.user ? <View style={styles.inset}><AccountPrompt returnTo="/notifications" title="Mantente al tanto" description="Inicia sesión para consultar los avisos de tus mensajes, visitas y ofertas." /></View>
       : <NotificationsBody key={auth.user.id} />}
   </View></SafeAreaView>;
@@ -59,14 +59,14 @@ function NotificationsBody() {
       ListEmptyComponent={!list.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} />
         : list.error ? null
         : list.nextCursor ? <Notice>Has revisado esta página. Carga más avisos para seguir consultando los anteriores.</Notice>
-        : list.unreadOnly && store.unreadCount > 0 ? <EmptyState icon="notifications-outline" title="Hay novedades por consultar" description="Desliza hacia abajo para ver los avisos que llegaron después de esta página." />
-        : <EmptyState icon={list.unreadOnly ? 'checkmark-done-outline' : 'notifications-outline'} title={list.unreadOnly ? 'Estás al día' : 'Aquí llegan tus novedades'} description={list.unreadOnly ? 'No tienes avisos sin leer. Puedes consultar los anteriores en Todas.' : 'Cuando recibas novedades sobre visitas, ofertas o alertas de búsqueda, las encontrarás aquí. Los mensajes se consultan en el chat.'} action={<Button label={list.unreadOnly ? 'Ver todos los avisos' : 'Ir a mensajes'} secondary onPress={() => list.unreadOnly ? store.setUnreadOnly(false) : router.push('/messages')} />} />}
+        : list.unreadOnly && store.unreadCount > 0 ? <EmptyState plain title="Hay novedades por consultar" description="Desliza hacia abajo para ver los avisos que llegaron después de esta página." />
+        : <EmptyState plain title={list.unreadOnly ? 'Sin avisos pendientes' : 'Sin notificaciones'} description={list.unreadOnly ? 'No tienes avisos sin leer. Puedes consultar los anteriores en Todas.' : 'Aquí aparecerán las novedades de visitas, ofertas y alertas de búsqueda. Los mensajes se consultan en el chat.'} action={<Button label={list.unreadOnly ? 'Ver todos los avisos' : 'Ir a mensajes'} secondary onPress={() => list.unreadOnly ? store.setUnreadOnly(false) : router.push('/messages')} />} />}
       ListFooterComponent={<View style={styles.footer}>{list.nextCursor && <Button label="Cargar más avisos" secondary disabled={!!store.marking} loading={list.loadingMore} onPress={() => void store.loadMore().catch(() => {})} />}<Text style={styles.hint}>El contenido de tus conversaciones se consulta dentro del chat.</Text></View>}
     />
   </>;
 }
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper }, shell: { flex: 1, width: '100%', maxWidth: 740, alignSelf: 'center' }, inset: { paddingHorizontal: 20 },
-  filters: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingBottom: 16 }, filterOptions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', flexShrink: 1 }, list: { paddingHorizontal: 20, paddingBottom: 28, gap: 12, flexGrow: 1 },
-  loading: { padding: 40 }, listHeader: { gap: 14, paddingBottom: 4 }, summary: { gap: 6 }, count: { color: colors.ink, fontSize: 16, fontWeight: '600' }, hint: { color: colors.muted, fontSize: 12, lineHeight: 19 }, error: { gap: 7 }, footer: { paddingTop: 12, gap: 16 },
+  safe: { flex: 1, backgroundColor: colors.paper }, shell: { flex: 1, width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center' }, inset: { paddingHorizontal: internalLayout.gutter },
+  filters: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingBottom: 16 }, filterOptions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', flexShrink: 1 }, list: { paddingHorizontal: 20, paddingBottom: 28, flexGrow: 1 },
+  loading: { padding: 40 }, listHeader: { gap: 16, paddingBottom: 20 }, summary: { gap: 6 }, count: { color: colors.ink, fontSize: 16, lineHeight: 23, fontWeight: '600' }, hint: { color: colors.muted, fontSize: 12, lineHeight: 19 }, error: { gap: 12 }, footer: { paddingTop: 20, gap: 16 },
 }));

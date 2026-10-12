@@ -28,7 +28,7 @@ import { draftStorage } from '../data/draftStorage';
 import { ListingPhotos } from './ListingPhotos';
 import { LocationPicker } from './maps/LocationPicker';
 import { normalizeMapLocation } from '../domain/geo';
-import { Button, Icon, Notice, Pill } from './ui';
+import { ActionGroup, Button, Icon, Notice, Pill } from './ui';
 import { SelectionField } from './SelectionField';
 import { AMENITIES, AMENITY_GROUPS, CONDITIONS, OPERATIONS, PROVINCES, RENT_PERIODS, SWAP_BALANCES, WANTED_OPERATIONS, type ListingOperation } from '../domain/listingOptions';
 import { normalizeDecimalInput, parseDecimal, publishedNumber } from '../domain/numericInput';
@@ -662,7 +662,7 @@ export function ListingForm({
           ) : null}
 
           {stepIssues.length > 0 ? <Notice error>Revisa estos campos antes de continuar: {stepIssues.join(', ')}.</Notice> : null}
-          <View style={styles.actions}>
+          <ActionGroup style={styles.actions}>
             {step > 0 ? (
               <Button
                 label="Anterior"
@@ -699,7 +699,7 @@ export function ListingForm({
                 style={styles.actionButton}
               />
             )}
-          </View>
+          </ActionGroup>
 
           {onSaveDraft ? <Button label="Guardar borrador privado en mi cuenta" secondary disabled={submitting || photoBusy} onPress={() => void submit(true)} /> : null}
           {step > 0 && onCancel ? (
@@ -800,26 +800,26 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: layout.tabContentBottom },
   formShell: { width: '100%', maxWidth: 680, alignSelf: 'center', gap: 20 },
   steps: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 8, borderRadius: 16, backgroundColor: colors.surface },
-  stepItem: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7 },
+  stepItem: { flex: 1, minWidth: 0, alignItems: 'center', gap: 6 },
   stepDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
   stepDotActive: { backgroundColor: colors.primaryFill, borderColor: colors.primary },
   stepNumber: { color: colors.muted, fontSize: 11, fontWeight: '600' },
   stepNumberActive: { color: colors.onPrimary },
-  stepLabel: { color: colors.muted, fontSize: 13 },
+  stepLabel: { color: colors.muted, fontSize: 13, textAlign: 'center', flexShrink: 1 },
   stepLabelActive: { color: colors.ink, fontWeight: '600' },
   section: { gap: 16 },
   sectionHeading: { gap: 6, paddingTop: 4, paddingBottom: 2 },
-  sectionTitle: { color: colors.ink, fontFamily: typefaces.display, fontSize: 26, fontWeight: '600', lineHeight: 32, letterSpacing: -0.6 },
+  sectionTitle: { color: colors.ink, fontFamily: typefaces.display, fontSize: 24, fontWeight: '600', lineHeight: 30, letterSpacing: -0.5 },
   sectionDescription: { color: colors.muted, fontSize: 15, lineHeight: 21, maxWidth: 560 },
-  fieldCard: { backgroundColor: colors.surface, borderRadius: 20, padding: 16, gap: 20 },
+  fieldCard: { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, borderRadius: 16, padding: 16, gap: 20 },
   fieldGroup: { gap: 7 },
   previewGroup: { gap: 6 },
   publishNote: { color: colors.muted, fontSize: 12, lineHeight: 18 },
   labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  label: { color: colors.muted, fontSize: 13, fontWeight: '500' },
+  label: { color: colors.ink, fontSize: 14, fontWeight: '500' },
   required: { color: colors.muted },
   helper: { color: colors.muted, fontSize: 13 },
-  input: { minHeight: 44, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, backgroundColor: colors.surface, color: colors.ink, paddingHorizontal: 0, paddingTop: 6, paddingBottom: 11, fontSize: 17, lineHeight: 23 },
+  input: { minHeight: 48, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, backgroundColor: colors.surface, color: colors.ink, paddingHorizontal: 0, paddingTop: 8, paddingBottom: 11, fontSize: 17, lineHeight: 23 },
   inputError: { borderBottomColor: colors.danger, backgroundColor: colors.softDanger },
   descriptionInput: { minHeight: 132, paddingTop: 8 },
   fieldHint: { flexShrink: 1, color: colors.muted, fontSize: 12, lineHeight: 18 }, descriptionHelp: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: colors.softBlue, borderRadius: 13, padding: 12 }, characterCount: { color: colors.muted, fontSize: 11, textAlign: 'right', marginTop: -12 },
@@ -853,8 +853,8 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   amenityGroup: { gap: 8, marginTop: 4 }, amenityGroupTitle: { color: colors.ink, fontSize: 14, fontWeight: '600' },
   amenityTag: { backgroundColor: colors.paper, borderRadius: 12, paddingVertical: 7, paddingHorizontal: 11 },
   amenityTagText: { color: colors.ink, fontSize: 13 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingTop: 2 },
-  actionButton: { flexGrow: 1, minWidth: 145 },
+  actions: { paddingTop: 4 },
+  actionButton: { width: '100%' },
   operationOption: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   operationTitle: { fontSize: 17, fontWeight: '600', color: colors.ink },
   operationText: { fontSize: 14, color: colors.muted },

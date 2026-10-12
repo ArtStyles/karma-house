@@ -1,7 +1,7 @@
 import { randomUUID } from 'expo-crypto';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { isAgencyReadAccessFailure } from '../agencies/messaging/live';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,7 +14,7 @@ import { isUuid } from '../messaging/domain';
 import ListingForm from '../components/ListingForm';
 import { toDraft } from './EditScreen';
 import { emptyDraft, type ListingDraft } from '../domain/listings';
-import { Button, Notice, PageTitle } from '../components/ui';
+import { ActionGroup, Button, Notice, PageTitle } from '../components/ui';
 import { AgencyTextField, useAgencyFormStyles } from '../components/agencies/AgencyRegistrationFields';
 import { useMarketplace } from '../state/MarketplaceProvider';
 export default function AgencyPropertyScreen() {
@@ -164,37 +164,39 @@ function Property({ id }: {
     }
     return (
         <SafeAreaView style={[s.safe, { flex: 1 }]} edges={['top', 'bottom', 'left', 'right']}>
-            <ScrollView alwaysBounceVertical style={{flex:editable?undefined:1,flexGrow:editable?0:1}} contentContainerStyle={[s.content, { paddingBottom: 8 }]} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={allowed&&!editable&&!busy&&!proposedPrice&&!proposedDescription} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}>
-                <PageTitle
+            <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" alwaysBounceVertical style={{flex:editable?undefined:1,flexGrow:editable?0:1}} contentContainerStyle={[s.content, { paddingBottom: 8 }]} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={allowed&&!editable&&!busy&&!proposedPrice&&!proposedDescription} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}>
+                <PageTitle compact
                     title={id === 'new' ? 'Añadir vivienda en venta' : item?.property.title ?? 'Vivienda'}
                     subtitle={w.activeAgency?.tradeName ?? 'Cartera empresarial'}
                     back fallback="/agency-portfolio"
                 />
                 {Boolean(issue) && <Notice error>{issue}</Notice>}
+                {!loaded&&allowed&&!issue&&<ActivityIndicator accessibilityLabel="Consultando vivienda" color={colors.primary}/>}
                 {!allowed && <Notice>Selecciona una inmobiliaria aprobada para continuar.</Notice>}
                 {item?.moderationHold && (
                     <Notice error>{item.property.reviewNote ?? 'KarmaHouse retiró esta ficha. Corregirla y enviarla de nuevo requiere revisión.'}</Notice>
                 )}
-                {matches&&<ScrollView style={{maxHeight:360}} contentContainerStyle={s.card}><Text style={s.title}>Posibles viviendas coincidentes</Text><Notice>Comprueba estas fichas públicas. Puedes solicitar autorización sobre la vivienda existente o declarar que se trata de otra casa.</Notice>{matches.items.map(candidate=><View key={candidate.id}><Text style={s.copy}>{candidate.title} · {candidate.location}</Text><Button label={`Solicitar autorización: ${candidate.title}`} secondary disabled={busy} onPress={()=>void requestExisting(candidate.id)}/></View>)}<Button label="He revisado las coincidencias: es otra vivienda" disabled={busy} onPress={()=>{const seq=sequence.current;void save(matches.draft,matches.intent,matches.review).catch(e=>{if(focused.current&&seq===sequence.current)setIssue(agencyError(e));});}}/><Button label="Volver a corregir la ficha" secondary disabled={busy} onPress={()=>{setMatches(null);setIssue('');}}/></ScrollView>}
+                {matches&&<ScrollView style={{maxHeight:360}} contentContainerStyle={s.card}><Text style={s.title}>Posibles viviendas coincidentes</Text><Notice>Comprueba estas fichas públicas. Puedes solicitar autorización sobre la vivienda existente o declarar que se trata de otra casa.</Notice>{matches.items.map(candidate=><View key={candidate.id} style={s.item}><Text style={s.title}>{candidate.title}</Text><Text style={s.copy}>{candidate.location}</Text><Button label={`Solicitar autorización: ${candidate.title}`} secondary disabled={busy} onPress={()=>void requestExisting(candidate.id)}/></View>)}<ActionGroup direction="vertical"><Button label="He revisado las coincidencias: es otra vivienda" disabled={busy} onPress={()=>{const seq=sequence.current;void save(matches.draft,matches.intent,matches.review).catch(e=>{if(focused.current&&seq===sequence.current)setIssue(agencyError(e));});}}/><Button label="Volver a corregir la ficha" secondary disabled={busy} onPress={()=>{setMatches(null);setIssue('');}}/></ActionGroup></ScrollView>}
                 {editable ? (
-                    <>
+                    <View style={s.card}>
+                        <Text accessibilityRole="header" style={s.title}>Origen y autorización</Text>
                         <AgencyTextField label="Referencia de origen" value={source} onChangeText={setSource} editable={!busy && !matches && id === 'new'} />
                         <AgencyTextField label="Referencia de autorización para publicar" value={consent} onChangeText={setConsent} editable={!busy && !matches} />
-                    </>
+                    </View>
                 ) : item && (
                     <>
-                        <Text style={s.copy}>{item.property.description}</Text>
+                        <View style={s.card}><Text accessibilityRole="header" style={s.title}>Información de la vivienda</Text><Text style={s.copy}>{item.property.location}</Text><Text style={s.value}>{item.property.description}</Text></View>
                         <Notice>El responsable de origen conserva la edición de los datos comunes y la confirmación de venta.</Notice>
-                        {w.enabled&&w.activeAgency?.state==='approved'&&w.membership?.role==='admin'&&item.property.status!=='sold'&&<>
+                        {w.enabled&&w.activeAgency?.state==='approved'&&w.membership?.role==='admin'&&item.property.status!=='sold'&&<View style={s.card}><Text accessibilityRole="header" style={s.title}>Proponer cambios al origen</Text>
                             <AgencyTextField label="Proponer precio (USD)" value={proposedPrice} onChangeText={setProposedPrice} keyboardType="numeric" editable={!busy}/>
                             <Button label="Proponer cambio de precio" secondary disabled={busy||!(Number(proposedPrice)>0)} onPress={()=>void propose('price')}/>
                             <AgencyTextField label="Proponer descripción" value={proposedDescription} onChangeText={setProposedDescription} multiline maxLength={2000} editable={!busy}/>
                             <Button label="Proponer cambio de descripción" secondary disabled={busy||proposedDescription.trim().length<20} onPress={()=>void propose('content')}/>
-                        </>}
+                        </View>}
                     </>
                 )}
-                {item&&<Button label="Agenda y ocupación" secondary onPress={()=>router.push({pathname:'/agency-agenda',params:{propertyId:item.property.id}})}/>}
-                {item&&w.membership?.role==='admin'&&<Button label="Ver autorizaciones y cambios" secondary onPress={()=>router.push('/agency-property-requests')}/>}
+                <ActionGroup>{item&&<Button label="Agenda y ocupación" secondary onPress={()=>router.push({pathname:'/agency-agenda',params:{propertyId:item.property.id}})}/>}
+                {item&&w.membership?.role==='admin'&&<Button label="Ver autorizaciones y cambios" secondary onPress={()=>router.push('/agency-property-requests')}/>}</ActionGroup>
                 {!loaded && allowed && Boolean(issue) && <Notice>Desliza hacia abajo para volver a consultar la vivienda.</Notice>}
             </ScrollView>
             {editable && (

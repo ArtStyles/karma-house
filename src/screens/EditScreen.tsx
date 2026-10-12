@@ -9,7 +9,7 @@ import { Button, goBack, Notice, PageTitle } from '../components/ui';
 import type { Listing, ListingDraft } from '../domain/listings';
 import { normalizeMapLocation } from '../domain/geo';
 import { useMarketplace } from '../state/MarketplaceProvider';
-import { createThemedStyles } from '../theme';
+import { createThemedStyles, internalLayout } from '../theme';
 import {useListingManagement} from '../transfers/useListingManagement';
 
 export default function EditScreen() {
@@ -26,7 +26,7 @@ export default function EditScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.header}>
-        <PageTitle title="Editar anuncio" back fallback="/my-listings" />
+        <PageTitle compact title="Editar anuncio" subtitle="Revisa la ficha antes de guardar los cambios." back fallback="/my-listings" />
         {storageError ? <Notice error>{storageError}</Notice> : null}
       </View>
 
@@ -109,7 +109,7 @@ export function toDraft(listing: Listing): ListingDraft {
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.paper },
-  header: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 20 },
+  header: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', paddingHorizontal: internalLayout.gutter },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  unavailable: { width: '100%', maxWidth: 720, alignSelf: 'center', padding: 20, gap: 16 },
+  unavailable: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', padding: internalLayout.gutter, gap: 16 },
 }));

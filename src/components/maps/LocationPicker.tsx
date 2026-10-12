@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { APPROXIMATE_RADIUS_METERS, normalizeMapLocation, type MapLocation } from '../../domain/geo';
 import { createThemedStyles } from '../../theme';
-import { Button, Icon, IconButton, Pill } from '../ui';
+import { ActionGroup, Button, Icon, IconButton, Pill } from '../ui';
 import { KarmaMap } from './KarmaMap';
 import { CUBA_CENTER, CUBA_ZOOM } from './mapConfig';
 import { beginLocationSelection, locationSelectionReducer, publishedSelection } from './locationSelection';
@@ -89,10 +89,10 @@ function LocationPickerModal({ value, onCancel, onConfirm }: { value?: MapLocati
             <Pill label="Exacta" icon="location-outline" active={selection.precision === 'exact'} onPress={() => dispatch({ type: 'precision', precision: 'exact' })} />
           </View>
           <Text accessibilityLiveRegion="polite" style={styles.description}>{!published ? 'Todavía no has elegido un punto. Toca el mapa para situarlo.' : selection.precision === 'approximate' ? `El círculo muestra la zona pública de ${APPROXIMATE_RADIUS_METERS} m de radio. El punto preciso que tocaste no se guarda.` : 'El marcador muestra el punto exacto que será visible para todos.'}</Text>
-          <View style={styles.modalActions}>
+          <ActionGroup style={styles.modalActions}>
             <Button label="Cancelar" secondary onPress={onCancel} style={styles.cancelAction} />
             <Button label={!published && value ? 'Confirmar sin ubicación' : 'Confirmar ubicación'} disabled={!published && !value} onPress={() => onConfirm(published)} style={styles.confirmAction} />
-          </View>
+          </ActionGroup>
           {published && <Pressable accessibilityRole="button" accessibilityLabel="Retirar punto del mapa" onPress={() => dispatch({ type: 'clear' })} style={({ pressed }) => [styles.clearPoint, pressed && styles.dimmed]}>
             <Icon name="trash-outline" color={colors.danger} size={16} />
             <Text style={styles.removeText}>Retirar punto</Text>
@@ -123,16 +123,16 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   sheet: { flex: 1, width: '100%', borderRadius: 24, overflow: 'hidden', backgroundColor: colors.surface },
   wideSheet: { width: 680 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16 },
-  headerCopy: { flex: 1, gap: 5 },
+  headerCopy: { flex: 1, minWidth: 0, gap: 5 },
   title: { fontSize: 21, fontWeight: '600', letterSpacing: -0.4, color: colors.ink },
   close: { backgroundColor: colors.paper },
   map: { flex: 1, minHeight: 150, backgroundColor: colors.paper },
   controls: { flexGrow: 0, maxHeight: 304 },
-  controlsContent: { padding: 16, gap: 10 },
+  controlsContent: { padding: 16, gap: 16 },
   controlTitle: { color: colors.ink, fontSize: 14, fontWeight: '600' },
   precision: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, backgroundColor: colors.paper, padding: 5, borderRadius: 24, alignSelf: 'flex-start' },
-  modalActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingTop: 2 },
-  cancelAction: { flexGrow: 1, flexBasis: 110 },
-  confirmAction: { flexGrow: 2, flexBasis: 190 },
+  modalActions: { paddingTop: 4 },
+  cancelAction: { width: '100%' },
+  confirmAction: { width: '100%' },
   clearPoint: { flexDirection: 'row', gap: 6, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 }));

@@ -5,7 +5,7 @@ import { createThemedStyles } from '../../theme';
 
 const pad = (value: number) => String(value).padStart(2,'0');
 export function VisitDateTimeFields({ date, time, disabled, onDate, onTime, purpose = 'visit' }: { purpose?: 'visit' | 'sale'; date: string; time: string; disabled: boolean; onDate(value: string): void; onTime(value: string): void }) {
-  const { styles } = useStyles();
+  const { colors, styles } = useStyles();
   const today = havanaDateTime().date;
   const [firstYear,firstMonth] = today.split('-').map(Number);
   const months = Array.from({length:7},(_,index) => {
@@ -16,7 +16,7 @@ export function VisitDateTimeFields({ date, time, disabled, onDate, onTime, purp
   const days = new Date(Date.UTC(year,month,0)).getUTCDate();
   const [hour,minute] = time.split(':');
   return <View style={styles.fields}>
-    {purpose === 'sale' ? <View><Text style={styles.label}>Fecha de venta (AAAA-MM-DD)</Text><TextInput accessibilityLabel="Fecha de venta (AAAA-MM-DD)" style={styles.dateInput} value={date} onChangeText={onDate} editable={!disabled} placeholder="AAAA-MM-DD" maxLength={10}/></View> : <><SelectionField inline label="Mes de la visita" value={date.slice(0,7)} options={months} disabled={disabled} onChange={value => {
+    {purpose === 'sale' ? <View style={styles.dateField}><Text style={styles.label}>Fecha de venta (AAAA-MM-DD)</Text><TextInput accessibilityLabel="Fecha de venta (AAAA-MM-DD)" style={styles.dateInput} value={date} onChangeText={onDate} editable={!disabled} placeholder="AAAA-MM-DD" placeholderTextColor={colors.muted} maxLength={10}/></View> : <><SelectionField inline label="Mes de la visita" value={date.slice(0,7)} options={months} disabled={disabled} onChange={value => {
       const [nextYear,nextMonth] = value.split('-').map(Number);
       const nextDay = Math.min(day,new Date(Date.UTC(nextYear,nextMonth,0)).getUTCDate());
       onDate(`${value}-${pad(nextDay)}`);
@@ -29,4 +29,4 @@ export function VisitDateTimeFields({ date, time, disabled, onDate, onTime, purp
     <Text style={styles.hint}>{purpose === 'sale' ? 'Hora de Cuba · Indica cuándo ocurrió la venta. La fecha y hora no pueden estar en el futuro.' : 'Hora de Cuba · Elige una fecha futura, dentro de los próximos 180 días.'}</Text>
   </View>;
 }
-const useStyles = createThemedStyles(colors => StyleSheet.create({label:{color:colors.ink,fontSize:14,marginBottom:6},dateInput:{color:colors.ink,borderColor:colors.border,borderWidth:1,borderRadius:12,padding:12},fields:{gap:13},timeRow:{flexDirection:'row',gap:10},timeField:{flex:1,minWidth:0},hint:{fontSize:12,lineHeight:19,color:colors.muted}}));
+const useStyles = createThemedStyles(colors => StyleSheet.create({label:{color:colors.ink,fontSize:13,lineHeight:19,fontWeight:'600'},dateField:{gap:8},dateInput:{minHeight:52,color:colors.ink,borderColor:colors.border,borderWidth:1,borderRadius:12,padding:12,fontSize:16},fields:{gap:16},timeRow:{flexDirection:'row',flexWrap:'wrap',gap:12},timeField:{flexGrow:1,flexBasis:140,minWidth:0},hint:{fontSize:12,lineHeight:19,color:colors.muted}}));

@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Modal, ScrollView, StyleSheet, Text, TextInput, V
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { parseListingText, type ImportResult } from '../domain/importListing';
 import { createThemedStyles } from '../theme';
-import { Button, Icon, Notice } from './ui';
+import { ActionGroup, Button, Icon, Notice } from './ui';
 
 const MAX_LENGTH = 4000;
 const MIN_LENGTH = 20;
@@ -27,8 +27,10 @@ export function ImportListingSheet({ onClose, onImport, preserveDraft = false }:
               placeholder="Pega aquí tu anuncio de Revolico o WhatsApp" placeholderTextColor={colors.muted} style={styles.input} />
             <Text style={styles.counter}>{text.length}/{MAX_LENGTH}</Text>
             {Boolean(error) && <Notice error>{error}</Notice>}
-            <Button label="Analizar" icon="sparkles-outline" disabled={text.trim().length < MIN_LENGTH} onPress={() => setError(onImport(parseListingText(text)) ?? '')} />
-            <Button label="Cancelar" secondary onPress={onClose} />
+            <ActionGroup direction="vertical">
+              <Button label="Analizar" icon="sparkles-outline" disabled={text.trim().length < MIN_LENGTH} onPress={() => setError(onImport(parseListingText(text)) ?? '')} />
+              <Button label="Cancelar" secondary onPress={onClose} />
+            </ActionGroup>
           </ScrollView>
         </View>
       </View>
@@ -38,8 +40,8 @@ export function ImportListingSheet({ onClose, onImport, preserveDraft = false }:
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', paddingHorizontal: 16 },
-  sheet: { backgroundColor: colors.surface, width: '100%', maxWidth: 560, maxHeight: '100%', alignSelf: 'center', borderRadius: 28, overflow: 'hidden' },
-  content: { padding: 24, gap: 14 }, icon: { width: 54, height: 54, borderRadius: 20, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
+  sheet: { backgroundColor: colors.surface, width: '100%', maxWidth: 560, maxHeight: '100%', alignSelf: 'center', borderRadius: 20, overflow: 'hidden' },
+  content: { padding: 20, gap: 16 }, icon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 25, fontWeight: '600', letterSpacing: -0.5, color: colors.ink }, description: { fontSize: 15, lineHeight: 22, color: colors.muted },
   input: { minHeight: 200, maxHeight: 360, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 14, fontSize: 16, lineHeight: 22, color: colors.ink },
   counter: { color: colors.muted, fontSize: 11, textAlign: 'right', marginTop: -6 },
