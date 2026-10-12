@@ -1,154 +1,115 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Icon, IconButton, Notice, PageTitle, type IconName } from '../components/ui';
+import { UserAvatar } from '../components/account/UserAvatar';
+import { AgencyVerifiedBadge } from '../components/agencies/AgencyVerifiedBadge';
+import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
-import { AccountPrompt } from '../components/AccountPrompt';
 import { useAuth } from '../auth/AuthProvider';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { createThemedStyles, layout } from '../theme';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
-import { AccountMenu } from '../components/account/AccountMenu';
 import { useSavedSearches } from '../searches/useSavedSearches';
 import { setDataSaver, useDataSaver } from '../settings/useDataSaver';
-import {AgencyVerifiedBadge} from '../components/agencies/AgencyVerifiedBadge';
-import {useAgencyWorkspace} from '../agencies/useAgencyWorkspace';
-import {useIncomingTransferCount} from '../transfers/useIncomingTransferCount';
+import { useAgencyWorkspace } from '../agencies/useAgencyWorkspace';
+import { useIncomingTransferCount } from '../transfers/useIncomingTransferCount';
 
 export default function ProfileScreen() {
   const { colors, styles } = useStyles();
   const { favoriteIds, ownListings: own, mode, refresh: refreshListings } = useMarketplace();
-  const { user, session, displayName, isAdmin, isOwner, suspended, suspensionReason, signOut, error: authError, refreshProfile } = useAuth();
+  const { ready: authReady, user, session, displayName, avatarUrl, isAdmin, isOwner, suspended, suspensionReason, signOut, error: authError, refreshProfile } = useAuth();
   const { unreadCount, refresh: refreshMessages } = useMessaging();
   const { unreadCount: notificationUnreadCount, refreshSummary, marking } = useNotifications();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const savedSearches = useSavedSearches();
   const dataSaver = useDataSaver();
-  const transfers=useIncomingTransferCount();
-  const agencies=useAgencyWorkspace();
+  const transfers = useIncomingTransferCount();
+  const agencies = useAgencyWorkspace();
   const reload = useConsultationRefresh(`${user?.id}:${session?.access_token}`, async () => {
     setError('');
     const outcomes = await Promise.allSettled([refreshProfile(), refreshListings(), refreshMessages(), refreshSummary(), savedSearches.refresh(), agencies.refreshAgencies(), transfers.refresh()]);
     const failed = outcomes.find(result => result.status === 'rejected');
     if (failed?.status === 'rejected') throw failed.reason;
   }, busy || !!marking || !user || mode !== 'cloud', () => setError('No pudimos actualizar toda tu actividad. Desliza hacia abajo para volver a intentarlo.'));
-  // Tabs stay mounted: recount alerts saved or removed elsewhere when Mi espacio comes back into view.
   const refreshSearches = savedSearches.refresh;
   const seen = useRef(false);
   useFocusEffect(useCallback(() => { if (seen.current) void refreshSearches(); seen.current = true; }, [refreshSearches]));
+  const principal = agencies.principalAgency;
+  const agencyInvitations = user && !principal && (agencies.enabled || agencies.agencies.length > 0);
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
     <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!busy && !!user && mode === 'cloud'} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}>
       <PageTitle title="Mi espacio" right={<IconButton name="settings-outline" label="Ajustes de cuenta" onPress={() => router.push('/account-settings')} />} />
 
-      <View style={styles.identity}>
-        <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.identityRing} />
-        <AccountMenu size={62} />
+      {(user || mode === 'demo') && <View style={styles.identity}>
+        <UserAvatar size={48} avatarUrl={user ? avatarUrl : null} name={user ? displayName : ''} />
         <View style={styles.identityText}>
-          <Text style={styles.identityEyebrow}>TU KARMAHOUSE</Text>
-          <Text style={styles.heading}>{user ? displayName || 'Mi cuenta' : 'Tu espacio personal'}</Text>
-          <Text style={styles.identityDescription}>{mode === 'demo' ? 'Demostración local' : user?.email ?? 'Tu próximo comienzo, contigo.'}</Text>
+          <Text style={styles.heading}>{user ? displayName || 'Mi cuenta' : 'Demostración local'}</Text>
+          <Text style={styles.identityDescription}>{mode === 'demo' ? 'Guardado en este dispositivo' : user?.email}</Text>
         </View>
-      </View>
+      </View>}
 
-      {user&&agencies.principalAgency&&<Pressable accessibilityRole="button" accessibilityLabel="Abrir inmobiliaria principal" onPress={()=>router.push({pathname:'/agency-workspace',params:{agencyId:agencies.principalAgency!.id}})} style={styles.principalCard}><View style={styles.rowIcon}><Icon name="business-outline" color={colors.amber}/></View><View style={styles.identityText}><Text style={styles.rowTitle}>{agencies.principalAgency.tradeName}</Text><AgencyVerifiedBadge agencyName={agencies.principalAgency.tradeName} verified={agencies.principalAgency.verified} principal={agencies.principalAgency.isPrincipal} labelled/><Text style={styles.rowDescription}>Gestiona tu perfil comercial, cartera y equipo.</Text></View><Icon name="chevron-forward" color={colors.amber}/></Pressable>}
-      {isAdmin&&<Pressable accessibilityRole="button" accessibilityLabel="Administración" onPress={()=>router.push('/administration')} style={styles.adminCard}><View style={styles.rowIcon}><Icon name="shield-checkmark-outline" color={colors.primary}/></View><View style={styles.identityText}><Text style={styles.rowTitle}>Administración</Text><Text style={styles.rowDescription}>Revisiones, reportes y gestión de la comunidad.</Text></View><Icon name="chevron-forward" color={colors.primary}/></Pressable>}
-
-      {/* Device preference remains accessible before any account or activity actions. */}
-      <Text style={styles.sectionLabel}>Preferencias</Text>
+      {/* A device preference stays reachable before any private activity, including for guests. */}
       <View style={styles.group}>
-        <View style={styles.row}>
-          <View style={styles.rowIcon}><Icon name="cellular-outline" size={21} color={colors.primary} /></View>
-          <View style={styles.rowBody}>
-            <View style={styles.rowCopy}><Text style={styles.rowTitle}>Ahorro de datos</Text><Text style={styles.rowDescription}>Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas.</Text></View>
-            <Switch accessibilityLabel="Ahorro de datos" accessibilityHint="Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas." value={dataSaver} onValueChange={setDataSaver} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.onPrimary} ios_backgroundColor={colors.switchTrack} />
-          </View>
+        <View style={[styles.row, styles.dataRow]}>
+          <Icon name="cellular-outline" size={21} color={colors.primary} />
+          <View style={styles.rowCopy}><Text style={styles.rowTitle}>Ahorro de datos</Text><Text style={styles.rowDescription}>Fotos al tocar; mapa al pedirlo.</Text></View>
+          <Switch accessibilityLabel="Ahorro de datos" accessibilityHint="Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas." hitSlop={10} value={dataSaver} onValueChange={setDataSaver} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.onPrimary} ios_backgroundColor={colors.switchTrack} />
         </View>
       </View>
 
-      {mode === 'cloud' && !user ? <View style={styles.accountPrompt}><AccountPrompt returnTo="/profile" /></View> : null}
+      {mode === 'cloud' && !authReady ? <View style={styles.loading}><ActivityIndicator color={colors.primary} /><Text style={styles.rowDescription}>Cargando tu cuenta…</Text></View> : mode === 'cloud' && !user ? <View style={styles.guest}>
+        <Text accessibilityRole="header" style={styles.guestTitle}>Entra a tu cuenta</Text>
+        <Text style={styles.guestText}>Guarda viviendas y consulta tus anuncios y conversaciones.</Text>
+        <Button label="Entrar o crear cuenta" onPress={() => router.push({ pathname: '/auth', params: { returnTo: '/profile' } })} style={styles.guestAction} />
+      </View> : null}
       {suspended && <Notice error>Tu cuenta está suspendida. No puedes publicar ni enviar mensajes. {suspensionReason}</Notice>}
-      {isOwner && <Notice>Tu información de cuenta es privada. Los demás solo ven tu nombre y foto de perfil.</Notice>}
-      {(user || mode === 'demo') && <><Text style={styles.sectionLabel}>Tu actividad</Text>
-      {user&&!agencies.principalAgency&&(agencies.enabled||agencies.agencies.length>0)&&<Button secondary icon="business-outline" label="Mi inmobiliaria e invitaciones" onPress={()=>router.push('/agency-workspace')}/>}
-      {user&&!isOwner&&<Button secondary icon="swap-horizontal-outline" label={`Anuncios por aceptar${transfers.count===null?'':` · ${transfers.count}`}`} onPress={()=>router.push('/listing-transfers')}/>}
-      <View style={styles.group}>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Notificaciones, ${notificationUnreadCount} sin leer`} onPress={() => router.push('/notifications')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-          <View style={styles.rowIcon}><Icon name="notifications-outline" size={21} color={colors.primary} /></View>
-          <View style={styles.rowBody}><View style={styles.rowCopy}><Text style={styles.rowTitle}>Notificaciones</Text><Text style={styles.rowDescription}>Novedades de tus conversaciones</Text></View><View style={styles.accessory}>{notificationUnreadCount > 0 && <Text style={[styles.count, styles.unread]}>{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}</Text>}<Icon name="chevron-forward" size={17} color={colors.muted} /></View></View>
-        </Pressable>
-        <View style={styles.separator} />
-        <Pressable accessibilityRole="button" accessibilityLabel={`Mensajes, ${unreadCount} sin leer`} onPress={() => router.push('/messages')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-          <View style={styles.rowIcon}><Icon name="chatbubbles-outline" size={21} color={colors.primary} /></View>
-          <View style={styles.rowBody}><View style={styles.rowCopy}><Text style={styles.rowTitle}>Mensajes</Text><Text style={styles.rowDescription}>{mode === 'demo' ? 'Disponible con una cuenta conectada' : 'Conversa sobre cada vivienda'}</Text></View><View style={styles.accessory}>{unreadCount > 0 && <Text style={[styles.count, styles.unread]}>{unreadCount > 99 ? '99+' : unreadCount}</Text>}<Icon name="chevron-forward" size={17} color={colors.muted} /></View></View>
-        </Pressable>
-        <View style={styles.separator} />
-        <Pressable accessibilityRole="button" accessibilityLabel="Visitas y ofertas" onPress={() => router.push('/requests')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-          <View style={styles.rowIcon}><Icon name="calendar-outline" size={21} color={colors.primary} /></View>
-          <View style={styles.rowBody}><View style={styles.rowCopy}><Text style={styles.rowTitle}>Visitas y ofertas</Text><Text style={styles.rowDescription}>Solicitudes, respuestas y próximos pasos</Text></View><Icon name="chevron-forward" size={17} color={colors.muted} /></View>
-        </Pressable>
-        <View style={styles.separator} />
-        <Pressable accessibilityRole="button" accessibilityLabel={`Mis anuncios, ${own.length}`} onPress={() => router.push('/my-listings')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-          <View style={[styles.rowIcon, styles.listingsIcon]}><Icon name="home-outline" size={21} color={colors.green} /></View>
-          <View style={styles.rowBody}>
-            <View style={styles.rowCopy}><Text style={styles.rowTitle}>Mis anuncios</Text><Text style={styles.rowDescription}>{mode === 'demo' ? 'Tus anuncios en este dispositivo' : 'Tus viviendas y su revisión'}</Text></View>
-            <View style={styles.accessory}><Text style={styles.count}>{own.length}</Text><Icon name="chevron-forward" size={17} color={colors.muted} /></View>
-          </View>
-        </Pressable>
-        <View style={styles.separator} />
-        <Pressable accessibilityRole="button" accessibilityLabel={`Favoritos, ${favoriteIds.length}`} onPress={() => router.push('/favorites')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-          <View style={[styles.rowIcon, styles.favoritesIcon]}><Icon name="heart-outline" size={21} color={colors.rose} /></View>
-          <View style={styles.rowBody}>
-            <View style={styles.rowCopy}><Text style={styles.rowTitle}>Favoritos</Text><Text style={styles.rowDescription}>Lugares que quieres recordar</Text></View>
-            <View style={styles.accessory}><Text style={styles.count}>{favoriteIds.length}</Text><Icon name="chevron-forward" size={17} color={colors.muted} /></View>
-          </View>
-        </Pressable>
-        {mode === 'cloud' && <>
-          <View style={styles.separator} />
-          <Pressable accessibilityRole="button" accessibilityLabel={`Mis alertas, ${savedSearches.items.length}`} onPress={() => router.push('/saved-searches')} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-            <View style={styles.rowIcon}><Icon name="bookmark-outline" size={21} color={colors.primary} /></View>
-            <View style={styles.rowBody}>
-              <View style={styles.rowCopy}><Text style={styles.rowTitle}>Mis alertas</Text><Text style={styles.rowDescription}>Búsquedas guardadas que te avisan</Text></View>
-              <View style={styles.accessory}><Text style={styles.count}>{savedSearches.items.length}</Text><Icon name="chevron-forward" size={17} color={colors.muted} /></View>
-            </View>
-          </Pressable>
-          {user && own.some(item => item.status === 'active' && item.moderationStatus === 'approved') && <>
-            <View style={styles.separator} />
-            <AccountRow icon="person-circle-outline" title="Ver mi perfil público" description="Lo que ven quienes visitan tus anuncios" onPress={() => router.push(`/user/${user.id}`)} />
-          </>}
-        </>}
-      </View></>}
 
-      <View style={styles.publish}>
-        <View style={styles.publishHeading}><View style={styles.publishIcon}><Icon name="key-outline" color={colors.primary} size={25} /></View><Text style={styles.publishEyebrow}>PARA PROPIETARIOS</Text></View>
-        <Text style={styles.publishTitle}>Dale un lugar a tu vivienda.</Text>
-        <Text style={styles.publishText}>Añade los detalles, elige sus mejores fotos y prepara tu {own.length ? 'próximo' : 'primer'} anuncio.</Text>
-        <Button label={mode === 'cloud' ? 'Publicar mi vivienda' : 'Crear anuncio de prueba'} onPress={() => router.push('/publish')} icon="add-outline" />
-      </View>
-
-      {/* Explorar no longer carries the account menu, so the account lives here in plain sight. */}
-      {user && <>
-        <Text style={styles.sectionLabel}>Cuenta</Text>
+      {user && (principal || agencyInvitations || isAdmin) && <>
+        <Text style={styles.sectionLabel}>Gestión</Text>
         <View style={styles.group}>
-          <AccountRow icon="settings-outline" title="Ajustes de cuenta" description="Apariencia, nombre, foto y privacidad" onPress={() => router.push('/account-settings')} />
-          <View style={styles.separator} />
-          <AccountRow icon="notifications-outline" title="Preferencias de notificaciones" description="Qué avisos quieres recibir" onPress={() => router.push('/notification-settings')} />
-          <View style={styles.separator} />
-          <Pressable accessibilityRole="button" accessibilityLabel="Cerrar sesión" disabled={busy} onPress={async () => {
-            setBusy(true); setError('');
-            try { await signOut(); } catch { setError('No pudimos cerrar la sesión. Inténtalo de nuevo.'); } finally { setBusy(false); }
-          }} style={({ pressed }) => [styles.row, styles.compactRow, pressed && styles.pressed]}>
-            <View style={[styles.rowIcon, styles.dangerIcon]}>{busy ? <ActivityIndicator size="small" color={colors.danger} /> : <Icon name="log-out-outline" size={21} color={colors.danger} />}</View>
-            <Text style={[styles.rowTitle, { color: colors.danger, flex: 1 }]}>Cerrar sesión</Text>
-          </Pressable>
+          {principal && <AccountRow icon="business-outline" title={principal.tradeName} description="Inmobiliaria principal" onPress={() => router.push({ pathname: '/agency-workspace', params: { agencyId: principal.id } })}>
+            <AgencyVerifiedBadge agencyName={principal.tradeName} verified={principal.verified} principal={principal.isPrincipal} labelled />
+          </AccountRow>}
+          {agencyInvitations && <AccountRow icon="business-outline" title="Mi inmobiliaria e invitaciones" onPress={() => router.push('/agency-workspace')} />}
+          {isAdmin && <AccountRow icon="shield-checkmark-outline" title="Administración" onPress={() => router.push('/administration')} />}
         </View>
       </>}
 
-      <Text style={styles.demoNote}>{mode === 'demo' ? 'Tus cambios se guardan en este dispositivo. Esta demo no incluye cuentas, mensajes ni publicaciones públicas.' : 'Conversa sobre cada vivienda sin publicar tu teléfono. Tus anuncios se revisan antes de aparecer en el catálogo.'}</Text>
+      {(user || mode === 'demo') && <>
+        <Text style={styles.sectionLabel}>Actividad</Text>
+        <View style={styles.group}>
+          <AccountRow icon="chatbubbles-outline" title="Mensajes" count={unreadCount} unread description={mode === 'demo' ? 'Disponible con una cuenta conectada' : undefined} onPress={() => router.push('/messages')} />
+          <AccountRow icon="notifications-outline" title="Notificaciones" count={notificationUnreadCount} unread onPress={() => router.push('/notifications')} />
+          <AccountRow icon="calendar-outline" title="Visitas y ofertas" onPress={() => router.push('/requests')} />
+        </View>
+        <Text style={styles.sectionLabel}>Viviendas</Text>
+        <View style={styles.group}>
+          <AccountRow icon="home-outline" title="Mis anuncios" count={own.length} onPress={() => router.push('/my-listings')} />
+          <AccountRow icon="heart-outline" title="Favoritos" count={favoriteIds.length} onPress={() => router.push('/favorites')} />
+          {mode === 'cloud' && <>
+            <AccountRow icon="bookmark-outline" title="Mis alertas" count={savedSearches.items.length} onPress={() => router.push('/saved-searches')} />
+            {user && own.some(item => item.status === 'active' && item.moderationStatus === 'approved') && <AccountRow icon="person-circle-outline" title="Ver mi perfil público" onPress={() => router.push(`/user/${user.id}`)} />}
+          </>}
+          {user && !isOwner && <AccountRow icon="swap-horizontal-outline" title="Anuncios por aceptar" count={transfers.count} onPress={() => router.push('/listing-transfers')} />}
+        </View>
+      </>}
+
+      {user && <>
+        <Text style={styles.sectionLabel}>Cuenta</Text>
+        <View style={styles.group}>
+          <AccountRow icon="notifications-outline" title="Preferencias de notificaciones" onPress={() => router.push('/notification-settings')} />
+          <AccountRow icon="log-out-outline" title="Cerrar sesión" danger disabled={busy} loading={busy} onPress={async () => {
+            setBusy(true); setError('');
+            try { await signOut(); } catch { setError('No pudimos cerrar la sesión. Inténtalo de nuevo.'); } finally { setBusy(false); }
+          }} />
+        </View>
+      </>}
+      {mode === 'demo' && <Text style={styles.demoNote}>Esta demo no incluye cuentas, mensajes ni publicaciones públicas.</Text>}
       <View style={styles.legal}>
         <Pressable accessibilityRole="link" style={styles.legalLink} onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.legalText}>Privacidad</Text></Pressable>
         <Text style={styles.legalText}>·</Text>
@@ -160,50 +121,38 @@ export default function ProfileScreen() {
   </SafeAreaView>;
 }
 
-function AccountRow({ icon, title, description, onPress }: { icon: IconName; title: string; description: string; onPress(): void }) {
+function AccountRow({ icon, title, description, count, unread = false, danger = false, disabled = false, loading = false, children, onPress }: {
+  icon: IconName; title: string; description?: string; count?: number | null; unread?: boolean; danger?: boolean;
+  disabled?: boolean; loading?: boolean; children?: ReactNode; onPress(): void;
+}) {
   const { colors, styles } = useStyles();
-  return <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-    <View style={styles.rowIcon}><Icon name={icon} size={21} color={colors.primary} /></View>
-    <View style={styles.rowBody}><View style={styles.rowCopy}><Text style={styles.rowTitle}>{title}</Text><Text style={styles.rowDescription}>{description}</Text></View><Icon name="chevron-forward" size={17} color={colors.muted} /></View>
+  const hasCount = count != null && (!unread || count > 0);
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}${count != null ? `, ${count}${unread ? ' sin leer' : ''}` : ''}`} accessibilityHint={description} accessibilityState={{ disabled, busy: loading }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.row, styles.accountRow, pressed && styles.pressed]}>
+    {loading ? <ActivityIndicator size="small" color={danger ? colors.danger : colors.primary} /> : <Icon name={icon} color={danger ? colors.danger : colors.primary} size={21} />}
+    <View style={styles.rowCopy}><Text style={[styles.rowTitle, danger && { color: colors.danger }]}>{title}</Text>{children}{description && <Text style={styles.rowDescription}>{description}</Text>}</View>
+    {hasCount && <Text style={[styles.count, unread && styles.unread]}>{unread && count! > 99 ? '99+' : count}</Text>}
+    {!danger && <Icon name="chevron-forward" size={16} color={colors.muted} />}
   </Pressable>;
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper },
-  content: { width: '100%', maxWidth: 700, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: layout.tabContentBottom },
-  identity: { flexDirection: 'row', alignItems: 'center', gap: 15, backgroundColor: colors.softBlue, borderRadius: 26, padding: 22, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-  principalCard:{marginTop:14,padding:18,borderWidth:1,borderColor:colors.amber,borderRadius:20,backgroundColor:colors.softAmber,flexDirection:'row',alignItems:'center',gap:12},
-  adminCard:{marginTop:14,padding:18,borderWidth:1,borderColor:colors.border,borderRadius:20,backgroundColor:colors.surface,flexDirection:'row',alignItems:'center',gap:12},
-  identityRing: { position: 'absolute', right: -72, top: -73, width: 195, height: 195, borderRadius: 100, borderWidth: 30, borderColor: colors.border },
-  avatar: { width: 62, height: 62, backgroundColor: colors.surface, borderRadius: 22, borderWidth: 4, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 12px rgba(51, 87, 137, 0.05)' },
-  initials: { color: colors.primary, fontSize: 22, fontWeight: '600', letterSpacing: -0.5 },
-  identityText: { flex: 1, minWidth: 0, gap: 5 },
-  identityEyebrow: { color: colors.mutedBlue, fontSize: 10, lineHeight: 14, fontWeight: '700', letterSpacing: 1.1 },
-  heading: { color: colors.inkBlue, fontSize: 21, lineHeight: 27, fontWeight: '600', letterSpacing: -.5 },
-  identityDescription: { color: colors.mutedBlue, fontSize: 13, lineHeight: 19 },
-  accountPrompt: { marginTop: 18 },
-  sectionLabel: { color: colors.muted, fontSize: 13, fontWeight: '600', marginTop: 26, marginBottom: 11, marginLeft: 4 },
-  group: { backgroundColor: colors.surface, borderRadius: 23, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
-  row: { minHeight: 79, flexDirection: 'row', alignItems: 'center', gap: 13, paddingLeft: 16, paddingRight: 18, paddingVertical: 15 },
-  pressed: { backgroundColor: colors.paper },
-  rowIcon: { width: 39, height: 39, borderRadius: 13, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
-  compactRow: { minHeight: 60 }, dangerIcon: { backgroundColor: colors.softDanger },
-  listingsIcon: { backgroundColor: colors.softGreen }, favoritesIcon: { backgroundColor: colors.softRose },
-  rowBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rowCopy: { flex: 1, gap: 4 },
-  rowTitle: { fontSize: 16, fontWeight: '500', color: colors.ink, letterSpacing: -.25 },
-  rowDescription: { color: colors.muted, fontSize: 12, lineHeight: 17 },
-  accessory: { flexDirection: 'row', alignItems: 'center', gap: 11 },
-  count: { color: colors.muted, fontSize: 13, lineHeight: 18, fontVariant: ['tabular-nums'], minWidth: 26, textAlign: 'center', paddingHorizontal: 7, paddingVertical: 4, backgroundColor: colors.paper, borderRadius: 12 },
-  unread: { color: colors.primary, backgroundColor: colors.softBlue, fontWeight: '600' },
-  separator: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginLeft: 68 },
-  publish: { padding: 22, backgroundColor: colors.softBlue, borderRadius: 25, gap: 12, marginTop: 24, borderWidth: 1, borderColor: colors.border },
-  publishHeading: { flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: 2 },
-  publishIcon: { width: 43, height: 43, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderRadius: 14 },
-  publishEyebrow: { color: colors.mutedBlue, fontSize: 10, fontWeight: '600', letterSpacing: 0.8 },
-  publishTitle: { fontSize: 22, lineHeight: 28, fontWeight: '600', letterSpacing: -.5, color: colors.ink },
-  publishText: { fontSize: 15, color: colors.muted, lineHeight: 22, marginBottom: 6 },
-  legal: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 14, minHeight: 44 }, legalText: { color: colors.muted, fontSize: 13, textDecorationLine: 'none' },
-  legalLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
-  demoNote: { color: colors.muted, fontSize: 13, lineHeight: 20, paddingHorizontal: 16, marginTop: 18 },
+  content: { width: '100%', maxWidth: 700, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: layout.tabContentBottom },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 2, paddingBottom: 20 },
+  identityText: { flex: 1, minWidth: 0, gap: 4 }, heading: { color: colors.ink, fontSize: 17, lineHeight: 23, fontWeight: '600' },
+  identityDescription: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+  sectionLabel: { color: colors.muted, fontSize: 13, fontWeight: '500', marginTop: 22, marginBottom: 8, marginLeft: 4 },
+  group: { backgroundColor: colors.surface, borderRadius: 16, overflow: 'hidden' },
+  row: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 14, paddingVertical: 13 },
+  accountRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  dataRow: { minHeight: 68 }, pressed: { backgroundColor: colors.softBlue }, rowCopy: { flex: 1, minWidth: 0, gap: 3 },
+  rowTitle: { fontSize: 15, lineHeight: 21, fontWeight: '500', color: colors.ink }, rowDescription: { color: colors.muted, fontSize: 12, lineHeight: 18 },
+  count: { color: colors.muted, fontSize: 13, lineHeight: 18, fontVariant: ['tabular-nums'], minWidth: 22, textAlign: 'center', paddingHorizontal: 5, paddingVertical: 3 },
+  unread: { color: colors.primary, backgroundColor: colors.softBlue, borderRadius: 12, fontWeight: '600' },
+  loading: { flexDirection: 'row', gap: 10, alignItems: 'center', paddingVertical: 24 },
+  guest: { gap: 14, paddingVertical: 32 }, guestTitle: { fontSize: 23, lineHeight: 29, fontWeight: '600', letterSpacing: -.4, color: colors.ink },
+  guestText: { fontSize: 16, lineHeight: 25, color: colors.muted, maxWidth: 350 }, guestAction: { alignSelf: 'flex-start' },
+  legal: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 14 },
+  legalText: { color: colors.muted, fontSize: 12, lineHeight: 18 }, legalLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 5 },
+  demoNote: { color: colors.muted, fontSize: 13, lineHeight: 20, paddingHorizontal: 4, marginTop: 20 },
 }));
