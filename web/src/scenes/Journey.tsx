@@ -111,7 +111,7 @@ export function Journey() {
         <div className="losa journey-losa pinned-only" data-part="losa" aria-hidden="true" />
         <div className={`${WRAP} journey-layout`}>
           <div className="journey-text">
-            <div data-part="hero">
+            <div className="journey-hero" data-part="hero">
               <div className="rise"><Eyebrow>Viviendas en Cuba</Eyebrow></div>
               <h1 id="hero-title" className="rise mt-5 text-[clamp(2.2rem,5.4vw,4.6rem)] leading-[1.05] sm:mt-6" style={{ animationDelay: '80ms' }}>
                 Tu casa en Cuba,<br />para <span className="sr-only">comprar, vender, permutar o alquilar</span><VerbRotator />

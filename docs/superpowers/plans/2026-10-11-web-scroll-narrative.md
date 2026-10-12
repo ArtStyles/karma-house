@@ -60,7 +60,7 @@ import { cardSizes, easeOut, pickMode, seg, stepAt } from '../web/src/scroll.ts'
 
 test('seg clamps progress to its window', () => {
   assert.equal(seg(0.1, 0.2, 0.4), 0);
-  assert.equal(seg(0.3, 0.2, 0.4), 0.5);
+  assert.equal(seg(0.25, 0, 0.5), 0.5);
   assert.equal(seg(0.9, 0.2, 0.4), 1);
 });
 
@@ -530,7 +530,8 @@ const PANES = RINGS.flatMap(([r0, r1, n], ring) =>
  *  into view, `"always"` shows it lit. Under reduced motion the CSS animation is off and the panes show lit. */
 export function Mediopunto({ className, delay = 0, lit = 'load' }: { className?: string; delay?: number; lit?: 'load' | 'view' | 'always' }) {
   const ref = useRef<SVGSVGElement>(null);
-  const inView = useInView(ref, { once: true, amount: 0.3 });
+  // Any visible part counts: the large window behind the download panel is mostly clipped by the panel.
+  const inView = useInView(ref, { once: true, margin: '0px 0px -15% 0px' });
   const [below, setBelow] = useState(false);
   useEffect(() => { if (lit === 'view' && ref.current!.getBoundingClientRect().top > innerHeight) setBelow(true); }, [lit]);
   const animate = lit === 'load' || (lit === 'view' && below && inView);
@@ -815,7 +816,7 @@ export function PublishScreen({ part }: { part?: string }) {
 
 html:not(.js) .pinned-only { display: none }
 @media (prefers-reduced-motion: reduce) { .pinned-only { display: none } }
-.track { position: relative }
+.track, .stage { position: relative }
 
 .glow { display: none; position: absolute; width: 80vmin; aspect-ratio: 1; border-radius: 50%; right: -10vmin; top: 50%; translate: 0 -50%; pointer-events: none }
 html[data-mode="full"] .glow { display: block }
@@ -1079,7 +1080,7 @@ Añadir al final de `web/src/scenes.css`:
 
 ```css
 /* Journey ----------------------------------------------------------------------------------------------- */
-.journey .stage { position: relative; padding-block: 2.5rem 4rem }
+.journey .stage { padding-block: 2.5rem 4rem }
 .journey-layout { position: relative; display: grid; gap: 3.5rem; align-items: center }
 @media (min-width: 1024px) { .journey-layout { grid-template-columns: 1.15fr 1fr } }
 .journey-steps ol { display: grid; gap: 2.5rem; margin: 3.5rem 0 0; padding: 0; list-style: none }
@@ -1104,7 +1105,7 @@ Añadir al final de `web/src/scenes.css`:
   .js .journey-steps ol { margin: 0; gap: 0 }
   .js .journey-steps li { grid-area: 1 / 1; opacity: 0; transform: translateY(12px); transition: opacity .45s var(--ease-out-soft), transform .45s var(--ease-out-soft) }
   .js .journey-steps li.on { opacity: 1; transform: none }
-  .js .journey-visual { position: relative; min-height: 0; perspective: 1400px; container-type: size }
+  .js .journey-visual { position: relative; min-height: 0; align-self: stretch; perspective: 1400px; container-type: size }
   .js .journey-card { --iw: min(420px, 86vw - 20px); position: absolute; left: 50%; top: 50%; margin: 0; padding: 0; contain: layout paint;
     width: calc(var(--iw) + 20px); height: calc(var(--iw) * 1.31 + 36px); transform: translate(-50%, -50%); will-change: transform }
   .js .journey-transom { position: absolute; left: 10px; top: 10px; width: var(--iw) }
@@ -1263,7 +1264,7 @@ html:not(.js) .cuba-figure { display: none }
 @media (prefers-reduced-motion: no-preference) {
   .js .cuba .stage { display: grid; align-items: center }
   .js .cuba [data-part="reveal"] { clip-path: inset(-4% 100% -4% -4%) }
-  .js .cuba-map path:not(.lit) { fill: var(--color-arena); stroke: var(--color-line) }
+  .js .cuba-map path:not(.lit) { fill: color-mix(in srgb, var(--color-ocre) 16%, var(--color-arena)) }
   .js .cuba-list li:not(.lit) { color: var(--color-body) }
   .js .cuba-list li:not(.lit)::before { opacity: .2 }
 }
@@ -1922,3 +1923,14 @@ Expected: PASS y build sin errores.
 git add web/README.md .claude/launch.json
 git commit -m "docs(web): document the scroll narrative structure"
 ```
+
+---
+
+## Ajustes durante la ejecución
+
+- Task 1: la prueba de `seg` usaba 0,1/0,2, que en coma flotante da 0,4999…; pasó a `seg(0.25, 0, 0.5)`.
+- Task 5: `.journey .stage` no puede llevar `position: relative` (pisaba el `sticky`), y `.journey-visual` necesita `align-self: stretch` en ordenador. En móvil el hero se compactó (sin la lista de pruebas, que ya resume «Gratis y sin comisión») y el arco deja 40 px para su pie (`cardSizes` usa `(h - 76) / 1.31`). La frase sobre la foto escala con `cqw`.
+- Task 6: las provincias apagadas usan un tono ocre suave para que la isla se lea entera.
+- Task 8: la tarjeta de estado de Publicar no lleva icono, para que quepa en el teléfono estrecho.
+- Task 9: `Mediopunto lit="view"` se enciende con cualquier parte visible (`margin: '0px 0px -15% 0px'`), porque el panel recorta casi toda la ventana grande.
+- Task 11: en modo estático el arco va justo después del hero (`.journey-text { display: contents }` y `order`), y en modo fijo los pasos ocultos no capturan clics (`pointer-events: none`). `.claude/launch.json` no se incluye en el commit: su cambio restante (`videos`) es de otra sesión.
