@@ -1,7 +1,8 @@
 import { useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { LazyMotion, MotionConfig, domAnimation } from 'motion/react';
-import { ArrowLeftRight, ArrowRight, CalendarDays, House, KeyRound, Menu, MessageCircle, Plus, ShieldCheck, Smartphone } from 'lucide-react';
-import { Cenefa, Mediopunto, ProvinceMarquee, Reveal, Stagger, StaggerItem } from './ui';
+import { ArrowRight, Menu, MessageCircle, Plus, ShieldCheck, Smartphone } from 'lucide-react';
+import { Cenefa, Mediopunto, Reveal, Stagger, StaggerItem } from './ui';
+import { Cuba } from './scenes/Cuba';
 import { Journey } from './scenes/Journey';
 
 const RELEASE = 'https://github.com/ArtStyles/karma-house/releases';
@@ -80,34 +81,6 @@ function SectionHeading({ eyebrow, title, id, aside }: { eyebrow: string; title:
       <div><Eyebrow>{eyebrow}</Eyebrow><h2 id={id} className="mt-5 text-[clamp(2.1rem,4vw,3.4rem)]">{title}</h2></div>
       <p className="text-[15px] leading-relaxed text-body md:justify-self-end md:text-right">{aside}</p>
     </Reveal>
-  );
-}
-
-const OPERATIONS = [
-  { icon: House, title: 'Comprar', text: 'Busca por zona, presupuesto y características. Guarda las viviendas que te interesen.', href: '#app', cta: 'Encuentra tu lugar', tone: 'text-blue bg-blue/10' },
-  { icon: KeyRound, title: 'Vender', text: 'Presenta tu vivienda con fotos y detalles. Recibe consultas en su propia conversación.', href: '#como-funciona', cta: 'Da a conocer tu vivienda', tone: 'text-terracota bg-terracota/10' },
-  { icon: ArrowLeftRight, title: 'Permutar', text: 'Cuenta qué ofreces y qué buscas a cambio, con o sin una diferencia de dinero.', href: '#como-funciona', cta: 'Explora otra posibilidad', tone: 'text-persiana bg-persiana/10' },
-  { icon: CalendarDays, title: 'Alquilar', text: 'Publica o busca alquileres por mes o por noche, con el precio y las condiciones a la vista.', href: '#app', cta: 'Piensa en tu próxima estancia', tone: 'text-ocre bg-ocre/10' },
-];
-
-function Possibilities() {
-  return (
-    <section className="py-20 lg:py-28" id="posibilidades" aria-labelledby="possibilities-title">
-      <div className={WRAP}>
-        <SectionHeading eyebrow="Un lugar, muchas posibilidades" id="possibilities-title" title="¿Cuál es tu próximo paso?"
-          aside={<>Hay distintas formas de cambiar de hogar.<br />KarmaHouse tiene un espacio para cada una.</>} />
-        <Stagger className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {OPERATIONS.map(({ icon: Icon, title, text, href, cta, tone }) => (
-            <StaggerItem key={title} as="article" className="group relative flex flex-col rounded-[28px] border border-line bg-paper p-7 transition-[translate,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_30px_60px_-36px_rgba(26,43,59,.45)]">
-              <span className={`grid size-12 place-items-center rounded-2xl ${tone}`}><Icon className="size-[22px]" aria-hidden="true" /></span>
-              <h3 className="mt-7 text-[1.75rem]">{title}</h3>
-              <p className="mt-3 text-[15px] leading-relaxed text-body">{text}</p>
-              <a className={`${LINK} mt-auto pt-6`} href={href}>{cta} <ArrowRight className={ARROW} aria-hidden="true" /></a>
-            </StaggerItem>
-          ))}
-        </Stagger>
-      </div>
-    </section>
   );
 }
 
@@ -269,8 +242,7 @@ export default function App() {
         <Header />
         <main id="contenido">
           <Journey />
-          <ProvinceMarquee />
-          <Possibilities />
+          <Cuba />
           <Publication />
           <Trust />
           <Download />

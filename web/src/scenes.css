@@ -78,3 +78,18 @@ html[data-mode="full"] .glow { display: block }
   }
   @supports (width: 1cqw) { .js .journey-card { --iw: min(94cqw - 20px, 420px, (100cqh - 76px) / 1.31) } }
 }
+
+/* Toda Cuba --------------------------------------------------------------------------------------------- */
+.cuba-map { display: block; width: 100%; aspect-ratio: 1000 / 343 }
+.cuba-map path { fill: color-mix(in srgb, var(--color-blue) 82%, var(--color-cal)); stroke: var(--color-cal); stroke-width: 1.4; stroke-linejoin: round; transition: fill .6s var(--ease-out-soft) }
+.cuba-list { margin: 0; padding: 0; list-style: none }
+.cuba-list li { display: flex; align-items: center; gap: .55rem; color: var(--color-ink); transition: color .4s var(--ease-out-soft) }
+.cuba-list li::before { content: ""; width: 6px; height: 6px; flex: none; rotate: 45deg; background: var(--color-sol); transition: opacity .4s }
+html:not(.js) .cuba-figure { display: none }
+@media (prefers-reduced-motion: no-preference) {
+  .js .cuba .stage { display: grid; align-items: center }
+  .js .cuba [data-part="reveal"] { clip-path: inset(-4% 100% -4% -4%) }
+  .js .cuba-map path:not(.lit) { fill: color-mix(in srgb, var(--color-ocre) 16%, var(--color-arena)) }
+  .js .cuba-list li:not(.lit) { color: var(--color-body) }
+  .js .cuba-list li:not(.lit)::before { opacity: .2 }
+}

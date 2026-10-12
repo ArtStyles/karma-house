@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, m, useInView, useReducedMotion, type Variants } from 'motion/react';
-import { Pause, Play } from 'lucide-react';
-import { PROVINCES } from './content';
 import { EASE } from './scroll';
 
 export const WRAP = 'mx-auto w-full max-w-[1280px] px-4 sm:px-8 lg:px-12';
@@ -121,34 +119,6 @@ export function VerbRotator() {
           exit={{ y: '-90%', opacity: 0 }} transition={{ duration: 0.6, ease: EASE }}>{verb.word}</m.span>
       </AnimatePresence>
     </span>
-  );
-}
-
-export function ProvinceMarquee() {
-  const [paused, setPaused] = useState(false);
-  const row = (hidden?: boolean) => (
-    <ul className="flex shrink-0 items-center" aria-hidden={hidden || undefined}>
-      {PROVINCES.map((name) => (
-        <li key={name} className="flex items-center whitespace-nowrap font-display text-xl text-espuma md:text-2xl">
-          {name}<span className="mx-6 inline-block size-1.5 rotate-45 bg-sol" aria-hidden="true" />
-        </li>
-      ))}
-    </ul>
-  );
-  return (
-    <div className="bg-mar text-espuma">
-      <div className="mx-auto flex max-w-[1280px] items-center gap-6 px-4 py-5 sm:px-8 lg:px-12">
-        <p className="hidden max-w-[11rem] shrink-0 text-xs font-semibold uppercase leading-snug tracking-[.14em] text-sol sm:block">Las 15 provincias y la Isla de la Juventud</p>
-        <div className="group relative min-w-0 flex-1 overflow-x-auto [mask-image:linear-gradient(90deg,transparent,#000_8%,#000_92%,transparent)] [scrollbar-width:none]">
-          <div className="marquee flex w-max" data-paused={paused}>{row()}{row(true)}</div>
-        </div>
-        <button type="button" onClick={() => setPaused(!paused)} aria-pressed={paused}
-          className="grid size-11 shrink-0 place-items-center rounded-full border border-white/20 text-espuma transition hover:bg-white/10 motion-reduce:hidden">
-          {paused ? <Play className="size-4" /> : <Pause className="size-4" />}
-          <span className="sr-only">{paused ? 'Reanudar' : 'Pausar'} la lista de provincias</span>
-        </button>
-      </div>
-    </div>
   );
 }
 
