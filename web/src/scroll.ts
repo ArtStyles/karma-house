@@ -7,6 +7,8 @@ export const seg = (p: number, a: number, b: number) => clamp((p - a) / (b - a))
 export const mix = (a: number, b: number, t: number) => a + (b - a) * t;
 /** Close to the brand curve cubic-bezier(.22,1,.36,1) and cheap enough to run every frame. */
 export const easeOut = (t: number) => 1 - Math.pow(1 - clamp(t), 4.2);
+/** Symmetric ease (smoothstep) for moves that start and end at rest, like a turning page. */
+export const smooth = (t: number) => { const x = clamp(t); return x * x * (3 - 2 * x); };
 /** Index of the active step when `s` (0..1) is split into `count` equal parts. */
 export const stepAt = (s: number, count: number) => Math.min(count - 1, Math.floor(clamp(s) * count));
 

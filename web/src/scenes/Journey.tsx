@@ -47,8 +47,6 @@ export function Journey() {
     P.hero.style.visibility = p > 0.07 ? 'hidden' : '';
     fade(P.losa, 0.06 * m);
     if (full) { fade(P.sun1, 0.7 * (1 - s * 0.7)); fade(P.sun2, 0.55 * s); }
-    fade(P.lineBox, seg(p, 0.1, 0.14));
-    put(P.line, `scaleX(${s})`);
 
     // 2. The story inside the same phone.
     const settle = easeOut(seg(s, 0, 0.2));
@@ -139,7 +137,6 @@ export function Journey() {
                   </li>
                 ))}
               </ol>
-              <div className="journey-line pinned-only" data-part="lineBox" aria-hidden="true"><span data-part="line" /></div>
               <PhoneFrame className="static-only mx-auto mt-12 w-[min(300px,80vw)]" label="Pantalla Explorar de la app KarmaHouse: mapa del barrio con viviendas y la ficha de una vivienda. Imagen y datos ilustrativos.">
                 <BarrioMap /><ExploreBar />
                 <div className="absolute inset-x-0 bottom-0 z-10"><ListingSheet /></div>

@@ -46,10 +46,10 @@ export const TAGLINE: (readonly [word: string, blue: boolean])[][] = [
 ];
 
 export const OPERATIONS = [
-  { icon: 'house', title: 'Comprar', text: 'Busca por zona, presupuesto y características. Guarda las viviendas que te interesen.', href: '#como-funciona', cta: 'Encuentra tu lugar', tone: 'text-blue bg-blue/10' },
-  { icon: 'key', title: 'Vender', text: 'Presenta tu vivienda con fotos y detalles. Recibe consultas en su propia conversación.', href: '#publicar', cta: 'Da a conocer tu vivienda', tone: 'text-terracota bg-terracota/10' },
-  { icon: 'swap', title: 'Permutar', text: 'Cuenta qué ofreces y qué buscas a cambio, con o sin una diferencia de dinero.', href: '#publicar', cta: 'Explora otra posibilidad', tone: 'text-persiana bg-persiana/10' },
-  { icon: 'calendar', title: 'Alquilar', text: 'Publica o busca alquileres por mes o por noche, con el precio y las condiciones a la vista.', href: '#como-funciona', cta: 'Piensa en tu próxima estancia', tone: 'text-ocre bg-ocre/10' },
+  { kicker: 'Para quien busca', title: 'Comprar', text: 'Busca por zona, presupuesto y características. Guarda las viviendas que te interesen.', href: '#como-funciona', cta: 'Encuentra tu lugar', tone: 'blue' },
+  { kicker: 'Para quien publica', title: 'Vender', text: 'Presenta tu vivienda con fotos y detalles. Recibe consultas en su propia conversación.', href: '#publicar', cta: 'Da a conocer tu vivienda', tone: 'terracota' },
+  { kicker: 'Para quien cambia', title: 'Permutar', text: 'Cuenta qué ofreces y qué buscas a cambio, con o sin una diferencia de dinero.', href: '#publicar', cta: 'Explora otra posibilidad', tone: 'persiana' },
+  { kicker: 'Por mes o por noche', title: 'Alquilar', text: 'Publica o busca alquileres por mes o por noche, con el precio y las condiciones a la vista.', href: '#como-funciona', cta: 'Piensa en tu próxima estancia', tone: 'ocre' },
 ] as const;
 
 export const TRUST = [

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cardSizes, easeOut, pickMode, seg, stepAt } from '../web/src/scroll.ts';
+import { cardSizes, easeOut, pickMode, seg, smooth, stepAt } from '../web/src/scroll.ts';
 
 test('seg clamps progress to its window', () => {
   assert.equal(seg(0.1, 0.2, 0.4), 0);
@@ -12,6 +12,14 @@ test('easeOut starts at 0, ends at 1 and never overshoots', () => {
   assert.equal(easeOut(0), 0);
   assert.equal(easeOut(1), 1);
   for (let t = 0; t <= 1; t += 0.05) assert.ok(easeOut(t) >= 0 && easeOut(t) <= 1);
+});
+
+test('smooth is symmetric and stays in 0..1', () => {
+  assert.equal(smooth(0), 0);
+  assert.equal(smooth(1), 1);
+  assert.equal(smooth(0.5), 0.5);
+  assert.ok(Math.abs(smooth(0.2) + smooth(0.8) - 1) < 1e-12);
+  assert.equal(smooth(-1), 0);
 });
 
 test('stepAt splits progress into equal steps and stays in range', () => {

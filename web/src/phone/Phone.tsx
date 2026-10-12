@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { Bell, CalendarDays, Check, ChevronLeft, CirclePlus, CircleUser, ClipboardPaste, Compass, Heart, House, MapPin, MessageCircle, Search, SlidersHorizontal } from 'lucide-react';
 import { Barrio, HOUSE_PIN, PINS, PinIcon } from './Barrio';
 
@@ -111,37 +111,68 @@ export function ChatScreen({ part }: { part?: string }) {
   );
 }
 
-const FIELDS = [['Operación', 'Venta'], ['Tipo', 'Casa'], ['Provincia', 'La Habana'], ['Habitaciones', '3']] as const;
+// Publish pages: larger app screens (13 px text) so they read at a glance. Illustrative example data.
+const AD = 'Vendo casa con portal y patio en La Habana. 3 habitaciones, 2 baños, cocina y sala comedor.';
+const FIELDS = [['Operación', 'Venta'], ['Tipo', 'Casa'], ['Provincia', 'La Habana'], ['Habitaciones', '3'], ['Baños', '2']] as const;
+const TIMELINE = ['Enviado', 'En revisión', 'Publicado'];
 
-export function PublishScreen({ part }: { part?: string }) {
+function AppTop({ title }: { title: string }) {
+  return <div className="flex items-center gap-2 border-b border-[#E5E5EA] bg-white px-4 py-3 font-semibold"><ChevronLeft className="size-4 text-[#0153A8]" />{title}</div>;
+}
+
+export function PasteScreen() {
   return (
-    <div className="flex h-full flex-col px-3 pt-4">
-      <p className="text-[15px] font-bold tracking-[-.02em]">Nuevo anuncio</p>
-      <span className="phone-paste mt-2" data-part={dp(part, 'paste')}><ClipboardPaste className="size-3.5" />Pegar anuncio</span>
-      <div className="phone-note mt-2" data-part={dp(part, 'note')}>
-        <span className="block h-1.5 w-11/12 rounded-full bg-[#D9D9DE]" /><span className="mt-1.5 block h-1.5 w-4/5 rounded-full bg-[#D9D9DE]" /><span className="mt-1.5 block h-1.5 w-2/3 rounded-full bg-[#D9D9DE]" />
+    <div className="app-screen">
+      <AppTop title="Nuevo anuncio" />
+      <div className="grid gap-2.5 p-4">
+        <span className="phone-paste"><ClipboardPaste className="size-4" />Pegar anuncio</span>
+        <p className="app-note"><span className="mb-1 block text-[11px] font-semibold text-[#68686D]">Texto pegado</span>{AD}</p>
+        <div className="grid gap-1.5">
+          {FIELDS.map(([label, value], i) => (
+            <div key={label} className="flex items-center justify-between rounded-xl border border-[#E5E5EA] bg-white px-3 py-2" style={{ '--i': i } as CSSProperties}>
+              <span className="text-[#68686D]">{label}</span><b className="app-fill">{value}</b>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="mt-2.5 grid gap-1.5">
-        {FIELDS.map(([label, value], i) => (
-          <div key={label} className="flex items-center justify-between rounded-xl border border-[#E5E5EA] bg-white px-2.5 py-2">
-            <span className="text-[#68686D]">{label}</span><span className="phone-fill font-semibold" data-part={dp(part, `f${i}`)}>{value}</span>
-          </div>
-        ))}
+    </div>
+  );
+}
+
+export function ReviewScreen() {
+  return (
+    <div className="app-screen">
+      <AppTop title="Mis anuncios" />
+      <div className="grid gap-4 p-4">
+        <div className="flex items-center gap-3 rounded-2xl border border-[#E5E5EA] bg-white p-2.5">
+          <picture><source type="image/avif" srcSet="/vedado-640.avif" /><img src="/vedado.jpg" alt="" loading="lazy" className="size-16 rounded-xl object-cover" /></picture>
+          <span className="min-w-0 flex-1 leading-snug">
+            <strong className="block">Casa con portal</strong>
+            <span className="block text-[#68686D]">Venta · La Habana</span>
+            <span className="text-[11px] text-[#68686D]">Imagen ilustrativa</span>
+          </span>
+          <span className="grid text-[11px] font-bold">
+            <span className="app-review col-start-1 row-start-1 rounded-full bg-[#F7EAD0] px-2.5 py-1 text-[#7A5212]">En revisión</span>
+            <span className="app-live col-start-1 row-start-1 rounded-full bg-[#E1EEE4] px-2.5 py-1 text-[#2C5638]">Publicado</span>
+          </span>
+        </div>
+        <ol className="app-timeline">
+          {TIMELINE.map((label, i) => (
+            <li key={label} style={{ '--i': i } as CSSProperties}><span className="app-tick"><Check className="size-3.5" strokeWidth={3} /></span>{label}</li>
+          ))}
+        </ol>
       </div>
-      <span className="phone-send mt-auto" data-part={dp(part, 'send')}>Enviar a revisión</span>
-      <p className="py-2.5 text-center text-[10px] text-[#68686D]">Ejemplo de uso</p>
-      <div className="phone-status pinned-only" data-part={dp(part, 'status')}>
-        <span className="min-w-0 flex-1 leading-tight"><strong className="block">Tu anuncio</strong><span className="block truncate text-[10px] text-[#68686D]">Casa · Venta · La Habana</span></span>
-        <span className="grid text-[10px] font-bold">
-          <span className="col-start-1 row-start-1 rounded-full bg-[#F7EAD0] px-2 py-0.5 text-[#7A5212]" data-part={dp(part, 'review')}>En revisión</span>
-          <span className="col-start-1 row-start-1 rounded-full bg-[#E1EEE4] px-2 py-0.5 text-[#2C5638] opacity-0" data-part={dp(part, 'live')}>Publicado</span>
-        </span>
-      </div>
-      <div className="phone-pubmap pinned-only" data-part={dp(part, 'map')}>
-        <Barrio />
-        <span className="absolute left-[62%] top-[52%]"><span className="phone-pin" data-part={dp(part, 'pin')}><PinIcon house /></span></span>
-        <span className="phone-toast" data-part={dp(part, 'toast')}>Tu vivienda ya está en el mapa</span>
-      </div>
+    </div>
+  );
+}
+
+export function MapScreen() {
+  return (
+    <div className="app-screen">
+      <Barrio />
+      <span className="absolute left-4 top-4 z-10 rounded-full bg-white px-3 py-1.5 text-[12px] font-semibold shadow-sm"><MapPin className="mr-1 inline size-3.5 text-[#A84C33]" />Ubicación aproximada</span>
+      <span className="absolute left-[58%] top-[54%]"><span className="phone-pin app-pin"><PinIcon house /></span></span>
+      <span className="app-toast">Tu vivienda ya está en el mapa</span>
     </div>
   );
 }
