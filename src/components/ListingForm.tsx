@@ -23,6 +23,7 @@ import {
 import { createThemedStyles, formatMoney, layout, typefaces } from '../theme';
 import { createDraftPersistence, draftToken, hasDraftVersionConflict } from '../domain/draftPersistence';
 import { restorePublicationDraft } from '../domain/publicationEntry';
+import { preparePublicationImport } from '../domain/publicationImport';
 import { draftStorage } from '../data/draftStorage';
 import { ListingPhotos } from './ListingPhotos';
 import { LocationPicker } from './maps/LocationPicker';
@@ -124,6 +125,7 @@ export function ListingForm({
   const seenImportRequest = useRef(0);
   // Component state on purpose: the notice describes this paste, not a draft restored after a restart.
   const [imported, setImported] = useState<ImportResult | null>(null);
+  const beforeImport = useRef<{ draft: ListingDraft; chosen: boolean; step: number } | null>(null);
   const operation = draft.operation ?? 'sale';
   const wanted = operation === 'wanted';
   const wantedOperations = draft.wantedOperations ?? ['sale', 'swap'];
@@ -281,20 +283,20 @@ export function ListingForm({
     }
   }
 
-  /** Same start as the chooser, but a type the text does not name stays empty instead of «Casa». */
   function applyImport(result: ImportResult) {
-    const kind = result.draft.operation ?? 'sale';
-    const next: ListingDraft = { ...cloneDraft(emptyDraft), type: '', ...result.draft, operation: kind, clientRequestId: draft.clientRequestId };
-    if (kind === 'wanted') next.wantedOperations = ['sale', 'swap'];
-    if (kind === 'rent') next.rentPeriod = result.draft.rentPeriod || 'month';
-    setDraft(next); setErrors({}); setSubmitError(null);
-    setImported(result); setImportOpen(false); setChosen(true); setStep(0);
+    const next = preparePublicationImport(draft, result);
+    if (!next.ok) return next.error;
+    if (!imported) beforeImport.current = { draft: cloneDraft(draft), chosen, step };
+    setDraft(next.draft); setErrors({}); setSubmitError(null);
+    setImported(next.summary); setImportOpen(false); setChosen(true); setStep(0);
   }
 
   function discardImport() {
-    setDraft({ ...cloneDraft(emptyDraft), clientRequestId: draft.clientRequestId });
+    const previous = beforeImport.current;
+    if (!previous) return;
+    setDraft(previous.draft); setChosen(previous.chosen); setStep(previous.step);
     setErrors({}); setSubmitError(null);
-    setImported(null); setChosen(false); setStep(0);
+    setImported(null); beforeImport.current = null;
   }
 
   function toggleAmenity(value: string) {
@@ -368,7 +370,7 @@ export function ListingForm({
 
           {imported ? <View style={styles.importNotice}>
             <Notice>{importSummary(imported)}</Notice>
-            <Button label="Descartar lo importado" icon="trash-outline" secondary disabled={submitting || photoBusy} onPress={discardImport} />
+            <Button label="Deshacer importación" icon="arrow-undo-outline" secondary disabled={submitting || photoBusy} onPress={discardImport} />
           </View> : null}
           {submitError ? <Notice error>{submitError}</Notice> : null}
           {submitError && onReloadLatest && <Button label="Actualizar anuncio sin perder el borrador" secondary loading={reloading} onPress={async () => { setReloading(true); try { await onReloadLatest(); } catch { /* Existing error remains visible. */ } finally { if (mounted.current) setReloading(false); } }} />}
@@ -715,7 +717,7 @@ export function ListingForm({
           </Text>
         </Animated.View>
       </ScrollView>
-      {importOpen && active ? <ImportListingSheet onClose={() => setImportOpen(false)} onImport={applyImport} /> : null}
+      {importOpen && active ? <ImportListingSheet preserveDraft={Boolean(draft.operation)} onClose={() => setImportOpen(false)} onImport={applyImport} /> : null}
     </KeyboardAvoidingView>
   );
 }

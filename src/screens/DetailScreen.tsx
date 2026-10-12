@@ -69,9 +69,16 @@ export default function DetailScreen() {
   const currentScope = useRef(contactScope);
   currentScope.current = contactScope;
   const contactInFlight = useRef(false);
+  const contactGeneration = useRef(0);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => { setContactBusy(false); setContactError(''); contactInFlight.current = false; }, [contactScope]);
+  const closeContact = useCallback(() => {
+    contactGeneration.current += 1;
+    contactInFlight.current = false;
+    setContactBusy(false); setAgencyChoice(false); setContact(false);
+  }, []);
+  useEffect(() => { closeContact(); setContactError(''); }, [contactScope, closeContact]);
+  useFocusEffect(useCallback(() => () => closeContact(), [closeContact]));
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [intentNotice, setIntentNotice] = useState('');
@@ -129,10 +136,14 @@ export default function DetailScreen() {
     if(!choice&&!contactOptions.personalContact){setContactError('El contacto de esta inmobiliaria no está disponible.');return;}
     contactInFlight.current = true; setContactBusy(true); setContactError('');
     const scope = contactScope;
+    const generation = ++contactGeneration.current;
+    const isCurrent = () => mounted.current && currentScope.current === scope && contactGeneration.current === generation;
     try {
       if (!auth.user) {
         const intent=choice?{kind:'agency-contact' as const,propertyId:listing.id,agencyId:choice.agencyId,...(preferred?.agencyId===choice.agencyId&&preferred.managerId?{preferredManagerId:preferred.managerId}:{})}:{kind:'contact' as const,propertyId:listing.id};
         await pendingIntentStore.write(intent);
+        if (!isCurrent()) return;
+        closeContact();
         router.push({ pathname: '/auth', params: { returnTo: pendingIntentDestination(intent) } });
         return;
       }
@@ -140,27 +151,28 @@ export default function DetailScreen() {
       if(choice){
         if(!supabase)throw Error(NEEDS_CONNECTION);
         const ctx=workspace.captureAccountContext();
-        try{const fresh=await readPublicPropertyContact(supabase,listing.id,ctx.signal);ctx.checkpoint();if(!fresh?.agencies.some(a=>a.agencyId===choice.agencyId&&a.contactAvailable))throw Error('La inmobiliaria elegida ya no está disponible. Revisa las opciones.');
+        try{const fresh=await readPublicPropertyContact(supabase,listing.id,ctx.signal);ctx.checkpoint();if(!isCurrent())return;if(!fresh?.agencies.some(a=>a.agencyId===choice.agencyId&&a.contactAvailable))throw Error('La inmobiliaria elegida ya no está disponible. Revisa las opciones.');
           const preferredManagerId=preferred?.agencyId===choice.agencyId?preferred.managerId:undefined,key=`${scope}:${choice.agencyId}:${preferredManagerId??''}`;
           if(agencyAttempt.current?.key!==key)agencyAttempt.current={key,requestId:createMessageId()};
           const conversation=await createAgencyMessagingRepository(supabase).start({propertyId:fresh.propertyId,agencyId:choice.agencyId,...(preferredManagerId?{preferredManagerId}:{}),clientRequestId:agencyAttempt.current.requestId},ctx);
-          ctx.checkpoint();if(mounted.current&&currentScope.current===scope){setAgencyChoice(false);router.push(`/agency-conversation/${conversation.id}`)}
+          ctx.checkpoint();if(isCurrent()){closeContact();router.push(`/agency-conversation/${conversation.id}`)}
         }finally{ctx.release()}return;
       }
       const expected=management.value?.managerId??listing.ownerId;
       const current=await management.refresh();
+      if (!isCurrent()) return;
       if(!current?.contactAvailable)throw Error('Este anuncio ya no está disponible para contacto.');
       if(current.managerId!==expected){retry();throw Error('El responsable del anuncio cambió. Revisa la ficha actualizada y vuelve a tocar Contactar.');}
       const conversationId = await messaging.startConversation(listing.id,current.managerId);
-      if (mounted.current && currentScope.current === scope) { setAgencyChoice(false); router.push(`/messages/${conversationId}`); }
+      if (isCurrent()) { closeContact(); router.push(`/messages/${conversationId}`); }
     } catch (failure) {
-      if(!mounted.current||currentScope.current!==scope)return;
+      if(!isCurrent())return;
       const failureText=failure instanceof Error?failure.message:failure&&typeof failure==='object'&&'message'in failure&&typeof failure.message==='string'?failure.message:'';
       if(/KH_AGENCY_MANAGER_CHANGED|KH_AGENCY_ASSIGNMENT_CHANGED|KH_CHAT_BLOCKED/.test(failureText)){setPreferred(null);agencyAttempt.current=null;setAgencyChoice(true);setContactError('Ese contacto no está disponible. Elige de nuevo una inmobiliaria para confirmar el destino.');return;}
       if(/responsable.*cambió|KH_CHAT_MANAGER_CHANGED/i.test(failure instanceof Error?failure.message:'')){retry();void management.refresh().catch(()=>{});}
-      if (mounted.current && currentScope.current === scope) setContactError(choice?agencyError(failure):failure instanceof Error ? failure.message : 'No pudimos abrir la conversación. Inténtalo de nuevo.');
+      if (isCurrent()) setContactError(choice?agencyError(failure):failure instanceof Error ? failure.message : 'No pudimos abrir la conversación. Inténtalo de nuevo.');
     } finally {
-      if (mounted.current && currentScope.current === scope) { contactInFlight.current = false; setContactBusy(false); }
+      if (isCurrent()) { contactInFlight.current = false; setContactBusy(false); }
     }
   }
   function openContact() {
@@ -329,9 +341,9 @@ export default function DetailScreen() {
         </View>
       </View>
     </Modal>
-    <Modal visible={agencyChoice} transparent animationType={reducedMotion ? 'none' : 'fade'} onRequestClose={() => setAgencyChoice(false)}>
+    <Modal visible={agencyChoice} transparent animationType={reducedMotion ? 'none' : 'fade'} onRequestClose={closeContact}>
       <View style={[styles.modalBackdrop, width >= 700 && styles.wideBackdrop]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Cerrar opciones de contacto" onPress={() => setAgencyChoice(false)} style={StyleSheet.absoluteFill} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Cerrar opciones de contacto" onPress={closeContact} style={StyleSheet.absoluteFill} />
         <View accessibilityViewIsModal style={[styles.modal, { maxHeight: height - insets.top - 24, paddingBottom: Math.max(insets.bottom, 20) }, width >= 700 && styles.wideModal]}>
           <ScrollView style={styles.contactScroll} contentContainerStyle={styles.contactSheetContent} keyboardShouldPersistTaps="handled">
             <Text accessibilityRole="header" style={styles.modalTitle}>Contactar</Text>
@@ -346,7 +358,7 @@ export default function DetailScreen() {
               <Button label={preferred?.agencyId === agency.agencyId && preferred.managerId ? 'Confirmar contacto con el gestor del enlace' : `Contactar con ${agency.tradeName}`} disabled={!agency.contactAvailable || !auth.ready || (Boolean(auth.user) && !messaging.ready)} loading={contactBusy} onPress={() => void contactSeller(agency)} />
             </View>)}
             {contactOptions?.personalContact && <Button label="Contactar con el responsable personal" secondary disabled={!auth.ready || (Boolean(auth.user) && !messaging.ready)} loading={contactBusy} onPress={() => void contactSeller(undefined, true)} />}
-            <Button label="Cerrar" secondary onPress={() => setAgencyChoice(false)} />
+            <Button label="Cerrar" secondary onPress={closeContact} />
           </ScrollView>
         </View>
       </View>

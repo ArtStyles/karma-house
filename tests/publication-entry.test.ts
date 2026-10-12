@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { safeReturnTo } from '../src/auth/callback.ts';
 import { emptyDraft } from '../src/domain/listings.ts';
+import { elements, executeComponent, Hooks } from './helpers/tsxHooks.ts';
+import { publicationReturnTo, readPublicationEntry } from '../src/domain/publicationEntry.ts';
 
 test('authentication returns to the selected publication operation and optional paste entry', () => {
   for (const route of ['/publish?operation=sale', '/publish?operation=swap', '/publish?operation=rent', '/publish?operation=wanted', '/publish?import=1', '/publish?operation=rent&import=1']) {
@@ -76,4 +78,21 @@ test('corrupt persisted data falls back to a fresh selected operation rather tha
   assert.equal(restored.operation, 'wanted');
   assert.equal(restored.type, '');
   assert.equal(restored.title, '');
+});
+
+test('a retained publication form becomes inactive when its screen loses focus', () => {
+  const hooks = new Hooks();
+  const bindings: Record<string, unknown> = {
+    useStyles: () => ({ colors: {}, styles: {} }), useMarketplace: () => ({ ready: true, mode: 'demo' }),
+    useAuth: () => ({ ready: true }), useLocalSearchParams: () => ({ operation: 'rent' }),
+    useFocusEffect: (work: () => void) => hooks.useEffect(work, [work]), readPublicationEntry, publicationReturnTo,
+    OPERATIONS: [], choices: [], ASSISTED_PUBLICATION_EMAIL: '',
+  };
+  for (const name of ['SafeAreaView', 'View', 'PageTitle', 'Button', 'ListingForm']) bindings[name] = name;
+  const component = executeComponent('src/screens/PublishScreen.tsx', 'PublishScreen', hooks, bindings);
+  const render = () => hooks.render(() => component());
+  render();
+  assert.equal(elements(render()).find(element => element.type === 'ListingForm')?.props.active, true);
+  hooks.dispose();
+  assert.equal(elements(render()).find(element => element.type === 'ListingForm')?.props.active, false);
 });

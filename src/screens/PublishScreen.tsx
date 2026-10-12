@@ -1,6 +1,6 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as Linking from 'expo-linking';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ListingForm from '../components/ListingForm';
@@ -33,6 +33,8 @@ export default function PublishScreen() {
   const [importRequest, setImportRequest] = useState(routeEntry.import ? 1 : 0);
   const [emailError, setEmailError] = useState(false);
   const [openingEmail, setOpeningEmail] = useState(false);
+  const [focused, setFocused] = useState(false);
+  useFocusEffect(useCallback(() => { setFocused(true); return () => setFocused(false); }, []));
 
   // An auth return or cold link restores intent only; it never submits an announcement.
   useEffect(() => {
@@ -102,7 +104,7 @@ export default function PublishScreen() {
       {/* An opened form stays mounted across own/help/choose; identity changes remount it. */}
       {ownStarted && <View style={[styles.form, section !== 'own' && styles.hidden]} accessibilityElementsHidden={section !== 'own'} importantForAccessibility={section !== 'own' ? 'no-hide-descendants' : 'auto'}>
         {mode === 'cloud' && !authReady ? <View style={styles.loading}><ActivityIndicator size="large" color={colors.primary} /><Text style={styles.text}>Comprobando tu cuenta…</Text></View> : mode === 'cloud' && !user ? <AccountPrompt returnTo={returnTo} title="Entra para publicar" description="Conservaremos la operación elegida para que prepares tu anuncio." /> : ready ? <ListingForm
-          key={user?.id ?? 'demo'} initialOperation={initialOperation} importRequest={importRequest} active={section === 'own'} onOperationChange={setFormOperation}
+          key={user?.id ?? 'demo'} initialOperation={initialOperation} importRequest={importRequest} active={focused && section === 'own'} onOperationChange={setFormOperation}
           draftStorageKey={mode === 'cloud' && user ? `karmahouse:draft:${user.id}:new` : undefined}
           cloud={mode === 'cloud'} submitLabel={mode === 'cloud' ? isOwner ? 'Publicar ahora' : 'Enviar a revisión' : 'Guardar anuncio'} directPublication={isOwner}
           onSubmit={async draft => { await saveListing(draft); }}
