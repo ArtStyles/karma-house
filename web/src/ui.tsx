@@ -1,8 +1,22 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, m, useInView, useReducedMotion, type Variants } from 'motion/react';
 import { Pause, Play } from 'lucide-react';
+import { PROVINCES } from './content';
+import { EASE } from './scroll';
 
-const EASE = [0.22, 1, 0.36, 1] as const;
+export const WRAP = 'mx-auto w-full max-w-[1280px] px-4 sm:px-8 lg:px-12';
+export const BUTTON = 'inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-blue px-6 text-sm font-semibold text-on-blue transition hover:bg-blue-hover active:scale-[.98]';
+export const LINK = 'group inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-ink transition-colors hover:text-blue';
+export const ARROW = 'size-4 transition-transform group-hover:translate-x-1';
+
+export function Eyebrow({ children, className = 'text-ocre' }: { children: ReactNode; className?: string }) {
+  return <p className={`flex items-center gap-3 text-xs font-bold uppercase tracking-[.16em] ${className}`}><span className="h-0.5 w-8 bg-sol" aria-hidden="true" />{children}</p>;
+}
+
+/** A headline with its one blue phrase. */
+export function Title({ title, accent }: { title: string; accent: string }) {
+  return <>{title} <span className="text-blue">{accent}</span></>;
+}
 
 // The prerendered HTML shows everything. After hydration, content still below the fold is hidden
 // (off screen, so nobody sees it go) and animates in when scrolled to; content already on screen stays put.
@@ -41,6 +55,15 @@ export function StaggerItem({ children, className, as = 'div' }: { children: Rea
   return <Tag className={className} variants={item}>{children}</Tag>;
 }
 
+export function SectionHeading({ eyebrow, title, id, aside }: { eyebrow: string; title: ReactNode; id: string; aside: ReactNode }) {
+  return (
+    <Reveal className="grid items-end gap-6 md:grid-cols-[1.3fr_1fr]">
+      <div><Eyebrow>{eyebrow}</Eyebrow><h2 id={id} className="mt-5 text-[clamp(2.1rem,4vw,3.4rem)]">{title}</h2></div>
+      <p className="text-[15px] leading-relaxed text-body md:justify-self-end md:text-right">{aside}</p>
+    </Reveal>
+  );
+}
+
 // Mediopunto: the half-moon stained-glass window above Cuban doors. Panes light up from the hub outwards.
 const GLASS = ['var(--color-blue)', 'var(--color-sol)', 'var(--color-terracota)', 'var(--color-persiana)'];
 const C = 100;
@@ -53,14 +76,21 @@ const RINGS: [number, number, number][] = [[0, 24, 1], [24, 60, 5], [60, 97, 9]]
 const PANES = RINGS.flatMap(([r0, r1, n], ring) =>
   Array.from({ length: n }, (_, i) => ({ d: pane(r0, r1, Math.PI + (i * Math.PI) / n, Math.PI + ((i + 1) * Math.PI) / n), ring, i })));
 
-// Panes light up with a CSS animation, so the hero animates on first paint even before the JavaScript arrives.
-export function Mediopunto({ className, delay = 0, animated = true }: { className?: string; delay?: number; animated?: boolean }) {
+/** `lit="load"` lights the panes on first paint (CSS, before the JavaScript arrives), `"view"` when the window scrolls
+ *  into view, `"always"` shows it lit. Under reduced motion the CSS animation is off and the panes show lit. */
+export function Mediopunto({ className, delay = 0, lit = 'load' }: { className?: string; delay?: number; lit?: 'load' | 'view' | 'always' }) {
+  const ref = useRef<SVGSVGElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.3 });
+  const [below, setBelow] = useState(false);
+  useEffect(() => { if (lit === 'view' && ref.current!.getBoundingClientRect().top > innerHeight) setBelow(true); }, [lit]);
+  const animate = lit === 'load' || (lit === 'view' && below && inView);
+  const dark = lit === 'view' && below && !inView;
   return (
-    <svg className={className} viewBox="0 0 200 102" aria-hidden="true">
+    <svg ref={ref} className={className} viewBox="0 0 200 102" aria-hidden="true">
       {PANES.map(({ d, ring, i }) => (
         <path key={d} d={d} fill={ring === 0 ? 'var(--color-sol)' : GLASS[(i + ring) % GLASS.length]} fillOpacity={ring === 2 && i % 2 ? 0.55 : 0.9}
-          stroke="var(--color-cal)" strokeWidth="2.6" strokeLinejoin="round"
-          className={animated ? 'glass' : undefined} style={animated ? { animationDelay: `${delay + ring * 0.25 + i * 0.05}s` } : undefined} />
+          stroke="var(--color-paper)" strokeWidth="2.6" strokeLinejoin="round"
+          className={animate ? 'glass' : undefined} style={animate ? { animationDelay: `${delay + ring * 0.25 + i * 0.05}s` } : dark ? { opacity: 0 } : undefined} />
       ))}
     </svg>
   );
@@ -88,15 +118,11 @@ export function VerbRotator() {
       {VERBS.map(({ word }) => <span key={word} className="invisible col-start-1 row-start-1">{word}</span>)}
       <AnimatePresence initial={false}>
         <m.span key={verb.word} className="col-start-1 row-start-1" initial={{ y: '90%', opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-          exit={{ y: '-90%', opacity: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 26 }}>{verb.word}</m.span>
+          exit={{ y: '-90%', opacity: 0 }} transition={{ duration: 0.6, ease: EASE }}>{verb.word}</m.span>
       </AnimatePresence>
     </span>
   );
 }
-
-// Same list and order as PROVINCES in src/domain/listingOptions.ts (the app's own source).
-const PROVINCES = ['Pinar del Río', 'Artemisa', 'La Habana', 'Mayabeque', 'Matanzas', 'Villa Clara', 'Cienfuegos', 'Sancti Spíritus',
-  'Ciego de Ávila', 'Camagüey', 'Las Tunas', 'Holguín', 'Granma', 'Santiago de Cuba', 'Guantánamo', 'Isla de la Juventud'];
 
 export function ProvinceMarquee() {
   const [paused, setPaused] = useState(false);

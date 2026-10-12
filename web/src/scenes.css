@@ -1,0 +1,37 @@
+/* Scroll scenes. A scene is a tall .track around a sticky .stage. Scenes pin only when the head script has added
+   .js to <html> and the visitor allows motion; otherwise each reads as static content in document order.
+   Frames (motion.ts) write transform, opacity and clip-path, except the journey card, whose box is contained. */
+
+html:not(.js) .pinned-only { display: none }
+@media (prefers-reduced-motion: reduce) { .pinned-only { display: none } }
+.track { position: relative }
+
+.glow { display: none; position: absolute; width: 80vmin; aspect-ratio: 1; border-radius: 50%; right: -10vmin; top: 50%; translate: 0 -50%; pointer-events: none }
+html[data-mode="full"] .glow { display: block }
+.glow-sol { background: radial-gradient(closest-side, color-mix(in srgb, var(--color-sol) 40%, transparent), transparent) }
+.glow-terracota { background: radial-gradient(closest-side, color-mix(in srgb, var(--color-terracota) 28%, transparent), transparent); opacity: 0 }
+
+/* Phone ------------------------------------------------------------------------------------------------- */
+.phone-frame { aspect-ratio: 9 / 19.5; padding: 7px; border: 1px solid var(--color-line); border-radius: 36px; background: var(--color-paper); box-shadow: 0 40px 80px -40px rgba(26, 43, 59, .45) }
+.phone-screen { position: relative; height: 100%; overflow: hidden; isolation: isolate; border-radius: 29px; background: #F5F5F7; color: #1D1D1F; font-size: 11px; line-height: 1.35 }
+.phone-chip { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; border: 1px solid #E5E5EA; border-radius: 999px; background: #fff; padding: 3px 9px; transition: background .3s, color .3s }
+.phone-chip.on { border-color: transparent; background: #EAF3FF; color: #0153A8; font-weight: 600 }
+.phone-pin { display: block; width: 24px; transform: translate(-50%, -100%); transform-origin: 50% 100% }
+.phone-sheet { position: relative; padding: 8px 10px 16px; border-radius: 20px 20px 0 0; background: #fff; box-shadow: 0 -14px 34px -16px rgba(0, 0, 0, .35) }
+.phone-toast { position: absolute; left: 50%; bottom: 16px; z-index: 6; translate: -50% 0; white-space: nowrap; border-radius: 999px; background: #1D1D1F; color: #fff; padding: 4px 12px; font-size: 10px; font-weight: 600; opacity: 0 }
+.phone-bubble { align-self: flex-start; max-width: 84%; padding: 7px 10px; border: 1px solid #E5E5EA; border-radius: 15px 15px 15px 4px; background: #fff }
+.phone-bubble.me { align-self: flex-end; border-color: transparent; border-radius: 15px 15px 4px 15px; background: #0153A8; color: #fff }
+.phone-visit { display: flex; align-self: flex-end; align-items: center; gap: 8px; width: 88%; padding: 8px; border: 1px solid #E5E5EA; border-radius: 14px; background: #fff }
+.phone-paste { display: inline-flex; align-self: flex-start; align-items: center; gap: 5px; border-radius: 999px; background: #EAF3FF; color: #0153A8; padding: 5px 10px; font-weight: 600 }
+.phone-note { border: 1px dashed #C9C9CF; border-radius: 12px; background: #fff; padding: 8px }
+.phone-fill { display: inline-block }
+.phone-send { display: block; border-radius: 999px; background: #0153A8; color: #fff; padding: 8px; text-align: center; font-weight: 600 }
+.phone-status { position: absolute; inset: auto 8px 40px; z-index: 4; display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid #E5E5EA; border-radius: 16px; background: #fff; box-shadow: 0 12px 30px -14px rgba(0, 0, 0, .35) }
+.phone-pubmap { position: absolute; inset: 0; z-index: 5; overflow: hidden; background: #F6F1E7 }
+
+/* Pinned scenes ----------------------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  .js .track { height: calc(var(--screens) * 100vh); height: calc(var(--screens) * 100svh) }
+  .js .stage { position: sticky; top: 76px; height: calc(100vh - 76px); height: calc(100svh - 76px); overflow: clip }
+  .js .static-only { display: none }
+}

@@ -348,7 +348,7 @@ function Download() {
     <section className="pb-20 lg:pb-28" id="descargar" aria-labelledby="android-title">
       <div className={WRAP}>
         <div className="relative grid gap-12 overflow-hidden rounded-[40px] bg-mar px-6 py-14 text-espuma sm:px-12 lg:grid-cols-[1.1fr_.9fr] lg:gap-14 lg:p-16">
-          <Mediopunto animated={false} className="pointer-events-none absolute -bottom-[26rem] left-1/2 w-[64rem] max-w-none -translate-x-1/2 opacity-[.14]" />
+          <Mediopunto lit="always" className="pointer-events-none absolute -bottom-[26rem] left-1/2 w-[64rem] max-w-none -translate-x-1/2 opacity-[.14]" />
           <Reveal className="relative">
             <span className="inline-flex items-center gap-2.5 rounded-full border border-white/15 px-3.5 py-1.5 text-xs font-semibold text-sol">
               <span className="relative flex size-2" aria-hidden="true"><span className="absolute inline-flex size-full rounded-full bg-sol opacity-60 motion-safe:animate-ping" /><span className="relative inline-flex size-2 rounded-full bg-sol" /></span>
