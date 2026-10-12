@@ -80,7 +80,7 @@ Un script en línea en el `<head>` añade la clase `js` a `<html>` antes de pint
 | `web/src/ui.tsx` | `Reveal`, `Stagger`, `StaggerItem`, `Mediopunto`, `VerbRotator` y `Cenefa`. Se elimina `ProvinceMarquee`. |
 | `web/src/cuba-map.ts` | Trazados SVG de los 16 territorios, simplificados (objetivo: 25 KB o menos). |
 
-El mapa de Cuba sale de Natural Earth admin-1, que es de dominio público, simplificado con mapshaper. El plan verifica que los datos tengan las 15 provincias actuales (con Artemisa y Mayabeque) y la Isla de la Juventud. Si no las tienen, se usa otra fuente con licencia libre y se documenta.
+El mapa de Cuba sale de geoBoundaries gbOpen CUB ADM1 (OpenStreetMap, ODbL 1.0): 16 unidades con Artemisa, Mayabeque y la Isla de la Juventud. `web/scripts/cuba-map.mjs` lo simplifica a 25 KB o menos. La página cita «© colaboradores de OpenStreetMap (ODbL)» bajo el mapa y el archivo generado conserva el aviso de licencia.
 
 ## Accesibilidad
 
