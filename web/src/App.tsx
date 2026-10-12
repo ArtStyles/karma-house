@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
-import { LazyMotion, MotionConfig, domAnimation, m, useScroll } from 'motion/react';
+import { LazyMotion, MotionConfig, domAnimation } from 'motion/react';
 import { ArrowRight, Menu } from 'lucide-react';
 import { CODE, CONTACT, LEGAL, NAV, RELEASE, structuredData } from './content';
 import { Cuba } from './scenes/Cuba';
@@ -58,7 +58,6 @@ function MobileMenu({ current }: { current: string }) {
 
 function Header() {
   const current = useCurrentSection();
-  const { scrollYProgress } = useScroll();
   return (
     <header className="sticky top-0 z-50 border-b border-line/70 bg-cal/85 backdrop-blur-md">
       <div className={`${WRAP} flex h-[76px] items-center justify-between gap-6`}>
@@ -73,7 +72,6 @@ function Header() {
           <MobileMenu current={current} />
         </div>
       </div>
-      <m.span className="absolute inset-x-0 -bottom-px h-0.5 origin-left bg-gradient-to-r from-sol via-terracota to-blue" style={{ scaleX: scrollYProgress }} aria-hidden="true" />
     </header>
   );
 }

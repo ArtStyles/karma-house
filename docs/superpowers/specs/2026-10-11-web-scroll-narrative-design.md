@@ -129,7 +129,7 @@ El mapa de Cuba sale de geoBoundaries gbOpen CUB ADM1 (OpenStreetMap, ODbL 1.0):
 
 Pedida por el usuario tras ver el build:
 
-- **Recorrido:** sin la barra de progreso de los pasos (la de la cabecera se mantiene). La pantalla del teléfono fija su color y tamaño de texto de app, que en modo oscuro heredaba el claro de la página.
+- **Recorrido y cabecera:** sin barras de progreso, ni la de los pasos ni la de la cabecera. La pantalla del teléfono fija su color y tamaño de texto de app, que en modo oscuro heredaba el claro de la página.
 - **Toda Cuba:** sin la lista de provincias. Panel `mar` con la silueta de la isla rellena de losa hidráulica, revelada de oeste a este mientras un sol cálido la cruza.
 - **Operaciones:** tarjetas translúcidas (`backdrop-filter`) sobre luces suaves de sol, azul y terracota, sin iconos. Cada tarjeta lleva un arco de mediopunto en su tono y una línea de contexto («Para quien busca», etc.). En modo ligero son opacas.
 - **Publicar:** libro de tres páginas que giran sobre su borde izquierdo con el scroll. Cada página muestra una pantalla de la app más grande (texto de 13 px) y lo que ocurre en ella se anima al abrirse. Los títulos de página usan la sans del sistema en negrita, a petición del usuario, en lugar de Calistoga.
