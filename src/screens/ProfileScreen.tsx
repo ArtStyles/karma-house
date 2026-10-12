@@ -72,7 +72,7 @@ export default function ProfileScreen() {
       {user && (principal || agencyInvitations || isAdmin) && <>
         <Text style={styles.sectionLabel}>Gestión</Text>
         <View style={styles.group}>
-          {principal && <AccountRow icon="business-outline" title={principal.tradeName} description="Inmobiliaria principal" onPress={() => router.push({ pathname: '/agency-workspace', params: { agencyId: principal.id } })}>
+          {principal && <AccountRow icon="business-outline" title={principal.tradeName} description={principal.isPrincipal ? undefined : 'Inmobiliaria principal'} onPress={() => router.push({ pathname: '/agency-workspace', params: { agencyId: principal.id } })}>
             <AgencyVerifiedBadge agencyName={principal.tradeName} verified={principal.verified} principal={principal.isPrincipal} labelled />
           </AccountRow>}
           {agencyInvitations && <AccountRow icon="business-outline" title="Mi inmobiliaria e invitaciones" onPress={() => router.push('/agency-workspace')} />}
