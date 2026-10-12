@@ -4,8 +4,10 @@ import { fade, useMode, useParts, useStage } from '../motion';
 import { easeOut, seg } from '../scroll';
 
 const COUNT = TAGLINE.flat().length;
+// The lowest opacity that keeps 3:1 contrast for large text in both themes (blue on cal is the tightest).
+const DIM = 0.62;
 
-/** «Un espacio para encontrar tu lugar.» Each word goes from 30 % to full colour, in reading order, with the scroll. */
+/** «Un espacio para encontrar tu lugar.» Each word goes from dimmed to full colour, in reading order, with the scroll. */
 export function Tagline() {
   const track = useRef<HTMLElement>(null);
   const mode = useMode();
@@ -15,7 +17,7 @@ export function Tagline() {
     if (still(mode.current === 'static')) return;
     for (let i = 0; i < COUNT; i++) {
       const a = 0.12 + (i * 0.6) / COUNT;
-      fade(parts.current[`w${i}`], 0.3 + 0.7 * easeOut(seg(p, a, a + 0.6 / COUNT)));
+      fade(parts.current[`w${i}`], DIM + (1 - DIM) * easeOut(seg(p, a, a + 0.6 / COUNT)));
     }
   }, [mode, parts, still]);
 

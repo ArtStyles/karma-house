@@ -1934,3 +1934,4 @@ git commit -m "docs(web): document the scroll narrative structure"
 - Task 8: la tarjeta de estado de Publicar no lleva icono, para que quepa en el teléfono estrecho.
 - Task 9: `Mediopunto lit="view"` se enciende con cualquier parte visible (`margin: '0px 0px -15% 0px'`), porque el panel recorta casi toda la ventana grande.
 - Task 11: en modo estático el arco va justo después del hero (`.journey-text { display: contents }` y `order`), y en modo fijo los pasos ocultos no capturan clics (`pointer-events: none`). `.claude/launch.json` no se incluye en el commit: su cambio restante (`videos`) es de otra sesión.
+- Task 11: Lighthouse marcó el lema apagado al 30 % por contraste (2,0 a 2,5:1). Sube a 62 %, el mínimo que da 3:1 en claro y oscuro (azul sobre cal es el caso límite).

@@ -106,7 +106,7 @@ html:not(.js) .cuba-figure { display: none }
 .tagline .stage { display: grid; place-items: center; padding-block: 6rem }
 @media (prefers-reduced-motion: no-preference) {
   .js .tagline .stage { padding-block: 0 }
-  .js .tagline-word { opacity: .3 }
+  .js .tagline-word { opacity: .62 }
 }
 
 /* Publish ----------------------------------------------------------------------------------------------- */
