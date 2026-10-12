@@ -21,7 +21,8 @@ import {
   type ListingDraft,
 } from '../domain/listings';
 import { createThemedStyles, formatMoney, layout, typefaces } from '../theme';
-import { createDraftPersistence, draftToken, hasDraftVersionConflict, restoreDraft } from '../domain/draftPersistence';
+import { createDraftPersistence, draftToken, hasDraftVersionConflict } from '../domain/draftPersistence';
+import { restorePublicationDraft } from '../domain/publicationEntry';
 import { draftStorage } from '../data/draftStorage';
 import { ListingPhotos } from './ListingPhotos';
 import { LocationPicker } from './maps/LocationPicker';
@@ -38,6 +39,10 @@ type DraftErrors = DraftValidation['errors'];
 
 export interface ListingFormProps {
   initialDraft?: ListingDraft;
+  initialOperation?: ListingOperation;
+  importRequest?: number;
+  active?: boolean;
+  onOperationChange?: (operation: ListingOperation | undefined) => void;
   submitLabel?: string;
   onSubmit(draft: ListingDraft): Promise<void>;
   onSaveDraft?: (draft: ListingDraft) => Promise<void>;
@@ -86,6 +91,10 @@ const floorOptions = [{ value: '', label: 'Sin especificar' }, ...Array.from({ l
 
 export function ListingForm({
   initialDraft,
+  initialOperation,
+  importRequest = 0,
+  active = true,
+  onOperationChange,
   submitLabel = 'Guardar anuncio',
   onSubmit,
   onSaveDraft,
@@ -97,7 +106,7 @@ export function ListingForm({
   draftStorageKey,
 }: ListingFormProps) {
   const { colors, styles } = useStyles();
-  const [draft, setDraft] = useState<ListingDraft>(() => ({ ...cloneDraft(initialDraft ?? emptyDraft), clientRequestId: initialDraft?.clientRequestId ?? draftToken() }));
+  const [draft, setDraft] = useState<ListingDraft>(() => ({ ...restorePublicationDraft(null, cloneDraft(initialDraft ?? emptyDraft), initialDraft ? undefined : initialOperation), clientRequestId: initialDraft?.clientRequestId ?? draftToken() }));
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<DraftErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -112,6 +121,7 @@ export function ListingForm({
   const [savedWarning, setSavedWarning] = useState('');
   const [chosen, setChosen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const seenImportRequest = useRef(0);
   // Component state on purpose: the notice describes this paste, not a draft restored after a restart.
   const [imported, setImported] = useState<ImportResult | null>(null);
   const operation = draft.operation ?? 'sale';
@@ -149,10 +159,18 @@ export function ListingForm({
     if (!persistence) return;
     setReadFailed(false); setHydrated(false);
     persistence.read().then(raw => {
-      if (active) { setDraft(restoreDraft(raw, latestRef.current ?? initialRef.current)); setDraftError(''); setHydrated(true); }
+      if (active) { setDraft(restorePublicationDraft(raw, latestRef.current ?? initialRef.current, initialDraft ? undefined : initialOperation)); setDraftError(''); setHydrated(true); }
     }).catch(() => { if (active) { setReadFailed(true); setDraftError('No pudimos recuperar el borrador guardado. Vuelve a intentarlo para conservar tus cambios.'); } });
     return () => { active = false; };
   }, [persistence, loadAttempt]);
+
+  useEffect(() => { if (hydrated) onOperationChange?.(draft.operation); }, [draft.operation, hydrated, onOperationChange]);
+  useEffect(() => {
+    if (!active) { setImportOpen(false); return; }
+    if (!hydrated || submitting || !importRequest || seenImportRequest.current === importRequest) return;
+    seenImportRequest.current = importRequest;
+    setImportOpen(true);
+  }, [active, hydrated, submitting, importRequest]);
 
   useEffect(() => {
     if (!persistence || !hydrated || completed.current || versionConflict || submitting || reloading) return;
@@ -697,7 +715,7 @@ export function ListingForm({
           </Text>
         </Animated.View>
       </ScrollView>
-      {importOpen ? <ImportListingSheet onClose={() => setImportOpen(false)} onImport={applyImport} /> : null}
+      {importOpen && active ? <ImportListingSheet onClose={() => setImportOpen(false)} onImport={applyImport} /> : null}
     </KeyboardAvoidingView>
   );
 }
