@@ -53,7 +53,7 @@ function MobileMenu({ current }: { current: string }) {
     }
   };
   return (
-    <details className="relative md:hidden" ref={menu} onClick={onClick} onKeyDown={onKeyDown}>
+    <details className="relative lg:hidden" ref={menu} onClick={onClick} onKeyDown={onKeyDown}>
       <summary className="flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-sm font-semibold"><Menu className="size-4" aria-hidden="true" />Menú</summary>
       <nav aria-label="Navegación móvil" className="absolute right-0 top-[calc(100%+12px)] grid w-64 rounded-3xl border border-line bg-paper p-2 shadow-2xl">
         {[...NAV, ['descargar', 'Descargar app'] as const].map(([id, label]) => (
@@ -70,7 +70,7 @@ function Header({ still, onToggle }: { still: boolean; onToggle: () => void }) {
     <header className="sticky top-0 z-50 border-b border-line/70 bg-cal/85 backdrop-blur-md">
       <div className={`${WRAP} flex h-[76px] items-center justify-between gap-6`}>
         <Brand />
-        <nav className="hidden items-center gap-8 md:flex" aria-label="Navegación principal">
+        <nav className="hidden items-center gap-8 lg:flex" aria-label="Navegación principal">
           {NAV.map(([id, label]) => (
             <a key={id} href={`#${id}`} aria-current={current === id ? 'true' : undefined} className="flex min-h-11 items-center text-sm text-body transition-colors hover:text-blue aria-[current=true]:font-semibold aria-[current=true]:text-blue">{label}</a>
           ))}

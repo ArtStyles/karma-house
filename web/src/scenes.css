@@ -4,7 +4,7 @@
    window (--a, --len in scroll units of --step) and its text sticks over the stage while Tour.tsx fades it.
    The visitor can turn the animation off (html[data-walk="off"], see useStill) and read the stops as plain sections. */
 
-.tour { --vh: 100vh; --head: 76px; --step: calc(var(--vh) * .34); position: relative; background: var(--color-mar); color: #fff }
+.tour { --vh: 100vh; --head: 76px; --step: calc(var(--vh) * .13); position: relative; background: var(--color-mar); color: #fff }
 @supports (height: 100svh) { .tour { --vh: 100svh } }
 .tour-stage { display: none }
 

@@ -9,7 +9,8 @@ import { ARROW, SOL_BUTTON } from '../ui';
 
 // A walk through one house, photo by photo (web/scripts/tour-assets.py). At each stop of TOUR the frame freezes
 // into a duotone and the stop's text takes over. Without WebGL, motion or JavaScript, the stops read as photo panels.
-const PAUSE = 2.4;
+// Scroll per step: 13 % of the screen per photo (--step in scenes.css); a pause lasts 5 steps, so the text stays readable.
+const PAUSE = 5;
 const STOPS = TOUR.map((stop) => data.frames.indexOf(stop.photo));
 const { parts, units } = tourTimeline(STOPS, PAUSE);
 const PAUSES = parts.filter((x) => x.kind === 'pause');
