@@ -182,35 +182,43 @@ export function Tour({ still, onToggle }: { still: boolean; onToggle: () => void
         <canvas aria-hidden="true" />
         <div className="tour-shade" />
         <div className="tour-flash" />
-        <span className="tour-label" aria-hidden="true">Imagen ilustrativa</span>
-        <button type="button" className="tour-switch" onClick={onToggle}><Pause className="size-3.5" aria-hidden="true" />Sin animación</button>
       </div>
       {TOUR.map((stop, s) => {
         const pause = PAUSES[s], Heading = s === 0 ? 'h1' : 'h2';
-        const picture = <img className="tour-photo" src={photo(stop.photo, 1280)} srcSet={srcSet(stop.photo)} sizes="100vw" width="1280" height="853" alt="" loading="lazy" decoding="async" />;
+        const picture = (
+          <figure className="tour-figure">
+            <img className="tour-photo" src={photo(stop.photo, 1280)} srcSet={srcSet(stop.photo)} sizes="(min-width: 900px) 50vw, 100vw" width="1280" height="853" alt="" loading="lazy" decoding="async" />
+            <figcaption className="tour-label">{stop.room} · Imagen ilustrativa</figcaption>
+          </figure>
+        );
         const style = { '--a': pause.a, '--len': pause.b - pause.a, '--mid': s === 0 ? 0 : (pause.b - pause.a) / 2 } as CSSProperties;
         return (
           <article key={stop.id} className="tour-stop" aria-labelledby={`${stop.id}-title`} style={style}>
             <span id={stop.id} className="tour-anchor" />
             {flat ? picture : <noscript>{picture}</noscript>}
-            <span className="tour-label">Imagen ilustrativa</span>
             <div className="tour-text">
+              {s > 0 && <p className="tour-num" aria-hidden="true">{String(s + 1).padStart(2, '0')}</p>}
               <p className="tour-kicker">{stop.kicker}</p>
               <Heading id={`${stop.id}-title`} className="tour-title">{stop.title} <span>{stop.accent}</span></Heading>
               <p className="tour-copy">{stop.text}</p>
               {s === 0 && (
                 <>
-                  <a className={`${SOL_BUTTON} mt-8`} href="#descargar">Descarga KarmaHouse para Android <ArrowRight className={ARROW} aria-hidden="true" /></a>
+                  <a className={`${SOL_BUTTON} tour-cta mt-8`} href="#descargar">Descarga KarmaHouse para Android <ArrowRight className={ARROW} aria-hidden="true" /></a>
                   <ul className="tour-proof">{PROOF.map((item) => <li key={item}>{item}</li>)}</ul>
                   <p className="tour-hint"><ArrowDown className="size-4" aria-hidden="true" />Desliza y recorre la casa</p>
                 </>
               )}
               {stop.id === 'publicar' && <a className="tour-link" href={ASSISTED_CONTACT}>¿Prefieres ayuda? Escríbenos y preparamos tu anuncio contigo <ArrowRight className={ARROW} aria-hidden="true" /></a>}
-              {s === TOUR.length - 1 && <a className={`${SOL_BUTTON} mt-8`} href="#descargar">Descarga KarmaHouse para Android <ArrowRight className={ARROW} aria-hidden="true" /></a>}
+              {s === TOUR.length - 1 && <a className={`${SOL_BUTTON} tour-cta mt-8`} href="#descargar">Descarga KarmaHouse para Android <ArrowRight className={ARROW} aria-hidden="true" /></a>}
             </div>
           </article>
         );
       })}
+      {/* After the stops, so it stays above their navy fade. */}
+      <div className="tour-bar">
+        <button type="button" className="tour-switch" onClick={onToggle}><Pause className="size-3.5" aria-hidden="true" />Sin animación</button>
+        <span className="tour-label" aria-hidden="true">Imagen ilustrativa</span>
+      </div>
     </section>
   );
 }

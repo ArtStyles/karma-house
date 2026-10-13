@@ -1,41 +1,62 @@
-/* House walk (scenes/Tour.tsx). By default each stop is a full-bleed photo under the mar overlay with its text: that is
-   what no-JavaScript, reduced-motion, data-saver and no-WebGL visitors get ([data-flat]). With JavaScript and motion,
-   the section becomes a tall track around a sticky stage where the canvas plays the walk; each stop sits in its pause
-   window (--a, --len in scroll units of --step) and its text sticks over the stage while Tour.tsx fades it.
-   The visitor can turn the animation off (html[data-walk="off"], see useStill) and read the stops as plain sections. */
+/* House walk (scenes/Tour.tsx). By default the stops read as a plain room-by-room story on limewash cream: each room's
+   photo in a mediopunto arch, its number and its text beside it. That is what no-JavaScript, reduced-motion,
+   data-saver and no-WebGL visitors get ([data-flat]), and what the visitor gets after turning the animation off
+   (html[data-walk="off"], see useStill). With JavaScript and motion, the section becomes a tall track around a sticky
+   stage where the canvas plays the walk; each stop sits in its pause window (--a, --len in scroll units of --step) and
+   its text sticks over the stage, white on navy, while Tour.tsx fades it. */
 
-.tour { --vh: 100vh; --head: 76px; --step: calc(var(--vh) * .13); position: relative; background: var(--color-mar); color: #fff }
+.tour { --vh: 100vh; --head: 76px; --step: calc(var(--vh) * .13); position: relative }
 @supports (height: 100svh) { .tour { --vh: 100svh } }
-.tour-stage { display: none }
-
-.tour-stop { position: relative; display: grid; min-height: calc(var(--vh) - var(--head)); place-items: center; overflow: hidden; isolation: isolate; padding: 5rem 1rem }
-.tour-stop::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(rgba(14, 34, 54, .55), rgba(14, 34, 54, .72)) }
-.tour-photo { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: 50% 47% }
+.tour-stage, .tour-bar { display: none }
 /* html scroll-padding-top is 96px; the stops start right under the 76px header. */
 .tour-anchor { position: absolute; top: 0; left: 0; scroll-margin-top: calc(var(--head) - 96px) }
-.tour-label { position: absolute; right: 16px; bottom: 16px; border-radius: 999px; background: rgba(250, 246, 238, .9); color: #1a2b3b; padding: 4px 12px; font-size: 11px; font-weight: 600; line-height: 1.6 }
+.tour-label { position: absolute; right: 14px; bottom: 14px; border-radius: 999px; background: rgba(250, 246, 238, .92); color: #1a2b3b; padding: 4px 12px; font-size: 11px; font-weight: 600; line-height: 1.6 }
 
-/* Text: white Calistoga, its one phrase in sol, on navy. */
-.tour-text { position: relative; width: min(100%, 54rem); margin-inline: auto; text-align: center }
-.tour-kicker { display: inline-flex; align-items: center; gap: .8rem; font-size: .8rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--color-sol) }
-.tour-kicker::before, .tour-kicker::after { content: ""; width: 1.75rem; height: 2px; border-radius: 2px; background: currentColor }
-.tour-title { margin-top: 1rem; font-size: clamp(2.75rem, 7.6vw, 6.25rem); line-height: 1; letter-spacing: -.025em; color: #fff; text-shadow: 0 2px 32px rgba(8, 18, 29, .55) }
-h1.tour-title { font-size: clamp(2.5rem, 6.2vw, 5.25rem) }
-.tour-title span { color: var(--color-sol) }
-.tour-copy { margin: 1.4rem auto 0; max-width: 36rem; font-size: clamp(1.05rem, 1.55vw, 1.3rem); font-weight: 500; line-height: 1.55; color: #f3efe7; text-wrap: pretty; text-shadow: 0 1px 16px rgba(8, 18, 29, .6) }
-.tour-proof { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; margin: 1.5rem 0 0; padding: 0; list-style: none }
-.tour-proof li { border: 1px solid rgba(255, 255, 255, .28); border-radius: 999px; background: rgba(14, 34, 54, .45); padding: .35rem .9rem; font-size: .8rem; font-weight: 600; color: #f3efe7 }
-.tour-link { display: inline-flex; min-height: 44px; align-items: center; gap: .5rem; margin-top: 1.25rem; font-weight: 600; color: var(--color-sol); text-decoration: underline; text-underline-offset: 4px }
+/* Plain sections ----------------------------------------------------------------------------------------- */
+.tour-stop { position: relative; display: grid; gap: 2rem; align-items: center; max-width: 1180px; margin-inline: auto; padding: 3.5rem 1rem }
+.tour-stop + .tour-stop { border-top: 1px solid var(--color-line) }
+.tour-stop:first-of-type .tour-figure { order: 2 }
+@media (min-width: 900px) {
+  .tour-stop { grid-template-columns: 1fr 1fr; gap: clamp(3rem, 6vw, 6rem); padding: 5.5rem 2rem }
+  .tour-stop:nth-of-type(odd) .tour-figure { order: 2 }
+}
+.tour-figure { position: relative; margin: 0; aspect-ratio: 4 / 5; max-height: 80vh; overflow: hidden; border: 1px solid var(--color-line);
+  border-radius: 999px 999px 28px 28px; background: var(--color-arena); box-shadow: 0 40px 80px -48px rgba(26, 43, 59, .45) }
+.tour-photo { display: block; width: 100%; height: 100%; object-fit: cover }
+
+.tour-text { position: relative; max-width: 34rem }
+.tour-num { margin: 0 0 .75rem; font-family: var(--font-display); font-size: clamp(3rem, 7vw, 5rem); line-height: .9; color: var(--color-ocre) }
+.tour-kicker { display: inline-flex; align-items: center; gap: .8rem; margin: 0; font-size: .8rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--color-ocre) }
+.tour-kicker::before { content: ""; flex: none; width: 1.75rem; height: 2px; border-radius: 2px; background: var(--color-sol) }
+.tour-title { margin-top: 1rem; font-size: clamp(2.1rem, 1rem + 3.4vw, 4rem); line-height: 1.04; letter-spacing: -.025em; color: var(--color-ink) }
+h1.tour-title { font-size: clamp(2.3rem, 1rem + 4vw, 4.6rem) }
+.tour-title span { color: var(--color-blue) }
+.tour-copy { margin: 1.25rem 0 0; font-size: clamp(1.02rem, .95rem + .35vw, 1.2rem); line-height: 1.6; color: var(--color-body); text-wrap: pretty }
+.tour-proof { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.5rem 0 0; padding: 0; list-style: none }
+.tour-proof li { border: 1px solid var(--color-line); border-radius: 999px; background: var(--color-paper); padding: .35rem .9rem; font-size: .8rem; font-weight: 600; color: var(--color-ink) }
+.tour-link { display: inline-block; margin-top: 1.25rem; padding-block: .6rem; font-weight: 600; color: var(--color-blue); text-decoration: underline; text-underline-offset: 4px; text-wrap: pretty }
+.tour-link svg { display: inline-block; margin-left: .35rem; vertical-align: -2px }
+.tour-text .tour-cta { background: var(--color-blue); color: var(--color-on-blue) }
+.tour-text .tour-cta:hover { background: var(--color-blue-hover) }
 .tour-hint { display: none }
 
+/* Animated walk ------------------------------------------------------------------------------------------ */
 @media (prefers-reduced-motion: no-preference) {
   html.js:not([data-walk="off"]):has(.tour:not([data-flat])) { scroll-snap-type: y proximity }
   .js:not([data-walk="off"]) .tour:not([data-flat]) {
     height: calc(var(--units) * var(--step) + var(--vh) - var(--head));
+    background: var(--color-mar);
+    color: #fff;
 
     .tour-stage { display: block; position: sticky; top: var(--head); height: calc(var(--vh) - var(--head)); overflow: hidden; background: #0b1622 }
-    .tour-stage > :is(img, canvas, div) { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
-    .tour-switch { position: absolute; left: 12px; bottom: 6px; z-index: 1; display: inline-flex; min-height: 44px; align-items: center; gap: .4rem; padding: 0 .25rem;
+    .tour-stage > * { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
+    /* The switch and the photo label ride along the bottom of the stage: sticky like it, and after the stops in the
+       page so their text fades never cover them. */
+    .tour-bar { position: sticky; top: calc(var(--vh) - 56px); display: flex; height: 56px; margin-top: -56px; align-items: center; justify-content: space-between;
+      padding: 0 12px; pointer-events: none }
+    .tour-bar > * { pointer-events: auto }
+    .tour-bar .tour-label { position: static }
+    .tour-switch { display: inline-flex; min-height: 44px; align-items: center; gap: .4rem; padding: 0 .25rem;
       font-size: .75rem; font-weight: 600; color: rgba(255, 255, 255, .78); text-shadow: 0 1px 8px rgba(8, 18, 29, .7); text-underline-offset: 4px; transition: color .3s var(--ease-out-soft) }
     .tour-switch:hover { color: #fff; text-decoration: underline }
     .tour-poster { object-fit: cover; object-position: 50% 47%; transform: scale(1.03); transform-origin: 50% 45% }
@@ -44,19 +65,41 @@ h1.tour-title { font-size: clamp(2.5rem, 6.2vw, 5.25rem) }
     .tour-shade { background: radial-gradient(ellipse at center, transparent 30%, rgba(8, 18, 29, .62)) }
     .tour-flash { opacity: 0; background: radial-gradient(circle at 50% 45%, rgba(255, 236, 196, .8), rgba(255, 236, 196, 0) 62%) }
 
-    .tour-stop { position: absolute; inset-inline: 0; top: calc(var(--a) * var(--step)); display: block; min-height: 0; padding: 0; overflow: visible; isolation: auto; pointer-events: none;
+    .tour-stop { position: absolute; inset-inline: 0; top: calc(var(--a) * var(--step)); display: block; max-width: none; min-height: 0; padding: 0; border: 0; pointer-events: none;
       height: calc(var(--len) * var(--step) + var(--vh) - var(--head)) }
-    .tour-stop::before, .tour-photo, .tour-stop > .tour-label { display: none }
     .tour-anchor { top: calc(var(--mid) * var(--step)); scroll-snap-align: start }
-    .tour-text { position: sticky; top: var(--head); display: grid; height: calc(var(--vh) - var(--head)); width: auto; place-content: center; justify-items: center; padding: 2rem 1rem; opacity: 0; will-change: opacity, transform }
+    .tour-num { display: none }
+
+    /* Text: white Calistoga with its one phrase in sol, on a soft navy pool so it reads on any part of the photo. */
+    .tour-text { position: sticky; top: var(--head); display: grid; height: calc(var(--vh) - var(--head)); max-width: none; place-content: center; justify-items: center;
+      padding: 2rem 1rem; text-align: center; opacity: 0; will-change: opacity, transform }
     .tour-text > * { max-width: 54rem }
-    /* A soft navy pool behind the words, so they read on any part of the photo. */
     .tour-text::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse 72% 58% at 50% 50%, rgba(14, 34, 54, .74), rgba(14, 34, 54, .3) 70%, rgba(14, 34, 54, 0)) }
+    .tour-kicker { color: var(--color-sol) }
+    .tour-kicker::before, .tour-kicker::after { content: ""; flex: none; width: 1.75rem; height: 2px; border-radius: 2px; background: currentColor }
+    .tour-title { font-size: clamp(2.15rem, 1rem + 5.4vw, 6.25rem); line-height: 1; color: #fff; text-shadow: 0 2px 32px rgba(8, 18, 29, .55) }
+    h1.tour-title { font-size: clamp(2rem, .9rem + 4.4vw, 5.25rem) }
+    .tour-title span { color: var(--color-sol) }
+    .tour-copy { margin-inline: auto; max-width: 36rem; font-size: clamp(1rem, .9rem + .5vw, 1.3rem); font-weight: 500; line-height: 1.55; color: #f3efe7; text-shadow: 0 1px 16px rgba(8, 18, 29, .6) }
+    .tour-proof { justify-content: center }
+    .tour-proof li { border-color: rgba(255, 255, 255, .28); background: rgba(14, 34, 54, .45); color: #f3efe7 }
+    .tour-link { color: var(--color-sol) }
+    .tour-text .tour-cta { background: var(--color-sol); color: var(--color-mar) }
+    .tour-text .tour-cta:hover { background: #f0c46a }
     .tour-text a { pointer-events: none }
     .tour-text[data-on] a, .tour-stop:first-of-type .tour-text:not([style]) a { pointer-events: auto }
     .tour-stop:first-of-type .tour-text:not([style]) { opacity: 1 }
     .tour-text:focus-within { opacity: 1 !important; transform: none !important }
     .tour-hint { display: inline-flex; align-items: center; gap: .5rem; margin-top: 1.75rem; font-size: .85rem; font-weight: 600; color: #f3efe7 }
+
+    /* Phones: the words sit low and to the left over a navy fade, so the room stays visible above them. */
+    @media (max-width: 639px) {
+      .tour-text { place-content: end start; justify-items: start; padding: 1.5rem 1.25rem 4rem; text-align: left }
+      .tour-text::before { background: linear-gradient(to top, rgba(14, 34, 54, .94), rgba(14, 34, 54, .78) 40%, rgba(14, 34, 54, .2) 72%, rgba(14, 34, 54, 0)) }
+      .tour-kicker::after { display: none }
+      .tour-proof { justify-content: flex-start }
+      .tour-hint { display: none }
+    }
   }
 }
 
