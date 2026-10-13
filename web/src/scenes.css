@@ -1,9 +1,9 @@
 /* House walk (scenes/Tour.tsx). By default the stops read as a plain room-by-room story on limewash cream: each room's
-   photo in a mediopunto arch, its number and its text beside it. That is what no-JavaScript, reduced-motion,
-   data-saver and no-WebGL visitors get ([data-flat]), and what the visitor gets after turning the animation off
-   (html[data-walk="off"], see useStill). With JavaScript and motion, the section becomes a tall track around a sticky
-   stage where the canvas plays the walk; each stop sits in its pause window (--a, --len in scroll units of --step) and
-   its text sticks over the stage, white on navy, while Tour.tsx fades it. */
+   photo in a mediopunto arch, with its text on a frosted card laid over the bottom of the photo. That is what
+   no-JavaScript, reduced-motion, data-saver and no-WebGL visitors get ([data-flat]), and what the visitor gets after
+   turning the animation off (html[data-walk="off"], see useStill). With JavaScript and motion, the section becomes a
+   tall track around a sticky stage where the canvas plays the walk; each stop sits in its pause window (--a, --len in
+   scroll units of --step) and its text sticks over the stage, white on navy, while Tour.tsx fades it. */
 
 .tour { --vh: 100vh; --head: 76px; --step: calc(var(--vh) * .13); position: relative }
 @supports (height: 100svh) { .tour { --vh: 100svh } }
@@ -13,67 +13,64 @@
 .tour-label { position: absolute; right: 14px; bottom: 14px; border-radius: 999px; background: rgba(250, 246, 238, .92); color: #1a2b3b; padding: 4px 12px; font-size: 11px; font-weight: 600; line-height: 1.6 }
 
 /* Plain sections ----------------------------------------------------------------------------------------- */
-.tour-stop { position: relative; display: grid; gap: 2rem; align-items: center; max-width: 1180px; margin-inline: auto; padding: 3.5rem 1rem }
-.tour-stop + .tour-stop { border-top: 1px solid var(--color-line) }
-.tour-stop:first-of-type .tour-figure { order: 2 }
-@media (min-width: 900px) {
-  .tour-stop { grid-template-columns: 1fr 1fr; gap: clamp(3rem, 6vw, 6rem); padding: 5.5rem 2rem }
-  .tour-stop:nth-of-type(odd) .tour-figure { order: 2 }
-}
-.tour-figure { position: relative; margin: 0; aspect-ratio: 4 / 5; max-height: 80vh; overflow: hidden; border: 1px solid var(--color-line);
-  border-radius: 999px 999px 28px 28px; background: var(--color-arena); box-shadow: 0 40px 80px -48px rgba(26, 43, 59, .45) }
+.tour-stop { position: relative; display: grid; max-width: 1180px; margin-inline: auto; padding: 3.5rem 1rem }
+.tour-figure { position: relative; margin: 0; width: min(100%, 560px); aspect-ratio: 4 / 5; max-height: 82vh; overflow: hidden;
+  border-radius: 999px 999px 24px 24px; background: var(--color-arena); box-shadow: 0 40px 80px -48px rgba(26, 43, 59, .45) }
+.tour-figure .tour-label { right: auto; left: 14px }
 /* Taller than the arch, so the photo can drift inside it. */
 .tour-photo { position: absolute; inset: -8% 0; display: block; width: 100%; height: 116%; object-fit: cover }
 
-.tour-text { position: relative; max-width: 34rem }
-.tour-num { margin: 0 0 .75rem; font-family: var(--font-display); font-size: clamp(3rem, 7vw, 5rem); line-height: .9; color: var(--color-ocre) }
-.tour-kicker { display: inline-flex; align-items: center; gap: .8rem; margin: 0; font-size: .8rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--color-ocre) }
-.tour-kicker::before { content: ""; flex: none; width: 1.75rem; height: 2px; border-radius: 2px; background: var(--color-sol) }
-.tour-title { margin-top: 1rem; font-size: clamp(2.1rem, 1rem + 3.4vw, 4rem); line-height: 1.04; letter-spacing: -.025em; color: var(--color-ink) }
-h1.tour-title { font-size: clamp(2.3rem, 1rem + 4vw, 4.6rem) }
+/* The text: a frosted card over the bottom of the photo. */
+.tour-text { position: relative; z-index: 1; max-width: 34rem; margin: -5rem .75rem 0; padding: 1.6rem 1.4rem; border: 1px solid color-mix(in srgb, var(--color-line) 80%, transparent);
+  border-radius: 24px; background: color-mix(in srgb, var(--color-paper) 62%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.2); backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 45%, transparent), 0 30px 60px -40px rgba(26, 43, 59, .5) }
+html[data-mode="lite"] .tour-text { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--color-paper) }
+.tour-title { font-size: clamp(1.9rem, 1.1rem + 2vw, 2.9rem); line-height: 1.05; letter-spacing: -.02em; color: var(--color-ink) }
+h1.tour-title { font-size: clamp(2.3rem, 1.2rem + 2.8vw, 3.9rem) }
 .tour-title span { color: var(--color-blue) }
-.tour-copy { margin: 1.25rem 0 0; font-size: clamp(1.02rem, .95rem + .35vw, 1.2rem); line-height: 1.6; color: var(--color-body); text-wrap: pretty }
-.tour-proof { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.5rem 0 0; padding: 0; list-style: none }
-.tour-proof li { border: 1px solid var(--color-line); border-radius: 999px; background: var(--color-paper); padding: .35rem .9rem; font-size: .8rem; font-weight: 600; color: var(--color-ink) }
-.tour-link { display: inline-block; margin-top: 1.25rem; padding-block: .6rem; font-weight: 600; color: var(--color-blue); text-decoration: underline; text-underline-offset: 4px; text-wrap: pretty }
+.tour-copy { margin: .9rem 0 0; font-size: clamp(1.02rem, .97rem + .25vw, 1.15rem); line-height: 1.6; color: var(--color-body); text-wrap: pretty }
+.tour-proof { margin: 1.1rem 0 0; font-size: .9rem; color: var(--color-body) }
+.tour-link { display: inline-block; margin-top: 1rem; padding-block: .6rem; font-weight: 600; color: var(--color-blue); text-decoration: underline; text-underline-offset: 4px; text-wrap: pretty }
 .tour-link svg { display: inline-block; margin-left: .35rem; vertical-align: -2px }
 .tour-text .tour-cta { background: var(--color-blue); color: var(--color-on-blue) }
 .tour-text .tour-cta:hover { background: var(--color-blue-hover) }
 .tour-hint { display: none }
-.tour-rule { display: block; width: 9rem; height: 2px; margin-top: 1.75rem; border-radius: 2px; background: linear-gradient(90deg, var(--color-sol), var(--color-terracota), var(--color-blue)); transform-origin: left }
 
-/* Plain sections in motion: as each room scrolls in, its arch opens upward like a door, the photo drifts inside it,
-   the words rise one after another and the brand line draws itself. The first room plays the same on load. Only
-   where scroll-driven animations exist and the visitor accepts motion; never on the animated walk. */
+/* The first room opens the page: its words stand on the cream beside the photo, not on a card. */
+.tour-stop:first-of-type { gap: 2rem }
+.tour-stop:first-of-type .tour-text { order: -1; max-width: 36rem; margin: 0; padding: 0; border: 0; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none }
+@media (min-width: 900px) {
+  .tour-stop { grid-template-columns: 7fr 5fr; align-items: end; padding: 5rem 2rem }
+  .tour-figure { width: 100% }
+  .tour-text { margin: 0 0 3rem -9rem; padding: 2.2rem }
+  .tour-stop:nth-of-type(odd):not(:first-of-type) { grid-template-columns: 5fr 7fr }
+  .tour-stop:nth-of-type(odd):not(:first-of-type) .tour-figure { order: 2; justify-self: end }
+  .tour-stop:nth-of-type(odd):not(:first-of-type) .tour-text { margin: 0 -9rem 3rem 0 }
+  .tour-stop:first-of-type { grid-template-columns: 1fr 1fr; align-items: center; gap: 4rem }
+  .tour-stop:first-of-type .tour-figure { justify-self: end; width: min(100%, 520px) }
+}
+
+/* Plain sections in motion: as each room scrolls in, its arch opens upward like a door, the photo drifts inside it
+   and the card rises over it. The first room plays the same on load. Only where scroll-driven animations exist and
+   the visitor accepts motion; never on the animated walk. */
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
     :is(html:not(.js) .tour, html[data-walk="off"] .tour, .tour[data-flat]) {
       .tour-stop { view-timeline: --room block }
       .tour-figure { animation: tour-door linear both; animation-timeline: --room; animation-range: entry 10% cover 40% }
       .tour-photo { animation: tour-drift linear both; animation-timeline: --room; animation-range: cover 0% cover 100% }
-      .tour-text > * { animation: tour-rise linear both; animation-timeline: --room; animation-range: entry 30% cover 35% }
-      .tour-text > :nth-child(2) { animation-range: entry 38% cover 37% }
-      .tour-text > :nth-child(3) { animation-range: entry 46% cover 39% }
-      .tour-text > :nth-child(4) { animation-range: entry 54% cover 41% }
-      .tour-text > :nth-child(n + 5) { animation-range: entry 62% cover 43% }
-      .tour-text > .tour-rule { animation: tour-draw linear both; animation-timeline: --room; animation-range: entry 70% cover 50% }
+      .tour-text { animation: tour-rise linear both; animation-timeline: --room; animation-range: entry 45% cover 42% }
       .tour-stop:first-of-type {
         .tour-figure { animation: tour-door 1.2s var(--ease-out-soft) .15s both }
         .tour-photo { animation: none }
-        .tour-text > * { animation: tour-rise .8s var(--ease-out-soft) both }
-        .tour-text > :nth-child(2) { animation-delay: .08s }
-        .tour-text > :nth-child(3) { animation-delay: .16s }
-        .tour-text > :nth-child(4) { animation-delay: .24s }
-        .tour-text > :nth-child(n + 5) { animation-delay: .32s }
-        .tour-text > .tour-rule { animation: tour-draw .9s var(--ease-out-soft) .5s both }
+        .tour-text { animation: tour-rise .8s var(--ease-out-soft) both }
       }
     }
   }
 }
-@keyframes tour-door { from { clip-path: inset(100% 0 0 0 round 999px 999px 28px 28px) } to { clip-path: inset(0 0 0 0 round 999px 999px 28px 28px) } }
+@keyframes tour-door { from { clip-path: inset(100% 0 0 0 round 999px 999px 24px 24px) } to { clip-path: inset(0 0 0 0 round 999px 999px 24px 24px) } }
 @keyframes tour-drift { from { transform: translateY(-6%) scale(1.08) } to { transform: translateY(6%) scale(1) } }
 @keyframes tour-rise { from { opacity: 0; transform: translateY(28px) } }
-@keyframes tour-draw { from { transform: scaleX(0) } }
 
 /* Animated walk ------------------------------------------------------------------------------------------ */
 @media (prefers-reduced-motion: no-preference) {
@@ -103,21 +100,18 @@ h1.tour-title { font-size: clamp(2.3rem, 1rem + 4vw, 4.6rem) }
     .tour-stop { position: absolute; inset-inline: 0; top: calc(var(--a) * var(--step)); display: block; max-width: none; min-height: 0; padding: 0; border: 0; pointer-events: none;
       height: calc(var(--len) * var(--step) + var(--vh) - var(--head)) }
     .tour-anchor { top: calc(var(--mid) * var(--step)); scroll-snap-align: start }
-    .tour-num, .tour-rule { display: none }
 
     /* Text: white Calistoga with its one phrase in sol, on a soft navy pool so it reads on any part of the photo. */
-    .tour-text { position: sticky; top: var(--head); display: grid; height: calc(var(--vh) - var(--head)); max-width: none; place-content: center; justify-items: center;
-      padding: 2rem 1rem; text-align: center; opacity: 0; will-change: opacity, transform }
+    .tour-text { position: sticky; top: var(--head); display: grid; height: calc(var(--vh) - var(--head)); max-width: none; margin: 0; place-content: center; justify-items: center;
+      padding: 2rem 1rem; border: 0; border-radius: 0; background: none; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none;
+      text-align: center; opacity: 0; will-change: opacity, transform }
     .tour-text > * { max-width: 54rem }
     .tour-text::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse 72% 58% at 50% 50%, rgba(14, 34, 54, .74), rgba(14, 34, 54, .3) 70%, rgba(14, 34, 54, 0)) }
-    .tour-kicker { color: var(--color-sol) }
-    .tour-kicker::before, .tour-kicker::after { content: ""; flex: none; width: 1.75rem; height: 2px; border-radius: 2px; background: currentColor }
     .tour-title { font-size: clamp(2.15rem, 1rem + 5.4vw, 6.25rem); line-height: 1; color: #fff; text-shadow: 0 2px 32px rgba(8, 18, 29, .55) }
     h1.tour-title { font-size: clamp(2rem, .9rem + 4.4vw, 5.25rem) }
     .tour-title span { color: var(--color-sol) }
     .tour-copy { margin-inline: auto; max-width: 36rem; font-size: clamp(1rem, .9rem + .5vw, 1.3rem); font-weight: 500; line-height: 1.55; color: #f3efe7; text-shadow: 0 1px 16px rgba(8, 18, 29, .6) }
-    .tour-proof { justify-content: center }
-    .tour-proof li { border-color: rgba(255, 255, 255, .28); background: rgba(14, 34, 54, .45); color: #f3efe7 }
+    .tour-proof { color: #f3efe7; text-shadow: 0 1px 12px rgba(8, 18, 29, .6) }
     .tour-link { color: var(--color-sol) }
     .tour-text .tour-cta { background: var(--color-sol); color: var(--color-mar) }
     .tour-text .tour-cta:hover { background: #f0c46a }
@@ -131,8 +125,6 @@ h1.tour-title { font-size: clamp(2.3rem, 1rem + 4vw, 4.6rem) }
     @media (max-width: 639px) {
       .tour-text { place-content: end start; justify-items: start; padding: 1.5rem 1.25rem 4rem; text-align: left }
       .tour-text::before { background: linear-gradient(to top, rgba(14, 34, 54, .94), rgba(14, 34, 54, .78) 40%, rgba(14, 34, 54, .2) 72%, rgba(14, 34, 54, 0)) }
-      .tour-kicker::after { display: none }
-      .tour-proof { justify-content: flex-start }
       .tour-hint { display: none }
     }
   }

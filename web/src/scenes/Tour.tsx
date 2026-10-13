@@ -188,7 +188,7 @@ export function Tour({ still, onToggle }: { still: boolean; onToggle: () => void
           <figure className="tour-figure">
             <img className="tour-photo" src={`/casa/room-${stop.photo}-1024.webp`} srcSet={`/casa/room-${stop.photo}-640.webp 640w, /casa/room-${stop.photo}-1024.webp 1024w`}
               sizes="(min-width: 900px) 42vw, 92vw" width="1024" height="1536" alt="" loading="lazy" decoding="async" />
-            <figcaption className="tour-label">{stop.room} · Imagen ilustrativa</figcaption>
+            <figcaption className="tour-label">{stop.caption} · Imagen ilustrativa</figcaption>
           </figure>
         );
         const style = { '--a': pause.a, '--len': pause.b - pause.a, '--mid': s === 0 ? 0 : (pause.b - pause.a) / 2 } as CSSProperties;
@@ -197,20 +197,17 @@ export function Tour({ still, onToggle }: { still: boolean; onToggle: () => void
             <span id={stop.id} className="tour-anchor" />
             {flat ? picture : <noscript>{picture}</noscript>}
             <div className="tour-text">
-              {s > 0 && <p className="tour-num" aria-hidden="true">{String(s + 1).padStart(2, '0')}</p>}
-              <p className="tour-kicker">{stop.kicker}</p>
               <Heading id={`${stop.id}-title`} className="tour-title">{stop.title} <span>{stop.accent}</span></Heading>
               <p className="tour-copy">{stop.text}</p>
               {s === 0 && (
                 <>
                   <a className={`${SOL_BUTTON} tour-cta mt-8`} href="#descargar">Descarga KarmaHouse para Android <ArrowRight className={ARROW} aria-hidden="true" /></a>
-                  <ul className="tour-proof">{PROOF.map((item) => <li key={item}>{item}</li>)}</ul>
+                  <p className="tour-proof">{PROOF.join(' · ')}</p>
                   <p className="tour-hint"><ArrowDown className="size-4" aria-hidden="true" />Desliza y recorre la casa</p>
                 </>
               )}
               {stop.id === 'publicar' && <a className="tour-link" href={ASSISTED_CONTACT}>¿Prefieres ayuda? Escríbenos y preparamos tu anuncio contigo <ArrowRight className={ARROW} aria-hidden="true" /></a>}
               {s === TOUR.length - 1 && <a className={`${SOL_BUTTON} tour-cta mt-8`} href="#descargar">Descarga KarmaHouse para Android <ArrowRight className={ARROW} aria-hidden="true" /></a>}
-              <span className="tour-rule" aria-hidden="true" />
             </div>
           </article>
         );

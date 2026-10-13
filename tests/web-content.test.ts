@@ -23,7 +23,7 @@ test('every stop of the walk has its text, one coloured phrase and a photo in wa
   assert.deepEqual(at, [...at].sort((a, b) => a - b));
   assert.equal(new Set(TOUR.map((stop) => stop.id)).size, TOUR.length);
   for (const stop of TOUR) {
-    assert.ok(stop.kicker && stop.title && stop.accent && stop.text);
+    assert.ok(stop.caption && stop.title && stop.accent && stop.text);
     assert.ok(!stop.title.includes(stop.accent));
   }
   const rooms = TOUR.flatMap((stop) => [`room-${stop.photo}-640.webp`, `room-${stop.photo}-1024.webp`]);
