@@ -97,4 +97,12 @@ Capturas y XML en `D:/work/karma-house/artifacts/internal-screens/phone/`; naveg
 
 Se reutilizó el entorno aislado `artifacts/v24` para conservar la caché Android, con fuente archivada desde el commit final. Se cotejaron las 307 fuentes copiadas: cero diferencias frente al archivo Git. Compilación final correcta en 58 segundos. Logs de compilación/verificación y el archivo de fuente están en `D:/work/karma-house/artifacts/internal-screens/`.
 
-La entrega se guarda también en `artifacts/distribution/0.1.25/`. No se ha publicado una release remota ni se ha integrado esta rama en el trabajo web del checkout principal.
+La entrega se guarda también en `artifacts/distribution/0.1.25/`.
+
+## Publicación del 13 de octubre de 2026
+
+- Release pública y última: [v0.1.25](https://github.com/ArtStyles/karma-house/releases/tag/v0.1.25), etiqueta en `a038fee` (la fuente del APK). Activos: `KarmaHouse.apk`, `KarmaHouse.apk.sha256` e `INSTALACION.txt`.
+- GitHub registra para el APK el SHA-256 `54e50063d4c1063a3d7a84ebd2b7b0a08cc8b9f608e706805e8835f7665d4e5e` y 85 180 663 bytes. Los tres archivos se descargaron sin sesión y sus hashes coinciden con los preparados; `releases/latest/download/KarmaHouse.apk` resuelve a este APK.
+- La subida con `gh release create` cortó a mitad con `HTTP 408: Upload body timed out due to inactivity`. Se repitió con `curl --limit-rate 400k` y entró al primer intento (unos 3,5 minutos).
+- La portada de karmahouse.site enlaza esta versión.
+- Pendiente en teléfono: instalación nueva descargando desde el navegador, con el análisis de Play Protect. La actualización por `adb` en el Pixel 7 Pro ya está comprobada.
