@@ -17,40 +17,30 @@ export const NAV: readonly (readonly [id: string, label: string])[] = [
   ['como-funciona', 'Cómo funciona'], ['cuba', 'Toda Cuba'], ['publicar', 'Publicar'], ['preguntas', 'Preguntas'],
 ];
 
-export const PROOF = ['Anuncios revisados antes de publicarse', 'Chat privado', 'Toda Cuba'];
+export const PROOF = ['Gratis y sin comisión', 'Chat privado', 'Anuncios revisados antes de publicarse'];
 
 /** Same list and order as PROVINCES in src/domain/listingOptions.ts: west to east, then the special municipality. */
 export const PROVINCES = ['Pinar del Río', 'Artemisa', 'La Habana', 'Mayabeque', 'Matanzas', 'Villa Clara', 'Cienfuegos', 'Sancti Spíritus',
   'Ciego de Ávila', 'Camagüey', 'Las Tunas', 'Holguín', 'Granma', 'Santiago de Cuba', 'Guantánamo', 'Isla de la Juventud'] as const;
 
-/** A step of a pinned scene. `accent` is the headline's one blue phrase, shown after `title`. */
-export type Step = { label: string; title: string; accent: string; text: string };
+/** A pause of the house walk: the photo (web/public/casa) where the walk stops, and the text it shows there.
+ *  `accent` is the headline's one coloured phrase, shown after `title`. */
+export type Stop = { id: string; photo: string; room: string; kicker: string; title: string; accent: string; text: string };
 
-export const JOURNEY: Step[] = [
-  { label: 'Mapa', title: 'Busca', accent: 'con contexto.', text: 'Filtra por precio, habitaciones y estado, y mira las viviendas en el mapa. Quien publica decide si la ubicación es exacta o aproximada.' },
-  { label: 'Ficha', title: 'Conoce cada', accent: 'vivienda.', text: 'Revisa fotos y detalles, y guarda las que te interesen para volver a ellas.' },
-  { label: 'Chat', title: 'Habla directo con', accent: 'quien publica.', text: 'Cada anuncio tiene su conversación. Otros usuarios no ven tu teléfono ni tu correo.' },
-  { label: 'Visita', title: 'Visitas y ofertas,', accent: 'dentro del chat.', text: 'Propón un día y recibe la respuesta en la misma conversación. La negociación y el cierre son entre las partes.' },
+export const TOUR: Stop[] = [
+  { id: 'inicio', photo: '000', room: 'Portal', kicker: 'Viviendas en Cuba', title: 'Tu casa en Cuba,', accent: 'para comprar, vender, permutar o alquilar.',
+    text: 'Habla directamente con quien publica. Publicar, buscar y conversar es gratis.' },
+  { id: 'como-funciona', photo: '150', room: 'Sala', kicker: 'Busca con contexto', title: 'Encuentra tu casa', accent: 'por zona, precio y estado.',
+    text: 'Filtra lo que buscas y mira cada vivienda en el mapa. Quien publica decide si muestra la ubicación exacta o aproximada.' },
+  { id: 'conversa', photo: '200', room: 'Comedor', kicker: 'Habla directo', title: 'Conversa con', accent: 'quien publica.',
+    text: 'Cada anuncio tiene su chat privado: otros usuarios no ven tu teléfono ni tu correo. Visitas y ofertas se proponen en la misma conversación.' },
+  { id: 'cuba', photo: '240', room: 'Patio', kicker: 'Toda Cuba', title: 'Las 15 provincias', accent: 'y la Isla de la Juventud.',
+    text: 'Compra, vende, permuta o alquila en cualquier lugar de Cuba, y mira las viviendas en el mapa.' },
+  { id: 'publicar', photo: '290', room: 'Estudio', kicker: 'Publica a tu manera', title: 'Pega tu anuncio', accent: 'y se rellena solo.',
+    text: 'Pegas el texto de tu anuncio y el formulario se completa. Los anuncios se revisan antes de publicarse.' },
+  { id: 'android', photo: '400', room: 'Azotea', kicker: 'Ya disponible para Android', title: 'Cada hogar,', accent: 'un nuevo comienzo.',
+    text: `KarmaHouse ${VERSION} para Android 7 o superior. Sin comisión: la negociación y el cierre son entre las partes.` },
 ];
-
-export const PUBLISH: Step[] = [
-  { label: 'Pega tu anuncio', title: 'Pega el texto y', accent: 'se rellena solo.', text: 'Si ya tienes tu anuncio escrito, usa «Pegar anuncio». Revisas el resultado y añades tus fotos antes de enviarlo.' },
-  { label: 'Revisión', title: 'Se revisa antes de', accent: 'publicarse.', text: 'Los anuncios pasan por moderación antes de aparecer en el catálogo. Si hay que corregir algo, ves el motivo y lo cambias.' },
-  { label: 'En el mapa', title: 'Tu vivienda,', accent: 'en el mapa.', text: 'Aparece en el catálogo y en el mapa, con la ubicación exacta o aproximada que elijas. Publicar es gratis y sin comisión.' },
-];
-
-/** The tagline, word by word; `true` marks its one blue phrase. */
-export const TAGLINE: (readonly [word: string, blue: boolean])[][] = [
-  [['Un', false], ['espacio', false], ['para', false]],
-  [['encontrar', false], ['tu', true], ['lugar.', true]],
-];
-
-export const OPERATIONS = [
-  { kicker: 'Para quien busca', title: 'Comprar', text: 'Busca por zona, presupuesto y características. Guarda las viviendas que te interesen.', href: '#como-funciona', cta: 'Encuentra tu lugar', tone: 'blue' },
-  { kicker: 'Para quien publica', title: 'Vender', text: 'Presenta tu vivienda con fotos y detalles. Recibe consultas en su propia conversación.', href: '#publicar', cta: 'Da a conocer tu vivienda', tone: 'terracota' },
-  { kicker: 'Para quien cambia', title: 'Permutar', text: 'Cuenta qué ofreces y qué buscas a cambio, con o sin una diferencia de dinero.', href: '#publicar', cta: 'Explora otra posibilidad', tone: 'persiana' },
-  { kicker: 'Por mes o por noche', title: 'Alquilar', text: 'Publica o busca alquileres por mes o por noche, con el precio y las condiciones a la vista.', href: '#como-funciona', cta: 'Piensa en tu próxima estancia', tone: 'ocre' },
-] as const;
 
 export const TRUST = [
   ['Revisión antes de publicar', 'Los anuncios pasan por moderación. Una revisión del anuncio no certifica la propiedad ni sustituye las comprobaciones antes de un acuerdo.'],

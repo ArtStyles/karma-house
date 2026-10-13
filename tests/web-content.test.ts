@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
+import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import * as content from '../web/src/content.ts';
 import { PROVINCES as APP_PROVINCES } from '../src/domain/listingOptions.ts';
 
-const { APK, FAQ, INSTALL, JOURNEY, NOTES, PROVINCES, PUBLISH, SHA, VERSION, plain, structuredData } = content;
+const { APK, FAQ, INSTALL, NOTES, PROVINCES, SHA, TOUR, VERSION, plain, structuredData } = content;
 
 test('provinces match the app: 15 provinces and the Isla de la Juventud', () => {
   assert.deepEqual([...PROVINCES], [...APP_PROVINCES]);
@@ -15,12 +16,18 @@ test('copy never makes claims BRAND.md forbids', () => {
   for (const banned of [/verificad/i, /garantizad/i, /16 provincias/i, /revolico/i, /whatsapp/i]) assert.doesNotMatch(copy, banned);
 });
 
-test('every step has a title and one blue phrase', () => {
-  assert.equal(JOURNEY.length, 4);
-  assert.equal(PUBLISH.length, 3);
-  for (const step of [...JOURNEY, ...PUBLISH]) {
-    assert.ok(step.title && step.accent && step.text && step.label);
-    assert.ok(!step.title.includes(step.accent));
+test('every stop of the walk has its text, one coloured phrase and a photo in walk order', () => {
+  const { frames } = JSON.parse(readFileSync(new URL('../web/src/tour-data.json', import.meta.url), 'utf8'));
+  const at = TOUR.map((stop) => frames.indexOf(stop.photo));
+  assert.equal(at[0], 0, 'the walk starts paused on its first photo');
+  assert.deepEqual(at, [...at].sort((a, b) => a - b));
+  assert.equal(new Set(TOUR.map((stop) => stop.id)).size, TOUR.length);
+  for (const stop of TOUR) {
+    assert.ok(stop.kicker && stop.title && stop.accent && stop.text);
+    assert.ok(!stop.title.includes(stop.accent));
+  }
+  for (const n of frames) for (const file of [`${n}-720.webp`, `${n}-1280.webp`, `${n}-d.webp`]) {
+    assert.ok(existsSync(new URL(`../web/public/casa/${file}`, import.meta.url)), file);
   }
 });
 

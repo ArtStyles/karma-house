@@ -43,3 +43,15 @@ Color palette: Warm off-white, muted sage green, natural wood, subdued earth ton
 Constraints: No people, no text, no logos, no watermark, no signage. One room and one photograph only. No collage, no split screen, no border.
 Avoid: luxury penthouse, extravagant mansion decor, hotel lobby, sterile showroom, excessive ornament, exaggerated HDR, CGI or illustration look.
 ```
+
+## House walk (web/public/casa)
+
+- Assets: `web/public/casa/NNN-720.webp`, `NNN-1280.webp` (70 photos), `NNN-d.webp` (depth maps), `hero-*.webp` (first photo in the pause duotone).
+- Nature: AI-generated fictional 1940s Havana house, seen as one continuous walk from the porch to the rooftop and the sea. It does not depict a real listing or a documented real house. The page labels it «Imagen ilustrativa».
+- Method: Codex CLI `exec` with the built-in image generation tool, October 2026. Each photo was generated from the previous one, with the porch photo as a colour reference; photos in between were generated with both neighbours as references. Depth maps come from Depth Anything V2 Small, run locally. `web/scripts/tour-assets.py` pulls the colour of the photos before the rooftop toward the porch photo, resizes them and saves WebP. The source PNGs, the camera script (`steps.txt`) and the generation scripts are kept outside git in `artifacts/tour/casa/`.
+
+### Prompt for each step (`<step>` is one line of the camera script)
+
+```text
+The attached image is one photograph from a continuous walk through a single fictional 1940s Havana house (Vedado). Generate the NEXT photograph of this walk, taken by the same photographer a moment later, after the photographer <step>. Keep everything that is still visible exactly the same: architecture, hydraulic floor tiles and their pattern, furniture, plants, objects, colours, materials, and the warm late-afternoon light direction and shadows. Anything that newly comes into view belongs to the same house: same style, materials, palette (cream limewashed walls, sage-green louvered shutters, terracotta and sage hydraulic tiles) and the same light. Same lens (about 24 mm) and eye height (about 1.5 m) unless the step says otherwise, straight verticals. Extreme photographic quality: ultra-detailed, tack-sharp, realistic textures and natural light, like a high-end architectural photograph taken with a full-frame camera; no softening, no blur, no plastic or CGI look. The SECOND attached image is only a style reference: match its natural colour grading, exposure, contrast and level of realism exactly. Restrained, natural colours: no oversaturation, no orange cast, no HDR or glossy look; a modest, lived-in family home, not a resort or luxury hotel. Landscape 3:2. No people, no animals, no text, no logos, no watermark. Single photograph, no collage, no border.
+```

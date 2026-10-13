@@ -1,6 +1,6 @@
 import { ArrowRight, Smartphone } from 'lucide-react';
 import { APK, INSTALL, INSTALL_STEPS, NOTES, SHA, VERSION } from '../content';
-import { ARROW, Mediopunto, Reveal, WRAP } from '../ui';
+import { ARROW, Mediopunto, Reveal, SOL_BUTTON, WRAP } from '../ui';
 
 /** The navy panel that closes the page. The large mediopunto lights pane by pane when it scrolls into view. */
 export function Download() {
@@ -17,7 +17,7 @@ export function Download() {
             <h2 id="android-title" className="mt-7 text-[clamp(2.3rem,4.4vw,3.8rem)] text-white">Tu búsqueda,<br /><span className="text-sol">también en tu bolsillo.</span></h2>
             <p className="mt-6 max-w-[28rem] leading-relaxed">KarmaHouse para Android reúne catálogo, mapa y conversaciones. Fotos optimizadas y ahorro de datos para aprovechar mejor tu conexión.</p>
             <div className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-3">
-              <a className="group inline-flex min-h-12 items-center gap-3 rounded-full bg-sol px-6 text-sm font-semibold text-mar transition hover:bg-[#f0c46a] active:scale-[.98]" href={APK}>Descarga KarmaHouse para Android <ArrowRight className={ARROW} aria-hidden="true" /></a>
+              <a className={SOL_BUTTON} href={APK}>Descarga KarmaHouse para Android <ArrowRight className={ARROW} aria-hidden="true" /></a>
               <a className="inline-flex min-h-11 items-center text-sm font-semibold text-white underline-offset-4 hover:underline" href={NOTES}>Ver la versión</a>
             </div>
             <p className="mt-7 text-xs leading-relaxed">Versión {VERSION} · Android 7 o superior<br />Publicar, buscar y conversar es gratis</p>

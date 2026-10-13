@@ -1,17 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cardSizes, easeOut, pickMode, seg, smooth, stepAt } from '../web/src/scroll.ts';
+import { pickMode, seg, smooth, tourAt, tourTimeline } from '../web/src/scroll.ts';
 
 test('seg clamps progress to its window', () => {
   assert.equal(seg(0.1, 0.2, 0.4), 0);
   assert.equal(seg(0.25, 0, 0.5), 0.5);
   assert.equal(seg(0.9, 0.2, 0.4), 1);
-});
-
-test('easeOut starts at 0, ends at 1 and never overshoots', () => {
-  assert.equal(easeOut(0), 0);
-  assert.equal(easeOut(1), 1);
-  for (let t = 0; t <= 1; t += 0.05) assert.ok(easeOut(t) >= 0 && easeOut(t) <= 1);
 });
 
 test('smooth is symmetric and stays in 0..1', () => {
@@ -22,10 +16,6 @@ test('smooth is symmetric and stays in 0..1', () => {
   assert.equal(smooth(-1), 0);
 });
 
-test('stepAt splits progress into equal steps and stays in range', () => {
-  assert.deepEqual([0, 0.24, 0.25, 0.5, 0.99, 1, 1.4].map((s) => stepAt(s, 4)), [0, 0, 1, 2, 3, 3, 3]);
-});
-
 test('pickMode: static for reduced motion, lite for data saver or low memory', () => {
   assert.equal(pickMode({ reduce: true, saveData: true }), 'static');
   assert.equal(pickMode({ reduce: false, saveData: true }), 'lite');
@@ -34,11 +24,15 @@ test('pickMode: static for reduced motion, lite for data saver or low memory', (
   assert.equal(pickMode({ reduce: false }), 'full');
 });
 
-test('cardSizes fits the arch in the visual area and keeps the phone at 9:19.5', () => {
-  for (const [w, h] of [[560, 640], [343, 380], [300, 900]]) {
-    const s = cardSizes(w, h);
-    assert.ok(s.archH <= h - 40 + 1e-6, `arch height for ${w}x${h}`);
-    assert.ok(s.archW <= w, `arch width for ${w}x${h}`);
-    assert.equal(Math.round((s.phoneW / s.phoneH) * 1000), Math.round((9 / 19.5) * 1000));
-  }
+test('tourTimeline starts paused, then walks one unit per photo and pauses at each stop', () => {
+  const { parts, units } = tourTimeline([0, 2], 2);
+  assert.deepEqual(parts.map((x) => [x.kind, x.k, x.a, x.b]), [['pause', 0, 0, 2], ['move', 0, 2, 3], ['move', 1, 3, 4], ['pause', 2, 4, 6]]);
+  assert.equal(units, 6);
+});
+
+test('tourAt finds the part and the progress inside it, and holds the end', () => {
+  const { parts } = tourTimeline([0, 2], 2);
+  assert.deepEqual([tourAt(parts, 2.5).part.k, tourAt(parts, 2.5).u], [0, 0.5]);
+  assert.equal(tourAt(parts, 3).part.k, 1);
+  assert.deepEqual([tourAt(parts, 99).part.kind, tourAt(parts, 99).u], ['pause', 1]);
 });

@@ -2,12 +2,9 @@ import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from
 import { LazyMotion, MotionConfig, domAnimation } from 'motion/react';
 import { ArrowRight, Menu } from 'lucide-react';
 import { CODE, CONTACT, LEGAL, NAV, RELEASE, structuredData } from './content';
-import { Cuba } from './scenes/Cuba';
 import { Download } from './scenes/Download';
-import { Journey } from './scenes/Journey';
-import { Publish } from './scenes/Publish';
 import { Questions } from './scenes/Questions';
-import { Tagline } from './scenes/Tagline';
+import { Tour } from './scenes/Tour';
 import { Trust } from './scenes/Trust';
 import { ARROW, BUTTON, Cenefa, WRAP } from './ui';
 
@@ -23,10 +20,21 @@ function Brand() {
 function useCurrentSection() {
   const [current, setCurrent] = useState('');
   useEffect(() => {
+    // A stop of the walk is marked by a small anchor; its article spans the whole pause, so watch that instead.
+    const ids = new Map<Element, string>();
     const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) if (entry.isIntersecting) setCurrent(entry.target.id);
+      for (const entry of entries) {
+        const id = ids.get(entry.target)!;
+        setCurrent((current) => (entry.isIntersecting ? id : current === id ? '' : current));
+      }
     }, { rootMargin: '-45% 0px -50% 0px' });
-    for (const [id] of NAV) { const el = document.getElementById(id); if (el) observer.observe(el); }
+    for (const [id] of NAV) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      const box = el.closest('article') ?? el;
+      ids.set(box, id);
+      observer.observe(box);
+    }
     return () => observer.disconnect();
   }, []);
   return current;
@@ -84,7 +92,7 @@ function Footer() {
       <div className={`${WRAP} pb-8 pt-14`}>
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div><Brand /><p className="mt-4 text-sm leading-relaxed text-body">Un espacio para encontrar tu lugar.<br />Compra, venta, permuta y alquiler en Cuba.</p></div>
-          <nav aria-label="Conoce KarmaHouse" className={column}><h2 className="mb-2 font-sans text-sm font-semibold tracking-normal">KarmaHouse</h2><a href="#como-funciona">Cómo funciona</a><a href="#cuba">Toda Cuba</a><a href="#posibilidades">Qué puedes hacer</a><a href="#publicar">Publicar una vivienda</a><a href="#descargar">Android</a></nav>
+          <nav aria-label="Conoce KarmaHouse" className={column}><h2 className="mb-2 font-sans text-sm font-semibold tracking-normal">KarmaHouse</h2><a href="#como-funciona">Cómo funciona</a><a href="#conversa">Chat privado</a><a href="#cuba">Toda Cuba</a><a href="#publicar">Publicar una vivienda</a><a href="#descargar">Android</a></nav>
           <nav aria-label="Ayuda y versiones" className={column}><h2 className="mb-2 font-sans text-sm font-semibold tracking-normal">Te ayudamos</h2><a href="#preguntas">Preguntas frecuentes</a><a href={CONTACT}>Contacto</a><a href={RELEASE}>Versiones públicas</a><a href={CODE}>Código del proyecto</a></nav>
           <nav aria-label="Información legal" className={column}><h2 className="mb-2 font-sans text-sm font-semibold tracking-normal">Legal</h2><a href={`${LEGAL}/privacidad.html`}>Privacidad</a><a href={`${LEGAL}/terminos.html`}>Términos de uso</a><a href={`${LEGAL}/eliminar-cuenta.html`}>Eliminar tu cuenta</a></nav>
         </div>
@@ -101,10 +109,7 @@ export default function App() {
         <a className="fixed left-4 top-3 z-[60] -translate-y-24 rounded-full bg-paper px-5 py-3 text-sm font-semibold shadow-lg focus:translate-y-0" href="#contenido">Saltar al contenido</a>
         <Header />
         <main id="contenido">
-          <Journey />
-          <Cuba />
-          <Tagline />
-          <Publish />
+          <Tour />
           <Trust />
           <Download />
           <Questions />

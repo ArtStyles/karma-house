@@ -1,178 +1,56 @@
-/* Scroll scenes. A scene is a tall .track around a sticky .stage. Scenes pin only when the head script has added
-   .js to <html> and the visitor allows motion; otherwise each reads as static content in document order.
-   Frames (motion.ts) write transform, opacity and clip-path, except the journey card, whose box is contained. */
+/* House walk (scenes/Tour.tsx). By default each stop is a full-bleed photo under the mar overlay with its text: that is
+   what no-JavaScript, reduced-motion, data-saver and no-WebGL visitors get ([data-flat]). With JavaScript and motion,
+   the section becomes a tall track around a sticky stage where the canvas plays the walk; each stop sits in its pause
+   window (--a, --len in scroll units of --step) and its text sticks over the stage while Tour.tsx fades it. */
 
-html:not(.js) .pinned-only { display: none }
-@media (prefers-reduced-motion: reduce) { .pinned-only { display: none } }
-.track, .stage { position: relative }
+.tour { --vh: 100vh; --head: 76px; --step: calc(var(--vh) * .34); position: relative; background: var(--color-mar); color: #fff }
+@supports (height: 100svh) { .tour { --vh: 100svh } }
+.tour-stage { display: none }
 
-.glow { display: none; position: absolute; width: 80vmin; aspect-ratio: 1; border-radius: 50%; right: -10vmin; top: 50%; translate: 0 -50%; pointer-events: none }
-html[data-mode="full"] .glow { display: block }
-.glow-sol { background: radial-gradient(closest-side, color-mix(in srgb, var(--color-sol) 40%, transparent), transparent) }
-.glow-terracota { background: radial-gradient(closest-side, color-mix(in srgb, var(--color-terracota) 28%, transparent), transparent); opacity: 0 }
+.tour-stop { position: relative; display: grid; min-height: calc(var(--vh) - var(--head)); place-items: center; overflow: hidden; isolation: isolate; padding: 5rem 1rem }
+.tour-stop::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(rgba(14, 34, 54, .55), rgba(14, 34, 54, .72)) }
+.tour-photo { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: 50% 47% }
+.tour-anchor { position: absolute; top: 0; left: 0 }
+.tour-label { position: absolute; right: 16px; bottom: 16px; border-radius: 999px; background: rgba(250, 246, 238, .9); color: #1a2b3b; padding: 4px 12px; font-size: 11px; font-weight: 600; line-height: 1.6 }
 
-/* Phone ------------------------------------------------------------------------------------------------- */
-.phone-frame { aspect-ratio: 9 / 19.5; padding: 7px; border: 1px solid var(--color-line); border-radius: 36px; background: var(--color-paper); box-shadow: 0 40px 80px -40px rgba(26, 43, 59, .45) }
-.phone-screen { position: relative; height: 100%; overflow: hidden; isolation: isolate; border-radius: 29px; background: #F5F5F7; color: #1D1D1F; font-size: 11px; line-height: 1.35 }
-.phone-chip { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; border: 1px solid #E5E5EA; border-radius: 999px; background: #fff; padding: 3px 9px; transition: background .3s, color .3s }
-.phone-chip.on { border-color: transparent; background: #EAF3FF; color: #0153A8; font-weight: 600 }
-.phone-pin { display: block; width: 24px; transform: translate(-50%, -100%); transform-origin: 50% 100% }
-.phone-sheet { position: relative; padding: 8px 10px 16px; border-radius: 20px 20px 0 0; background: #fff; box-shadow: 0 -14px 34px -16px rgba(0, 0, 0, .35) }
-.phone-toast { position: absolute; left: 50%; bottom: 16px; z-index: 6; translate: -50% 0; white-space: nowrap; border-radius: 999px; background: #1D1D1F; color: #fff; padding: 4px 12px; font-size: 10px; font-weight: 600; opacity: 0 }
-.phone-bubble { align-self: flex-start; max-width: 84%; padding: 7px 10px; border: 1px solid #E5E5EA; border-radius: 15px 15px 15px 4px; background: #fff }
-.phone-bubble.me { align-self: flex-end; border-color: transparent; border-radius: 15px 15px 4px 15px; background: #0153A8; color: #fff }
-.phone-visit { display: flex; align-self: flex-end; align-items: center; gap: 8px; width: 88%; padding: 8px; border: 1px solid #E5E5EA; border-radius: 14px; background: #fff }
-.phone-paste { display: inline-flex; align-self: flex-start; align-items: center; gap: 5px; border-radius: 999px; background: #EAF3FF; color: #0153A8; padding: 5px 10px; font-weight: 600 }
-
-/* Pinned scenes ----------------------------------------------------------------------------------------- */
-@media (prefers-reduced-motion: no-preference) {
-  .js .track { height: calc(var(--screens) * 100vh); height: calc(var(--screens) * 100svh) }
-  .js .stage { position: sticky; top: 76px; height: calc(100vh - 76px); height: calc(100svh - 76px); overflow: clip }
-  .js .static-only { display: none }
-}
-
-/* Journey ----------------------------------------------------------------------------------------------- */
-.journey .stage { padding-block: 2.5rem 4rem }
-/* Static: hero, arch window, then the steps beside a still phone. */
-.journey-layout { position: relative; display: grid; gap: 3.5rem; align-items: center }
-.journey-text { display: contents }
-.journey-hero { order: 1 } .journey-visual { order: 2 } .journey-steps { order: 3 }
-@media (min-width: 1024px) {
-  .journey-layout { grid-template-columns: 1.15fr 1fr }
-  .journey-steps { display: grid; grid-column: 1 / -1; grid-template-columns: 1.15fr 1fr; align-items: center; gap: 3.5rem }
-  .journey-steps .phone-frame { margin-top: 0 }
-}
-.journey-steps ol { display: grid; gap: 2.5rem; margin: 3.5rem 0 0; padding: 0; list-style: none }
-.journey-card { position: relative; width: min(440px, 100%); margin-inline: auto; padding: 10px; border: 1px solid var(--color-line); border-radius: 999px 999px 34px 34px; background: var(--color-paper); box-shadow: 0 40px 80px -40px rgba(26, 43, 59, .45) }
-.journey-transom i { display: block; height: 10px; margin-block: 6px; border-radius: 999px; background: var(--color-ink); opacity: .85 }
-.journey-screen { position: relative; aspect-ratio: 5 / 4; overflow: hidden; isolation: isolate; border-radius: 6px 6px 26px 26px; background: #F6F1E7; color: #1D1D1F; font-size: 11px; line-height: 1.35 }
-.journey-photo { position: absolute; inset: 0; z-index: 2; transform-origin: 64% 55% }
-.journey-caption { margin-top: 1rem; text-align: center; font-size: .75rem; color: var(--color-body) }
-.journey-plane { position: absolute; inset: -8%; transform-origin: 62% 58% }
-.journey-ui { position: absolute; inset: 0; z-index: 3 }
-.journey-sheet { position: absolute; inset: auto 0 0; z-index: 4 }
-.journey-chat { position: absolute; inset: 0; z-index: 5; background: #F5F5F7 }
-.journey-losa { position: absolute; inset: 0; color: var(--color-ocre); opacity: 0 }
+/* Text: white Calistoga, its one phrase in sol, on navy. */
+.tour-text { position: relative; width: min(100%, 54rem); margin-inline: auto; text-align: center }
+.tour-kicker { display: inline-flex; align-items: center; gap: .8rem; font-size: .8rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--color-sol) }
+.tour-kicker::before, .tour-kicker::after { content: ""; width: 1.75rem; height: 2px; border-radius: 2px; background: currentColor }
+.tour-title { margin-top: 1rem; font-size: clamp(2.75rem, 7.6vw, 6.25rem); line-height: 1; letter-spacing: -.025em; color: #fff; text-shadow: 0 2px 32px rgba(8, 18, 29, .55) }
+h1.tour-title { font-size: clamp(2.5rem, 6.2vw, 5.25rem) }
+.tour-title span { color: var(--color-sol) }
+.tour-copy { margin: 1.4rem auto 0; max-width: 36rem; font-size: clamp(1.05rem, 1.55vw, 1.3rem); font-weight: 500; line-height: 1.55; color: #f3efe7; text-wrap: pretty; text-shadow: 0 1px 16px rgba(8, 18, 29, .6) }
+.tour-proof { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; margin: 1.5rem 0 0; padding: 0; list-style: none }
+.tour-proof li { border: 1px solid rgba(255, 255, 255, .28); border-radius: 999px; background: rgba(14, 34, 54, .45); padding: .35rem .9rem; font-size: .8rem; font-weight: 600; color: #f3efe7 }
+.tour-link { display: inline-flex; min-height: 44px; align-items: center; gap: .5rem; margin-top: 1.25rem; font-weight: 600; color: var(--color-sol); text-decoration: underline; text-underline-offset: 4px }
+.tour-hint { display: none }
 
 @media (prefers-reduced-motion: no-preference) {
-  .js .journey .stage { padding-block: 1.25rem }
-  .js .journey-layout { height: 100%; grid-template-rows: auto minmax(0, 1fr); gap: 1.25rem; align-items: stretch }
-  .js .journey-text { display: grid; align-items: start }
-  .js .journey-steps { display: block; pointer-events: none }
-  .js .journey-text > * { grid-area: 1 / 1 }
-  .js .journey-steps ol { margin: 0; gap: 0 }
-  .js .journey-steps li { grid-area: 1 / 1; opacity: 0; transform: translateY(12px); transition: opacity .45s var(--ease-out-soft), transform .45s var(--ease-out-soft) }
-  .js .journey-steps li.on { opacity: 1; transform: none }
-  .js .journey-visual { position: relative; min-height: 0; align-self: stretch; perspective: 1400px; container-type: size }
-  .js .journey-card { --iw: min(420px, 86vw - 20px); position: absolute; left: 50%; top: 50%; margin: 0; padding: 0; contain: layout paint;
-    width: calc(var(--iw) + 20px); height: calc(var(--iw) * 1.31 + 36px); transform: translate(-50%, -50%); will-change: transform }
-  .js .journey-transom { position: absolute; left: 10px; top: 10px; width: var(--iw) }
-  .js .journey-screen { position: absolute; aspect-ratio: auto; left: 10px; right: 10px; bottom: 10px; top: calc(26px + var(--iw) * .51) }
-  .js .journey-caption { position: absolute; inset-inline: 0; bottom: 0; margin: 0 }
-  .js .journey-plane, .js .journey-ui, .js .journey .phone-pin, .js .journey .phone-bubble, .js .journey .phone-visit { opacity: 0 }
-  .js .journey-sheet { transform: translateY(105%) }
-  .js .journey-chat { transform: translateX(102%) }
-  .js .journey .phone-tick { clip-path: inset(0 100% 0 0) }
-  @media (min-width: 1024px) {
-    .js .journey-layout { grid-template-rows: none; grid-template-columns: 1.05fr 1fr; align-items: center; gap: 3.5rem }
-    .js .journey-text { align-items: center }
-  }
-  @supports (width: 1cqw) { .js .journey-card { --iw: min(94cqw - 20px, 420px, (100cqh - 76px) / 1.31) } }
-}
+  html.js:has(.tour:not([data-flat])) { scroll-snap-type: y proximity }
+  .js .tour:not([data-flat]) {
+    height: calc(var(--units) * var(--step) + var(--vh) - var(--head));
 
-/* Toda Cuba: the island tiled like a Cuban floor, on the navy panel ------------------------------------ */
-.cuba { background: var(--color-mar); color: var(--color-espuma) }
-.cuba .stage { display: grid; align-content: center; padding-block: 5rem; overflow: hidden }
-.cuba-layout { position: relative; display: grid; gap: clamp(2rem, 5vh, 3.5rem) }
-.cuba-figure { position: relative; width: min(1100px, 100%); margin: 0 auto }
-.cuba-island { position: relative }
-.cuba-island svg, .cuba-box { display: block; width: 100%; aspect-ratio: 1000 / 343 }
-.cuba-ground { fill: color-mix(in srgb, var(--color-espuma) 13%, var(--color-mar)) }
-.cuba-sun { position: absolute; top: -45%; left: 0; width: 42%; aspect-ratio: 1; border-radius: 50%; pointer-events: none; opacity: 0;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--color-sol) 60%, transparent), transparent); mix-blend-mode: screen }
-.cuba figcaption { margin-top: 1rem; text-align: center; font-size: .75rem; color: color-mix(in srgb, var(--color-espuma) 75%, transparent) }
-html:not(.js) .cuba-figure { display: none }
-@media (prefers-reduced-motion: no-preference) {
-  .js .cuba .stage { padding-block: 2rem }
-  .js .cuba-island { clip-path: inset(-30% 100% -30% -30%) }
-}
+    .tour-stage { display: block; position: sticky; top: var(--head); height: calc(var(--vh) - var(--head)); overflow: hidden; background: #0b1622 }
+    .tour-stage > :not(.tour-label) { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
+    .tour-poster { object-fit: cover; object-position: 50% 47%; transform: scale(1.03); transform-origin: 50% 45% }
+    canvas { opacity: 0; transition: opacity .5s var(--ease-out-soft) }
+    &[data-ready] canvas { opacity: 1 }
+    .tour-shade { background: radial-gradient(ellipse at center, transparent 30%, rgba(8, 18, 29, .62)) }
+    .tour-flash { opacity: 0; background: radial-gradient(circle at 50% 45%, rgba(255, 236, 196, .8), rgba(255, 236, 196, 0) 62%) }
 
-/* Operations: translucent cards over soft afternoon light ---------------------------------------------- */
-.ops-light { position: absolute; inset: 0; z-index: -1; pointer-events: none }
-.ops-light span { position: absolute; width: min(70vw, 760px); aspect-ratio: 1; border-radius: 50% }
-.ops-light span:nth-child(1) { left: -14%; top: 4%; background: radial-gradient(closest-side, color-mix(in srgb, var(--color-sol) 34%, transparent), transparent) }
-.ops-light span:nth-child(2) { right: -12%; top: -18%; background: radial-gradient(closest-side, color-mix(in srgb, var(--color-blue) 18%, transparent), transparent) }
-.ops-light span:nth-child(3) { left: 34%; bottom: -46%; background: radial-gradient(closest-side, color-mix(in srgb, var(--color-terracota) 20%, transparent), transparent) }
-.op-blue { --tone: var(--color-blue) } .op-terracota { --tone: var(--color-terracota) } .op-persiana { --tone: var(--color-persiana) } .op-ocre { --tone: var(--color-ocre) }
-.op-card { position: relative; display: flex; flex-direction: column; min-height: 100%; overflow: hidden; padding: 28px 26px 26px; border-radius: 28px;
-  border: 1px solid color-mix(in srgb, var(--color-line) 65%, transparent); background: color-mix(in srgb, var(--color-paper) 56%, transparent);
-  -webkit-backdrop-filter: blur(18px) saturate(1.3); backdrop-filter: blur(18px) saturate(1.3);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 40%, transparent), 0 24px 50px -38px rgba(26, 43, 59, .5);
-  transition: translate .5s var(--ease-out-soft), background .5s var(--ease-out-soft), box-shadow .5s var(--ease-out-soft) }
-.op-card::before { content: ""; position: absolute; top: 24px; right: 24px; width: 52px; height: 26px; border: 1.5px solid var(--tone); border-bottom: 0; border-radius: 999px 999px 0 0; opacity: .75 }
-.op-card::after { content: ""; position: absolute; inset: 0; pointer-events: none; translate: -110% 0; transition: translate .9s var(--ease-out-soft);
-  background: linear-gradient(115deg, transparent 35%, color-mix(in srgb, #fff 18%, transparent) 50%, transparent 65%) }
-.op-card:hover { translate: 0 -4px; background: color-mix(in srgb, var(--color-paper) 76%, transparent); box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 50%, transparent), 0 34px 60px -36px rgba(26, 43, 59, .55) }
-.op-card:hover::after { translate: 110% 0 }
-.op-card:focus-within { outline: 2px solid var(--tone); outline-offset: 3px }
-.op-kicker { margin: 0; padding-right: 64px; font-size: .72rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--tone) }
-html[data-mode="lite"] .op-card { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--color-paper) }
-@media (prefers-reduced-motion: reduce) { .op-card, .op-card::after { transition: none } }
-
-/* Tagline ----------------------------------------------------------------------------------------------- */
-.tagline .stage { display: grid; place-items: center; padding-block: 6rem }
-@media (prefers-reduced-motion: no-preference) {
-  .js .tagline .stage { padding-block: 0 }
-  .js .tagline-word { opacity: .62 }
-}
-
-/* Publish: a book whose pages turn with the scroll ---------------------------------------------------- */
-.book { display: grid; gap: 1.5rem; padding-block: 2rem }
-.page { position: relative; display: grid; gap: 1.5rem; align-items: center; overflow: hidden; padding: clamp(20px, 3vw, 48px); border: 1px solid var(--color-line); border-radius: 28px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--color-ink) 7%, transparent), transparent 2.5rem), var(--color-paper); box-shadow: 0 30px 70px -44px rgba(14, 34, 54, .5) }
-@media (min-width: 1024px) { .page { grid-template-columns: 1fr 1fr; gap: 3rem } }
-.page-head { display: flex; align-items: baseline; gap: .9rem }
-.page-num { margin: 0; font-family: var(--font-display); font-size: clamp(2.8rem, 7vw, 6.5rem); line-height: .9; color: var(--color-ocre) }
-.page-label { margin: 0; font-size: .75rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--color-ocre) }
-.page-title { margin-top: .9rem; font-family: var(--font-sans); font-weight: 700; font-size: clamp(1.7rem, 3.4vw, 2.9rem); line-height: 1.05; letter-spacing: -.035em }
-.page-copy { margin-top: .9rem; max-width: 30rem; line-height: 1.65; color: var(--color-body) }
-.page-visual { display: grid; min-height: 0; place-items: center }
-.page-shade { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: linear-gradient(90deg, rgba(14, 34, 54, 0), rgba(14, 34, 54, .6)) }
-@media (min-width: 1024px) { .page-head { display: block } .page-label { margin-top: 1rem } }
-
-/* App screens inside the pages: larger text so they read at a glance. */
-.app-screen { position: relative; width: min(360px, 100%); aspect-ratio: 4 / 5; overflow: hidden; border: 1px solid var(--color-line); border-radius: 28px; background: #F5F5F7; color: #1D1D1F; font-size: 13px; line-height: 1.4; box-shadow: 0 30px 60px -36px rgba(14, 34, 54, .55) }
-.app-note { margin: 0; padding: 10px 12px; border: 1px dashed #C9C9CF; border-radius: 14px; background: #fff; font-size: 12px; line-height: 1.45; color: #3A3A3C }
-.app-fill { display: inline-block }
-.app-timeline { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none }
-.app-timeline li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #E5E5EA; border-radius: 14px; background: #fff; font-weight: 600 }
-.app-tick { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #E1EEE4; color: #2C5638 }
-.app-review { opacity: 0 }
-.app-pin { position: relative; width: 34px }
-.app-toast { position: absolute; left: 50%; bottom: 18px; z-index: 6; translate: -50% 0; white-space: nowrap; border-radius: 999px; background: #1D1D1F; color: #fff; padding: 7px 14px; font-size: 12px; font-weight: 600 }
-
-@media (prefers-reduced-motion: no-preference) {
-  .js .publish .stage { padding-block: 1rem }
-  .js .book { position: relative; height: 100%; padding: 0; perspective: 1800px }
-  .js .page { position: absolute; inset: 0; align-content: center; transform-origin: left center; backface-visibility: hidden; will-change: transform }
-  .js .page:nth-child(1) { z-index: 3 } .js .page:nth-child(2) { z-index: 2 } .js .page:nth-child(3) { z-index: 1 }
-  /* What happens on a page plays when the page is open (.on). */
-  .js .app-fill { transition: clip-path .5s var(--ease-out-soft) calc(.3s + var(--i) * .12s) }
-  .js .page:not(.on) .app-fill { clip-path: inset(0 100% 0 0) }
-  .js .app-note { transition: opacity .5s var(--ease-out-soft), translate .5s var(--ease-out-soft) }
-  .js .page:not(.on) .app-note { opacity: 0; translate: 0 -10px }
-  .js .app-tick { transition: background .4s, color .4s; transition-delay: calc(var(--i) * .5s) }
-  .js .page:not(.on) .app-timeline li:not(:first-child) .app-tick { background: #E5E5EA; color: transparent }
-  .js .app-review, .js .app-live { transition: opacity .4s 1.1s }
-  .js .page:not(.on) .app-review { opacity: 1 }
-  .js .page:not(.on) .app-live { opacity: 0 }
-  .js .app-pin { transition: opacity .4s .3s, translate .7s var(--ease-out-soft) .3s }
-  .js .page:not(.on) .app-pin { opacity: 0; translate: 0 -30px }
-  .js .app-toast { transition: opacity .4s 1s, translate .5s var(--ease-out-soft) 1s }
-  .js .page:not(.on) .app-toast { opacity: 0; translate: -50% 8px }
-  @media (max-width: 1023px) {
-    .js .page { grid-template-rows: auto minmax(0, 1fr); align-items: stretch; align-content: stretch }
-    .js .page-visual { height: 100% }
-    .js .app-screen { width: auto; height: 100%; max-height: 460px; max-width: 100% }
+    .tour-stop { position: absolute; inset-inline: 0; top: calc(var(--a) * var(--step)); display: block; min-height: 0; padding: 0; overflow: visible; isolation: auto; pointer-events: none;
+      height: calc(var(--len) * var(--step) + var(--vh) - var(--head)) }
+    .tour-stop::before, .tour-photo, .tour-stop > .tour-label { display: none }
+    .tour-anchor { top: calc(var(--mid) * var(--step)); scroll-snap-align: start }
+    .tour-text { position: sticky; top: var(--head); display: grid; height: calc(var(--vh) - var(--head)); width: auto; place-content: center; justify-items: center; padding: 2rem 1rem; opacity: 0; will-change: opacity, transform }
+    .tour-text > * { max-width: 54rem }
+    /* A soft navy pool behind the words, so they read on any part of the photo. */
+    .tour-text::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse 72% 58% at 50% 50%, rgba(14, 34, 54, .74), rgba(14, 34, 54, .3) 70%, rgba(14, 34, 54, 0)) }
+    .tour-text a { pointer-events: none }
+    .tour-text[data-on] a, .tour-stop:first-of-type .tour-text:not([style]) a { pointer-events: auto }
+    .tour-stop:first-of-type .tour-text:not([style]) { opacity: 1 }
+    .tour-text:focus-within { opacity: 1 !important; transform: none !important }
+    .tour-hint { display: inline-flex; align-items: center; gap: .5rem; margin-top: 1.75rem; font-size: .85rem; font-weight: 600; color: #f3efe7 }
   }
 }
