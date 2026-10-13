@@ -1,5 +1,5 @@
 import { ArrowRight, Smartphone } from 'lucide-react';
-import { APK, INSTALL, INSTALL_STEPS, NOTES, SHA, VERSION } from '../content';
+import { APK, INSTALL, INSTALL_STEPS, NOTES, SHA, VERSION, WEB_APP } from '../content';
 import { ARROW, Mediopunto, Reveal, SOL_BUTTON, WRAP } from '../ui';
 
 /** The navy panel that closes the page. The large mediopunto lights pane by pane when it scrolls into view. */
@@ -19,6 +19,7 @@ export function Download() {
             <div className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-3">
               <a className={SOL_BUTTON} href={APK}>Descarga KarmaHouse para Android <ArrowRight className={ARROW} aria-hidden="true" /></a>
               <a className="inline-flex min-h-11 items-center text-sm font-semibold text-white underline-offset-4 hover:underline" href={NOTES}>Ver la versión</a>
+              <a className="inline-flex min-h-11 items-center text-sm font-semibold text-white underline-offset-4 hover:underline" href={WEB_APP}>Úsala en el navegador</a>
             </div>
             <p className="mt-7 text-xs leading-relaxed">Versión {VERSION} · Android 7 o superior<br />Publicar, buscar y conversar es gratis</p>
             <p className="mt-3 text-xs leading-relaxed">APK firmado con el certificado oficial de KarmaHouse. <a className="text-white underline underline-offset-4" href={INSTALL}>Instrucciones para instalar y actualizar</a> · <a className="text-white underline underline-offset-4" href={SHA}>Comprobación SHA-256</a></p>

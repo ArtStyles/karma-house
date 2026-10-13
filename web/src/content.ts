@@ -6,6 +6,9 @@ export const APK = `${RELEASE}/download/v${VERSION}/KarmaHouse.apk`;
 export const SHA = `${APK}.sha256`;
 export const NOTES = `${RELEASE}/tag/v${VERSION}`;
 export const INSTALL = `${RELEASE}/download/v${VERSION}/INSTALACION.txt`;
+/** The same app in the browser, with the same account as on Android. */
+export const WEB_APP = 'https://app.karmahouse.site/';
+export const SIGN_IN = `${WEB_APP}auth?returnTo=/profile`;
 export const CODE = 'https://github.com/ArtStyles/karma-house';
 export const LEGAL = 'https://artstyles.github.io/karma-house';
 export const CONTACT = 'mailto:hernandezfrankjames@gmail.com';
@@ -61,6 +64,7 @@ export const plain = (parts: Part[]) => parts.map((p) => (typeof p === 'string' 
 export const FAQ: { q: string; a: Part[] }[] = [
   { q: '¿Cuánto cuesta usar KarmaHouse?', a: ['Publicar, buscar y conversar es gratis. KarmaHouse no cobra comisión por las operaciones ni interviene en la negociación entre las partes.'] },
   { q: '¿Ya puedo descargar la app?', a: [`Sí. KarmaHouse ${VERSION} está disponible para Android 7 o superior. `, { text: 'Descarga el APK oficial', href: APK }, ' e instálalo siguiendo las instrucciones de esta página. Si ya tienes KarmaHouse, instala la actualización sobre la versión anterior.'] },
+  { q: '¿Puedo usar KarmaHouse sin instalar nada?', a: ['Sí. ', { text: 'Entra en app.karmahouse.site', href: WEB_APP }, ' desde el navegador del teléfono o del ordenador, con la misma cuenta que en Android. Los avisos en el teléfono, por ahora, llegan solo con la app de Android.'] },
   { q: '¿Por qué Android puede mostrar un aviso?', a: ['El APK se instalará fuera de Google Play. Android puede pedir autorización para ese origen y Play Protect puede solicitar un análisis. Mantén Play Protect activo y espera el resultado. Si identifica el archivo como dañino, detén la instalación y contacta con nosotros.'] },
   { q: '¿Cómo compruebo que el APK es el original?', a: ['Descárgalo desde el enlace oficial de esta página y compara su hash con el ', { text: 'archivo SHA-256 de esta versión', href: SHA }, '. Las ', { text: 'notas de la entrega', href: NOTES }, ' también lo incluyen. Compararlo permite detectar cambios; no sustituye al análisis de Play Protect ni implica una aprobación de Google.'] },
   { q: '¿Quién ve mi teléfono o mi correo?', a: ['Otros usuarios no ven esos datos de tu cuenta. La conversación ocurre dentro de la app y puedes bloquear o reportar contactos.'] },
