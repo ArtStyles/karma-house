@@ -46,16 +46,20 @@ export function useStill() {
 export function Tour({ still, onToggle }: { still: boolean; onToggle: () => void }) {
   const root = useRef<HTMLElement>(null);
   const mode = useMode();
+  // The photos of the plain sections exist only once the walk is flat; until then they sit in <noscript>, so the
+  // animated walk does not download them up front (the preload scanner fetches even lazy images).
+  const [flat, setFlat] = useState(false);
 
   useEffect(() => {
     const section = root.current!;
     const stage = section.querySelector<HTMLElement>('.tour-stage')!;
     const cards = [...section.querySelectorAll<HTMLElement>('.tour-text')];
-    const flat = () => {
+    const goFlat = () => {
       section.dataset.flat = '';
       for (const card of cards) { card.removeAttribute('style'); card.removeAttribute('data-on'); }
+      setFlat(true);
     };
-    if (still) { flat(); return; }
+    if (still) { goFlat(); return; }
     delete section.dataset.flat;
     let walk: ReturnType<typeof createWalk> = null;
     // The stage is sticky only when CSS pins the walk (JavaScript on, motion allowed).
@@ -64,7 +68,8 @@ export function Tour({ still, onToggle }: { still: boolean; onToggle: () => void
       // No WebGL: nothing to switch, so the header hides its switch.
       if (!walk) document.documentElement.dataset.gl = 'off';
     }
-    if (!walk) { flat(); return; }
+    if (!walk) { goFlat(); return; }
+    setFlat(false);
     const gl = walk;
     const shade = section.querySelector<HTMLElement>('.tour-shade')!;
     const flash = section.querySelector<HTMLElement>('.tour-flash')!;
@@ -158,11 +163,12 @@ export function Tour({ still, onToggle }: { still: boolean; onToggle: () => void
       </div>
       {TOUR.map((stop, s) => {
         const pause = PAUSES[s], Heading = s === 0 ? 'h1' : 'h2';
+        const picture = <img className="tour-photo" src={photo(stop.photo, 1280)} srcSet={srcSet(stop.photo)} sizes="100vw" width="1280" height="853" alt="" loading="lazy" decoding="async" />;
         const style = { '--a': pause.a, '--len': pause.b - pause.a, '--mid': s === 0 ? 0 : (pause.b - pause.a) / 2 } as CSSProperties;
         return (
           <article key={stop.id} className="tour-stop" aria-labelledby={`${stop.id}-title`} style={style}>
             <span id={stop.id} className="tour-anchor" />
-            <img className="tour-photo" src={photo(stop.photo, 1280)} srcSet={srcSet(stop.photo)} sizes="100vw" width="1280" height="853" alt="" loading="lazy" decoding="async" />
+            {flat ? picture : <noscript>{picture}</noscript>}
             <span className="tour-label">Imagen ilustrativa</span>
             <div className="tour-text">
               <p className="tour-kicker">{stop.kicker}</p>
