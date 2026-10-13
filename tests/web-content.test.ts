@@ -26,7 +26,7 @@ test('every stop of the walk has its text, one coloured phrase and a photo in wa
     assert.ok(stop.kicker && stop.title && stop.accent && stop.text);
     assert.ok(!stop.title.includes(stop.accent));
   }
-  for (const n of frames) for (const file of [`${n}-720.webp`, `${n}-1280.webp`, `${n}-d.webp`]) {
+  for (const file of ['thumbs.webp', 'depth.webp', ...frames.flatMap((n: string) => [`${n}-720.webp`, `${n}-1280.webp`])]) {
     assert.ok(existsSync(new URL(`../web/public/casa/${file}`, import.meta.url)), file);
   }
 });

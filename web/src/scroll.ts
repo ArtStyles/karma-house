@@ -36,3 +36,10 @@ export function tourAt(parts: TourPart[], p: number) {
   const part = parts.find((x) => p < x.b) ?? parts[parts.length - 1];
   return { part, u: seg(p, part.a, part.b) };
 }
+
+/** Texture rectangle [x, y, w, h] (0..1) of tile k in a grid image of `cols` tiles per row, each w × h pixels, inset
+ *  by half a pixel so smooth sampling never blends in the neighbouring tile. */
+export function tileRect(k: number, grid: { cols: number; w: number; h: number }, width: number, height: number) {
+  const x = (k % grid.cols) * grid.w, y = Math.floor(k / grid.cols) * grid.h;
+  return [(x + 0.5) / width, (y + 0.5) / height, (grid.w - 1) / width, (grid.h - 1) / height];
+}

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { pickMode, seg, smooth, tourAt, tourTimeline } from '../web/src/scroll.ts';
+import { pickMode, seg, smooth, tileRect, tourAt, tourTimeline } from '../web/src/scroll.ts';
 
 test('seg clamps progress to its window', () => {
   assert.equal(seg(0.1, 0.2, 0.4), 0);
@@ -35,4 +35,10 @@ test('tourAt finds the part and the progress inside it, and holds the end', () =
   assert.deepEqual([tourAt(parts, 2.5).part.k, tourAt(parts, 2.5).u], [0, 0.5]);
   assert.equal(tourAt(parts, 3).part.k, 1);
   assert.deepEqual([tourAt(parts, 99).part.kind, tourAt(parts, 99).u], ['pause', 1]);
+});
+
+test('tileRect finds a tile in the grid, half a pixel inside its edges', () => {
+  const grid = { cols: 10, w: 160, h: 107 };
+  assert.deepEqual(tileRect(0, grid, 1600, 749), [0.5 / 1600, 0.5 / 749, 159 / 1600, 106 / 749]);
+  assert.deepEqual(tileRect(12, grid, 1600, 749), [320.5 / 1600, 107.5 / 749, 159 / 1600, 106 / 749]);
 });
