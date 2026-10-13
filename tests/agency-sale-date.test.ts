@@ -17,7 +17,7 @@ test('date fields retain default visit controls and expose historical sale input
  const source=await readFile(new URL('../src/components/negotiations/VisitDateTimeFields.tsx',import.meta.url),'utf8');
  const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
  const require=createRequire(import.meta.url),exports:any={};
- const mocks:any={'../SelectionField':{SelectionField:'SelectionField'},'react-native':{Text:'Text',TextInput:'TextInput',View:'View',StyleSheet:{create:(v:any)=>v}},'../../negotiations/domain':{havanaDateTime:()=>({date:'2026-10-08',time:'10:00'})},'../../theme':{createThemedStyles:()=>()=>({styles:{}})}};
+ const mocks:any={'../SelectionField':{SelectionField:'SelectionField'},'react-native':{Text:'Text',TextInput:'TextInput',View:'View',StyleSheet:{create:(v:any)=>v}},'../../negotiations/domain':{havanaDateTime:()=>({date:'2026-10-08',time:'10:00'})},'../../theme':{createThemedStyles:()=>()=>({styles:{},colors:{muted:'#666'}})}};
  runInNewContext(code,{exports,require:(id:string)=>id==='react/jsx-runtime'?require(id):mocks[id]??(()=>{throw Error(id)})()});
  const flatten=(n:any):any[]=>!n?[]:Array.isArray(n)?n.flatMap(flatten):typeof n==='object'?[n,...flatten(n.props?.children)]:[n];
  const base={date:'2026-10-08',time:'10:00',disabled:false,onDate(){},onTime(){}};

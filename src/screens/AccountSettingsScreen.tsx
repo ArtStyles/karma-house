@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import { router } from 'expo-router';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useConsultationRefresh } from '../lib/useConsultationRefresh';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { accountProfileError } from '../auth/accountProfile';
 import { pickAccountAvatar, type PreparedAvatar } from '../auth/prepareAvatar';
@@ -10,8 +10,8 @@ import { isSupabaseConfigured } from '../lib/supabase';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { UserAvatar } from '../components/account/UserAvatar';
 import { AppearanceSettings } from '../components/AppearanceSettings';
-import { Button, EmptyState, Icon, Notice, PageTitle } from '../components/ui';
-import { createThemedStyles } from '../theme';
+import { ActionGroup, Button, EmptyState, Icon, Notice, PageTitle } from '../components/ui';
+import { createThemedStyles, internalLayout } from '../theme';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 
 export default function AccountSettingsScreen() {
@@ -22,9 +22,9 @@ export default function AccountSettingsScreen() {
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!!auth.user && !editing.current && !formBusy.current} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}>
-        <PageTitle title="Ajustes de cuenta" back />
+        <PageTitle compact title="Ajustes de cuenta" subtitle="Identidad, preferencias y privacidad." back />
         <AppearanceSettings />
-        {!isSupabaseConfigured ? <EmptyState icon="person-outline" title="Tu perfil, a tu manera" description="La foto y el nombre de tu cuenta estarán disponibles con el servicio conectado." /> : !auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : !auth.user ? <AccountPrompt returnTo="/account-settings" title="Tu perfil, a tu manera" description="Inicia sesión para personalizar el nombre y la foto de tu cuenta." /> : !auth.profileReady ? <View style={styles.card}><Notice error={!!auth.error}>{auth.error || 'Cargando tu perfil…'} Desliza hacia abajo para volver a cargarlo.</Notice></View> : <AccountSettingsForm key={auth.user.id} ownerId={auth.user.id} editing={editing} locked={formBusy} refreshing={reload.isRefreshing} />}
+        {!isSupabaseConfigured ? <EmptyState plain title="Perfil no disponible" description="La foto y el nombre de tu cuenta estarán disponibles con el servicio conectado." /> : !auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : !auth.user ? <AccountPrompt returnTo="/account-settings" title="Personaliza tu cuenta" description="Inicia sesión para cambiar el nombre y la foto de tu cuenta." /> : !auth.profileReady ? <View style={styles.card}><Notice error={!!auth.error}>{auth.error || 'Cargando tu perfil…'} Desliza hacia abajo para volver a cargarlo.</Notice></View> : <AccountSettingsForm key={auth.user.id} ownerId={auth.user.id} editing={editing} locked={formBusy} refreshing={reload.isRefreshing} />}
       </ScrollView>
     </KeyboardAvoidingView>
   </SafeAreaView>;
@@ -69,32 +69,38 @@ function AccountSettingsForm({ ownerId, editing, locked, refreshing }: { ownerId
   editing.current = changed || deleting;
   const preview = avatar === undefined ? auth.avatarUrl : avatar?.previewUri ?? null;
   return <View style={styles.form}>
-    <View style={[styles.card, styles.photoCard]}>
-      <View style={styles.avatarFrame}><UserAvatar size={104} name={name} avatarUrl={preview} /><View pointerEvents="none" style={styles.photoAccent}><Icon name="camera-outline" size={17} color={colors.primary} /></View></View>
-      <View style={styles.photoCopy}><Text style={styles.cardTitle}>Tu foto de perfil</Text><Text style={styles.description}>Elige una foto para tu cuenta. Se recorta en formato cuadrado y se optimiza antes de guardar.</Text></View>
-      <View style={styles.photoActions}><Button label={preview || auth.hasAvatar ? 'Cambiar foto' : 'Elegir foto'} secondary icon="image-outline" onPress={selectPhoto} loading={busy === 'photo'} disabled={!!busy} style={styles.photoButton} />{(avatar ? true : avatar === undefined && auth.hasAvatar) && <Button label="Quitar foto" secondary onPress={() => { setAvatar(null); setSaved(false); }} disabled={!!busy} style={styles.photoButton} />}</View>
+    <View style={styles.card}>
+      <View style={styles.photoCard}>
+        <UserAvatar size={64} name={name} avatarUrl={preview} />
+        <View style={styles.photoCopy}><Text accessibilityRole="header" style={styles.cardTitle}>Foto de la cuenta</Text><Text style={styles.description}>Se recorta en formato cuadrado y se optimiza antes de guardar.</Text></View>
+      </View>
+      <ActionGroup><Button label={preview || auth.hasAvatar ? 'Cambiar foto' : 'Elegir foto'} secondary icon="image-outline" onPress={selectPhoto} loading={busy === 'photo'} disabled={!!busy} />{(avatar ? true : avatar === undefined && auth.hasAvatar) && <Button label="Quitar foto" secondary onPress={() => { setAvatar(null); setSaved(false); }} disabled={!!busy} />}</ActionGroup>
       <Text style={styles.privacy}>La foto se muestra solo en tu cuenta.</Text>
     </View>
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>Información de tu cuenta</Text>
+      <Text accessibilityRole="header" style={styles.cardTitle}>Información personal</Text>
       <View style={styles.field}><Text style={styles.label}>Nombre</Text><TextInput accessibilityLabel="Nombre de tu cuenta" value={name} onChangeText={value => { setName(value); setSaved(false); }} editable={!busy} maxLength={80} autoCapitalize="words" style={styles.input} placeholder="Tu nombre" placeholderTextColor={colors.muted} /><Text style={styles.description}>Tu nombre en las conversaciones de KarmaHouse.</Text></View>
       <View style={styles.field}><Text style={styles.label}>Correo electrónico</Text><Text selectable style={styles.email}>{auth.user?.email}</Text><Text style={styles.description}>Correo asociado a tu cuenta.</Text></View>
     </View>
     {error || auth.error ? <Notice error>{error || auth.error}</Notice> : null}
     {saved && <View accessibilityLiveRegion="polite" style={styles.success}><Icon name="checkmark-circle" size={19} color={colors.green} /><Text style={styles.successText}>Cambios guardados.</Text></View>}
-    <Button label="Guardar cambios" onPress={save} loading={busy === 'save'} disabled={!!busy || !changed} />
-    {changed && <Button label="Descartar cambios" secondary disabled={!!busy} onPress={() => { setName(auth.displayName); setAvatar(undefined); setError(''); setSaved(false); }} />}
+    <ActionGroup><Button label="Guardar cambios" onPress={save} loading={busy === 'save'} disabled={!!busy || !changed} />
+    {changed && <Button label="Descartar cambios" secondary disabled={!!busy} onPress={() => { setName(auth.displayName); setAvatar(undefined); setError(''); setSaved(false); }} />}</ActionGroup>
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>Tus avisos</Text>
+      <Text accessibilityRole="header" style={styles.cardTitle}>Notificaciones</Text>
       <Text style={styles.description}>Elige qué novedades quieres ver en la bandeja de KarmaHouse.</Text>
       <Button label="Preferencias de notificaciones" secondary icon="notifications-outline" onPress={() => router.push('/notification-settings')} />
     </View>
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>Privacidad</Text>
+      <Text accessibilityRole="header" style={styles.cardTitle}>Privacidad</Text>
       <View style={styles.links}>
-        <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.link}>Política de privacidad</Text></Pressable>
-        <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(TERMS_URL)}><Text style={styles.link}>Términos de uso</Text></Pressable>
+        <Pressable accessibilityRole="link" style={styles.legalRow} onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.link}>Política de privacidad</Text><Icon name="open-outline" size={18} color={colors.muted} /></Pressable>
+        <Pressable accessibilityRole="link" style={styles.legalRow} onPress={() => void Linking.openURL(TERMS_URL)}><Text style={styles.link}>Términos de uso</Text><Icon name="open-outline" size={18} color={colors.muted} /></Pressable>
       </View>
+    </View>
+    <View style={styles.card}>
+      <Text accessibilityRole="header" style={styles.cardTitle}>Eliminar cuenta</Text>
+      <Text style={styles.description}>La eliminación borra tus datos de forma permanente.</Text>
       {auth.isOwner ? <Notice>La cuenta propietaria está protegida. Para eliminarla, primero debe transferirse la propiedad de KarmaHouse.</Notice> : <Pressable accessibilityRole="button" disabled={!!busy} onPress={() => setDeleting(true)} style={({ pressed }) => [styles.danger, pressed && { opacity: .7 }]}>
         <Icon name="trash-outline" size={19} color={colors.danger} /><Text style={styles.dangerText}>Eliminar cuenta</Text>
       </Pressable>}
@@ -105,6 +111,7 @@ function AccountSettingsForm({ ownerId, editing, locked, refreshing }: { ownerId
 
 function DeleteAccountSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colors, styles } = useStyles();
+  const insets = useSafeAreaInsets();
   const auth = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -116,31 +123,32 @@ function DeleteAccountSheet({ visible, onClose }: { visible: boolean; onClose: (
     finally { setBusy(false); }
   }
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={() => !busy && onClose()}>
-    <View style={styles.backdrop}>
+    <View style={[styles.backdrop, { paddingTop: Math.max(insets.top, 20), paddingBottom: Math.max(insets.bottom, 20) }]}>
       <View accessibilityViewIsModal style={styles.sheet}>
+        <ScrollView contentContainerStyle={styles.sheetContent}>
         <Text accessibilityRole="header" style={styles.sheetTitle}>¿Eliminar tu cuenta?</Text>
         <Text style={styles.sheetText}>Se borran para siempre tus anuncios y sus fotos, tus favoritos, tus conversaciones, visitas y ofertas, tus avisos y tu perfil. No se puede deshacer.</Text>
         <Text style={styles.description}>Los reportes enviados a moderación se conservan sin tus datos de cuenta.</Text>
         {error ? <Notice error>{error}</Notice> : null}
-        <Pressable accessibilityRole="button" disabled={busy} onPress={() => void confirm()} style={({ pressed }) => [styles.dangerFilled, (pressed || busy) && { opacity: .7 }]}>
+        <ActionGroup direction="vertical"><Pressable accessibilityRole="button" accessibilityLabel={error ? 'Reintentar eliminación' : 'Eliminar definitivamente'} accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={() => void confirm()} style={({ pressed }) => [styles.dangerFilled, (pressed || busy) && { opacity: .7 }]}>
           {busy ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.dangerFilledText}>{error ? 'Reintentar eliminación' : 'Eliminar definitivamente'}</Text>}
         </Pressable>
-        <Button label="Cancelar" secondary disabled={busy} onPress={onClose} />
+        <Button label="Cancelar" secondary disabled={busy} onPress={onClose} /></ActionGroup>
+        </ScrollView>
       </View>
     </View>
   </Modal>;
 }
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 }, content: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 36 }, loading: { padding: 40 },
-  form: { gap: 18 }, card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 25, padding: 22, gap: 22 }, photoCard: { backgroundColor: colors.softBlue, alignItems: 'center', gap: 17 },
-  avatarFrame: { position: 'relative' }, photoAccent: { position: 'absolute', bottom: 0, right: -3, width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
-  photoCopy: { alignItems: 'center', gap: 7, maxWidth: 360 }, cardTitle: { color: colors.ink, fontSize: 19, lineHeight: 25, fontWeight: '600', letterSpacing: -0.35 }, description: { color: colors.muted, fontSize: 13, lineHeight: 20 },
-  photoActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: '100%' }, photoButton: { flexGrow: 1, flexBasis: 140 }, privacy: { color: colors.mutedBlue, fontSize: 11, lineHeight: 17, textAlign: 'center' },
-  field: { gap: 8 }, label: { color: colors.muted, fontSize: 13, fontWeight: '500' }, input: { minHeight: 48, paddingVertical: 8, color: colors.ink, fontSize: 17, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, email: { color: colors.ink, fontSize: 16, lineHeight: 23 },
-  links: { gap: 14 }, link: { color: colors.primary, fontSize: 16, fontWeight: '500', minHeight: 24 },
+  safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 }, content: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', paddingHorizontal: internalLayout.gutter, paddingBottom: 36 }, loading: { padding: 40 },
+  form: { gap: 20 }, card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: internalLayout.radius, padding: 16, gap: 16 }, photoCard: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  photoCopy: { flex: 1, minWidth: 0, gap: 6 }, cardTitle: { color: colors.ink, fontSize: 18, lineHeight: 24, fontWeight: '600', letterSpacing: -0.3 }, description: { color: colors.muted, fontSize: 14, lineHeight: 21 },
+  privacy: { color: colors.muted, fontSize: 12, lineHeight: 18 },
+  field: { gap: 8 }, label: { color: colors.ink, fontSize: 13, fontWeight: '600' }, input: { minHeight: 52, paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.border, borderRadius: 12, color: colors.ink, fontSize: 17 }, email: { color: colors.ink, fontSize: 16, lineHeight: 23 },
+  links: { gap: 0 }, legalRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, link: { flex: 1, color: colors.primary, fontSize: 16, lineHeight: 23, fontWeight: '500' },
   danger: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }, dangerText: { color: colors.danger, fontSize: 16, fontWeight: '600' },
-  backdrop: { flex: 1, backgroundColor: colors.photoOverlay, justifyContent: 'center', padding: 16 }, sheet: { width: '100%', maxWidth: 460, alignSelf: 'center', backgroundColor: colors.surface, borderRadius: 28, padding: 24, gap: 16 },
+  backdrop: { flex: 1, backgroundColor: colors.photoOverlay, justifyContent: 'center', paddingHorizontal: 20 }, sheet: { width: '100%', maxWidth: 520, maxHeight: '100%', alignSelf: 'center', backgroundColor: colors.surface, borderRadius: internalLayout.radius, overflow: 'hidden' }, sheetContent: { padding: 20, gap: 16 },
   sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '700', letterSpacing: -.5 }, sheetText: { color: colors.ink, fontSize: 16, lineHeight: 24 },
-  dangerFilled: { minHeight: 52, borderRadius: 18, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 }, dangerFilledText: { color: colors.onPrimary, fontSize: 16, fontWeight: '600' },
+  dangerFilled: { minHeight: 52, borderRadius: 14, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 12 }, dangerFilledText: { color: colors.onPrimary, fontSize: 16, lineHeight: 23, fontWeight: '600', textAlign: 'center' },
   success: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingHorizontal: 4 }, successText: { color: colors.green, fontSize: 14, fontWeight: '500' },
 }));

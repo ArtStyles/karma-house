@@ -1,6 +1,6 @@
 {
   "name": "karma-house",
-  "version": "0.1.23",
+  "version": "0.1.25",
   "main": "index.ts",
   "type": "module",
   "dependencies": {
@@ -51,6 +51,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "export": "expo export --platform all",
+    "build:web": "expo export --platform web && node scripts/stamp-sw.mjs",
     "check": "npm run typecheck && npm test"
   },
   "private": true,

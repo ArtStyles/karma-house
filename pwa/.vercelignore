@@ -1,0 +1,3 @@
+# The PWA project builds from pwa/, so this file replaces the repository-root .vercelignore,
+# which only lets web/ through for the landing. The app does not need the landing.
+web

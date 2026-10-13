@@ -11,7 +11,7 @@ import type { CapturedAccountContext } from '../agencies/controller';
 import type { DuplicateCandidate } from '../agencies/properties/types';
 import { createAgencyScreenRequestScope } from '../agencies/screenRequests';
 import { agencyError } from '../agencies/domain';
-import { Button, Notice, PageTitle } from '../components/ui';
+import { ActionGroup, Button, Notice, PageTitle } from '../components/ui';
 import { AgencyTextField, useAgencyFormStyles } from '../components/agencies/AgencyRegistrationFields';
 export default function AgencyDuplicateReviewScreen() { const auth = useAuth(), w = useAgencyWorkspace(); return <Review key={`${auth.user?.id}:${w.generation}:${auth.isOwner}:${auth.suspended}:${Boolean(auth.session)}`}/>; }
 function Review() {
@@ -85,5 +85,20 @@ function Review() {
         catch { }
         c?.release();
     } }
-    return <SafeAreaView style={s.safe} edges={['top', 'bottom', 'left', 'right']}><ScrollView contentContainerStyle={s.content}><PageTitle title="Revisar duplicados" subtitle="Consolidación por el propietario de KarmaHouse" back/>{!allowed ? <Notice>Esta revisión requiere al propietario de KarmaHouse.</Notice> : <>{Boolean(issue) && <Notice>{issue}</Notice>}<AgencyTextField label="UUID o enlace de la vivienda canónica" value={id} onChangeText={setId} editable={!busy}/>{canonical && <Text style={s.title}>Conservar: {canonical.title}</Text>}<Button label="Consultar coincidencias para revisar" loading={busy} onPress={() => void load()}/><Notice>Una coincidencia requiere revisión manual. Solo se pueden consolidar orígenes compatibles. Los historiales y conversaciones conservan sus identificadores.</Notice>{items.map(item => <View key={item.id} style={s.card}><Text style={s.title}>{item.title}</Text><Text style={s.copy}>{item.location} · Versión {item.version}</Text><Text selectable style={s.copy}>{item.id}</Text><Button secondary label={selected.some(x => x.id === item.id) ? 'Quitar de la consolidación' : 'Marcar duplicado'} disabled={busy || selected.length >= 20 && !selected.some(x => x.id === item.id)} onPress={() => setSelected(old => old.some(x => x.id === item.id) ? old.filter(x => x.id !== item.id) : [...old, item])}/></View>)}{offset > 0 && <Button label="Página anterior" secondary disabled={busy} onPress={() => void load(offset - 30)}/>}{more && <Button label="Más coincidencias" secondary disabled={busy} onPress={() => void load(offset + 30)}/>}<Text style={s.copy}>{selected.length} duplicados seleccionados</Text><AgencyTextField label="Evidencia de origen compatible" value={evidence} onChangeText={setEvidence} multiline editable={!busy} maxLength={2000}/><AgencyTextField label="Motivo de consolidación" value={reason} onChangeText={setReason} multiline editable={!busy} maxLength={500}/><Button label="Consolidar los duplicados seleccionados" disabled={busy || !selected.length || evidence.trim().length < 10 || reason.trim().length < 10 || !canonical} onPress={() => void merge()}/></>}</ScrollView></SafeAreaView>;
+    return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+        <PageTitle compact title="Revisar duplicados" subtitle="Consolidación por el propietario de KarmaHouse" back fallback="/administration"/>
+        {!allowed ? <Notice>Esta revisión requiere al propietario de KarmaHouse.</Notice> : <>
+            {Boolean(issue) && <Notice>{issue}</Notice>}
+            <View style={s.card}><Text accessibilityRole="header" style={s.title}>Vivienda que se conserva</Text>
+                <AgencyTextField label="UUID o enlace de la vivienda canónica" value={id} onChangeText={setId} editable={!busy}/>
+                {canonical && <View style={s.item}><Text style={s.title}>{canonical.title}</Text><Text style={s.copy}>{canonical.location}</Text><Text style={s.caption}>Versión {canonical.version}</Text></View>}
+                <Button label="Consultar coincidencias para revisar" loading={busy} onPress={() => void load()}/>
+            </View>
+            <Notice>Una coincidencia requiere revisión manual. Solo se pueden consolidar orígenes compatibles. Los historiales y conversaciones conservan sus identificadores.</Notice>
+            {items.length>0&&<Text accessibilityRole="header" style={s.title}>Posibles duplicados</Text>}
+            {items.map(item => <View key={item.id} style={s.card}><Text style={s.title}>{item.title}</Text><Text style={s.copy}>{item.location}</Text><View style={s.datum}><Text style={s.caption}>Identificador · versión {item.version}</Text><Text selectable style={s.copy}>{item.id}</Text></View><Button secondary label={selected.some(x => x.id === item.id) ? 'Quitar de la consolidación' : 'Marcar duplicado'} disabled={busy || selected.length >= 20 && !selected.some(x => x.id === item.id)} onPress={() => setSelected(old => old.some(x => x.id === item.id) ? old.filter(x => x.id !== item.id) : [...old, item])}/></View>)}
+            <ActionGroup>{offset > 0 && <Button label="Página anterior" secondary disabled={busy} onPress={() => void load(offset - 30)}/>}{more && <Button label="Más coincidencias" secondary disabled={busy} onPress={() => void load(offset + 30)}/>}</ActionGroup>
+            <View style={s.card}><Text accessibilityRole="header" style={s.title}>Evidencia y consolidación</Text><Text style={s.status}>{selected.length} duplicados seleccionados</Text><AgencyTextField label="Evidencia de origen compatible" value={evidence} onChangeText={setEvidence} multiline editable={!busy} maxLength={2000}/><AgencyTextField label="Motivo de consolidación" value={reason} onChangeText={setReason} multiline editable={!busy} maxLength={500}/><Button label="Consolidar los duplicados seleccionados" disabled={busy || !selected.length || evidence.trim().length < 10 || reason.trim().length < 10 || !canonical} onPress={() => void merge()}/></View>
+        </>}
+    </ScrollView></SafeAreaView>;
 }

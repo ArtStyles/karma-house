@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ChatMessage, PendingMessage } from '../../messaging/types';
 import { createThemedStyles } from '../../theme';
-import { Icon } from '../ui';
+import { ActionGroup, Icon } from '../ui';
 
 export type MessageRow = { key: string; message: ChatMessage; pending?: never } | { key: string; pending: PendingMessage; message?: never };
 
@@ -20,26 +20,26 @@ export function MessageBubble({ row, own, showStatus = false, canRetry, busy, on
     </View>
     {failed && <View style={styles.failure}>
       {!!row.pending?.error && <Text style={styles.error}>{row.pending.error}</Text>}
-      <View style={styles.actions}>
+      <ActionGroup style={styles.actions}>
         <Pressable accessibilityRole="button" accessibilityLabel="Reintentar mensaje" accessibilityState={{ disabled: busy || !canRetry }} disabled={busy || !canRetry} onPress={onRetry} style={({ pressed }) => [styles.action, (pressed || busy || !canRetry) && styles.dimmed]}>
           <Icon name="refresh-outline" size={16} color={colors.primary} /><Text style={styles.actionText}>Reintentar</Text>
         </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Descartar mensaje no enviado" disabled={busy} onPress={onDiscard} style={({ pressed }) => [styles.action, (pressed || busy) && styles.dimmed]}>
           <Text style={styles.discardText}>Descartar</Text>
         </Pressable>
-      </View>
+      </ActionGroup>
     </View>}
   </View>;
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   row: { alignItems: 'flex-start', paddingVertical: 5 }, ownRow: { alignItems: 'flex-end' },
-  bubble: { maxWidth: '87%', paddingHorizontal: 15, paddingTop: 11, paddingBottom: 8, borderRadius: 20, borderBottomLeftRadius: 6, backgroundColor: colors.surface },
-  ownBubble: { backgroundColor: colors.primaryFill, borderBottomLeftRadius: 20, borderBottomRightRadius: 6 },
+  bubble: { maxWidth: '92%', paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, borderRadius: 16, borderBottomLeftRadius: 5, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  ownBubble: { backgroundColor: colors.primaryFill, borderColor: colors.primaryFill, borderBottomLeftRadius: 16, borderBottomRightRadius: 5 },
   failedBubble: { backgroundColor: colors.primaryFill }, body: { color: colors.ink, fontSize: 16, lineHeight: 23 }, ownBody: { color: colors.onPrimary },
   metadata: { flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 7, marginTop: 5 },
   time: { fontSize: 12, lineHeight: 16, color: colors.muted }, ownTime: { color: colors.onPrimaryMuted },
-  failure: { maxWidth: '90%', alignItems: 'flex-end', paddingTop: 5 }, error: { color: colors.danger, fontSize: 12, lineHeight: 17 },
-  actions: { flexDirection: 'row', gap: 16 }, action: { minHeight: 44, flexDirection: 'row', gap: 5, alignItems: 'center', paddingHorizontal: 2 },
-  actionText: { color: colors.primary, fontWeight: '600', fontSize: 13 }, discardText: { color: colors.muted, fontSize: 13 }, dimmed: { opacity: 0.45 },
+  failure: { width: '92%', maxWidth: 380, gap: 8, paddingTop: 8 }, error: { color: colors.danger, fontSize: 13, lineHeight: 19 },
+  actions: { gap: 12 }, action: { minHeight: 44, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, paddingVertical: 10 },
+  actionText: { flexShrink: 1, color: colors.primary, fontWeight: '600', fontSize: 13, lineHeight: 19 }, discardText: { flexShrink: 1, color: colors.muted, fontSize: 13, lineHeight: 19 }, dimmed: { opacity: 0.45 },
 }));

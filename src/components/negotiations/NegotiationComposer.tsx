@@ -5,7 +5,7 @@ import { formatNegotiationValue, negotiationErrorMessage, validateCreateNegotiat
 import type { CreateNegotiationInput, Negotiation } from '../../negotiations/types';
 import type { ProposalDraft, ProposalTarget } from '../../negotiations/proposalDraft';
 import { createThemedStyles } from '../../theme';
-import { Button, Icon, Notice } from '../ui';
+import { ActionGroup, Button, Icon, Notice } from '../ui';
 import { VisitDateTimeFields } from './VisitDateTimeFields';
 
 export type { ProposalTarget } from '../../negotiations/proposalDraft';
@@ -34,7 +34,7 @@ export function NegotiationComposer({ target, draft, updateDraft, disabled, disa
     }catch(failure){updateDraft({error:negotiationErrorMessage(failure)});}
     finally{lock.current=false;if(mounted.current)setBusy(false);}
   }
-  if(confirmed)return <View style={styles.form}><View style={styles.successIcon}><Icon name="checkmark-circle-outline" size={29} color={colors.green}/></View><Text accessibilityRole="header" style={styles.title}>Propuesta enviada</Text><Text style={styles.value}>{formatNegotiationValue(confirmed)}</Text><Text style={styles.copy}>Quedó registrada en esta conversación. La otra persona podrá responder desde KarmaHouse.</Text><Button label="Ver historial" onPress={onConfirmed}/></View>;
+  if(confirmed)return <View style={styles.form}><View style={styles.successHeading}><Icon name="checkmark-circle-outline" size={22} color={colors.green}/><Text accessibilityRole="header" style={styles.title}>Propuesta enviada</Text></View><Text style={styles.value}>{formatNegotiationValue(confirmed)}</Text><Text style={styles.copy}>Quedó registrada en esta conversación. La otra persona podrá responder desde KarmaHouse.</Text><Button label="Ver historial" onPress={onConfirmed}/></View>;
   const fieldsDisabled=busy||uncertain||disabled;
   return <View style={styles.form}>
     <Text accessibilityRole="header" style={styles.title}>{target.previous?'Proponer una alternativa':target.kind==='visit'?'Proponer una visita':'Hacer una oferta'}</Text>
@@ -46,9 +46,9 @@ export function NegotiationComposer({ target, draft, updateDraft, disabled, disa
     {disabled&&<Notice>{disabledReason??'Ahora no se pueden enviar nuevas propuestas en esta conversación.'}</Notice>}
     {!!error&&<Notice error>{error}</Notice>}
     {uncertain&&<Text style={styles.help}>No se pudo confirmar el resultado. Reintenta para consultar el mismo envío o actualiza el historial antes de editarlo.</Text>}
-    <Button label={uncertain?'Reintentar el mismo envío':'Enviar propuesta'} onPress={submit} loading={busy} disabled={disabled&&!uncertain}/>
-    {uncertain&&<><Button label="Actualizar historial" secondary disabled={busy} onPress={()=>void onRefresh()}/><Button label="Editar propuesta" secondary disabled={busy} onPress={()=>updateDraft({attempt:null,error:''})}/></>}
-    <Button label="Volver al historial" secondary disabled={busy} onPress={onBack}/>
+    <ActionGroup direction="vertical"><Button label={uncertain?'Reintentar el mismo envío':'Enviar propuesta'} onPress={submit} loading={busy} disabled={disabled&&!uncertain}/>
+    {uncertain&&<ActionGroup><Button label="Actualizar historial" secondary disabled={busy} onPress={()=>void onRefresh()}/><Button label="Editar propuesta" secondary disabled={busy} onPress={()=>updateDraft({attempt:null,error:''})}/></ActionGroup>}
+    <Button label="Volver al historial" secondary disabled={busy} onPress={onBack}/></ActionGroup>
   </View>;
 }
-const useStyles = createThemedStyles(colors => StyleSheet.create({form:{gap:16},title:{color:colors.ink,fontSize:25,lineHeight:31,fontWeight:'600',letterSpacing:-.6},copy:{color:colors.muted,fontSize:14,lineHeight:21},field:{gap:8},label:{color:colors.ink,fontSize:13,fontWeight:'600'},input:{minHeight:53,borderRadius:16,borderWidth:1,borderColor:colors.border,backgroundColor:colors.paper,paddingHorizontal:14,paddingVertical:13,color:colors.ink,fontSize:17},note:{minHeight:90,fontSize:14,lineHeight:21},help:{color:colors.muted,fontSize:12,lineHeight:19},previous:{padding:15,borderRadius:17,backgroundColor:colors.softBlue,gap:7},previousValue:{color:colors.primary,fontSize:17,lineHeight:24,fontWeight:'500'},successIcon:{backgroundColor:colors.softGreen,width:55,height:55,borderRadius:19,alignItems:'center',justifyContent:'center'},value:{fontSize:23,lineHeight:30,fontWeight:'600',color:colors.ink}}));
+const useStyles = createThemedStyles(colors => StyleSheet.create({form:{gap:20},title:{color:colors.ink,fontSize:22,lineHeight:28,fontWeight:'600',letterSpacing:-.4},copy:{color:colors.muted,fontSize:14,lineHeight:21},field:{gap:8},label:{color:colors.ink,fontSize:13,lineHeight:19,fontWeight:'600'},input:{minHeight:52,borderRadius:12,borderWidth:1,borderColor:colors.border,backgroundColor:colors.paper,paddingHorizontal:14,paddingVertical:12,color:colors.ink,fontSize:17},note:{minHeight:104,fontSize:16,lineHeight:23},help:{color:colors.muted,fontSize:12,lineHeight:19},previous:{paddingVertical:16,borderTopWidth:StyleSheet.hairlineWidth,borderBottomWidth:StyleSheet.hairlineWidth,borderColor:colors.border,gap:8},previousValue:{color:colors.ink,fontSize:17,lineHeight:24,fontWeight:'500'},successHeading:{flexDirection:'row',alignItems:'center',gap:10,flexWrap:'wrap'},value:{fontSize:22,lineHeight:29,fontWeight:'600',color:colors.ink}}));

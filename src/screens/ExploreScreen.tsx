@@ -16,6 +16,7 @@ import { MotionPressable } from '../components/MotionPressable';
 import { Brand, Button, EmptyState, Icon, IconButton, Notice } from '../components/ui';
 import { CatalogFilters } from '../components/CatalogFilters';
 import { CatalogSortMenu } from '../components/CatalogSortMenu';
+import { InstallHint } from '../components/InstallHint';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { NotificationBell } from '../components/notifications/NotificationBell';
@@ -93,6 +94,7 @@ export default function ExploreScreen() {
         onEndReached={loadMore}
         onEndReachedThreshold={0.6}
         columnWrapperStyle={columns > 1 ? styles.row : undefined}
+        ItemSeparatorComponent={() => <View accessible={false} style={styles.listDivider} />}
         renderItem={({ item }) => <View style={[styles.cell, { width: result.length === 1 ? '100%' : columns === 3 ? '31.9%' : columns === 2 ? '48.8%' : '100%' }]}><PropertyCard listing={item} offline={offline} horizontal={columns > 1 && result.length === 1} /></View>}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.content}
@@ -108,6 +110,7 @@ export default function ExploreScreen() {
               </View>
             </View>
           </View>
+          <InstallHint />
           <View style={styles.discovery}>
             <ExploreDiscovery offline={offline} onOperation={operation => change({ operation })} onPublish={() => router.push('/publish')} />
             <View style={[styles.search, locked]}>
@@ -142,7 +145,7 @@ export default function ExploreScreen() {
           {saveNotice === 'saved' && <View style={styles.saveNotice}><Notice>Te avisaremos cuando aparezca una vivienda que encaje.</Notice><Button label="Ver mis alertas" secondary icon="bookmark-outline" onPress={() => router.push('/saved-searches')} /></View>}
           {storageError && <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{storageError}</Notice><Button label="Volver a cargar" secondary loading={refreshing} onPress={reload} /></View>}
         </View>}
-        ListFooterComponent={<View>
+        ListFooterComponent={<View style={result.length > 0 ? styles.listFooter : undefined}>
           {pageError && ready ? <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{pageError}</Notice><Button label="Reintentar" secondary loading={loading} onPress={() => { if (catalogRetryAction({ current, hasMore }) === 'page') loadMore(); else void refreshCatalog().catch(() => {}); }} /></View>
             : loading && ready ? <View style={styles.skeletons}><CardSkeleton /></View>
             : current && !updating && !hasMore && result.length > 0 && !offline ? <Text style={styles.listEnd}>{total === 1 ? 'Has visto la única vivienda que coincide.' : `Has visto las ${total} viviendas que coinciden.`}</Text> : null}
@@ -212,7 +215,9 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   activeFilters: { gap: 7, paddingTop: 12, alignItems: 'center' }, filterTag: { minHeight: 44, paddingHorizontal: 11, paddingVertical: 8, gap: 6, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.softBlue, borderRadius: 12 }, filterTagText: { fontSize: 13, color: colors.primary },
   clear: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }, clearText: { color: colors.muted, fontSize: 13 },
   listEnd: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: 4, marginBottom: 8 },
-  row: { columnGap: '2%' }, cell: { marginBottom: 26 },
+  row: { columnGap: '2%' }, cell: {},
+  listDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: 13 },
+  listFooter: { paddingTop: 26 },
   skeletons: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', marginTop: 4 }, skeleton: { flex: 1, minWidth: 260, gap: 8, marginBottom: 26 },
   skeletonImage: { height: 200, borderRadius: 16, backgroundColor: colors.skeleton, marginBottom: 4 }, skeletonLine: { height: 14, borderRadius: 7, backgroundColor: colors.skeleton },
   sellerBanner: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: colors.banner, borderRadius: 22, padding: 20, marginTop: 18, marginBottom: 10 },

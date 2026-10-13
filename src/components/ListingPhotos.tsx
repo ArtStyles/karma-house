@@ -103,7 +103,7 @@ export function ListingPhotos({ photos, busy, disabled, required = false, onBusy
 }
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   container: { gap: 12 }, title: { fontSize: 17, fontWeight: '600', color: colors.ink }, caption: { fontSize: 13, color: colors.muted, lineHeight: 19 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: '2%', rowGap: 10 }, tile: { width: '49%', borderRadius: 14, overflow: 'hidden', backgroundColor: colors.paper }, frame: { aspectRatio: 1.35 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 }, tile: { flexBasis: 144, flexGrow: 1, minWidth: 124, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.paper }, frame: { aspectRatio: 1.35 },
   coverChoice: { minHeight: 44, justifyContent: 'center', alignItems: 'center', padding: 8, backgroundColor: colors.softBlue }, coverChoiceText: { fontSize: 12, color: colors.primary, fontWeight: '600', textAlign: 'center' },
   image: { width: '100%', height: '100%' }, remove: { position: 'absolute', right: 4, top: 4, backgroundColor: colors.surface },
   number: { position: 'absolute', left: 8, bottom: 8, backgroundColor: colors.navigationGlass, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 8, fontSize: 12, color: colors.ink },

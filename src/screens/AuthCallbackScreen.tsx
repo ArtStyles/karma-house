@@ -1,7 +1,7 @@
 import * as Linking from 'expo-linking';
 import { router, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { completeAuthCallback } from '../auth/completeCallback';
 import { pendingIntentStore } from '../auth/pendingIntentStorage';
@@ -50,19 +50,21 @@ export default function AuthCallbackScreen() {
   },[destination,auth.ready,auth.user?.id,auth.suspended,Boolean(auth.session),workspace.ready,workspace.repository,workspace.captureAccountContext]);
 
   return <SafeAreaView style={styles.safe}>
+    <ScrollView contentContainerStyle={styles.scroll}>
     <View style={styles.content}>
       <View style={styles.symbol}><Icon name={error ? 'key-outline' : 'mail-outline'} color={colors.primary} size={29} /></View>
       <Text accessibilityRole="header" style={styles.title}>{error ? 'Revisemos ese enlace' : 'Abriendo tu cuenta'}</Text>
       {error ? <><Notice error>{error}</Notice><Button label="Solicitar recuperación" onPress={() => router.replace({ pathname: '/auth', params: { mode: 'forgot' } })} /><Button label="Volver a entrar" secondary onPress={() => router.replace('/auth')} /></>
         : <><Text style={styles.copy}>Estamos verificando el enlace de tu correo.</Text><ActivityIndicator color={colors.primary} size="large" /></>}
     </View>
+    </ScrollView>
   </SafeAreaView>;
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper, justifyContent: 'center', padding: 24 },
+  safe: { flex: 1, backgroundColor: colors.paper }, scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
   content: { width: '100%', maxWidth: 420, alignSelf: 'center', gap: 20 },
-  symbol: { width: 64, height: 64, borderRadius: 20, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
-  title: { color: colors.ink, fontSize: 30, fontWeight: '700', letterSpacing: -.8 },
+  symbol: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  title: { color: colors.ink, fontSize: 28, lineHeight: 34, fontWeight: '600', letterSpacing: -.6 },
   copy: { color: colors.muted, fontSize: 16, lineHeight: 24, marginBottom: 12 },
 }));

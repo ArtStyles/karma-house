@@ -108,8 +108,8 @@ export default function AuthScreen() {
     } finally { if (isCurrent()) setSubmitting(false); }
   }
 
-  const title = mode === 'signup' ? 'Tu próximo hogar\nempieza aquí.' : mode === 'forgot' ? 'Volvamos a\ntu cuenta.' : mode === 'recovery' ? 'Una nueva\ncontraseña.' : 'Qué bueno\nverte de nuevo.';
-  const subtitle = mode === 'signup' ? 'Guarda tus favoritos y publica tu vivienda con una sola cuenta.' : mode === 'forgot' ? 'Escribe tu correo para solicitar un enlace de recuperación.' : mode === 'recovery' ? 'Elige una contraseña segura para volver a tu espacio.' : 'Entra para continuar con tus favoritos y tus anuncios.';
+  const title = mode === 'signup' ? 'Crear cuenta' : mode === 'forgot' ? 'Recuperar tu cuenta' : mode === 'recovery' ? 'Nueva contraseña' : 'Entrar en tu cuenta';
+  const subtitle = mode === 'signup' ? 'Completa tus datos para guardar viviendas y publicar anuncios.' : mode === 'forgot' ? 'Escribe tu correo para solicitar un enlace de recuperación.' : mode === 'recovery' ? 'Elige una contraseña para volver a tu espacio.' : 'Consulta tus favoritos, anuncios y conversaciones.';
   const submitLabel = mode === 'signup' ? 'Crear cuenta' : mode === 'forgot' ? 'Solicitar enlace' : mode === 'recovery' ? 'Guardar contraseña' : 'Entrar';
   const hasRecoverySession = mode !== 'recovery' || Boolean(auth.user);
 
@@ -122,7 +122,6 @@ export default function AuthScreen() {
           <View style={styles.backSpace} />
         </View>
         <View style={styles.content}>
-          <View style={styles.symbol}><Icon name={mode === 'forgot' || mode === 'recovery' ? 'key-outline' : 'person-outline'} size={29} color={colors.primary} /></View>
           <Text accessibilityRole="header" style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
           {intent && (mode === 'signin' || mode === 'signup') && <View style={{ marginTop: 18 }}><Notice>{pendingIntentReason(intent)}</Notice></View>}
@@ -186,27 +185,26 @@ function Field({ label, icon, accessory, inputRef, ...input }: TextInputProps & 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 },
   scroll: { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: 40, flexGrow: 1 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, paddingBottom: 24 },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, paddingBottom: 20 },
   backSpace: { width: 44 },
-  content: { width: '100%', maxWidth: 440, alignSelf: 'center', paddingTop: 12 },
-  symbol: { width: 62, height: 62, borderRadius: 20, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-  title: { fontFamily: typefaces.display, color: colors.ink, fontSize: 39, lineHeight: 44, fontWeight: '700', letterSpacing: -1.4 },
-  subtitle: { color: colors.muted, fontSize: 16, lineHeight: 24, marginTop: 14, maxWidth: 385 },
-  form: { marginTop: 30, gap: 17 },
+  content: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingTop: 4 },
+  title: { fontFamily: typefaces.display, color: colors.ink, fontSize: 30, lineHeight: 36, fontWeight: '600', letterSpacing: -.6 },
+  subtitle: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: 8, maxWidth: 420 },
+  form: { marginTop: 24, gap: 18 },
   segment: { flexDirection: 'row', backgroundColor: colors.softNeutral, padding: 4, borderRadius: 15, marginBottom: 7 },
-  segmentItem: { flex: 1, minHeight: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  segmentItem: { flex: 1, minWidth: 0, minHeight: 44, padding: 8, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   segmentSelected: { backgroundColor: colors.surface, boxShadow: '0 1px 5px rgba(0, 0, 0, 0.06)' },
-  segmentText: { fontSize: 15, fontWeight: '500', color: colors.muted }, segmentTextSelected: { color: colors.ink, fontWeight: '600' },
+  segmentText: { fontSize: 15, fontWeight: '500', textAlign: 'center', color: colors.muted }, segmentTextSelected: { color: colors.ink, fontWeight: '600' },
   field: { gap: 9 }, label: { fontSize: 14, fontWeight: '500', color: colors.ink, marginLeft: 4 },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: colors.surface, borderRadius: 15, paddingLeft: 16, paddingRight: 8, borderWidth: 1, borderColor: colors.border },
   inputFocused: { borderColor: colors.primary },
-  input: { flex: 1, minWidth: 0, minHeight: 56, fontSize: 16, color: colors.ink, paddingVertical: 15, outlineWidth: 0 },
+  input: { flex: 1, minWidth: 0, minHeight: 52, fontSize: 16, color: colors.ink, paddingVertical: 13, outlineWidth: 0 },
   eye: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   forgot: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center', marginTop: -10 }, linkText: { color: colors.primary, fontSize: 14, fontWeight: '500' },
-  helper: { color: colors.muted, fontSize: 13, lineHeight: 20, textAlign: 'center', paddingHorizontal: 14 },
+  helper: { color: colors.muted, fontSize: 13, lineHeight: 20 },
   explore: { flexDirection: 'row', alignSelf: 'center', alignItems: 'center', gap: 8, minHeight: 48, marginTop: 28 },
   exploreText: { fontSize: 14, fontWeight: '500', color: colors.muted },
-  successCard: { marginTop: 30, padding: 24, borderRadius: 24, backgroundColor: colors.surface, gap: 16 },
+  successCard: { marginTop: 24, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, gap: 16 },
   successIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.softGreen, alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontSize: 23, fontWeight: '600', letterSpacing: -.5, color: colors.ink },
   cardCopy: { color: colors.muted, fontSize: 15, lineHeight: 23, marginBottom: 7 },

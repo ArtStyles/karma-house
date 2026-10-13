@@ -21,12 +21,14 @@ import {
   type ListingDraft,
 } from '../domain/listings';
 import { createThemedStyles, formatMoney, layout, typefaces } from '../theme';
-import { createDraftPersistence, draftToken, hasDraftVersionConflict, restoreDraft } from '../domain/draftPersistence';
+import { createDraftPersistence, draftToken, hasDraftVersionConflict } from '../domain/draftPersistence';
+import { restorePublicationDraft } from '../domain/publicationEntry';
+import { preparePublicationImport } from '../domain/publicationImport';
 import { draftStorage } from '../data/draftStorage';
 import { ListingPhotos } from './ListingPhotos';
 import { LocationPicker } from './maps/LocationPicker';
 import { normalizeMapLocation } from '../domain/geo';
-import { Button, Icon, Notice, Pill } from './ui';
+import { ActionGroup, Button, Icon, Notice, Pill } from './ui';
 import { SelectionField } from './SelectionField';
 import { AMENITIES, AMENITY_GROUPS, CONDITIONS, OPERATIONS, PROVINCES, RENT_PERIODS, SWAP_BALANCES, WANTED_OPERATIONS, type ListingOperation } from '../domain/listingOptions';
 import { normalizeDecimalInput, parseDecimal, publishedNumber } from '../domain/numericInput';
@@ -38,6 +40,10 @@ type DraftErrors = DraftValidation['errors'];
 
 export interface ListingFormProps {
   initialDraft?: ListingDraft;
+  initialOperation?: ListingOperation;
+  importRequest?: number;
+  active?: boolean;
+  onOperationChange?: (operation: ListingOperation | undefined) => void;
   submitLabel?: string;
   onSubmit(draft: ListingDraft): Promise<void>;
   onSaveDraft?: (draft: ListingDraft) => Promise<void>;
@@ -86,6 +92,10 @@ const floorOptions = [{ value: '', label: 'Sin especificar' }, ...Array.from({ l
 
 export function ListingForm({
   initialDraft,
+  initialOperation,
+  importRequest = 0,
+  active = true,
+  onOperationChange,
   submitLabel = 'Guardar anuncio',
   onSubmit,
   onSaveDraft,
@@ -97,7 +107,7 @@ export function ListingForm({
   draftStorageKey,
 }: ListingFormProps) {
   const { colors, styles } = useStyles();
-  const [draft, setDraft] = useState<ListingDraft>(() => ({ ...cloneDraft(initialDraft ?? emptyDraft), clientRequestId: initialDraft?.clientRequestId ?? draftToken() }));
+  const [draft, setDraft] = useState<ListingDraft>(() => ({ ...restorePublicationDraft(null, cloneDraft(initialDraft ?? emptyDraft), initialDraft ? undefined : initialOperation), clientRequestId: initialDraft?.clientRequestId ?? draftToken() }));
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<DraftErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -112,8 +122,10 @@ export function ListingForm({
   const [savedWarning, setSavedWarning] = useState('');
   const [chosen, setChosen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const seenImportRequest = useRef(0);
   // Component state on purpose: the notice describes this paste, not a draft restored after a restart.
   const [imported, setImported] = useState<ImportResult | null>(null);
+  const beforeImport = useRef<{ draft: ListingDraft; chosen: boolean; step: number } | null>(null);
   const operation = draft.operation ?? 'sale';
   const wanted = operation === 'wanted';
   const wantedOperations = draft.wantedOperations ?? ['sale', 'swap'];
@@ -149,10 +161,18 @@ export function ListingForm({
     if (!persistence) return;
     setReadFailed(false); setHydrated(false);
     persistence.read().then(raw => {
-      if (active) { setDraft(restoreDraft(raw, latestRef.current ?? initialRef.current)); setDraftError(''); setHydrated(true); }
+      if (active) { setDraft(restorePublicationDraft(raw, latestRef.current ?? initialRef.current, initialDraft ? undefined : initialOperation)); setDraftError(''); setHydrated(true); }
     }).catch(() => { if (active) { setReadFailed(true); setDraftError('No pudimos recuperar el borrador guardado. Vuelve a intentarlo para conservar tus cambios.'); } });
     return () => { active = false; };
   }, [persistence, loadAttempt]);
+
+  useEffect(() => { if (hydrated) onOperationChange?.(draft.operation); }, [draft.operation, hydrated, onOperationChange]);
+  useEffect(() => {
+    if (!active) { setImportOpen(false); return; }
+    if (!hydrated || submitting || !importRequest || seenImportRequest.current === importRequest) return;
+    seenImportRequest.current = importRequest;
+    setImportOpen(true);
+  }, [active, hydrated, submitting, importRequest]);
 
   useEffect(() => {
     if (!persistence || !hydrated || completed.current || versionConflict || submitting || reloading) return;
@@ -263,20 +283,20 @@ export function ListingForm({
     }
   }
 
-  /** Same start as the chooser, but a type the text does not name stays empty instead of «Casa». */
   function applyImport(result: ImportResult) {
-    const kind = result.draft.operation ?? 'sale';
-    const next: ListingDraft = { ...cloneDraft(emptyDraft), type: '', ...result.draft, operation: kind, clientRequestId: draft.clientRequestId };
-    if (kind === 'wanted') next.wantedOperations = ['sale', 'swap'];
-    if (kind === 'rent') next.rentPeriod = result.draft.rentPeriod || 'month';
-    setDraft(next); setErrors({}); setSubmitError(null);
-    setImported(result); setImportOpen(false); setChosen(true); setStep(0);
+    const next = preparePublicationImport(draft, result);
+    if (!next.ok) return next.error;
+    if (!imported) beforeImport.current = { draft: cloneDraft(draft), chosen, step };
+    setDraft(next.draft); setErrors({}); setSubmitError(null);
+    setImported(next.summary); setImportOpen(false); setChosen(true); setStep(0);
   }
 
   function discardImport() {
-    setDraft({ ...cloneDraft(emptyDraft), clientRequestId: draft.clientRequestId });
+    const previous = beforeImport.current;
+    if (!previous) return;
+    setDraft(previous.draft); setChosen(previous.chosen); setStep(previous.step);
     setErrors({}); setSubmitError(null);
-    setImported(null); setChosen(false); setStep(0);
+    setImported(null); beforeImport.current = null;
   }
 
   function toggleAmenity(value: string) {
@@ -350,7 +370,7 @@ export function ListingForm({
 
           {imported ? <View style={styles.importNotice}>
             <Notice>{importSummary(imported)}</Notice>
-            <Button label="Descartar lo importado" icon="trash-outline" secondary disabled={submitting || photoBusy} onPress={discardImport} />
+            <Button label="Deshacer importación" icon="arrow-undo-outline" secondary disabled={submitting || photoBusy} onPress={discardImport} />
           </View> : null}
           {submitError ? <Notice error>{submitError}</Notice> : null}
           {submitError && onReloadLatest && <Button label="Actualizar anuncio sin perder el borrador" secondary loading={reloading} onPress={async () => { setReloading(true); try { await onReloadLatest(); } catch { /* Existing error remains visible. */ } finally { if (mounted.current) setReloading(false); } }} />}
@@ -642,7 +662,7 @@ export function ListingForm({
           ) : null}
 
           {stepIssues.length > 0 ? <Notice error>Revisa estos campos antes de continuar: {stepIssues.join(', ')}.</Notice> : null}
-          <View style={styles.actions}>
+          <ActionGroup style={styles.actions}>
             {step > 0 ? (
               <Button
                 label="Anterior"
@@ -679,7 +699,7 @@ export function ListingForm({
                 style={styles.actionButton}
               />
             )}
-          </View>
+          </ActionGroup>
 
           {onSaveDraft ? <Button label="Guardar borrador privado en mi cuenta" secondary disabled={submitting || photoBusy} onPress={() => void submit(true)} /> : null}
           {step > 0 && onCancel ? (
@@ -697,7 +717,7 @@ export function ListingForm({
           </Text>
         </Animated.View>
       </ScrollView>
-      {importOpen ? <ImportListingSheet onClose={() => setImportOpen(false)} onImport={applyImport} /> : null}
+      {importOpen && active ? <ImportListingSheet preserveDraft={Boolean(draft.operation)} onClose={() => setImportOpen(false)} onImport={applyImport} /> : null}
     </KeyboardAvoidingView>
   );
 }
@@ -780,26 +800,26 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: layout.tabContentBottom },
   formShell: { width: '100%', maxWidth: 680, alignSelf: 'center', gap: 20 },
   steps: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 8, borderRadius: 16, backgroundColor: colors.surface },
-  stepItem: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7 },
+  stepItem: { flex: 1, minWidth: 0, alignItems: 'center', gap: 6 },
   stepDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
   stepDotActive: { backgroundColor: colors.primaryFill, borderColor: colors.primary },
   stepNumber: { color: colors.muted, fontSize: 11, fontWeight: '600' },
   stepNumberActive: { color: colors.onPrimary },
-  stepLabel: { color: colors.muted, fontSize: 13 },
+  stepLabel: { color: colors.muted, fontSize: 13, textAlign: 'center', flexShrink: 1 },
   stepLabelActive: { color: colors.ink, fontWeight: '600' },
   section: { gap: 16 },
   sectionHeading: { gap: 6, paddingTop: 4, paddingBottom: 2 },
-  sectionTitle: { color: colors.ink, fontFamily: typefaces.display, fontSize: 26, fontWeight: '600', lineHeight: 32, letterSpacing: -0.6 },
+  sectionTitle: { color: colors.ink, fontFamily: typefaces.display, fontSize: 24, fontWeight: '600', lineHeight: 30, letterSpacing: -0.5 },
   sectionDescription: { color: colors.muted, fontSize: 15, lineHeight: 21, maxWidth: 560 },
-  fieldCard: { backgroundColor: colors.surface, borderRadius: 20, padding: 16, gap: 20 },
+  fieldCard: { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, borderRadius: 16, padding: 16, gap: 20 },
   fieldGroup: { gap: 7 },
   previewGroup: { gap: 6 },
   publishNote: { color: colors.muted, fontSize: 12, lineHeight: 18 },
   labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  label: { color: colors.muted, fontSize: 13, fontWeight: '500' },
+  label: { color: colors.ink, fontSize: 14, fontWeight: '500' },
   required: { color: colors.muted },
   helper: { color: colors.muted, fontSize: 13 },
-  input: { minHeight: 44, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, backgroundColor: colors.surface, color: colors.ink, paddingHorizontal: 0, paddingTop: 6, paddingBottom: 11, fontSize: 17, lineHeight: 23 },
+  input: { minHeight: 48, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, backgroundColor: colors.surface, color: colors.ink, paddingHorizontal: 0, paddingTop: 8, paddingBottom: 11, fontSize: 17, lineHeight: 23 },
   inputError: { borderBottomColor: colors.danger, backgroundColor: colors.softDanger },
   descriptionInput: { minHeight: 132, paddingTop: 8 },
   fieldHint: { flexShrink: 1, color: colors.muted, fontSize: 12, lineHeight: 18 }, descriptionHelp: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: colors.softBlue, borderRadius: 13, padding: 12 }, characterCount: { color: colors.muted, fontSize: 11, textAlign: 'right', marginTop: -12 },
@@ -833,8 +853,8 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   amenityGroup: { gap: 8, marginTop: 4 }, amenityGroupTitle: { color: colors.ink, fontSize: 14, fontWeight: '600' },
   amenityTag: { backgroundColor: colors.paper, borderRadius: 12, paddingVertical: 7, paddingHorizontal: 11 },
   amenityTagText: { color: colors.ink, fontSize: 13 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingTop: 2 },
-  actionButton: { flexGrow: 1, minWidth: 145 },
+  actions: { paddingTop: 4 },
+  actionButton: { width: '100%' },
   operationOption: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   operationTitle: { fontSize: 17, fontWeight: '600', color: colors.ink },
   operationText: { fontSize: 14, color: colors.muted },
