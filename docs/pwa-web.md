@@ -60,13 +60,16 @@ Antes de publicar, `vercel deploy dist --dry --json --project karmahouse-app-pwa
 
 Estado el 2026-10-13:
 
-1. Publicado en producción: https://karmahouse-app-pwa.vercel.app
-2. `app.karmahouse.site` añadido al proyecto. El DNS está en GoDaddy: falta el registro
-   `CNAME app → b48cd2d2a2f31010.vercel-dns-017.com.` Después,
-   `vercel domains verify app.karmahouse.site --scope frank-james-hernandezs-projects`.
-3. Pendiente en Supabase → Authentication → URL Configuration → Redirect URLs: añadir
-   `https://app.karmahouse.site/**` (y `https://karmahouse-app-pwa.vercel.app/**` mientras se use
-   esa URL). Sin esto, los enlaces de confirmación y de recuperar la contraseña no vuelven a la web.
+1. En producción: https://app.karmahouse.site (también https://karmahouse-app-pwa.vercel.app).
+2. DNS en GoDaddy: `CNAME app → b48cd2d2a2f31010.vercel-dns-017.com.` Vercel lo verificó. El
+   certificado no se emitió solo; hizo falta
+   `vercel certs issue app.karmahouse.site --scope frank-james-hernandezs-projects`.
+3. Supabase → Authentication → URL Configuration:
+   - Site URL: `https://app.karmahouse.site/auth/callback` (antes `http://localhost:8083/...`,
+     que dejaba sin salida a cualquier enlace que cayera en la URL por defecto).
+   - Redirect URLs: `http://localhost:8083/auth/callback**`, `karmahouse://auth/callback**`,
+     `https://app.karmahouse.site/auth/callback**`,
+     `https://karmahouse-app-pwa.vercel.app/auth/callback**`.
 4. No anunciar iPhone en la landing ni en BRAND.md hasta comprobarlo en un iPhone real.
 
 El primer despliegue subió sin la fuente de iconos; la reescritura devolvió `index.html` en su
@@ -85,7 +88,7 @@ Con `dist/` servido en `localhost` y reescritura SPA, en el navegador integrado:
   tras recargar. Con user agent de Android no aparece.
 - Sin errores en consola. `npm run typecheck` y `tests/stamp-sw.test.ts` pasan.
 
-En producción (`karmahouse-app-pwa.vercel.app`): página, rutas internas y `/auth/callback`
+En producción (`app.karmahouse.site` y `karmahouse-app-pwa.vercel.app`): página, rutas internas y `/auth/callback`
 responden 200; un asset que no existe responde 404; el bundle sale en brotli con caché inmutable;
 `sw.js` sin caché. En el navegador el service worker controla la página, carga las viviendas
 reales y los iconos, sin errores en consola.
