@@ -1,4 +1,5 @@
 // scripts/stamp-sw.mjs fills VERSION and SHELL in dist/sw.js. Unstamped (the dev server) it does nothing.
+// VERSION covers this file too, so changing the worker also replaces every cached response.
 const VERSION = 'dev';
 const SHELL = ['/'];
 const CACHE = `karmahouse-${VERSION}`;
@@ -46,7 +47,8 @@ async function immutable(request) {
   const cached = await caches.match(request, { cacheName: CACHE });
   if (cached) return cached;
   const response = await fetch(request);
-  if (response.ok) {
+  // A missing file answered with the app page must never be stored as the asset.
+  if (response.ok && !response.headers.get('content-type')?.includes('text/html')) {
     const copy = response.clone();
     caches.open(CACHE).then(cache => cache.put(request, copy)).catch(() => {});
   }

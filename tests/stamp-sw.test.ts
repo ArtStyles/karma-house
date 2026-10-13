@@ -13,10 +13,11 @@ test('stamped service worker precaches the page and exactly the bundles it loads
   assert.ok(!stamped.includes("VERSION = 'dev'"));
 });
 
-test('a new build gets a new cache version', () => {
-  const version = (html: string) => stampServiceWorker(source, html).match(/VERSION = '(\w+)'/)?.[1];
+test('a new build or a changed worker gets a new cache version', () => {
+  const version = (html: string, worker = source) => stampServiceWorker(worker, html).match(/VERSION = '(\w+)'/)?.[1];
   assert.equal(version(page('aaa')), version(page('aaa')));
   assert.notEqual(version(page('aaa')), version(page('bbb')));
+  assert.notEqual(version(page('aaa')), version(page('aaa'), `${source}\n// changed`));
 });
 
 test('stamping refuses a changed template or a page without bundles', () => {
