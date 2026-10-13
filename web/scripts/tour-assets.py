@@ -4,8 +4,9 @@ artifacts/tour/casa/steps.txt and the scripts beside it for how they were made).
 Writes, per photo NNN: web/public/casa/NNN-1280.webp and NNN-720.webp (colour-matched photo). For all photos at once:
 thumbs.webp (every photo small, in a grid; the walk shows them while the sharp photo is still on its way) and
 depth.webp (the depth maps for the morph, same grid). Also the hero poster hero-1280.webp / hero-720.webp (first photo
-in the pause duotone, so the page paints before WebGL starts) and web/src/tour-data.json with the photo order, the
-grid and the morph model of each step.
+in the pause duotone, so the page paints before WebGL starts), room-NNN-1024.webp and room-NNN-640.webp (a vertical,
+high-detail photo of each stop's room for the plain sections, from portrait/room-NNN.png) and web/src/tour-data.json
+with the photo order, the grid and the morph model of each step.
 
 Usage, from the repo root: python -P web/scripts/tour-assets.py [source dir, default artifacts/tour/casa]
 """
@@ -78,6 +79,11 @@ for i, n in enumerate(names):
     if i == 0:
         save(duotone(im), 'hero-1280.webp', 1280, 76)
         save(duotone(im), 'hero-720.webp', 720, 74)
+for room in sorted((src / 'portrait').glob('room-[0-9][0-9][0-9].png')):
+    num = room.stem[5:]
+    im = Image.open(room).convert('RGB')  # generated from colour-matched photos: no second correction
+    save(im, f'room-{num}-1024.webp', 1024, 82)
+    save(im, f'room-{num}-640.webp', 640, 80)
 thumbs.save(out / 'thumbs.webp', 'WEBP', quality=40, method=6)
 depths.save(out / 'depth.webp', 'WEBP', quality=80, method=6)
 for old in out.glob('*-d.webp'):  # one depth file per photo, before depth.webp
@@ -88,5 +94,6 @@ data = {'frames': [n[5:] for n in names], 'grid': {'cols': COLS, 'w': TILE[0], '
         'pairs': [p and {'f': r4(p['f']), 'fwd': r4(p['fwd']), 'bwd': r4(p['bwd'])} for p in pairs]}
 (root / 'web' / 'src' / 'tour-data.json').write_text(json.dumps(data, separators=(',', ':')) + '\n')
 size = lambda pattern: sum(f.stat().st_size for f in out.glob(pattern)) // 1024
-print(f'{len(names)} photos, {sum(1 for p in pairs if p)} aligned steps; 1280: {size("*-1280.webp")} KB, '
-      f'720: {size("*-720.webp")} KB, thumbs: {size("thumbs.webp")} KB, depth: {size("depth.webp")} KB')
+print(f'{len(names)} photos, {sum(1 for p in pairs if p)} aligned steps; 1280: {size("[0-9]*-1280.webp")} KB, '
+      f'720: {size("[0-9]*-720.webp")} KB, thumbs: {size("thumbs.webp")} KB, depth: {size("depth.webp")} KB, '
+      f'rooms: {size("room-*.webp")} KB')

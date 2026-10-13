@@ -24,21 +24,21 @@ export const PROVINCES = ['Pinar del Río', 'Artemisa', 'La Habana', 'Mayabeque'
   'Ciego de Ávila', 'Camagüey', 'Las Tunas', 'Holguín', 'Granma', 'Santiago de Cuba', 'Guantánamo', 'Isla de la Juventud'] as const;
 
 /** A pause of the house walk: the photo (web/public/casa) where the walk stops, and the text it shows there.
- *  `accent` is the headline's one coloured phrase, shown after `title`. */
-export type Stop = { id: string; photo: string; room: string; kicker: string; title: string; accent: string; text: string };
+ *  `accent` is the headline's one coloured phrase, shown after `title`; `caption` describes the room's photo. */
+export type Stop = { id: string; photo: string; caption: string; title: string; accent: string; text: string };
 
 export const TOUR: Stop[] = [
-  { id: 'inicio', photo: '000', room: 'Portal', kicker: 'Viviendas en Cuba', title: 'Tu casa en Cuba,', accent: 'para comprar, vender, permutar o alquilar.',
+  { id: 'inicio', photo: '000', caption: 'El portal, con la puerta abierta', title: 'Tu casa en Cuba,', accent: 'para comprar, vender, permutar o alquilar.',
     text: 'Habla directamente con quien publica. Publicar, buscar y conversar es gratis.' },
-  { id: 'como-funciona', photo: '150', room: 'Sala', kicker: 'Busca con contexto', title: 'Encuentra tu casa', accent: 'por zona, precio y estado.',
+  { id: 'como-funciona', photo: '150', caption: 'La sala, a media tarde', title: 'Encuentra tu casa', accent: 'por zona, precio y estado.',
     text: 'Filtra lo que buscas y mira cada vivienda en el mapa. Quien publica decide si muestra la ubicación exacta o aproximada.' },
-  { id: 'conversa', photo: '200', room: 'Comedor', kicker: 'Habla directo', title: 'Conversa con', accent: 'quien publica.',
+  { id: 'conversa', photo: '200', caption: 'El comedor, abierto al jardín', title: 'Conversa con', accent: 'quien publica.',
     text: 'Cada anuncio tiene su chat privado: otros usuarios no ven tu teléfono ni tu correo. Visitas y ofertas se proponen en la misma conversación.' },
-  { id: 'cuba', photo: '240', room: 'Patio', kicker: 'Toda Cuba', title: 'Las 15 provincias', accent: 'y la Isla de la Juventud.',
+  { id: 'cuba', photo: '240', caption: 'El patio de la fuente', title: 'Las 15 provincias', accent: 'y la Isla de la Juventud.',
     text: 'Compra, vende, permuta o alquila en cualquier lugar de Cuba, y mira las viviendas en el mapa.' },
-  { id: 'publicar', photo: '290', room: 'Estudio', kicker: 'Publica a tu manera', title: 'Pega tu anuncio', accent: 'y se rellena solo.',
+  { id: 'publicar', photo: '290', caption: 'El estudio, junto a la ventana', title: 'Pega tu anuncio', accent: 'y se rellena solo.',
     text: 'Pegas el texto de tu anuncio y el formulario se completa. Los anuncios se revisan antes de publicarse.' },
-  { id: 'android', photo: '400', room: 'Azotea', kicker: 'Ya disponible para Android', title: 'Cada hogar,', accent: 'un nuevo comienzo.',
+  { id: 'android', photo: '400', caption: 'La azotea, al atardecer', title: 'Cada hogar,', accent: 'un nuevo comienzo.',
     text: `KarmaHouse ${VERSION} para Android 7 o superior. Sin comisión: la negociación y el cierre son entre las partes.` },
 ];
 
