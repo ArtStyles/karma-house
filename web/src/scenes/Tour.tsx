@@ -159,7 +159,7 @@ export function Tour({ still, onToggle }: { still: boolean; onToggle: () => void
         <div className="tour-shade" />
         <div className="tour-flash" />
         <span className="tour-label" aria-hidden="true">Imagen ilustrativa</span>
-        <button type="button" className="tour-switch" onClick={onToggle}><Pause className="size-4" aria-hidden="true" />Ver sin animación</button>
+        <button type="button" className="tour-switch" onClick={onToggle}><Pause className="size-3.5" aria-hidden="true" />Sin animación</button>
       </div>
       {TOUR.map((stop, s) => {
         const pause = PAUSES[s], Heading = s === 0 ? 'h1' : 'h2';

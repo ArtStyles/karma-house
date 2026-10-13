@@ -77,9 +77,9 @@ function Header({ still, onToggle }: { still: boolean; onToggle: () => void }) {
         </nav>
         <div className="flex items-center gap-3">
           {/* Shown by CSS only where the walk can animate (scenes.css). */}
-          <button type="button" className="walk-switch min-h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-line px-3 text-sm font-semibold transition-colors hover:text-blue active:scale-[.98] lg:px-4" title={still ? 'Ver con animación' : 'Ver sin animación'} onClick={onToggle}>
+          <button type="button" className="walk-switch size-11 items-center justify-center rounded-full text-body transition-colors hover:bg-arena hover:text-blue active:scale-[.98]" title={still ? 'Ver con animación' : 'Ver sin animación'} onClick={onToggle}>
             {still ? <Play className="size-4" aria-hidden="true" /> : <Pause className="size-4" aria-hidden="true" />}
-            <span className="max-lg:sr-only">{still ? 'Ver con animación' : 'Ver sin animación'}</span>
+            <span className="sr-only">{still ? 'Ver con animación' : 'Ver sin animación'}</span>
           </button>
           <a className={`${BUTTON} group min-h-11 px-5 max-sm:hidden`} href="#descargar">Descargar app <ArrowRight className={ARROW} aria-hidden="true" /></a>
           <MobileMenu current={current} />
