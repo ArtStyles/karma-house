@@ -16,7 +16,7 @@ export function NegotiationNotice({ answer, actorId, userId, otherName, time }: 
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  row: { alignItems: 'center', paddingVertical: 6 },
-  pill: { maxWidth: '92%', flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surface, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 },
+  row: { alignItems: 'center', paddingVertical: 12 },
+  pill: { maxWidth: '100%', flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingHorizontal: 8, paddingVertical: 4 },
   text: { flexShrink: 1, fontSize: 13, lineHeight: 18, color: colors.muted, textAlign: 'center' },
 }));

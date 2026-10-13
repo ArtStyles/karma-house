@@ -42,7 +42,7 @@ export function SelectionField({ label, value, options, onChange, placeholder = 
       <View style={[styles.overlay, { paddingTop: Math.max(insets.top, 20), paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cancelar selección" onPress={close} style={StyleSheet.absoluteFill} />
         <View accessibilityViewIsModal style={styles.sheet}>
-          <View style={styles.header}><View style={styles.headerText}><Text style={styles.eyebrow}>ELIGE UNA OPCIÓN</Text><Text accessibilityRole="header" style={styles.title}>{label}</Text></View><IconButton name="close" label="Cerrar selector" onPress={close} style={{ backgroundColor: colors.paper }} /></View>
+          <View style={styles.header}><View style={styles.headerText}><Text accessibilityRole="header" style={styles.title}>{label}</Text></View><IconButton name="close" label="Cerrar selector" onPress={close} style={{ backgroundColor: colors.paper }} /></View>
           {choices}
         </View>
       </View>
@@ -65,8 +65,8 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   flex: { flex: 1 }, field: { gap: 8 }, label: { color: colors.ink, fontSize: 14, fontWeight: '600' },
   trigger: { minHeight: 52, borderRadius: 15, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }, triggerOpen: { borderColor: colors.primary, backgroundColor: colors.softBlue }, triggerError: { borderColor: colors.danger },
   value: { flex: 1, fontSize: 16, lineHeight: 22, color: colors.ink }, hint: { fontSize: 12, lineHeight: 18, color: colors.muted }, error: { color: colors.danger, fontSize: 13, lineHeight: 19 },
-  overlay: { flex: 1, backgroundColor: colors.overlay, paddingHorizontal: 16, justifyContent: 'center' }, sheet: { backgroundColor: colors.surface, borderRadius: 26, maxHeight: '90%', width: '100%', maxWidth: 480, alignSelf: 'center', overflow: 'hidden', flexShrink: 1 },
-  header: { padding: 20, flexDirection: 'row', gap: 12, alignItems: 'center' }, headerText: { flex: 1, gap: 5 }, eyebrow: { color: colors.primary, fontSize: 9, fontWeight: '700', letterSpacing: 1 }, title: { color: colors.ink, fontSize: 23, fontWeight: '700', letterSpacing: -.5 },
+  overlay: { flex: 1, backgroundColor: colors.overlay, paddingHorizontal: 16, justifyContent: 'center' }, sheet: { backgroundColor: colors.surface, borderRadius: 20, maxHeight: '90%', width: '100%', maxWidth: 480, alignSelf: 'center', overflow: 'hidden', flexShrink: 1 },
+  header: { padding: 20, flexDirection: 'row', gap: 12, alignItems: 'center' }, headerText: { flex: 1, minWidth: 0, gap: 5 }, title: { color: colors.ink, fontSize: 23, lineHeight: 29, fontWeight: '600', letterSpacing: -.5 },
   list: { flexShrink: 1 }, options: { padding: 12, gap: 5 }, option: { minHeight: 50, borderRadius: 13, paddingVertical: 13, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }, selectedOption: { backgroundColor: colors.softBlue }, optionText: { flex: 1, color: colors.ink, fontSize: 15, lineHeight: 21 }, selectedText: { color: colors.primary, fontWeight: '600' },
   search: { marginHorizontal: 16, marginBottom: 8, backgroundColor: colors.paper, borderRadius: 13, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 8 }, searchInput: { flex: 1, minWidth: 0, minHeight: 44, fontSize: 15, color: colors.ink }, noResults: { padding: 20, textAlign: 'center', color: colors.muted, fontSize: 14 },
   inlinePanel: { borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingTop: 12, backgroundColor: colors.surface }, inlineList: { maxHeight: 230 },

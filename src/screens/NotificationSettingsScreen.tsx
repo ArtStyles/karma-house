@@ -6,12 +6,12 @@ import { useAuth } from '../auth/AuthProvider';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { useMessagingActivity } from '../components/messaging/useMessagingActivity';
 import { PushDeviceCard } from '../components/notifications/PushDeviceCard';
-import { Button, EmptyState, Icon, type IconName, Notice, PageTitle } from '../components/ui';
+import { ActionGroup, Button, EmptyState, Icon, type IconName, Notice, PageTitle } from '../components/ui';
 import { notificationErrorMessage } from '../notifications/domain';
 import { reconcileNotificationPreferenceDraft, sameNotificationChoices } from '../notifications/preferenceDraft';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import type { NotificationPreferences } from '../notifications/types';
-import { createThemedStyles } from '../theme';
+import { createThemedStyles, internalLayout } from '../theme';
 
 export default function NotificationSettingsScreen() {
   const { colors, styles } = useStyles();
@@ -21,9 +21,9 @@ export default function NotificationSettingsScreen() {
   const reload=useConsultationRefresh(`${auth.user?.id}:${auth.session?.access_token}`,store.loadPreferences,()=>formDirty.current||formLocked.current||store.savingPreferences||store.preferencesLoading||!auth.user||!store.available);
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
     <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!!auth.user&&!store.savingPreferences&&!formDirty.current} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}>
-      <PageTitle title="Tus avisos" subtitle="Tus novedades, a tu manera." back fallback="/notifications" />
+      <PageTitle compact title="Tus avisos" subtitle="Preferencias y permisos de notificaciones." back fallback="/notifications" />
       {!auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} />
-        : !store.available ? <EmptyState icon="notifications-outline" title="Avisos a tu medida" description="Las preferencias estarán disponibles cuando conectes una cuenta." />
+        : !store.available ? <EmptyState plain title="Preferencias no disponibles" description="Las preferencias estarán disponibles con el servicio conectado." />
         : !auth.user ? <AccountPrompt returnTo="/notification-settings" title="Avisos a tu medida" description="Inicia sesión para elegir los avisos de mensajes, visitas y ofertas que quieres recibir." />
         : <View style={styles.form}><PushDeviceCard /><PreferencesBody key={auth.user.id} userId={auth.user.id} dirty={formDirty} locked={formLocked} refreshing={reload.isRefreshing} /></View>}
     </ScrollView>
@@ -84,7 +84,7 @@ function PreferencesForm({ userId, preferences, dirty, locked, refreshing }: { u
     setDraft(preferences); setSaved(false); setIssue('');
   }
   return <View style={styles.form}>
-    <Text accessibilityRole="header" style={styles.groupLabel}>Lo que quieres recibir</Text>
+    <Text accessibilityRole="header" style={styles.groupLabel}>Categorías de avisos</Text>
     <View style={styles.card}>
       <PreferenceRow label="Mensajes" description="Aviso en tu teléfono cuando alguien te escriba. El chat marca siempre los no leídos." icon="chatbubble-outline" value={draft.messages} disabled={busy} onChange={value => change('messages', value)} />
       <PreferenceRow label="Visitas" description="Propuestas de visita y cambios en su estado." icon="calendar-outline" value={draft.visits} disabled={busy} onChange={value => change('visits', value)} />
@@ -95,8 +95,8 @@ function PreferencesForm({ userId, preferences, dirty, locked, refreshing }: { u
     <Text style={styles.footnote}>Desactivar una categoría evita sus próximos avisos. Tu bandeja recoge visitas, ofertas, alertas de búsqueda y avisos de agencias; los mensajes se consultan en el chat.</Text>
     {!!(issue || store.preferencesError) && <Notice error>{issue || store.preferencesError}</Notice>}
     {saved && <View accessibilityLiveRegion="polite" style={styles.success}><Icon name="checkmark-circle" color={colors.green} size={19} /><Text style={styles.successText}>Preferencias guardadas.</Text></View>}
-    <Button label="Guardar preferencias" onPress={() => void save()} loading={store.savingPreferences} disabled={busy || !changed} />
-    {changed && <Button label="Descartar cambios" secondary disabled={busy} onPress={discardChanges} />}
+    <ActionGroup><Button label="Guardar preferencias" onPress={() => void save()} loading={store.savingPreferences} disabled={busy || !changed} />
+    {changed && <Button label="Descartar cambios" secondary disabled={busy} onPress={discardChanges} />}</ActionGroup>
   </View>;
 }
 
@@ -110,8 +110,8 @@ function PreferenceRow({ label, description, icon, value, disabled, onChange, la
   </View>;
 }
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 36 }, loading: { padding: 40 }, form: { gap: 18 },
-  groupLabel: { color: colors.ink, fontSize: 15, fontWeight: '600', letterSpacing: -0.2, marginBottom: -6, paddingHorizontal: 3 },
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 24, paddingHorizontal: 18 }, row: { paddingVertical: 19, gap: 10 }, rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, rowTop: { flexDirection: 'row', alignItems: 'center', gap: 10 }, rowIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' }, rowTitle: { flex: 1, minWidth: 0, fontSize: 16, fontWeight: '600', color: colors.ink }, rowDescription: { color: colors.muted, fontSize: 13, lineHeight: 20 }, footnote: { color: colors.muted, fontSize: 12, lineHeight: 19, paddingHorizontal: 3 },
+  safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', paddingHorizontal: internalLayout.gutter, paddingBottom: 36, gap: 20 }, loading: { padding: 40 }, form: { gap: 20 },
+  groupLabel: { color: colors.ink, fontSize: 17, lineHeight: 23, fontWeight: '600', letterSpacing: -0.2, marginBottom: -4 },
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: internalLayout.radius, paddingHorizontal: 16 }, row: { paddingVertical: 16, gap: 8 }, rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, rowTop: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44 }, rowIcon: { width: 24, alignItems: 'center', justifyContent: 'center' }, rowTitle: { flex: 1, minWidth: 0, fontSize: 16, lineHeight: 23, fontWeight: '600', color: colors.ink }, rowDescription: { color: colors.muted, fontSize: 14, lineHeight: 21 }, footnote: { color: colors.muted, fontSize: 12, lineHeight: 19 },
   success: { flexDirection: 'row', alignItems: 'center', gap: 8 }, successText: { flex: 1, color: colors.green, fontSize: 14, lineHeight: 21 },
 }));

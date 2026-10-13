@@ -3,8 +3,8 @@ import type { MessageNegotiation } from '../../messaging/types';
 import { availableNegotiationActions } from '../../negotiations/domain';
 import { expiryHint, proposalStatus, proposalTitle, proposalValue, type StatusTone } from '../../negotiations/presentation';
 import type { Negotiation, NegotiationAction } from '../../negotiations/types';
-import { createThemedStyles } from '../../theme';
-import { Button, Icon } from '../ui';
+import { createThemedStyles, internalLayout } from '../../theme';
+import { ActionGroup, Button, Icon } from '../ui';
 
 
 
@@ -33,8 +33,8 @@ export function ProposalCard({ proposal, live, userId, time, busy, managementCha
       <View style={styles.heading}>
         <View style={styles.icon}><Icon name={proposal.kind === 'offer' ? 'pricetag-outline' : 'calendar-outline'} size={18} color={colors.primary} /></View>
         <Text style={styles.title}>{title}</Text>
-        {status && <Text style={[styles.status, { backgroundColor: tones[status.tone].background, color: tones[status.tone].color }]}>{status.label}</Text>}
       </View>
+      {status && <Text style={[styles.status, { color: tones[status.tone].color }]}>{status.label}</Text>}
       <Text style={[styles.value, live?.status === 'superseded' && styles.struck]}>{value.primary}</Text>
       {value.secondary && <Text style={styles.secondary}>{value.secondary}</Text>}
       {!!proposal.note && <Text style={styles.note}>{proposal.note}</Text>}
@@ -42,10 +42,10 @@ export function ProposalCard({ proposal, live, userId, time, busy, managementCha
       {live?.status === 'pending' && !own && hint && <Text style={styles.meta}>{hint}</Text>}
       {paused && <Text style={styles.paused}>Las respuestas están pausadas: el anuncio no está disponible o hay un bloqueo. Puedes cancelar.</Text>}
       {managementChanged&&<Text style={styles.paused}>Este acuerdo pertenece a la conversación anterior. Sus participantes y condiciones se conservan.</Text>}
-      {actions && (actions.accept || actions.decline) && <View style={styles.answers}>
+      {actions && (actions.accept || actions.decline) && <ActionGroup style={styles.answers}>
         {actions.decline && <Button label="Rechazar" secondary disabled={busy} onPress={() => onRespond(live!, 'decline')} style={styles.answer} />}
         {actions.accept && <Button label="Aceptar" disabled={busy} onPress={() => onRespond(live!, 'accept')} style={styles.answer} />}
-      </View>}
+      </ActionGroup>}
       {actions?.counter && <Link label={proposal.kind === 'offer' ? 'Proponer otro importe' : 'Proponer otra fecha'} disabled={busy} onPress={() => onCounter(live!)} />}
       {actions?.cancel && (live!.status === 'accepted'
         ? <Link label="Cancelar acuerdo" danger disabled={busy} onPress={() => onCancelAgreement(live!)} />
@@ -64,17 +64,17 @@ function Link({ label, onPress, disabled, danger = false }: { label: string; onP
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   row: { alignItems: 'flex-start', paddingVertical: 6 }, ownRow: { alignItems: 'flex-end' },
-  card: { width: '86%', maxWidth: 380, backgroundColor: colors.surface, borderRadius: 20, borderBottomLeftRadius: 6, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 6 },
-  ownCard: { borderBottomLeftRadius: 20, borderBottomRightRadius: 6, borderColor: colors.border },
+  card: { width: '92%', maxWidth: 420, backgroundColor: colors.surface, borderRadius: internalLayout.radius, borderBottomLeftRadius: 5, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 12 },
+  ownCard: { borderBottomLeftRadius: internalLayout.radius, borderBottomRightRadius: 5, borderColor: colors.border },
   heading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  icon: { width: 30, height: 30, borderRadius: 10, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
-  title: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.ink },
-  status: { fontSize: 12, fontWeight: '600', paddingHorizontal: 9, paddingVertical: 3, borderRadius: 10, overflow: 'hidden' },
-  value: { fontSize: 22, lineHeight: 28, fontWeight: '700', letterSpacing: -.4, color: colors.ink, marginTop: 4 }, struck: { textDecorationLine: 'line-through', color: colors.muted },
+  icon: { width: 24, height: 28, alignItems: 'center', justifyContent: 'center' },
+  title: { flex: 1, minWidth: 0, fontSize: 15, lineHeight: 21, fontWeight: '600', color: colors.ink },
+  status: { fontSize: 12, lineHeight: 18, fontWeight: '600' },
+  value: { fontSize: 21, lineHeight: 28, fontWeight: '700', letterSpacing: -.4, color: colors.ink }, struck: { textDecorationLine: 'line-through', color: colors.muted },
   secondary: { fontSize: 15, lineHeight: 21, color: colors.ink, marginTop: -2 },
   note: { fontSize: 14, lineHeight: 20, color: colors.ink, borderLeftWidth: 3, borderLeftColor: colors.border, paddingLeft: 9, marginTop: 2 },
   meta: { fontSize: 13, lineHeight: 18, color: colors.muted }, paused: { fontSize: 13, lineHeight: 18, color: colors.amber },
-  answers: { flexDirection: 'row', gap: 8, marginTop: 6 }, answer: { flex: 1, minHeight: 44, paddingVertical: 10, paddingHorizontal: 12 },
-  link: { minHeight: 40, justifyContent: 'center', alignItems: 'center' }, linkText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  answers: { gap: 12, marginTop: 4 }, answer: { minHeight: 48, paddingVertical: 12, paddingHorizontal: 12 },
+  link: { minHeight: 44, justifyContent: 'center', alignItems: 'center', paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }, linkText: { color: colors.primary, fontSize: 14, lineHeight: 21, fontWeight: '600', textAlign: 'center' },
   time: { alignSelf: 'flex-end', fontSize: 12, color: colors.muted },
 }));

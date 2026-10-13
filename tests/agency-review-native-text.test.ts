@@ -3,12 +3,13 @@ import {test} from 'node:test';
 import {readFile} from 'node:fs/promises';
 import ts from 'typescript';
 
-for(const screen of ['AgencyReviewsScreen','AgencyPropertyRequestsScreen','AgencyDuplicateReviewScreen'])test(`${screen} has no raw text children outside native Text components`,async()=>{
- const source=await readFile(new URL(`../src/screens/${screen}.tsx`,import.meta.url),'utf8');
- const tree=ts.createSourceFile(`${screen}.tsx`,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+const nativeFiles=['AgencyAgendaScreen','AgencyApplicationScreen','AgencyClosuresScreen','AgencyConversationScreen','AgencyDealScreen','AgencyDealsScreen','AgencyDuplicateReviewScreen','AgencyPortfolioScreen','AgencyProfileScreen','AgencyPropertyRequestsScreen','AgencyPropertyScreen','AgencyReviewsScreen','AgencyTeamScreen','AgencyVerificationScreen','AgencyWorkspaceScreen'].map(screen=>`screens/${screen}.tsx`).concat(['components/agencies/AgencyRegistrationFields.tsx','components/agencies/AgencyProposalPanel.tsx','components/agencies/AgencyShareButton.tsx']);
+for(const file of nativeFiles)test(`${file} has no raw text children outside native Text components`,async()=>{
+ const source=await readFile(new URL(`../src/${file}`,import.meta.url),'utf8');
+ const tree=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
  const invalid:string[]=[];
  function visit(node:ts.Node){
-  if((ts.isJsxElement(node)&&['View','ScrollView','SafeAreaView'].includes(node.openingElement.tagName.getText(tree)))||ts.isJsxFragment(node)){
+  if((ts.isJsxElement(node)&&['View','ScrollView','SafeAreaView','KeyboardAvoidingView','ActionGroup'].includes(node.openingElement.tagName.getText(tree)))||ts.isJsxFragment(node)){
    for(const child of node.children){
     // JSX preserves single-line whitespace as a string child; native View rejects it.
     if(ts.isJsxText(child)&&child.text!==''&&(!/^\s*$/.test(child.text)||!/[\r\n]/.test(child.text)))invalid.push(`line ${tree.getLineAndCharacterOfPosition(child.pos).line+1}: ${JSON.stringify(child.text)}`);

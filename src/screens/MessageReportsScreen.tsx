@@ -6,11 +6,11 @@ import { useAuth } from '../auth/AuthProvider';
 import {useAdminQuery} from '../admin/useAdminQuery';
 import {AdminPagination,AdminStatus,AdminToolbar,options} from '../components/admin/AdminControls';
 import { AccountPrompt } from '../components/AccountPrompt';
-import { Button, EmptyState, Icon, Notice, PageTitle, Pill } from '../components/ui';
+import { ActionGroup, Button, EmptyState, Icon, Notice, PageTitle, Pill } from '../components/ui';
 import { supabase } from '../lib/supabase';
 import { createReportModerationRepository,type ModerationReport as ChatReport } from '../messaging/reportModeration';
 import type { ReportReason } from '../messaging/types';
-import { createThemedStyles } from '../theme';
+import { createThemedStyles, internalLayout } from '../theme';
 
 const reasonLabels: Record<ReportReason, string> = { spam: 'Spam', fraud: 'Posible fraude', harassment: 'Acoso', other: 'Otro motivo' };
 const dateLabel = (value: string) => new Date(value).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -68,25 +68,26 @@ export default function MessageReportsScreen() {
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
     <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={list.refreshing} enabled={!!repository&&!busy} onRefresh={()=>{if(!busyRef.current)void list.refresh();}} tintColor={colors.primary}/>}>
-      <PageTitle title="Reportes" subtitle="Cuida las conversaciones de KarmaHouse." back />
+      <PageTitle compact title="Reportes de mensajes" subtitle="Contexto y revisión de conversaciones denunciadas." back fallback="/administration" />
       <View style={styles.filters}><Pill label="Personales" active={source==='personal'} onPress={()=>setSource('personal')}/><Pill label="Inmobiliarias" active={source==='agency'} onPress={()=>setSource('agency')}/></View>
-      {!user ? <AccountPrompt returnTo="/message-reports" /> : !owner || !repository ? <EmptyState icon="lock-closed-outline" title="Acceso reservado" description="Solo las cuentas administradoras pueden revisar reportes." /> : <>
+      {!user ? <AccountPrompt returnTo="/message-reports" /> : !owner || !repository ? <EmptyState plain title="Acceso reservado" description="Solo las cuentas administradoras pueden revisar reportes." /> : <>
         <View style={styles.filters}><Pill label="Pendientes" active={status === 'open'} onPress={() => setStatus('open')} /><Pill label="Revisados" active={status === 'reviewed'} onPress={() => setStatus('reviewed')} /></View>
         <Text style={styles.meta}>Cada reporte incluye el contexto de la conversación en el momento de enviarlo.</Text>
         <AdminToolbar query={query} onSearch={setQuery} filters={filters} onFilters={setFilters} fields={[{key:'reason',label:'Motivo',options:options(reasonLabels)},{key:'from',label:'Desde',kind:'date'},{key:'to',label:'Hasta',kind:'date'}]} sort={sort} onSort={value=>setSort(value as typeof sort)} allowName={false} disabled={busy}/>
         {visible.error ? <Notice error>{visible.error}</Notice> : null}
-        {visible.loading && visible.reports.length === 0 ? <ActivityIndicator color={colors.primary} style={{ margin: 40 }} /> : !visible.error && visible.reports.length === 0 ? <EmptyState icon="shield-checkmark-outline" title={status === 'open' ? 'Sin reportes pendientes' : 'Aún no hay revisiones'} description={status === 'open' ? 'Aquí aparecerán las conversaciones que necesiten atención.' : 'Los reportes revisados se conservarán aquí.'} /> : null}
-        {visible.reports.map(report => <Pressable key={report.id} accessibilityRole="button" accessibilityLabel={`Revisar reporte: ${reasonLabels[report.reason]}, ${report.propertyTitle}`} style={({ pressed }) => [styles.card, pressed && { opacity: .75 }]} onPress={() => setSelection({ owner:queueOwner, report, note: '', error: '' })}>
-          <View style={styles.row}><View style={styles.flag}><Icon name="flag-outline" color={colors.primary} /></View><View style={{ flex: 1, gap: 4 }}><Text style={styles.title}>{reasonLabels[report.reason]}</Text><Text style={styles.meta}>{dateLabel(report.createdAt)}</Text></View><Icon name="chevron-forward" color={colors.muted} size={18} /></View>
+        {visible.loading && visible.reports.length === 0 ? <ActivityIndicator color={colors.primary} style={{ margin: 32 }} /> : !visible.error && visible.reports.length === 0 ? <EmptyState plain title={status === 'open' ? 'Sin reportes pendientes' : 'Sin reportes revisados'} description={status === 'open' ? 'No hay conversaciones denunciadas pendientes en esta vista.' : 'No hay revisiones que coincidan con los filtros.'} /> : null}
+        {!!visible.reports.length&&<View style={styles.reportList}>{visible.reports.map(report => <Pressable key={report.id} accessibilityRole="button" accessibilityLabel={`Revisar reporte: ${reasonLabels[report.reason]}, ${report.propertyTitle}`} style={({ pressed }) => [styles.card, pressed && { opacity: .75 }]} onPress={() => setSelection({ owner:queueOwner, report, note: '', error: '' })}>
+          <View style={styles.row}><View style={{ flex: 1, minWidth: 0, gap: 4 }}><Text style={styles.title}>{reasonLabels[report.reason]}</Text><Text style={styles.meta}>{dateLabel(report.createdAt)}</Text></View><Icon name="chevron-forward" color={colors.muted} size={18} /></View>
           <Text style={styles.property}>{report.propertyTitle}</Text>
           {report.details ? <Text numberOfLines={3} style={styles.body}>{report.details}</Text> : null}
           <View style={styles.row}><AdminStatus label={report.status==='open'?'Pendiente':'Revisado'} tone={report.status==='open'?'amber':'neutral'}/><Text style={styles.meta}>{report.context.length} mensajes de contexto</Text></View>
-        </Pressable>)}
+        </Pressable>)}</View>}
         <AdminPagination {...list} loading={list.loading||busy}/>
       </>}
     </ScrollView>
     <Modal visible={Boolean(selected)} transparent animationType="fade" onRequestClose={() => !busy && setSelection(null)}>
       <KeyboardAvoidingView style={styles.backdrop} behavior="padding">
+        <SafeAreaView style={styles.modalSafe} edges={['top','bottom','left','right']}>
         <View accessibilityViewIsModal style={styles.modal}>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalContent}>
             <Text accessibilityRole="header" style={styles.modalTitle}>{selected ? reasonLabels[selected.report.reason] : 'Reporte'}</Text>
@@ -105,25 +106,25 @@ export default function MessageReportsScreen() {
               <TextInput accessibilityLabel="Nota de revisión del reporte" value={selected?.note ?? ''} onChangeText={note => setSelection(old => old ? { ...old, note } : null)} multiline maxLength={1000} editable={!busy} placeholder="Deja constancia de lo revisado." placeholderTextColor={colors.muted} style={styles.input} />
               <Text style={styles.meta}>Marcar como revisado conserva el contexto. No bloquea ni suspende cuentas automáticamente.</Text>
               {selected?.error ? <Notice error>{selected.error}</Notice> : null}
-              <Button label="Marcar como revisado" icon="checkmark-outline" loading={busy} disabled={visible.loading||(source==='agency'&&!selected?.note.trim())} onPress={() => void review()} />
             </>}
-            <Button label="Cerrar reporte" secondary disabled={busy} onPress={() => setSelection(null)} />
+            <ActionGroup direction="vertical">{selected?.report.status==='open'&&selected.report.reporterId!==owner&&selected.report.reportedUserId!==owner&&<Button label="Marcar como revisado" icon="checkmark-outline" loading={busy} disabled={visible.loading||(source==='agency'&&!selected.note.trim())} onPress={() => void review()} />}<Button label="Cerrar reporte" secondary disabled={busy} onPress={() => setSelection(null)} /></ActionGroup>
           </ScrollView>
         </View>
+        </SafeAreaView>
       </KeyboardAvoidingView>
     </Modal>
   </SafeAreaView>;
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: 28, gap: 14 },
-  filters: { flexDirection: 'row', gap: 10 }, meta: { color: colors.muted, fontSize: 13, lineHeight: 20 },
-  card: { backgroundColor: colors.surface, borderRadius: 20, borderWidth:1,borderColor:colors.border, padding: 18, gap: 12 }, row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  flag: { width: 44, height: 44, backgroundColor: colors.softBlue, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', paddingHorizontal: internalLayout.gutter, paddingBottom: 32, gap: 16 },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, meta: { color: colors.muted, fontSize: 13, lineHeight: 20 },
+  reportList: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  card: { padding: 16, gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
   title: { fontSize: 18, fontWeight: '600', color: colors.ink }, property: { fontSize: 16, fontWeight: '600', lineHeight: 23, color: colors.ink },
   body: { fontSize: 15, lineHeight: 23, color: colors.ink }, label: { fontSize: 14, lineHeight: 20, color: colors.ink, fontWeight: '600' },
-  backdrop: { flex: 1, backgroundColor: colors.photoOverlay, padding: 16, justifyContent: 'center' }, modal: { width: '100%', maxWidth: 580, maxHeight: '94%', alignSelf: 'center', backgroundColor: colors.surface, borderRadius: 28, overflow: 'hidden' },
-  modalContent: { padding: 22, gap: 16 }, modalTitle: { fontSize: 26, lineHeight: 32, fontWeight: '700', letterSpacing: -.6, color: colors.ink },
+  backdrop: { flex: 1, backgroundColor: colors.photoOverlay }, modalSafe: { flex: 1, paddingHorizontal: 20, justifyContent: 'center' }, modal: { width: '100%', maxWidth: 580, maxHeight: '94%', alignSelf: 'center', backgroundColor: colors.surface, borderRadius: 16, overflow: 'hidden' },
+  modalContent: { padding: 20, gap: 16 }, modalTitle: { fontSize: 24, lineHeight: 30, fontWeight: '600', letterSpacing: -.5, color: colors.ink },
   message: { backgroundColor: colors.paper, borderRadius: 16, padding: 14, gap: 8 }, time: { fontSize: 11, color: colors.muted },
-  input: { minHeight: 100, borderRadius: 16, padding: 14, backgroundColor: colors.paper, color: colors.ink, fontSize: 15, lineHeight: 23, textAlignVertical: 'top' },
+  input: { minHeight: 112, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14, backgroundColor: colors.paper, color: colors.ink, fontSize: 16, lineHeight: 23, textAlignVertical: 'top' },
 }));

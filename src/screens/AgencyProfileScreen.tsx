@@ -1,6 +1,6 @@
 import {useCallback,useRef,useState} from 'react';
 import {useFocusEffect,router} from 'expo-router';
-import {Image,Linking,RefreshControl,ScrollView,Text,View} from 'react-native';
+import {ActivityIndicator,Image,Linking,RefreshControl,ScrollView,Text,View} from 'react-native';
 import {useConsultationRefresh} from '../lib/useConsultationRefresh';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useAuth} from '../auth/AuthProvider';
@@ -15,7 +15,7 @@ import {createMessageId} from '../messaging/domain';
 import {supabase} from '../lib/supabase';
 import {PUBLIC_PAGES_URL} from '../lib/publicSite';
 import {AgencyVerifiedBadge} from '../components/agencies/AgencyVerifiedBadge';
-import {Button,Notice,PageTitle} from '../components/ui';
+import {ActionGroup,Button,Notice,PageTitle} from '../components/ui';
 const repo=supabase?createAgencyProfileRepository(supabase):null;
 export default function AgencyProfileScreen(){const a=useAuth(),w=useAgencyWorkspace();return <Profile key={`${a.user?.id}:${a.session?.access_token}:${w.activeAgencyId}:${w.generation}`}/>;}
 function Profile(){
@@ -33,12 +33,13 @@ function Profile(){
   if(logo&&!pending.current.logoPath){const assets=createAgencyAssetsRepository(process.env.EXPO_PUBLIC_SUPABASE_URL??'',process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY??'');pending.current.logoPath=await assets.upload(c.agencyId,pending.current.clientRequestId,logo,c);}
   const r=await repo.save(pending.current,c);c.checkpoint();pending.current=null;const next={...emptyAgencyApplication(),...r.input};baseline.current=JSON.stringify(next);setRecord(r);setInput(next);setLogo(null);
  }
- return <SafeAreaView style={s.safe}><ScrollView alwaysBounceVertical contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!busy&&!dirty.current&&w.membership?.role==='admin'} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}><PageTitle title="Perfil comercial" subtitle={w.activeAgency?.tradeName} back fallback="/agency-workspace"/>
+ return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView keyboardDismissMode="on-drag" alwaysBounceVertical contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!busy&&!dirty.current&&w.membership?.role==='admin'} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}><PageTitle compact title="Perfil comercial" subtitle={w.activeAgency?.tradeName} back fallback="/agency-workspace"/>
  {w.activeAgency&&<AgencyVerifiedBadge verified={w.activeAgency.verified} agencyName={w.activeAgency.tradeName} principal={w.activeAgency.isPrincipal} labelled/>}
  {Boolean(issue)&&<Notice error>{issue}</Notice>}<Notice>El teléfono, las zonas, la descripción y el logo son públicos. Publica la oficina solo si lo deseas.</Notice>
  {!editable&&<Notice>La edición requiere una agencia aprobada y un administrador actual.</Notice>}
+ {!record&&repo&&!issue&&w.membership?.role==='admin'&&<ActivityIndicator accessibilityLabel="Consultando perfil comercial" color={colors.primary}/>}
  {record?.commercialProfileComplete===false&&<Notice>Completa el perfil comercial de tu inmobiliaria principal. Hasta guardarlo, el perfil público solo muestra su nombre y distintivo.</Notice>}
- {record&&<><AgencyRegistrationFields commercialOnly value={input} onChange={setInput} disabled={!editable||busy||!!pending.current}/>{logo&&<Image source={{uri:logo.previewUri}} accessibilityLabel="Logo preparado" style={{width:96,height:96}}/>}<Button label="Seleccionar logo comercial" secondary disabled={!editable||busy||!!pending.current} onPress={()=>void act(async c=>{const image=await pickAccountAvatar(c.checkpoint);c.checkpoint();setLogo(image);})}/><Button label={pending.current?'Reintentar guardar perfil':'Guardar perfil comercial'} disabled={!editable} loading={busy} onPress={()=>void act(save)}/>{pending.current&&<Button label="Descartar intento" secondary disabled={busy} onPress={()=>{pending.current=null;setLogo(null);setIssue('');}}/>}</>}
- <Button label="Ver perfil público" secondary onPress={()=>void Linking.openURL(`${PUBLIC_PAGES_URL}agency/${w.activeAgencyId}`)}/><Button label="Volver a mi inmobiliaria" secondary onPress={()=>router.replace('/agency-workspace')}/>
+ {record&&<><AgencyRegistrationFields commercialOnly value={input} onChange={setInput} disabled={!editable||busy||!!pending.current}/><View style={s.card}><Text accessibilityRole="header" style={s.title}>Logo comercial</Text><Text style={s.copy}>El logo guardado se muestra en el perfil público.</Text>{logo&&<Image source={{uri:logo.previewUri}} accessibilityLabel="Logo preparado" style={s.logo}/>}<Button label="Seleccionar logo comercial" secondary disabled={!editable||busy||!!pending.current} onPress={()=>void act(async c=>{const image=await pickAccountAvatar(c.checkpoint);c.checkpoint();setLogo(image);})}/></View><ActionGroup><Button label={pending.current?'Reintentar guardar perfil':'Guardar perfil comercial'} disabled={!editable} loading={busy} onPress={()=>void act(save)}/>{pending.current&&<Button label="Descartar intento" secondary disabled={busy} onPress={()=>{pending.current=null;setLogo(null);setIssue('');}}/>}</ActionGroup></>}
+ <View style={s.section}><Text accessibilityRole="header" style={s.title}>Consultar el perfil</Text><ActionGroup><Button label="Ver perfil público" secondary onPress={()=>void Linking.openURL(`${PUBLIC_PAGES_URL}agency/${w.activeAgencyId}`)}/><Button label="Volver a mi inmobiliaria" secondary onPress={()=>router.replace('/agency-workspace')}/></ActionGroup></View>
  </ScrollView></SafeAreaView>;
 }

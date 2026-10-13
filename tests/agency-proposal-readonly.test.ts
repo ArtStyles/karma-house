@@ -15,8 +15,8 @@ async function panel(canSend:boolean){
   '../../agencies/scheduling/repository':{},'../../agencies/scheduling/domain':{},
   '../../negotiations/domain':{havanaDateTime:()=>({date:'2026-10-08',time:'10:00'})},
   '../../messaging/domain':{},'../../lib/supabase':{supabase:null},
-  '../ui':{Button:'Button',Notice:'Notice',Pill:'Pill'},
-  './AgencyRegistrationFields':{useAgencyFormStyles:()=>({styles:{},colors:{}})},
+  '../ui':{ActionGroup:'ActionGroup',Button:'Button',Notice:'Notice',Pill:'Pill'},
+  './AgencyRegistrationFields':{AgencyTextField:'AgencyTextField',useAgencyFormStyles:()=>({styles:{},colors:{}})},
   '../negotiations/VisitDateTimeFields':{VisitDateTimeFields:'VisitDateTimeFields'},
  };
  runInNewContext(code,{exports,require:(id:string)=>id==='react/jsx-runtime'?require(id):mocks[id]??(()=>{throw Error(id)})()});

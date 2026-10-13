@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, type Href } from 'expo-router';
-import type { ComponentProps, ReactNode } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle, type ColorValue } from 'react-native';
+import { Children, type ComponentProps, type ReactNode } from 'react';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type ViewStyle, type ColorValue } from 'react-native';
 import { createThemedStyles, typefaces } from '../theme';
 import { MotionPressable } from './MotionPressable';
 import { HeartIcon } from './HeartIcon';
@@ -28,7 +28,7 @@ export function Button({ label, onPress, secondary = false, loading = false, dis
   label: string; onPress: () => void; secondary?: boolean; loading?: boolean; disabled?: boolean; icon?: IconName; style?: StyleProp<ViewStyle>;
 }) {
   const { colors, styles } = useStyles();
-  return <MotionPressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: disabled || loading }}
+  return <MotionPressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: disabled || loading, busy: loading }}
     disabled={disabled || loading} onPress={onPress} style={({ pressed }) => [styles.button, secondary && styles.secondary, (disabled || loading) && { opacity: .5 }, pressed && { opacity: .8 }, style]}>
     {loading ? <ActivityIndicator color={secondary ? colors.primary : colors.onPrimary} /> : icon ? <Icon name={icon} size={19} color={secondary ? colors.primary : colors.onPrimary} /> : null}
     <Text style={[styles.buttonText, secondary && { color: colors.primary }]}>{label}</Text>
@@ -48,11 +48,20 @@ export function Pill({ label, active = false, onPress, icon, accessibilityLabel 
     <Text style={[styles.pillText, active && { color: colors.primary }]}>{label}</Text>
   </MotionPressable>;
 }
-export function PageTitle({ title, subtitle, back = false, fallback, right }: { title: string; subtitle?: string; back?: boolean; fallback?: Href; right?: ReactNode }) {
+/** Related actions retain a readable label and a separate touch target at narrow widths. */
+export function ActionGroup({ children, direction = 'auto', style }: { children: ReactNode; direction?: 'auto' | 'vertical' | 'horizontal'; style?: StyleProp<ViewStyle> }) {
+  const { width, fontScale } = useWindowDimensions();
+  const items = Children.toArray(children);
+  const stacked = direction === 'vertical' || (direction === 'auto' && (width < 380 || fontScale > 1.2 || items.length > 2));
+  return <View style={[{ flexDirection: stacked ? 'column' : 'row', gap: 12, width: '100%' }, style]}>
+    {items.map((child, index) => <View key={(child as { key?: string }).key ?? index} style={{ minWidth: 0, ...(stacked ? {} : { flex: 1 }) }}>{child}</View>)}
+  </View>;
+}
+export function PageTitle({ title, subtitle, back = false, fallback, right, compact = false }: { title: string; subtitle?: string; back?: boolean; fallback?: Href; right?: ReactNode; compact?: boolean }) {
   const { styles } = useStyles();
-  return <View style={styles.pageTitle}>
+  return <View style={[styles.pageTitle, compact && styles.compactHeader]}>
     {back && <IconButton name="chevron-back" label="Volver" onPress={() => goBack(fallback)} style={{ marginLeft: -4 }} />}
-    <View style={{ flex: 1 }}><Text accessibilityRole="header" style={styles.title}>{title}</Text>{subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}</View>{right}
+    <View style={{ flex: 1, minWidth: 0 }}><Text accessibilityRole="header" style={[styles.title, compact && styles.compactTitle]}>{title}</Text>{subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}</View>{right}
   </View>;
 }
 export function Notice({ children, error = false }: { children: ReactNode; error?: boolean }) {
@@ -62,18 +71,18 @@ export function Notice({ children, error = false }: { children: ReactNode; error
     <Text style={[styles.noticeText, error && { color: colors.danger }]}>{children}</Text>
   </View>;
 }
-export function EmptyState({ title, description, icon = 'home-outline', action }: { title: string; description: string; icon?: IconName; action?: ReactNode }) {
+export function EmptyState({ title, description, icon = 'home-outline', action, plain = false }: { title: string; description: string; icon?: IconName; action?: ReactNode; plain?: boolean }) {
   const { colors, styles } = useStyles();
-  return <View style={styles.empty}>
-    <View pointerEvents="none" aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.emptyArtwork}>
+  return <View style={[styles.empty, plain && styles.plainEmpty]}>
+    {!plain && <View pointerEvents="none" aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.emptyArtwork}>
       <View style={styles.emptyHalo} />
       <View style={styles.emptyBackCard}><View style={styles.emptyCardLine} /><View style={[styles.emptyCardLine, styles.emptyShortLine]} /></View>
       <View style={styles.emptyIcon}><Icon name={icon} color={colors.primary} size={31} /></View>
       <View style={styles.emptyAccent} />
       <View style={styles.emptyGround} />
-    </View>
-    <Text accessibilityRole="header" style={styles.emptyTitle}>{title}</Text>
-    <Text style={styles.emptyDescription}>{description}</Text>
+    </View>}
+    <Text accessibilityRole="header" style={[styles.emptyTitle, plain && styles.plainTitle]}>{title}</Text>
+    <Text style={[styles.emptyDescription, plain && styles.plainDescription]}>{description}</Text>
     {action ? <View style={styles.emptyAction}>{action}</View> : null}
   </View>;
 }
@@ -83,9 +92,10 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   secondary: { backgroundColor: colors.softBlue }, buttonText: { color: colors.onPrimary, fontWeight: '600', fontSize: 16, flexShrink: 1, textAlign: 'center' },
   iconButton: { width: 44, minHeight: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
   pill: { minHeight: 44, borderRadius: 22, paddingHorizontal: 14, paddingVertical: 11, backgroundColor: colors.surface, flexDirection: 'row', gap: 7, alignItems: 'center' },
-  pillActive: { backgroundColor: colors.softBlue }, pillText: { fontSize: 14, fontWeight: '600', color: colors.ink },
+  pillActive: { backgroundColor: colors.softBlue }, pillText: { fontSize: 14, fontWeight: '600', color: colors.ink, flexShrink: 1 },
   pageTitle: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 26, paddingBottom: 24 }, title: { fontFamily: typefaces.display, fontSize: 34, fontWeight: '700', color: colors.ink, letterSpacing: -1 },
   subtitle: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: 6 },
+  compactHeader: { paddingTop: 18, paddingBottom: 22, alignItems: 'flex-start' }, compactTitle: { fontSize: 28, lineHeight: 34, fontWeight: '600', letterSpacing: -.6 },
   notice: { paddingVertical: 14, paddingHorizontal: 4, borderRadius: 14, flexDirection: 'row', gap: 9, alignItems: 'flex-start' }, noticeError: { backgroundColor: colors.softDanger, paddingHorizontal: 14 }, noticeText: { flex: 1, fontSize: 13, color: colors.muted, lineHeight: 20 },
   empty: { width: '100%', maxWidth: 620, alignSelf: 'center', paddingVertical: 28, paddingHorizontal: 22, alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: 26, borderWidth: 1, borderColor: colors.border, boxShadow: '0 4px 18px rgba(32, 62, 94, 0.025)' },
   emptyArtwork: { width: 150, height: 90, marginBottom: 2 },
@@ -98,4 +108,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   emptyTitle: { fontSize: 21, lineHeight: 27, letterSpacing: -0.45, color: colors.ink, textAlign: 'center', fontWeight: '600', maxWidth: 390 },
   emptyDescription: { fontSize: 14, lineHeight: 22, color: colors.muted, maxWidth: 370, textAlign: 'center' },
   emptyAction: { width: '100%', maxWidth: 330, marginTop: 6 },
+  plainEmpty: { alignItems: 'flex-start', maxWidth: 720, padding: 20, borderRadius: 16, boxShadow: 'none', gap: 8 },
+  plainTitle: { textAlign: 'left', fontSize: 19, lineHeight: 26, maxWidth: '100%' },
+  plainDescription: { textAlign: 'left', maxWidth: '100%' },
 }));

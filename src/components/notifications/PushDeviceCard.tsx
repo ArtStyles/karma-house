@@ -1,7 +1,7 @@
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { usePushNotifications } from '../../push/PushProvider';
-import { createThemedStyles } from '../../theme';
-import { Button, Icon, Notice } from '../ui';
+import { createThemedStyles, internalLayout } from '../../theme';
+import { ActionGroup, Button, Icon, Notice } from '../ui';
 
 export function PushDeviceCard() {
   const { colors, styles } = useStyles();
@@ -12,7 +12,7 @@ export function PushDeviceCard() {
   if (!push.supported) return <View style={styles.card}>
     <View style={styles.heading}>
       <View style={styles.icon}><Icon name="phone-portrait-outline" color={colors.primary} size={23} /></View>
-      <View style={styles.copy}><Text accessibilityRole="header" style={styles.title}>También en tu teléfono</Text><Text style={styles.description}>
+      <View style={styles.copy}><Text accessibilityRole="header" style={styles.title}>Avisos en este dispositivo</Text><Text style={styles.description}>
         {Platform.OS === 'web' ? 'En la web, tus novedades llegan a la bandeja de KarmaHouse. Para recibir avisos en el teléfono, por ahora necesitas la app de Android. Aquí puedes elegir qué novedades recibir.'
           : Platform.OS === 'ios' ? 'En iPhone, por ahora puedes consultar todas tus novedades en la bandeja de KarmaHouse.'
             : 'Abre la versión instalada de KarmaHouse para recibir avisos con la app cerrada.'}
@@ -29,21 +29,21 @@ export function PushDeviceCard() {
       : <View style={styles.status} accessibilityLiveRegion="polite"><View style={[styles.dot, push.enabled && !blocked && styles.enabledDot]} /><Text style={styles.statusText}>{blocked ? 'Permiso desactivado en Android' : push.enabled ? 'Avisos activados en este teléfono' : 'Avisos de este teléfono desactivados'}</Text></View>}
     {blocked && <Text style={styles.footnote}>Permite las notificaciones en los ajustes de Android y vuelve a KarmaHouse para activarlas.</Text>}
     {push.error && <Notice error>{push.error}</Notice>}
-    {push.enabled ? <Button label="Desactivar en este teléfono" secondary loading={push.busy} disabled={!push.ready} onPress={() => run(push.disable)} />
+    <ActionGroup>{push.enabled ? <Button label="Desactivar en este teléfono" secondary loading={push.busy} disabled={!push.ready} onPress={() => run(push.disable)} />
       : <Button label={blocked ? 'Abrir ajustes de Android' : push.error ? 'Reintentar activación' : 'Activar en este teléfono'} icon={blocked ? 'settings-outline' : 'notifications-outline'} loading={push.busy} disabled={!push.ready} onPress={() => run(blocked ? push.openSettings : push.enable)} />}
-    {push.enabled && blocked && <Button label="Abrir ajustes de Android" secondary disabled={push.busy} onPress={() => run(push.openSettings)} />}
+    {push.enabled && blocked && <Button label="Abrir ajustes de Android" secondary disabled={push.busy} onPress={() => run(push.openSettings)} />}</ActionGroup>
     <Text style={styles.footnote}>Los avisos no muestran el texto de tus mensajes. Puedes desactivarlos cuando quieras.</Text>
   </View>;
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  card: { borderWidth: 1, borderColor: colors.border, borderRadius: 24, backgroundColor: colors.surface, padding: 19, gap: 16 },
-  heading: { flexDirection: 'row', alignItems: 'flex-start', gap: 13 },
-  icon: { width: 44, height: 44, borderRadius: 15, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
-  enabledIcon: { backgroundColor: colors.softGreen }, copy: { flex: 1, minWidth: 0, gap: 6 },
+  card: { borderWidth: 1, borderColor: colors.border, borderRadius: internalLayout.radius, backgroundColor: colors.surface, padding: 16, gap: 16 },
+  heading: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  icon: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  enabledIcon: { backgroundColor: 'transparent' }, copy: { flex: 1, minWidth: 0, gap: 6 },
   title: { fontSize: 18, lineHeight: 24, fontWeight: '600', letterSpacing: -0.3, color: colors.ink },
   description: { fontSize: 13, lineHeight: 20, color: colors.muted },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 9 }, dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.muted }, enabledDot: { backgroundColor: colors.green },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }, dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.muted }, enabledDot: { backgroundColor: colors.green },
   statusText: { flex: 1, color: colors.ink, fontSize: 13, lineHeight: 19, fontWeight: '500' },
   footnote: { color: colors.muted, fontSize: 12, lineHeight: 18 },
 }));

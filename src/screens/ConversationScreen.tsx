@@ -16,10 +16,10 @@ import { useNegotiationMutations } from '../components/negotiations/useNegotiati
 import { proposalSubject } from '../negotiations/presentation';
 import type { Negotiation } from '../negotiations/types';
 import { useNegotiations } from '../negotiations/useNegotiations';
-import { Button, EmptyState, goBack, Icon, IconButton, Notice, PageTitle } from '../components/ui';
+import { ActionGroup, Button, EmptyState, goBack, Icon, IconButton, Notice, PageTitle } from '../components/ui';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
-import { createThemedStyles } from '../theme';
+import { createThemedStyles, internalLayout } from '../theme';
 
 export default function ConversationScreen() {
   const { colors, styles } = useStyles();
@@ -29,9 +29,9 @@ export default function ConversationScreen() {
   const auth = useAuth();
   const validId = !!id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
   if (!auth.ready || (auth.user && messaging.userId !== auth.user.id)) return <SafeAreaView style={styles.safe}><ActivityIndicator style={styles.loading} color={colors.primary} /></SafeAreaView>;
-  if (!messaging.available || !auth.user || !validId) return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}><View style={styles.shell}><View style={styles.padding}><PageTitle title="Conversación" back />
-    {!messaging.available ? <EmptyState icon="chatbubbles-outline" title="Mensajes entre personas" description="La mensajería estará disponible con tu cuenta cuando se conecte el servicio." /> : !auth.user ? <AccountPrompt returnTo={validId ? `/messages/${id}` : '/messages'} title="Conversa sobre tu próxima vivienda" description="Inicia sesión para hablar con propietarios y compradores sin publicar tu teléfono." /> : <EmptyState icon="chatbubble-outline" title="No encontramos la conversación" description="Vuelve a tu bandeja para elegir una conversación disponible." action={<Button label="Ir a mensajes" onPress={() => router.replace('/messages')} />} />}
-  </View></View></SafeAreaView>;
+  if (!messaging.available || !auth.user || !validId) return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}><View style={styles.shell}><ScrollView contentContainerStyle={styles.padding}><PageTitle compact title="Conversación" back />
+    {!messaging.available ? <EmptyState plain title="Mensajes no disponibles" description="La mensajería estará disponible con tu cuenta cuando se conecte el servicio." /> : !auth.user ? <AccountPrompt returnTo={validId ? `/messages/${id}` : '/messages'} title="Consulta tu conversación" description="Inicia sesión para hablar con propietarios y compradores sin publicar tu teléfono." /> : <EmptyState plain title="No encontramos la conversación" description="Vuelve a tu bandeja para elegir una conversación disponible." action={<Button label="Ir a mensajes" onPress={() => router.replace('/messages')} />} />}
+  </ScrollView></View></SafeAreaView>;
   return <ConversationBody key={`${auth.user.id}:${id}`} id={id!} userId={auth.user.id} />;
 }
 
@@ -164,7 +164,7 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
   }
 
   if (!conversation) return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}><View style={styles.shell}><ScrollView alwaysBounceVertical contentContainerStyle={[styles.padding,{flexGrow:1}]} refreshControl={<RefreshControl refreshing={reload.refreshing} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}>
-    <PageTitle title="Conversación" back />
+    <PageTitle compact title="Conversación" back />
     {opening ? <ActivityIndicator style={styles.loading} color={colors.primary} /> : <><Notice error>{issue || syncIssue || messaging.error || 'Esta conversación no está disponible para tu cuenta.'} Desliza hacia abajo para volver a consultar.</Notice><Button label="Ir a mensajes" onPress={() => router.replace('/messages')} style={{ marginTop: 12 }} /></>}
   </ScrollView></View></SafeAreaView>;
 
@@ -181,11 +181,11 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
           <IconButton name="chevron-back" label="Volver" onPress={() => goBack('/messages')} />
           <View style={styles.person}>
             {/* A chat partner can always see the other's profile, even without active listings. */}
-            <Pressable accessibilityRole="button" accessibilityLabel={`Ver el perfil de ${conversation.otherName}`} onPress={() => router.push(`/user/${conversation.otherUserId}`)} style={({ pressed }) => pressed && { opacity: 0.7 }}>
-              <Text numberOfLines={1} style={styles.personName}>{conversation.otherName}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Ver el perfil de ${conversation.otherName}`} onPress={() => router.push(`/user/${conversation.otherUserId}`)} style={({ pressed }) => [styles.contextLink, pressed && { opacity: 0.7 }]}>
+              <Text numberOfLines={2} style={styles.personName}>{conversation.otherName}</Text>
             </Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel={`Ver vivienda: ${conversation.propertyTitle}`} disabled={!conversation.propertyAvailable} onPress={() => router.push(`/property/${conversation.propertyId}`)} style={({ pressed }) => pressed && { opacity: 0.7 }}>
-              <Text numberOfLines={1} style={[styles.personHint, conversation.propertyAvailable && styles.propertyLink]}>{conversation.propertyTitle}{conversation.propertyAvailable ? ' ›' : ''}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Ver vivienda: ${conversation.propertyTitle}`} disabled={!conversation.propertyAvailable} onPress={() => router.push(`/property/${conversation.propertyId}`)} style={({ pressed }) => [styles.contextLink, pressed && { opacity: 0.7 }]}>
+              <Text numberOfLines={2} style={[styles.personHint, conversation.propertyAvailable && styles.propertyLink]}>{conversation.propertyTitle}{conversation.propertyAvailable ? ' ›' : ''}</Text>
             </Pressable>
           </View>
           <IconButton name="ellipsis-horizontal" label="Opciones de conversación" onPress={() => { Keyboard.dismiss(); setMenu(true); }} />
@@ -214,7 +214,7 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
             updateBottom();
           }}
           ListHeaderComponent={history?.hasMore ? <Button label="Ver mensajes anteriores" secondary loading={history.loading} onPress={older} style={styles.older} /> : null}
-          ListEmptyComponent={history?.loading || opening ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : <EmptyState icon="chatbubble-ellipses-outline" title="Saluda y pregunta" description="Puedes consultar los detalles de la vivienda y coordinar el siguiente paso por aquí." />}
+          ListEmptyComponent={history?.loading || opening ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : history && !syncError ? <EmptyState plain title="Sin mensajes" description="Todavía no hay mensajes en esta conversación." /> : null}
           renderItem={({ item, index }) => {
             const date = new Date((item.message ?? item.pending).createdAt).toLocaleDateString('es', { day: 'numeric', month: 'long' });
             const previous = index > 0 ? rows[index - 1] : undefined;
@@ -239,8 +239,8 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
           <Pressable accessibilityRole="button" accessibilityLabel="Visitas y ofertas" onPress={() => { Keyboard.dismiss(); setSheet({}); }} style={({ pressed }) => [styles.plus, pressed && { opacity: 0.7 }]}>
             <Icon name="add" size={26} color={colors.primary} />
           </Pressable>
-          <TextInput accessibilityLabel="Escribe un mensaje" placeholder={auth.suspended ? 'Tu cuenta está suspendida' : composer.ready ? 'Escribe un mensaje…' : 'Recuperando borrador…'} placeholderTextColor={colors.muted} value={composer.text} onChangeText={composer.change} multiline maxLength={2000} editable={composer.ready && !busy && !auth.suspended && !conversation.managementChanged} style={[styles.input, !conversation.canSend && styles.mutedInput]} textAlignVertical="top" />
-          <Pressable accessibilityRole="button" accessibilityLabel="Enviar mensaje" accessibilityState={{ disabled: auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim() }} disabled={auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim()} onPress={send} style={({ pressed }) => [styles.send, (auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim() || pressed) && styles.sendDisabled]}>
+          <View style={styles.inputField}><Text style={styles.inputLabel}>Mensaje</Text><TextInput accessibilityLabel="Escribe un mensaje" placeholder={auth.suspended ? 'Tu cuenta está suspendida' : composer.ready ? 'Escribe un mensaje…' : 'Recuperando borrador…'} placeholderTextColor={colors.muted} value={composer.text} onChangeText={composer.change} multiline maxLength={2000} editable={composer.ready && !busy && !auth.suspended && !conversation.managementChanged} style={[styles.input, !conversation.canSend && styles.mutedInput]} textAlignVertical="top" /></View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Enviar mensaje" accessibilityState={{ disabled: auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim(), busy: busy === 'send' }} disabled={auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim()} onPress={send} style={({ pressed }) => [styles.send, (auth.suspended || !conversation.canSend || !composer.ready || !!busy || !composer.text.trim() || pressed) && styles.sendDisabled]}>
             {busy === 'send' ? <ActivityIndicator color={colors.onPrimary} /> : <Icon name="arrow-up" size={24} color={colors.onPrimary} />}
           </Pressable>
         </View>
@@ -248,23 +248,24 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
       </View>
     </KeyboardAvoidingView>
     <Modal visible={menu || !!discard || !!cancelTarget} transparent animationType="fade" onRequestClose={() => { if (!busy && !negotiations.mutating) { setMenu(false); setDiscard(null); setCancelTarget(null); } }}>
-      <View style={[styles.backdrop, { paddingBottom: Math.max(insets.bottom, 20), paddingTop: Math.max(insets.top, 20) }]}><View accessibilityViewIsModal style={styles.actionSheet}>
+      <KeyboardAvoidingView style={styles.flex} behavior="padding"><View style={[styles.backdrop, { paddingBottom: Math.max(insets.bottom, 20), paddingTop: Math.max(insets.top, 20) }]}><View accessibilityViewIsModal style={styles.actionSheet}><ScrollView contentContainerStyle={styles.actionSheetContent} keyboardShouldPersistTaps="handled">
         {cancelTarget ? <>
-          <Text style={styles.sheetTitle}>¿Cancelar el acuerdo?</Text>
+          <Text accessibilityRole="header" style={styles.sheetTitle}>¿Cancelar el acuerdo?</Text>
           <Text style={styles.sheetDescription}>La {proposalSubject(cancelTarget)} ya estaba aceptada. Si la cancelas, {conversation.otherName} lo verá en el chat.</Text>
-          <Button label="Cancelar acuerdo" loading={negotiations.mutating} onPress={() => { const target = cancelTarget; void negotiationMutations.respond(target, 'cancel').finally(() => { if (mounted.current) setCancelTarget(null); }); }} />
-          <Button label="Mantener acuerdo" secondary disabled={negotiations.mutating} onPress={() => setCancelTarget(null)} />
+          <ActionGroup><Button label="Cancelar acuerdo" loading={negotiations.mutating} onPress={() => { const target = cancelTarget; void negotiationMutations.respond(target, 'cancel').finally(() => { if (mounted.current) setCancelTarget(null); }); }} />
+          <Button label="Mantener acuerdo" secondary disabled={negotiations.mutating} onPress={() => setCancelTarget(null)} /></ActionGroup>
         </> : <>
-        <Text style={styles.sheetTitle}>{discard ? 'Descartar mensaje' : 'Opciones de conversación'}</Text>
+        <Text accessibilityRole="header" style={styles.sheetTitle}>{discard ? 'Descartar mensaje' : 'Opciones de conversación'}</Text>
         <Text style={styles.sheetDescription}>{discard ? 'Se quitará de la bandeja de salida de este dispositivo. No se borran mensajes ya recibidos por la otra persona.' : conversation.blockedByMe ? 'Puedes volver a permitir mensajes con esta persona.' : 'Al bloquear, no podréis enviaros mensajes en ninguna de vuestras conversaciones. El historial se conserva.'}</Text>
-        {discard ? <Button label="Confirmar descarte" loading={busy === 'discard'} disabled={!!busy} onPress={() => void perform('discard', async () => { await latest.current.discardMessage(discard); if (mounted.current) setDiscard(null); })} /> : <>
+        <ActionGroup direction="vertical">{discard ? <Button label="Confirmar descarte" loading={busy === 'discard'} disabled={!!busy} onPress={() => void perform('discard', async () => { await latest.current.discardMessage(discard); if (mounted.current) setDiscard(null); })} /> : <View style={{ gap: 12 }}>
           <Button label={conversation.blockedByMe ? 'Desbloquear persona' : 'Bloquear persona'} loading={busy === 'block'} disabled={!!busy} secondary onPress={() => void perform('block', async () => { await latest.current.setBlocked(id, !conversation.blockedByMe); await invalidateAfterBlockChange(); if (mounted.current) { setMenu(false); setNotice(conversation.blockedByMe ? 'Has desbloqueado a esta persona.' : 'Has bloqueado a esta persona.'); } })} />
           <Button label="Reportar conversación" secondary icon="flag-outline" disabled={!!busy} onPress={() => { setMenu(false); setReport(true); }} />
-        </>}
+        </View>}
         {!!issue && <Notice error>{issue}</Notice>}
         <Button label="Cancelar" secondary disabled={!!busy} onPress={() => { setMenu(false); setDiscard(null); }} />
+        </ActionGroup>
         </>}
-      </View></View>
+      </ScrollView></View></View></KeyboardAvoidingView>
     </Modal>
     <ReportConversationSheet visible={report} onClose={() => setReport(false)} onReport={(reason, details, clientId) => latest.current.reportConversation(id, reason, details, clientId)} />
   </SafeAreaView>;
@@ -273,16 +274,16 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
 function message(failure: unknown, fallback: string) { return failure instanceof Error && failure.message ? failure.message : fallback; }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 }, shell: { flex: 1, width: '100%', maxWidth: 800, alignSelf: 'center' }, padding: { paddingHorizontal: 20 }, loading: { padding: 36 },
-  chatHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }, person: { flex: 1, gap: 3 }, personName: { color: colors.ink, fontSize: 18, fontWeight: '600' }, personHint: { color: colors.muted, fontSize: 12 },
+  safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 }, shell: { flex: 1, width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center' }, padding: { paddingHorizontal: internalLayout.gutter }, loading: { padding: 36 },
+  chatHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, person: { flex: 1, minWidth: 0 }, contextLink: { minHeight: 44, justifyContent: 'center' }, personName: { color: colors.ink, fontSize: 18, lineHeight: 24, fontWeight: '600' }, personHint: { color: colors.muted, fontSize: 13, lineHeight: 19 },
   propertyLink: { color: colors.primary },
-  plus: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' },
-  messages: { paddingHorizontal: 18, paddingVertical: 12, flexGrow: 1 }, older: { alignSelf: 'center', marginBottom: 12 }, day: { color: colors.muted, textAlign: 'center', fontSize: 12, fontWeight: '500', marginTop: 14, marginBottom: 10 },
+  plus: { width: 48, height: 52, borderRadius: 14, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  messages: { paddingHorizontal: 20, paddingVertical: 16, flexGrow: 1 }, older: { alignSelf: 'center', marginBottom: 12 }, day: { color: colors.muted, textAlign: 'center', fontSize: 12, lineHeight: 18, fontWeight: '500', marginTop: 16, marginBottom: 12 },
   sync: { marginHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.softDanger, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 }, syncText: { flex: 1, fontSize: 12, lineHeight: 17, color: colors.danger }, retryLink: { minHeight: 44, justifyContent: 'center' }, link: { color: colors.primary, fontSize: 13, fontWeight: '600' },
   notice: { marginHorizontal: 20, paddingVertical: 8, color: colors.green, fontSize: 12, lineHeight: 18 }, disabledReason: { color: colors.muted, fontSize: 12, lineHeight: 18, paddingHorizontal: 20, paddingVertical: 9, backgroundColor: colors.softNeutral },
-  toBottom: { position: 'absolute', bottom: 10, alignSelf: 'center', flexDirection: 'row', gap: 6, alignItems: 'center', minHeight: 44, paddingHorizontal: 18, backgroundColor: colors.surface, borderRadius: 22, boxShadow: '0 2px 10px rgba(0,0,0,0.12)' },
-  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, padding: 14, paddingTop: 10, backgroundColor: colors.surface, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  input: { flex: 1, minHeight: 46, maxHeight: 128, fontSize: 16, lineHeight: 23, paddingTop: 11, paddingBottom: 11, paddingHorizontal: 15, backgroundColor: colors.paper, borderRadius: 23, color: colors.ink }, mutedInput: { opacity: 0.6 },
-  send: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center' }, sendDisabled: { opacity: 0.45 }, count: { fontSize: 12, color: colors.muted, textAlign: 'right', paddingHorizontal: 20, paddingBottom: 6, backgroundColor: colors.surface },
-  backdrop: { flex: 1, justifyContent: 'center', backgroundColor: colors.overlay, paddingHorizontal: 20 }, actionSheet: { width: '100%', maxWidth: 480, alignSelf: 'center', padding: 24, borderRadius: 28, backgroundColor: colors.surface, gap: 14 }, sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '600' }, sheetDescription: { color: colors.muted, fontSize: 15, lineHeight: 22 },
+  toBottom: { position: 'absolute', bottom: 10, alignSelf: 'center', flexDirection: 'row', gap: 8, alignItems: 'center', minHeight: 44, paddingHorizontal: 18, backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
+  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 12, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: colors.surface, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  inputField: { flex: 1, minWidth: 0, gap: 6 }, inputLabel: { fontSize: 12, lineHeight: 18, color: colors.muted }, input: { minHeight: 52, maxHeight: 152, fontSize: 16, lineHeight: 23, paddingVertical: 13, paddingHorizontal: 12, backgroundColor: colors.paper, borderRadius: 14, borderWidth: 1, borderColor: colors.border, color: colors.ink }, mutedInput: { opacity: 0.6 },
+  send: { width: 48, height: 52, borderRadius: 14, backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center' }, sendDisabled: { opacity: 0.45 }, count: { fontSize: 12, color: colors.muted, textAlign: 'right', paddingHorizontal: 20, paddingBottom: 6, backgroundColor: colors.surface },
+  backdrop: { flex: 1, justifyContent: 'center', backgroundColor: colors.overlay, paddingHorizontal: 20 }, actionSheet: { width: '100%', maxWidth: 520, maxHeight: '100%', alignSelf: 'center', borderRadius: internalLayout.radius, overflow: 'hidden', backgroundColor: colors.surface }, actionSheetContent: { padding: 20, gap: 20 }, sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '600' }, sheetDescription: { color: colors.muted, fontSize: 14, lineHeight: 21 },
 }));

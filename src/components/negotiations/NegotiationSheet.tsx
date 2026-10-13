@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { createThemedStyles } from '../../theme';
+import { createThemedStyles, internalLayout } from '../../theme';
 import { IconButton } from '../ui';
 
 export function NegotiationSheet({ visible, title = 'Visitas y ofertas', busy = false, onClose, children, refreshControl }: { visible:boolean; title?:string; busy?:boolean; onClose():void; children:ReactNode;refreshControl?:ScrollViewProps['refreshControl'] }) {
@@ -18,10 +18,10 @@ export function NegotiationSheet({ visible, title = 'Visitas y ofertas', busy = 
         <Pressable accessibilityRole="button" accessibilityLabel="Cerrar panel de solicitudes" disabled={busy} onPress={onClose} style={StyleSheet.absoluteFill}/>
         <View accessibilityViewIsModal style={styles.sheet}>
           <View style={styles.header}><Text accessibilityRole="header" style={styles.title}>{title}</Text><View pointerEvents={busy?'none':'auto'}><IconButton name="close" label="Cerrar visitas y ofertas" onPress={onClose} style={styles.close}/></View></View>
-          <ScrollView alwaysBounceVertical refreshControl={refreshControl} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>{children}</ScrollView>
+          <ScrollView alwaysBounceVertical refreshControl={refreshControl} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} contentContainerStyle={styles.content}>{children}</ScrollView>
         </View>
       </View>
     </KeyboardAvoidingView>
   </Modal>;
 }
-const useStyles = createThemedStyles(colors => StyleSheet.create({flex:{flex:1},overlay:{flex:1,backgroundColor:colors.overlay,paddingHorizontal:14,justifyContent:'center'},sheet:{width:'100%',maxWidth:580,maxHeight:'100%',alignSelf:'center',backgroundColor:colors.paper,borderRadius:27,overflow:'hidden',flexShrink:1},header:{flexDirection:'row',alignItems:'center',gap:10,padding:18,paddingBottom:13,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:colors.border},title:{flex:1,color:colors.ink,fontSize:21,lineHeight:27,fontWeight:'600',letterSpacing:-.4},close:{backgroundColor:colors.softBlue},content:{padding:18,gap:15,paddingBottom:25}}));
+const useStyles = createThemedStyles(colors => StyleSheet.create({flex:{flex:1},overlay:{flex:1,backgroundColor:colors.overlay,paddingHorizontal:internalLayout.gutter,justifyContent:'center'},sheet:{width:'100%',maxWidth:580,maxHeight:'100%',alignSelf:'center',backgroundColor:colors.surface,borderRadius:internalLayout.radius,overflow:'hidden',flexShrink:1},header:{flexDirection:'row',alignItems:'center',gap:12,paddingHorizontal:20,paddingVertical:16,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:colors.border},title:{flex:1,minWidth:0,color:colors.ink,fontSize:24,lineHeight:30,fontWeight:'600',letterSpacing:-.4},close:{backgroundColor:'transparent'},content:{padding:20,gap:20,paddingBottom:28}}));
