@@ -47,8 +47,12 @@ de la landing y conectado a GitHub (`ArtStyles/karma-house`):
 
 - Root Directory `pwa`, con archivos de fuera de esa carpeta incluidos en la build.
 - Cada push a `main` publica en producción; otras ramas generan vistas previas protegidas.
-- Paso «Ignored Build Step»: `git diff --quiet HEAD^ HEAD -- . ':(exclude)web'`. Si el commit
-  solo toca `web/` (la landing), no se reconstruye la app.
+- Paso «Ignored Build Step»:
+  `cd .. && git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD -- . ':(exclude)web'`.
+  Si desde el último despliegue bueno solo cambió `web/` (la landing), no se reconstruye la app.
+  Vercel ejecuta el comando dentro de `pwa/`: sin el `cd ..`, el `.` solo miraba esa carpeta y se
+  saltaban los cambios de la app. Comparar con `HEAD^` en vez de con el último despliegue también
+  fallaba cuando un push traía varios commits.
 - Variables `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en Vercel
   (las mismas públicas de `.env.local`).
 
