@@ -15,7 +15,7 @@ export function AccountPrompt({ returnTo, title = 'Entra en tu cuenta', descript
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  card: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', padding: 20, borderRadius: internalLayout.radius, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, gap: 12 },
+  card: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'flex-start', padding: 20, borderRadius: internalLayout.radius, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, gap: 12 },
   symbol: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 20, lineHeight: 27, fontWeight: '600', color: colors.ink },
   description: { fontSize: 15, lineHeight: 22, color: colors.muted, maxWidth: 540 },

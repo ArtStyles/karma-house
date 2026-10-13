@@ -3,7 +3,7 @@ import { Platform, StyleSheet, Text, useWindowDimensions, View,type ScrollView }
 import Animated,{useAnimatedReaction,useAnimatedScrollHandler,useAnimatedStyle,useSharedValue} from 'react-native-reanimated';
 import {scheduleOnRN} from 'react-native-worklets';
 import {useReducedMotion} from '../settings/useReducedMotion';
-import { createThemedStyles } from '../theme';
+import { createThemedStyles, layout } from '../theme';
 import { Icon, type IconName } from './ui';
 import { MotionPressable } from './MotionPressable';
 
@@ -27,12 +27,36 @@ export function ExploreDiscovery({ offline, onOperation, onPublish }: {
   const cardWidth = Math.max(1, viewport - 24);
   const interval = cardWidth + 10;
   const narrow = viewport < 320;
+  // With room for every option there is nothing to swipe: they sit side by side.
+  const grid = width >= layout.wideMinWidth;
   const reduced=useReducedMotion(),progress=useSharedValue(0);
   const trackScroll=useAnimatedScrollHandler(event=>{progress.value=Math.max(0,Math.min(cards.length-1,event.contentOffset.x/interval))},[interval]);
   useAnimatedReaction(()=>Math.round(progress.value),(next,previous)=>{if(next!==previous)scheduleOnRN(setPage,next)});
   const indicator=useAnimatedStyle(()=>({transform:[{translateX:(reduced?Math.round(progress.value):progress.value)*10}]}));
   // Rotation and desktop breakpoints keep the same option at the front.
   useEffect(() => { progress.value=page;scroll.current?.scrollTo({ x: page * interval, animated: false }); }, [interval]);
+  const renderCard = (card: typeof cards[number]) => {
+    const disabled = offline && !!card.operation;
+    return <MotionPressable key={card.action} accessibilityRole="button"
+      accessibilityLabel={`${card.action}: ${card.title}`}
+      accessibilityHint={card.operation ? 'Selecciona esta operación para tu búsqueda' : 'Abre el formulario para publicar una vivienda'}
+      accessibilityState={{ disabled }} disabled={disabled}
+      onPress={() => card.operation ? onOperation(card.operation) : onPublish()}
+      style={({ pressed }) => [styles.card, grid ? styles.gridCard : { width: cardWidth }, narrow && styles.narrowCard, disabled && { opacity: .45 }, pressed && { opacity: .7 }]}>
+      <View pointerEvents="none" aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.scene, narrow && styles.narrowScene]}>
+        <View style={styles.halo} />
+        <Icon name={card.icon} size={34} color={colors.primary} />
+        <View style={styles.accent}><Icon name={card.accent} size={19} color={colors.primary} /></View>
+      </View>
+      <View style={styles.copy}>
+        <Text style={[styles.title, narrow && styles.narrowTitle]}>{card.title}</Text>
+        <Text style={styles.description}>{card.description}</Text>
+        <Text style={styles.action}>{card.action}</Text>
+      </View>
+      <View style={styles.arrow}><Icon name="arrow-up-outline" size={14} color={colors.primary} /></View>
+    </MotionPressable>;
+  };
+  if (grid) return <View style={[styles.root, styles.grid]}>{cards.map(renderCard)}</View>;
   return <View style={styles.root} onLayout={event => {
     const next = event.nativeEvent.layout.width;
     if (next > 0) setViewport(next);
@@ -42,27 +66,7 @@ export function ExploreDiscovery({ offline, onOperation, onPublish }: {
       pagingEnabled={Platform.OS === 'web'}
       snapToInterval={interval} snapToAlignment="start" decelerationRate="fast"
       contentContainerStyle={styles.track} scrollEventThrottle={16} onScroll={trackScroll}>
-      {cards.map(card => {
-        const disabled = offline && !!card.operation;
-        return <MotionPressable key={card.action} accessibilityRole="button"
-          accessibilityLabel={`${card.action}: ${card.title}`}
-          accessibilityHint={card.operation ? 'Selecciona esta operación para tu búsqueda' : 'Abre el formulario para publicar una vivienda'}
-          accessibilityState={{ disabled }} disabled={disabled}
-          onPress={() => card.operation ? onOperation(card.operation) : onPublish()}
-          style={({ pressed }) => [styles.card, { width: cardWidth }, narrow && styles.narrowCard, disabled && { opacity: .45 }, pressed && { opacity: .7 }]}>
-          <View pointerEvents="none" aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.scene, narrow && styles.narrowScene]}>
-            <View style={styles.halo} />
-            <Icon name={card.icon} size={34} color={colors.primary} />
-            <View style={styles.accent}><Icon name={card.accent} size={19} color={colors.primary} /></View>
-          </View>
-          <View style={styles.copy}>
-            <Text style={[styles.title, narrow && styles.narrowTitle]}>{card.title}</Text>
-            <Text style={styles.description}>{card.description}</Text>
-            <Text style={styles.action}>{card.action}</Text>
-          </View>
-          <View style={styles.arrow}><Icon name="arrow-up-outline" size={14} color={colors.primary} /></View>
-        </MotionPressable>;
-      })}
+      {cards.map(renderCard)}
     </Animated.ScrollView>
     <View accessible accessibilityLabel={`Tarjeta ${page + 1} de ${cards.length}: ${cards[page].action}`} style={styles.status}>
       <View pointerEvents="none" aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.dots}>{cards.map(card => <View key={card.action} style={styles.dot} />)}<Animated.View style={[styles.currentDot,indicator]}/></View>
@@ -76,6 +80,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   track: { gap: 10, paddingRight: 24 },
   card: { minHeight: 86, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 4, paddingVertical: 8, borderRadius: 16 },
   narrowCard: { gap: 7 },
+  grid: { flexDirection: 'row', gap: 10 }, gridCard: { flex: 1, minWidth: 0 },
   scene: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center' }, narrowScene: { width: 50 },
   halo: { position: 'absolute', width: 52, height: 48, borderRadius: 20, backgroundColor: colors.softBlue, transform: [{ rotate: '-10deg' }] },
   accent: { position: 'absolute', right: 0, bottom: 3, padding: 2, borderRadius: 8, backgroundColor: colors.paper },

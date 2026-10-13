@@ -66,11 +66,22 @@ test('discovery indicator tracks the finger while scrolling never applies a sear
   const component=executeComponent('src/components/ExploreDiscovery.tsx','ExploreDiscovery',hooks,{
     useStyles:()=>({colors:{},styles:{}}),useWindowDimensions:()=>({width:390}),useReducedMotion:()=>false,
     useSharedValue:()=>progress,useAnimatedScrollHandler:(work:any)=>work,useAnimatedReaction:(read:any,run:any)=>{reaction={read,run}},useAnimatedStyle:(work:any)=>({evaluate:work}),scheduleOnRN:(work:any,...args:any[])=>work(...args),
-    cards,Platform:{OS:'android'},Animated:{ScrollView:'ScrollView',View:'AnimatedView'},View:'View',Text:'Text',Icon:'Icon',MotionPressable:'MotionPressable',
+    cards,layout:{wideMinWidth:1024},Platform:{OS:'android'},Animated:{ScrollView:'ScrollView',View:'AnimatedView'},View:'View',Text:'Text',Icon:'Icon',MotionPressable:'MotionPressable',
   });
   const render=()=>hooks.render(()=>component({offline:false,onOperation:()=>operations++,onPublish:()=>operations++}));let tree=render(),scroll=elements(tree).find(x=>x.type==='ScrollView')!;
   scroll.props.ref.current={scrollTo:(value:any)=>scrolls.push(value)};scroll.props.onScroll({contentOffset:{x:504}});reaction!.run(reaction!.read(),0);
   assert.equal(operations,0);assert.equal(elements(tree).find(x=>x.type==='AnimatedView')!.props.style.at(-1).evaluate().transform[0].translateX,15);
   tree=render();assert.ok(elements(tree).some(x=>x.props.accessibilityLabel==='Tarjeta 3 de 4: Permutar'));
   tree.props.onLayout({nativeEvent:{layout:{width:600}}});render();assert.equal(scrolls.at(-1).x,1172);assert.equal(scrolls.at(-1).animated,false);assert.equal(operations,0);
+});
+test('on wide screens every discovery option sits in one row with nothing to swipe',()=>{
+  const hooks=new Hooks();const cards=[{action:'Comprar'},{action:'Alquilar'},{action:'Permutar'},{action:'Publicar anuncio'}];
+  const component=executeComponent('src/components/ExploreDiscovery.tsx','ExploreDiscovery',hooks,{
+    useStyles:()=>({colors:{},styles:{}}),useWindowDimensions:()=>({width:1280}),useReducedMotion:()=>false,
+    useSharedValue:()=>({value:0}),useAnimatedScrollHandler:(work:any)=>work,useAnimatedReaction:()=>{},useAnimatedStyle:(work:any)=>({evaluate:work}),scheduleOnRN:(work:any,...args:any[])=>work(...args),
+    cards,layout:{wideMinWidth:1024},Platform:{OS:'web'},Animated:{ScrollView:'ScrollView',View:'AnimatedView'},View:'View',Text:'Text',Icon:'Icon',MotionPressable:'MotionPressable',
+  });
+  const tree=hooks.render(()=>component({offline:false,onOperation:()=>{},onPublish:()=>{}}));
+  assert.ok(!elements(tree).some(x=>x.type==='ScrollView'));assert.equal(elements(tree).filter(x=>x.type==='MotionPressable').length,4);
+  assert.ok(!elements(tree).some(x=>x.type==='Text'&&x.props.children==='Desliza'));
 });

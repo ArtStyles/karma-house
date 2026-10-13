@@ -1,14 +1,15 @@
 import { Tabs } from 'expo-router';
-import { StyleSheet, type ColorValue } from 'react-native';
+import { StyleSheet, useWindowDimensions, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, type IconName } from '../../components/ui';
-import { useTheme } from '../../theme';
+import { layout, useTheme } from '../../theme';
 import { useMessaging } from '../../messaging/MessagingProvider';
 import { useNotifications } from '../../notifications/NotificationsProvider';
 
 export default function TabLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const wide = useWindowDimensions().width >= layout.wideMinWidth;
   const { unreadCount: messageUnread } = useMessaging();
   const { unreadCount: noticeUnread } = useNotifications();
   // Mi espacio is the only tab that carries both inboxes, so its badge counts both.
@@ -22,13 +23,19 @@ export default function TabLayout() {
       tabBarInactiveTintColor: colors.muted,
       tabBarActiveBackgroundColor: 'transparent',
       tabBarHideOnKeyboard: true,
-      tabBarStyle: {
+      // A bottom bar stretched across a computer screen scatters four tabs; wide screens use a side rail.
+      tabBarPosition: wide ? 'left' : 'bottom',
+      tabBarVariant: wide ? 'material' : 'uikit',
+      tabBarStyle: wide ? {
+        width: 96, paddingTop: 16, paddingStart: 4, paddingEnd: 4, borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: colors.border,
+        backgroundColor: colors.surface, elevation: 0,
+      } : {
         // The navigator reserves this space; content never scrolls behind the bar.
         height: 64 + insets.bottom, paddingTop: 6, paddingBottom: Math.max(insets.bottom, 6),
         paddingHorizontal: 6, borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: colors.border, backgroundColor: colors.surface, elevation: 0,
       },
-      tabBarItemStyle: { minHeight: 48 },
+      tabBarItemStyle: wide ? { minHeight: 64, maxHeight: 72 } : { minHeight: 48 },
       // On web the item is a few pixels shorter, and a shrinking label gets its lower half clipped.
       tabBarLabelStyle: { fontSize: 12, fontWeight: '500', marginTop: 2, flexShrink: 0 },
       tabBarLabelPosition: 'below-icon',

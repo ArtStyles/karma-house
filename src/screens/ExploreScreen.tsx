@@ -68,6 +68,7 @@ export default function ExploreScreen() {
   const { width, fontScale } = useWindowDimensions();
   const compactMeta = width < 360 || fontScale > 1.2;
   const columns = width >= 1060 ? 3 : width >= 700 ? 2 : 1;
+  const wide = width >= layout.wideMinWidth;
   const { rows: result, total, hasMore, ready, loading, updating, current, pageError, offlineSince, loadMore, refresh: refreshCatalog } = useCatalogPage(filters);
   // On the saved snapshot nothing can ask the server, so every control that would is held still.
   const offline = offlineSince !== null;
@@ -111,9 +112,11 @@ export default function ExploreScreen() {
             </View>
           </View>
           <InstallHint />
-          <View style={styles.discovery}>
+          <View style={[styles.discovery, wide && styles.wideDiscovery]}>
             <ExploreDiscovery offline={offline} onOperation={operation => change({ operation })} onPublish={() => router.push('/publish')} />
-            <View style={[styles.search, locked]}>
+            {/* On wide screens search and refinements share one row as wide as the results. */}
+            <View style={wide && styles.controls}>
+            <View style={[styles.search, locked, wide && styles.wideSearch]}>
               <Icon name="search" size={20} color={colors.muted} />
               <TextInput accessibilityLabel="Buscar por barrio, municipio o calle" placeholder="Barrio, municipio o calle" placeholderTextColor={colors.muted} style={styles.searchInput} editable={!offline} value={filters.query} onChangeText={query => change({ query })} returnKeyType="search" />
               {filters.query ? <IconButton name="close-circle" label="Borrar búsqueda" onPress={() => change({ query: '' })} style={styles.clearSearch} /> : null}
@@ -122,10 +125,12 @@ export default function ExploreScreen() {
                 {filterCount > 0 && <View style={styles.filterCount}><Text style={styles.filterCountText}>{filterCount}</Text></View>}
               </MotionPressable>
             </View>
+            {wide && <View style={styles.wideRefinements}><CatalogRefinements filters={filters} onChange={change} disabled={offline} /></View>}
+            </View>
           </View>
-          <View style={styles.refinements}>
+          {!wide && <View style={styles.refinements}>
             <CatalogRefinements filters={filters} onChange={change} disabled={offline} />
-          </View>
+          </View>}
           {filterTags.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={locked} contentContainerStyle={styles.activeFilters}>
             {filterTags.map(tag => <FilterTag key={tag.key} label={tag.label} onRemove={() => removeFilter(tag.key)} />)}
             <MotionPressable accessibilityRole="button" accessibilityLabel="Limpiar búsqueda y filtros" disabled={offline} onPress={clearFilters} style={styles.clear}><Text style={styles.clearText}>Limpiar</Text></MotionPressable>
@@ -200,7 +205,8 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   brand: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 8 }, actions: { flexDirection: 'row', gap: 6 },
   demo: { color: colors.muted, fontSize: 11, backgroundColor: colors.softNeutral, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   messageBadge: { position: 'absolute', right: -2, top: -2, borderRadius: 11, minWidth: 19, paddingHorizontal: 5, height: 19, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primaryFill }, messageBadgeText: { color: colors.onPrimary, fontSize: 11, fontWeight: '700' },
-  discovery: { maxWidth: 640, gap: 12 },
+  discovery: { maxWidth: 640, gap: 12 }, wideDiscovery: { maxWidth: '100%' },
+  controls: { flexDirection: 'row', alignItems: 'center', gap: 12 }, wideSearch: { flex: 1.2 }, wideRefinements: { flex: 1 },
   search: { minHeight: 52, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 26, paddingLeft: 16, paddingRight: 4, flexDirection: 'row', alignItems: 'center', gap: 8 },
   searchInput: { flex: 1, minWidth: 0, minHeight: 50, fontSize: 16, color: colors.ink }, clearSearch: { backgroundColor: 'transparent', width: 40 },
   filterButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.softBlue }, filterActive: { backgroundColor: colors.primaryFill },
