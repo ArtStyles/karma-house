@@ -13,7 +13,7 @@ export function PushDeviceCard() {
     <View style={styles.heading}>
       <View style={styles.icon}><Icon name="phone-portrait-outline" color={colors.primary} size={23} /></View>
       <View style={styles.copy}><Text accessibilityRole="header" style={styles.title}>También en tu teléfono</Text><Text style={styles.description}>
-        {Platform.OS === 'web' ? 'Activa los avisos desde la app de KarmaHouse en tu Android. Aquí puedes elegir qué novedades recibir.'
+        {Platform.OS === 'web' ? 'En la web, tus novedades llegan a la bandeja de KarmaHouse. Para recibir avisos en el teléfono, por ahora necesitas la app de Android. Aquí puedes elegir qué novedades recibir.'
           : Platform.OS === 'ios' ? 'En iPhone, por ahora puedes consultar todas tus novedades en la bandeja de KarmaHouse.'
             : 'Abre la versión instalada de KarmaHouse para recibir avisos con la app cerrada.'}
       </Text></View>

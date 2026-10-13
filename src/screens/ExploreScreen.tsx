@@ -16,6 +16,7 @@ import { MotionPressable } from '../components/MotionPressable';
 import { Brand, Button, EmptyState, Icon, IconButton, Notice } from '../components/ui';
 import { CatalogFilters } from '../components/CatalogFilters';
 import { CatalogSortMenu } from '../components/CatalogSortMenu';
+import { InstallHint } from '../components/InstallHint';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { NotificationBell } from '../components/notifications/NotificationBell';
@@ -108,6 +109,7 @@ export default function ExploreScreen() {
               </View>
             </View>
           </View>
+          <InstallHint />
           <View style={styles.discovery}>
             <ExploreDiscovery offline={offline} onOperation={operation => change({ operation })} onPublish={() => router.push('/publish')} />
             <View style={[styles.search, locked]}>
