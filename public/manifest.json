@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "KarmaHouse",
+  "short_name": "KarmaHouse",
+  "description": "Compra, vende, permuta o alquila en Cuba, y habla directamente con quien publica.",
+  "lang": "es",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#F5F5F7",
+  "background_color": "#F5F5F7",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
