@@ -46,7 +46,7 @@ Avoid: luxury penthouse, extravagant mansion decor, hotel lobby, sterile showroo
 
 ## House walk (web/public/casa)
 
-- Assets: `web/public/casa/NNN-720.webp`, `NNN-1280.webp` (70 photos), `NNN-d.webp` (depth maps), `hero-*.webp` (first photo in the pause duotone).
+- Assets: `web/public/casa/NNN-720.webp`, `NNN-1280.webp` (70 photos), `thumbs.webp` and `depth.webp` (every photo small and every depth map, in a grid), `hero-*.webp` (first photo in the pause duotone), `room-NNN-640.webp` / `room-NNN-1024.webp` (one vertical photo per stop for the plain sections).
 - Nature: AI-generated fictional 1940s Havana house, seen as one continuous walk from the porch to the rooftop and the sea. It does not depict a real listing or a documented real house. The page labels it «Imagen ilustrativa».
 - Method: Codex CLI `exec` with the built-in image generation tool, October 2026. Each photo was generated from the previous one, with the porch photo as a colour reference; photos in between were generated with both neighbours as references. Depth maps come from Depth Anything V2 Small, run locally. `web/scripts/tour-assets.py` pulls the colour of the photos before the rooftop toward the porch photo, resizes them and saves WebP. The source PNGs, the camera script (`steps.txt`) and the generation scripts are kept outside git in `artifacts/tour/casa/`.
 
@@ -55,3 +55,12 @@ Avoid: luxury penthouse, extravagant mansion decor, hotel lobby, sterile showroo
 ```text
 The attached image is one photograph from a continuous walk through a single fictional 1940s Havana house (Vedado). Generate the NEXT photograph of this walk, taken by the same photographer a moment later, after the photographer <step>. Keep everything that is still visible exactly the same: architecture, hydraulic floor tiles and their pattern, furniture, plants, objects, colours, materials, and the warm late-afternoon light direction and shadows. Anything that newly comes into view belongs to the same house: same style, materials, palette (cream limewashed walls, sage-green louvered shutters, terracotta and sage hydraulic tiles) and the same light. Same lens (about 24 mm) and eye height (about 1.5 m) unless the step says otherwise, straight verticals. Extreme photographic quality: ultra-detailed, tack-sharp, realistic textures and natural light, like a high-end architectural photograph taken with a full-frame camera; no softening, no blur, no plastic or CGI look. The SECOND attached image is only a style reference: match its natural colour grading, exposure, contrast and level of realism exactly. Restrained, natural colours: no oversaturation, no orange cast, no HDR or glossy look; a modest, lived-in family home, not a resort or luxury hotel. Landscape 3:2. No people, no animals, no text, no logos, no watermark. Single photograph, no collage, no border.
 ```
+
+### Vertical room photos (`room-NNN`)
+
+Six vertical (1024x1536) photographs, one per stop of the walk, generated the same way from that stop's colour-matched walk photo, for the arches of the plain sections. `<room>` and `<centre>` name the room and what the frame centres on (see `artifacts/tour/casa/portrait/all.sh`).
+
+```text
+The attached image is a photograph of the <room> of a single fictional 1940s Havana house (Vedado). Create a NEW photograph of this same room: identical architecture, hydraulic floor tiles and their pattern, furniture, plants, objects, colours, materials and the same warm late-afternoon light. Compose it as a VERTICAL portrait photograph, 2:3 aspect ratio (1024x1536), centred on <centre>, with straight verticals, as if for a high-end architectural magazine. Extreme photographic quality: ultra-detailed, tack-sharp from front to back, crisp fine textures in wood grain, fabric, plaster, tiles and leaves, natural light and soft realistic shadows, like a photograph taken with a full-frame camera and a sharp prime lens. Natural, restrained colours exactly like the attached photograph: no oversaturation, no orange cast, no HDR or glossy look, no plastic or CGI look, no blur, no haze. A modest, lived-in family home, not a resort or luxury hotel. No people, no animals, no text, no logos, no watermark. Single photograph, no collage, no border.
+```
+

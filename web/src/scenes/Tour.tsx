@@ -15,7 +15,6 @@ const STOPS = TOUR.map((stop) => data.frames.indexOf(stop.photo));
 const { parts, units } = tourTimeline(STOPS, PAUSE);
 const PAUSES = parts.filter((x) => x.kind === 'pause');
 const photo = (n: string, width: number) => `/casa/${n}-${width}.webp`;
-const srcSet = (n: string) => `${photo(n, 720)} 720w, ${photo(n, 1280)} 1280w`;
 // A step without a fitted model: a gentle push toward the middle and a plain dissolve.
 const PLAIN = { f: [0.5, 0.45], fwd: [0.14, 0.1, 0, 0], bwd: [0.14, 0.1, 0, 0] };
 
@@ -187,7 +186,8 @@ export function Tour({ still, onToggle }: { still: boolean; onToggle: () => void
         const pause = PAUSES[s], Heading = s === 0 ? 'h1' : 'h2';
         const picture = (
           <figure className="tour-figure">
-            <img className="tour-photo" src={photo(stop.photo, 1280)} srcSet={srcSet(stop.photo)} sizes="(min-width: 900px) 50vw, 100vw" width="1280" height="853" alt="" loading="lazy" decoding="async" />
+            <img className="tour-photo" src={`/casa/room-${stop.photo}-1024.webp`} srcSet={`/casa/room-${stop.photo}-640.webp 640w, /casa/room-${stop.photo}-1024.webp 1024w`}
+              sizes="(min-width: 900px) 42vw, 92vw" width="1024" height="1536" alt="" loading="lazy" decoding="async" />
             <figcaption className="tour-label">{stop.room} · Imagen ilustrativa</figcaption>
           </figure>
         );
