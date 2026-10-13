@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { LazyMotion, MotionConfig, domAnimation } from 'motion/react';
-import { ArrowRight, Menu } from 'lucide-react';
+import { ArrowRight, Menu, Pause, Play } from 'lucide-react';
 import { CODE, CONTACT, LEGAL, NAV, RELEASE, structuredData } from './content';
 import { Download } from './scenes/Download';
 import { Questions } from './scenes/Questions';
-import { Tour } from './scenes/Tour';
+import { Tour, useStill } from './scenes/Tour';
 import { Trust } from './scenes/Trust';
 import { ARROW, BUTTON, Cenefa, WRAP } from './ui';
 
@@ -64,7 +64,7 @@ function MobileMenu({ current }: { current: string }) {
   );
 }
 
-function Header() {
+function Header({ still, onToggle }: { still: boolean; onToggle: () => void }) {
   const current = useCurrentSection();
   return (
     <header className="sticky top-0 z-50 border-b border-line/70 bg-cal/85 backdrop-blur-md">
@@ -76,6 +76,11 @@ function Header() {
           ))}
         </nav>
         <div className="flex items-center gap-3">
+          {/* Shown by CSS only where the walk can animate (scenes.css). */}
+          <button type="button" className="walk-switch min-h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-line px-3 text-sm font-semibold transition-colors hover:text-blue active:scale-[.98] lg:px-4" title={still ? 'Ver con animación' : 'Ver sin animación'} onClick={onToggle}>
+            {still ? <Play className="size-4" aria-hidden="true" /> : <Pause className="size-4" aria-hidden="true" />}
+            <span className="max-lg:sr-only">{still ? 'Ver con animación' : 'Ver sin animación'}</span>
+          </button>
           <a className={`${BUTTON} group min-h-11 px-5 max-sm:hidden`} href="#descargar">Descargar app <ArrowRight className={ARROW} aria-hidden="true" /></a>
           <MobileMenu current={current} />
         </div>
@@ -103,13 +108,14 @@ function Footer() {
 }
 
 export default function App() {
+  const [still, toggleStill] = useStill();
   return (
     <LazyMotion features={domAnimation} strict>
       <MotionConfig reducedMotion="user">
         <a className="fixed left-4 top-3 z-[60] -translate-y-24 rounded-full bg-paper px-5 py-3 text-sm font-semibold shadow-lg focus:translate-y-0" href="#contenido">Saltar al contenido</a>
-        <Header />
+        <Header still={still} onToggle={toggleStill} />
         <main id="contenido">
-          <Tour />
+          <Tour still={still} onToggle={toggleStill} />
           <Trust />
           <Download />
           <Questions />

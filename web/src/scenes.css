@@ -1,7 +1,8 @@
 /* House walk (scenes/Tour.tsx). By default each stop is a full-bleed photo under the mar overlay with its text: that is
    what no-JavaScript, reduced-motion, data-saver and no-WebGL visitors get ([data-flat]). With JavaScript and motion,
    the section becomes a tall track around a sticky stage where the canvas plays the walk; each stop sits in its pause
-   window (--a, --len in scroll units of --step) and its text sticks over the stage while Tour.tsx fades it. */
+   window (--a, --len in scroll units of --step) and its text sticks over the stage while Tour.tsx fades it.
+   The visitor can turn the animation off (html[data-walk="off"], see useStill) and read the stops as plain sections. */
 
 .tour { --vh: 100vh; --head: 76px; --step: calc(var(--vh) * .34); position: relative; background: var(--color-mar); color: #fff }
 @supports (height: 100svh) { .tour { --vh: 100svh } }
@@ -10,7 +11,8 @@
 .tour-stop { position: relative; display: grid; min-height: calc(var(--vh) - var(--head)); place-items: center; overflow: hidden; isolation: isolate; padding: 5rem 1rem }
 .tour-stop::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(rgba(14, 34, 54, .55), rgba(14, 34, 54, .72)) }
 .tour-photo { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: 50% 47% }
-.tour-anchor { position: absolute; top: 0; left: 0 }
+/* html scroll-padding-top is 96px; the stops start right under the 76px header. */
+.tour-anchor { position: absolute; top: 0; left: 0; scroll-margin-top: calc(var(--head) - 96px) }
 .tour-label { position: absolute; right: 16px; bottom: 16px; border-radius: 999px; background: rgba(250, 246, 238, .9); color: #1a2b3b; padding: 4px 12px; font-size: 11px; font-weight: 600; line-height: 1.6 }
 
 /* Text: white Calistoga, its one phrase in sol, on navy. */
@@ -27,12 +29,17 @@ h1.tour-title { font-size: clamp(2.5rem, 6.2vw, 5.25rem) }
 .tour-hint { display: none }
 
 @media (prefers-reduced-motion: no-preference) {
-  html.js:has(.tour:not([data-flat])) { scroll-snap-type: y proximity }
-  .js .tour:not([data-flat]) {
+  html.js:not([data-walk="off"]):has(.tour:not([data-flat])) { scroll-snap-type: y proximity }
+  .js:not([data-walk="off"]) .tour:not([data-flat]) {
     height: calc(var(--units) * var(--step) + var(--vh) - var(--head));
 
     .tour-stage { display: block; position: sticky; top: var(--head); height: calc(var(--vh) - var(--head)); overflow: hidden; background: #0b1622 }
-    .tour-stage > :not(.tour-label) { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
+    .tour-stage > :is(img, canvas, div) { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
+    .tour-switch { position: absolute; left: 16px; bottom: 12px; z-index: 1; display: inline-flex; min-height: 44px; align-items: center; gap: .5rem; border: 1px solid rgba(255, 255, 255, .3);
+      border-radius: 999px; background: rgba(14, 34, 54, .6); padding: 0 1rem; font-size: .8rem; font-weight: 600; color: #fff; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+      transition: background .3s var(--ease-out-soft), scale .2s var(--ease-out-soft) }
+    .tour-switch:hover { background: rgba(14, 34, 54, .85) }
+    .tour-switch:active { scale: .98 }
     .tour-poster { object-fit: cover; object-position: 50% 47%; transform: scale(1.03); transform-origin: 50% 45% }
     canvas { opacity: 0; transition: opacity .5s var(--ease-out-soft) }
     &[data-ready] canvas { opacity: 1 }
@@ -53,4 +60,10 @@ h1.tour-title { font-size: clamp(2.5rem, 6.2vw, 5.25rem) }
     .tour-text:focus-within { opacity: 1 !important; transform: none !important }
     .tour-hint { display: inline-flex; align-items: center; gap: .5rem; margin-top: 1.75rem; font-size: .85rem; font-weight: 600; color: #f3efe7 }
   }
+}
+
+/* Header switch: only where the walk can animate (JavaScript, full mode, motion allowed, WebGL). */
+.walk-switch { display: none }
+@media (prefers-reduced-motion: no-preference) {
+  html.js[data-mode="full"]:not([data-gl="off"]) .walk-switch { display: inline-flex }
 }
