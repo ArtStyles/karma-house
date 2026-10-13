@@ -1,4 +1,0 @@
-# Expo puts package assets (the Ionicons font) under assets/node_modules; the Vercel CLI skips
-# every node_modules folder unless it is re-included here.
-!assets/node_modules
-!assets/node_modules/**

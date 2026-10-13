@@ -22,11 +22,12 @@ La fase 1 no incluye notificaciones push; en la web las novedades quedan en la b
   `index.html` y del propio `sw.js`) y la lista de precarga. Cada build nueva instala un service
   worker nuevo, que borra la caché anterior. Nunca guarda como asset una respuesta HTML.
   Prueba: `tests/stamp-sw.test.ts`.
-- `public/vercel.json`: reescritura SPA a `index.html` para todo menos `/_expo`, `/assets`,
-  `/maplibre` e `/icons` (un archivo que falte da 404, no la página), caché inmutable para rutas
-  con hash y `no-cache` para `sw.js`. Expo lo copia a `dist/`, que es lo que se publica.
-- `public/.vercelignore`: la CLI de Vercel no sube ninguna carpeta `node_modules`, y Expo deja la
-  fuente de iconos (Ionicons) en `assets/node_modules/`. Este archivo la vuelve a incluir.
+- `pwa/vercel.json`: configuración del proyecto de Vercel. Instala y construye desde la raíz del
+  repo y copia `dist/` a `pwa/dist`. Reescritura SPA a `index.html` para todo menos `/_expo`,
+  `/assets`, `/maplibre` e `/icons` (un archivo que falte da 404, no la página), caché inmutable
+  para rutas con hash y `no-cache` para `sw.js`.
+- `pwa/.vercelignore`: el proyecto usa `pwa/` como Root Directory, así que este archivo sustituye
+  al `.vercelignore` de la raíz, que solo deja pasar `web/` para la landing.
 - `src/components/InstallHint.tsx`: tarjeta en Explorar, solo en iPhone y solo si la app no está
   instalada: «Toca Compartir y luego «Añadir a pantalla de inicio»». Se puede cerrar y no vuelve
   en ese navegador.
@@ -42,26 +43,28 @@ Usa las variables `EXPO_PUBLIC_*` de `.env.local`, igual que la APK. El resultad
 ## Publicar
 
 Proyecto de Vercel `karmahouse-app-pwa` (equipo `frank-james-hernandezs-projects`), separado del
-de la landing. Se publica la carpeta ya construida, no la raíz del repo: el `.vercelignore` de la
-raíz solo deja subir `web/` para la landing. Framework «Other», sin build en Vercel.
+de la landing y conectado a GitHub (`ArtStyles/karma-house`):
 
-```bash
-npm run build:web
-```
+- Root Directory `pwa`, con archivos de fuera de esa carpeta incluidos en la build.
+- Cada push a `main` publica en producción; otras ramas generan vistas previas protegidas.
+- Paso «Ignored Build Step»: `git diff --quiet HEAD^ HEAD -- . ':(exclude)web'`. Si el commit
+  solo toca `web/` (la landing), no se reconstruye la app.
+- Variables `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en Vercel
+  (las mismas públicas de `.env.local`).
 
-```bash
-npx vercel deploy dist --prod --project karmahouse-app-pwa --scope frank-james-hernandezs-projects --yes
-```
+Para volver a publicar sin cambios en el código: Vercel → proyecto → Deployments → Redeploy.
 
-Si `node` da `EACCES` al conectar, ejecuta la CLI con el node empaquetado de Codex
+Si `node` da `EACCES` al usar la CLI de Vercel, ejecútala con el node empaquetado de Codex
 (`%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe`).
-Antes de publicar, `vercel deploy dist --dry --json --project karmahouse-app-pwa` debe mostrar
-`"ignoredCount": 0`.
+
+Por qué `pwa/` y no la raíz: el 2026-10-13 se probó una build desde Git con la raíz del repo y
+Vercel aplicó el `.vercelignore` de la raíz (borró 852 archivos, `package-lock.json` incluido).
+Con `pwa/` como Root Directory solo quitó `web/` y la build salió bien.
 
 Estado el 2026-10-13:
 
 1. En producción: https://app.karmahouse.site (también https://karmahouse-app-pwa.vercel.app).
-   Se publica desde `main`, que desde este día incluye el rediseño visual 0.1.25.
+   Se publica desde `main` (desde este día incluye el rediseño visual 0.1.25).
 2. DNS en GoDaddy: `CNAME app → b48cd2d2a2f31010.vercel-dns-017.com.` Vercel lo verificó. El
    certificado no se emitió solo; hizo falta
    `vercel certs issue app.karmahouse.site --scope frank-james-hernandezs-projects`.
