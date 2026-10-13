@@ -29,7 +29,8 @@ export default function TabLayout() {
         borderTopColor: colors.border, backgroundColor: colors.surface, elevation: 0,
       },
       tabBarItemStyle: { minHeight: 48 },
-      tabBarLabelStyle: { fontSize: 12, fontWeight: '500', marginTop: 2 },
+      // On web the item is a few pixels shorter, and a shrinking label gets its lower half clipped.
+      tabBarLabelStyle: { fontSize: 12, fontWeight: '500', marginTop: 2, flexShrink: 0 },
       tabBarLabelPosition: 'below-icon',
       sceneStyle: { backgroundColor: colors.paper },
     }}>

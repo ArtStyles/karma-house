@@ -61,6 +61,7 @@ Antes de publicar, `vercel deploy dist --dry --json --project karmahouse-app-pwa
 Estado el 2026-10-13:
 
 1. En producción: https://app.karmahouse.site (también https://karmahouse-app-pwa.vercel.app).
+   Se publica desde `main`, que desde este día incluye el rediseño visual 0.1.25.
 2. DNS en GoDaddy: `CNAME app → b48cd2d2a2f31010.vercel-dns-017.com.` Vercel lo verificó. El
    certificado no se emitió solo; hizo falta
    `vercel certs issue app.karmahouse.site --scope frank-james-hernandezs-projects`.
