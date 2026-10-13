@@ -3,29 +3,32 @@
 // cream duotone that the hero poster bakes in (web/scripts/tour-assets.py, same 0.7 gain).
 
 export type Tex = { t: WebGLTexture; w: number; h: number };
+/** A photo inside a texture: the whole texture, or one tile of a grid image ([x, y, w, h] in 0..1). */
+export type View = { tex: Tex; rect: number[] };
+const WHOLE = [0, 0, 1, 1];
 /** dir 1 walks forward from this photo, -1 steps back from the next one: points spread from `focus` by
  *  1 + amt * (ka + kb * nearness) and shift by `shift` (turning). `drift` sways the camera a little. */
 export type Pose = { focus: number[]; ka: number; kb: number; amt: number; dir: 1 | -1; alpha: number; shift?: number[]; drift?: number[]; tone?: number };
 
 const VS = 'attribute vec2 a;varying vec2 v;void main(){v=vec2(a.x*.5+.5,.5-a.y*.5);gl_Position=vec4(a,0.,1.);}';
 const FS = `precision highp float;varying vec2 v;
-uniform sampler2D img,dep;uniform vec2 cover,center,focus,shift,cam;uniform float amt,ka,kb,dir,alpha,tone;
+uniform sampler2D img,dep;uniform vec4 imgR,depR;uniform vec2 cover,center,focus,shift,cam;uniform float amt,ka,kb,dir,alpha,tone;
 void main(){
   vec2 x=center+(v-.5)*cover-shift;
   vec2 p=x;
   for(int i=0;i<5;i++){
-    float d=texture2D(dep,clamp(p,0.,1.)).r;
+    float d=texture2D(dep,depR.xy+clamp(p,0.,1.)*depR.zw).r;
     float s=1.+amt*(ka+kb*d);
     p=dir>0.?focus+(x-focus)/s:focus+(x-focus)*s;
   }
-  p-=cam*(texture2D(dep,clamp(p,0.,1.)).r-.35)*.5;
+  p-=cam*(texture2D(dep,depR.xy+clamp(p,0.,1.)*depR.zw).r-.35)*.5;
   vec2 e=smoothstep(vec2(0.),vec2(.015),p)*smoothstep(vec2(1.),vec2(.985),p);
-  vec3 c=texture2D(img,clamp(p,.001,.999)).rgb;
+  vec3 c=texture2D(img,imgR.xy+clamp(p,0.,1.)*imgR.zw).rgb;
   float l=dot(c,vec3(.299,.587,.114));
   vec3 duo=mix(vec3(.04,.1,.17),vec3(.93,.89,.8),smoothstep(.04,.98,l))*.7;
   gl_FragColor=vec4(mix(c,duo,tone),alpha*e.x*e.y);
 }`;
-const UNIFORMS = ['img', 'dep', 'cover', 'center', 'focus', 'shift', 'cam', 'amt', 'ka', 'kb', 'dir', 'alpha', 'tone'] as const;
+const UNIFORMS = ['img', 'dep', 'imgR', 'depR', 'cover', 'center', 'focus', 'shift', 'cam', 'amt', 'ka', 'kb', 'dir', 'alpha', 'tone'] as const;
 
 /** null when the browser has no WebGL. */
 export function createWalk(canvas: HTMLCanvasElement) {
@@ -73,12 +76,15 @@ export function createWalk(canvas: HTMLCanvasElement) {
     free(tex: Tex | null | undefined) { if (tex) gl.deleteTexture(tex.t); },
     resize(w: number, h: number) { W = canvas.width = w; H = canvas.height = h; gl.viewport(0, 0, w, h); },
     clear() { gl.clearColor(0.04, 0.08, 0.13, 1); gl.clear(gl.COLOR_BUFFER_BIT); },
-    /** Draws the photo to cover the canvas, a little above centre like object-position 50% 47%. */
-    draw(img: Tex, dep: Tex, o: Pose) {
-      const ia = img.w / img.h, ca = W / H;
+    /** Draws the photo to cover the canvas, a little above centre like object-position 50% 47%. A Tex is the whole
+     *  photo; a View can be one tile of a grid image. */
+    draw(photo: Tex | View, depth: View, o: Pose) {
+      const { tex: img, rect } = 'rect' in photo ? photo : { tex: photo, rect: WHOLE };
+      const ia = (rect[2] * img.w) / (rect[3] * img.h), ca = W / H;
       const cover = ca > ia ? [1, ia / ca] : [ca / ia, 1];
       gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, img.t);
-      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, dep.t);
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, depth.tex.t);
+      gl.uniform4fv(U.imgR, rect); gl.uniform4fv(U.depR, depth.rect);
       gl.uniform2fv(U.cover, cover);
       gl.uniform2fv(U.center, [0.5, Math.min(Math.max(0.47, cover[1] / 2), 1 - cover[1] / 2)]);
       gl.uniform2fv(U.focus, o.focus);

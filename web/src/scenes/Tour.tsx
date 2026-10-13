@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { ArrowDown, ArrowRight, Pause } from 'lucide-react';
 import { ASSISTED_CONTACT, PROOF, TOUR } from '../content';
 import { useMode } from '../motion';
-import { clamp, seg, smooth, tourAt, tourTimeline } from '../scroll';
+import { clamp, seg, smooth, tileRect, tourAt, tourTimeline } from '../scroll';
 import data from '../tour-data.json';
-import { createWalk, type Tex } from '../tour-gl';
+import { createWalk, type Tex, type View } from '../tour-gl';
 import { ARROW, SOL_BUTTON } from '../ui';
 
 // A walk through one house, photo by photo (web/scripts/tour-assets.py). At each stop of TOUR the frame freezes
@@ -19,7 +19,7 @@ const srcSet = (n: string) => `${photo(n, 720)} 720w, ${photo(n, 1280)} 1280w`;
 // A step without a fitted model: a gentle push toward the middle and a plain dissolve.
 const PLAIN = { f: [0.5, 0.45], fwd: [0.14, 0.1, 0, 0], bwd: [0.14, 0.1, 0, 0] };
 
-type Frame = { tex?: Tex; dep?: Tex };
+type Sharp = { tex?: Tex };
 
 /** The visitor's choice to see the walk as plain sections, remembered on this device. The head script of index.html
  *  applies it before the first paint (html[data-walk="off"]). Switching keeps the reader on the same stop or section. */
@@ -75,22 +75,37 @@ export function Tour({ still, onToggle }: { still: boolean; onToggle: () => void
     const shade = section.querySelector<HTMLElement>('.tour-shade')!;
     const flash = section.querySelector<HTMLElement>('.tour-flash')!;
     const width = stage.clientWidth * Math.min(devicePixelRatio || 1, 1.5) > 900 ? 1280 : 720;
-    const cache = new Map<number, Frame>();
-    let queued = 0, top = 0;
+    const sharp = new Map<number, Sharp>();
+    // Two small files hold every photo: depth.webp (all depth maps) and thumbs.webp (every photo small), in a grid.
+    const grids: Record<'depth' | 'thumbs', { tex?: Tex; asked?: boolean }> = { depth: {}, thumbs: {} };
+    let queued = 0, top = 0, alive = true, ready = false;
 
-    // Photos load a few steps ahead of the camera; those left far behind or ahead are freed.
-    const want = (k: number) => {
-      if (k < 0 || k >= data.frames.length || cache.has(k)) return;
-      const entry: Frame = {};
-      cache.set(k, entry);
-      const n = data.frames[k];
-      Promise.all([gl.load(photo(n, width)), gl.load(`/casa/${n}-d.webp`)]).then(([tex, dep]) => {
-        if (cache.get(k) === entry && tex && dep) { entry.tex = tex; entry.dep = dep; request(); return; }
-        gl.free(tex); gl.free(dep);
-        if (cache.get(k) === entry) setTimeout(() => { if (cache.get(k) === entry) cache.delete(k); }, 4000);
+    const ask = (name: 'depth' | 'thumbs') => {
+      const grid = grids[name];
+      if (grid.asked) return;
+      grid.asked = true;
+      gl.load(`/casa/${name}.webp`).then((tex) => {
+        if (!alive) { gl.free(tex); return; }
+        if (tex) { grid.tex = tex; request(); } else setTimeout(() => { grid.asked = false; request(); }, 4000);
       });
     };
-    const drop = (k: number) => { const e = cache.get(k)!; gl.free(e.tex); gl.free(e.dep); cache.delete(k); };
+    const tile = (grid: Tex, k: number): View => ({ tex: grid, rect: tileRect(k, data.grid, grid.w, grid.h) });
+    // The sharp photo once it has arrived, else its thumbnail: scrolling faster than the connection shows a soft
+    // frame in the right place instead of freezing and then jumping. The hero waits for its sharp photo.
+    const view = (k: number) => sharp.get(k)?.tex ?? (ready && grids.thumbs.tex ? tile(grids.thumbs.tex, k) : undefined);
+
+    // Sharp photos load a few steps ahead of the camera, nearest first; those left far behind or ahead are freed.
+    const want = (k: number) => {
+      if (k < 0 || k >= data.frames.length || sharp.has(k)) return;
+      const entry: Sharp = {};
+      sharp.set(k, entry);
+      gl.load(photo(data.frames[k], width)).then((tex) => {
+        if (sharp.get(k) === entry && tex) { entry.tex = tex; request(); return; }
+        gl.free(tex);
+        if (sharp.get(k) === entry) setTimeout(() => { if (sharp.get(k) === entry) sharp.delete(k); }, 4000);
+      });
+    };
+    const drop = (k: number) => { gl.free(sharp.get(k)!.tex); sharp.delete(k); };
 
     function frame() {
       queued = 0;
@@ -98,25 +113,28 @@ export function Tour({ still, onToggle }: { still: boolean; onToggle: () => void
       const p = clamp((top - r.top) / (r.height - stage.clientHeight)) * units;
       const { part, u } = tourAt(parts, p);
       const k = part.k;
-      for (let n = k - 1; n <= k + 4; n++) want(n);
-      for (const n of [...cache.keys()]) if (n < k - 3 || n > k + 6) drop(n);
+      for (let n = k; n <= k + 5; n++) want(n);
+      want(k - 1);
+      for (const n of [...sharp.keys()]) if (n < k - 3 || n > k + 8) drop(n);
 
-      const now = cache.get(k), drift = [Math.sin(p * 0.9) * 0.008, Math.cos(p * 0.7) * 0.004];
+      const depth = grids.depth.tex, now = view(k), drift = [Math.sin(p * 0.9) * 0.008, Math.cos(p * 0.7) * 0.004];
       let tone = 0, text = -1, textO = 0, shutter = 0;
       if (part.kind === 'move') {
-        const next = cache.get(k + 1), pr = data.pairs[k] ?? PLAIN, w = smooth(seg(u, 0.1, 0.9));
-        if (now?.tex && now.dep) {
+        const next = view(k + 1), pr = data.pairs[k] ?? PLAIN, w = smooth(seg(u, 0.1, 0.9));
+        if (depth && now) {
           gl.clear();
-          gl.draw(now.tex, now.dep, { focus: pr.f, ka: pr.fwd[0], kb: pr.fwd[1], shift: [pr.fwd[2] * u, pr.fwd[3] * u], amt: u, dir: 1, alpha: 1, drift });
-          if (w > 0 && next?.tex && next.dep) gl.draw(next.tex, next.dep, { focus: pr.f, ka: pr.bwd[0], kb: pr.bwd[1], shift: [pr.bwd[2] * (1 - u), pr.bwd[3] * (1 - u)], amt: 1 - u, dir: -1, alpha: w, drift });
+          gl.draw(now, tile(depth, k), { focus: pr.f, ka: pr.fwd[0], kb: pr.fwd[1], shift: [pr.fwd[2] * u, pr.fwd[3] * u], amt: u, dir: 1, alpha: 1, drift });
+          if (w > 0 && next) gl.draw(next, tile(depth, k + 1), { focus: pr.f, ka: pr.bwd[0], kb: pr.bwd[1], shift: [pr.bwd[2] * (1 - u), pr.bwd[3] * (1 - u)], amt: 1 - u, dir: -1, alpha: w, drift });
+          ready = true;
           section.dataset.ready = '';
         }
       } else {
         const first = part.s === 0, last = part.s === TOUR.length - 1;
         tone = (first ? 1 : smooth(seg(u, 0, 0.14))) * (last ? 1 : 1 - smooth(seg(u, 0.86, 1)));
-        if (now?.tex && now.dep) {
+        if (depth && now) {
           gl.clear();
-          gl.draw(now.tex, now.dep, { focus: [0.5, 0.45], ka: 0.03, kb: 0, amt: tone, dir: 1, alpha: 1, tone, drift: drift.map((d) => d * (1 - tone)) });
+          gl.draw(now, tile(depth, k), { focus: [0.5, 0.45], ka: 0.03, kb: 0, amt: tone, dir: 1, alpha: 1, tone, drift: drift.map((d) => d * (1 - tone)) });
+          ready = true;
           section.dataset.ready = '';
         }
         text = part.s;
@@ -143,12 +161,17 @@ export function Tour({ still, onToggle }: { still: boolean; onToggle: () => void
     const sizes = new ResizeObserver(resize);
     sizes.observe(stage);
     addEventListener('scroll', request, { passive: true });
+    ask('depth');
     for (let n = 0; n < 6; n++) want(n);
+    ask('thumbs');
     return () => {
+      alive = false;
       cancelAnimationFrame(queued);
       removeEventListener('scroll', request);
       sizes.disconnect();
-      for (const n of [...cache.keys()]) drop(n);
+      for (const n of [...sharp.keys()]) drop(n);
+      gl.free(grids.depth.tex);
+      gl.free(grids.thumbs.tex);
     };
   }, [mode, still]);
 
