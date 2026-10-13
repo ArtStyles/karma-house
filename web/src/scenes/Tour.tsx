@@ -210,6 +210,7 @@ export function Tour({ still, onToggle }: { still: boolean; onToggle: () => void
               )}
               {stop.id === 'publicar' && <a className="tour-link" href={ASSISTED_CONTACT}>¿Prefieres ayuda? Escríbenos y preparamos tu anuncio contigo <ArrowRight className={ARROW} aria-hidden="true" /></a>}
               {s === TOUR.length - 1 && <a className={`${SOL_BUTTON} tour-cta mt-8`} href="#descargar">Descarga KarmaHouse para Android <ArrowRight className={ARROW} aria-hidden="true" /></a>}
+              <span className="tour-rule" aria-hidden="true" />
             </div>
           </article>
         );
