@@ -47,9 +47,11 @@ de la landing y conectado a GitHub (`ArtStyles/karma-house`):
 
 - Root Directory `pwa`, con archivos de fuera de esa carpeta incluidos en la build.
 - Cada push a `main` publica en producción; otras ramas generan vistas previas protegidas.
-- Paso «Ignored Build Step»:
-  `cd .. && git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD -- . ':(exclude)web'`.
-  Si desde el último despliegue bueno solo cambió `web/` (la landing), no se reconstruye la app.
+- Paso «Ignored Build Step»: vive en `pwa/vercel.json` (`ignoreCommand`), que manda sobre el ajuste
+  del panel. Si desde el último despliegue bueno solo cambió `web/` (la landing), no se reconstruye la app.
+  Si ese commit anterior no está en el clon (Vercel clona con poca profundidad y un push con muchos
+  commits lo deja fuera), compila en vez de fallar: el 14 de octubre de 2026 un push de 25 commits
+  terminó en `fatal: bad object` con el comando anterior, que no comprobaba el commit.
   Vercel ejecuta el comando dentro de `pwa/`: sin el `cd ..`, el `.` solo miraba esa carpeta y se
   saltaban los cambios de la app. Comparar con `HEAD^` en vez de con el último despliegue también
   fallaba cuando un push traía varios commits.
