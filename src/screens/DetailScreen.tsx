@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PropertyImage } from '../components/PropertyImage';
+import { ProBadge } from '../components/ProBadge';
 import { KarmaMap } from '../components/maps/KarmaMap';
 import { MapOnDemand } from '../components/ExploreMap';
 import { Button, EmptyState, goBack, Icon, IconButton, Notice, type IconName } from '../components/ui';
@@ -243,6 +244,7 @@ export default function DetailScreen() {
           {operation !== 'sale' && <Text style={styles.priceLabel}>{priceLabel(listing)}</Text>}
           <Text style={styles.price}>{wanted ? 'Hasta ' : ''}{formatMoney(listing.price)} <Text style={styles.currency}>USD{priceSuffix(listing)}</Text></Text>
           <Text accessibilityRole="header" style={styles.title}>{listing.title}</Text>
+          {listing.isPro && <ProBadge />}
           <View style={styles.location}><Icon name="location-outline" color={colors.muted} size={17} /><Text style={styles.locationText}>{listing.location}, {listing.province}, Cuba</Text></View>
         </View>
         {own && Boolean(moderation) && <Notice>{listing.moderationStatus === 'rejected' ? listing.reviewNote || 'Revisa los detalles del anuncio antes de enviarlo de nuevo.' : listing.moderationStatus === 'pending' ? 'Tu anuncio está en revisión. Aparecerá en el catálogo cuando sea aprobado y esté en venta.' : 'Este borrador solo aparece en tu cuenta. Envíalo a revisión cuando esté listo.'}</Notice>}
