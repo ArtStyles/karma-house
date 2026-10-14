@@ -90,7 +90,11 @@ function AccountSettingsForm({ ownerId, editing, locked, refreshing }: { ownerId
       <Text accessibilityRole="header" style={styles.cardTitle}>Notificaciones</Text>
       <Text style={styles.description}>Elige qué novedades quieres ver en la bandeja de KarmaHouse.</Text>
       <Button label="Preferencias de notificaciones" secondary icon="notifications-outline" onPress={() => router.push('/notification-settings')} />
-      <Button label="KarmaHouse Pro" secondary icon="star-outline" onPress={() => router.push('/pro')} />
+    </View>
+    <View style={styles.card}>
+      <Text accessibilityRole="header" style={styles.cardTitle}>KarmaHouse Pro</Text>
+      <Text style={styles.description}>Consulta tu estado o canjea un código.</Text>
+      <Button label="Ver mi Pro" secondary icon="star-outline" onPress={() => router.push('/pro')} />
     </View>
     <View style={styles.card}>
       <Text accessibilityRole="header" style={styles.cardTitle}>Privacidad</Text>

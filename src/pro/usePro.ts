@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { proErrorMessage, type ProStatus } from './domain';
 import { createProRepository } from './repository';
 
-/** Pro of the signed-in account; an account or token change discards older answers. */
+/** Pro of the signed-in account; an account or token change discards older answers, and only an account change clears the status. */
 export function usePro() {
   const { user, session } = useAuth();
   const actorId = user?.id, token = session?.access_token;
@@ -21,6 +21,8 @@ export function usePro() {
     catch (failure) { if (mine === generation.current) setError(proErrorMessage(failure)); }
     finally { if (mine === generation.current) setLoading(false); }
   }, [repository]);
-  useEffect(() => { setStatus(null); void reload(); return () => { generation.current++; }; }, [reload]);
+  // Another account must not inherit the previous status; a token refresh keeps it while the new answer loads.
+  useEffect(() => { setStatus(null); }, [actorId]);
+  useEffect(() => { void reload(); return () => { generation.current++; }; }, [reload]);
   return { repository, status, error, loading, reload };
 }

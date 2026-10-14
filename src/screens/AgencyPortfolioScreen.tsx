@@ -18,9 +18,15 @@ export default function AgencyPortfolioScreen(){const a=useAuth(),w=useAgencyWor
 function Portfolio(){
  const w=useAgencyWorkspace(),auth=useAuth(),{styles:s,colors}=useAgencyFormStyles();
  const [items,setItems]=useState<AgencyProperty[]>([]),[more,setMore]=useState(false),[busy,setBusy]=useState(false),[issue,setIssue]=useState('');
- const pro=usePro(),[bumping,setBumping]=useState('');
+ const pro=usePro(),[bumping,setBumping]=useState(''),[bumpIssue,setBumpIssue]=useState<{id:string;message:string}|null>(null),bumpLock=useRef(false);
  const agencyPro=isProActive(pro.status?.agencies.find(agency=>agency.id===w.activeAgencyId)?.until);
- async function bump(item:AgencyProperty){if(!pro.repository||bumping)return;setBumping(item.property.id);setIssue('');try{await pro.repository.bump(item.property.id);await load();}catch(e){setIssue(bumpErrorMessage(e,item.property));}finally{setBumping('');}}
+ // Patched in place so the pages added with «Cargar más» stay; the error belongs to its own card, not to the pull-to-refresh notice.
+ async function bump(item:AgencyProperty){
+  if(!pro.repository||bumpLock.current)return;const id=item.property.id;bumpLock.current=true;setBumping(id);setBumpIssue(null);
+  try{const done=await pro.repository.bump(id);setItems(old=>old.map(x=>x.property.id===id?{...x,property:{...x.property,bumpedAt:done.bumpedAt}}:x));}
+  catch(e){setBumpIssue({id,message:bumpErrorMessage(e,item.property)});if(String((e as {message?:unknown}|null)?.message).includes('KH_PRO_REQUIRED'))void pro.reload();}
+  finally{bumpLock.current=false;setBumping('');}
+ }
  const focused=useRef(false),sequence=useRef(0),itemsRef=useRef(items);itemsRef.current=items;
  const allowed=w.ready&&!!w.activeAgency&&Boolean(w.membership&&auth.session&&!auth.suspended);
  const load=useCallback(async(append=false)=>{
@@ -31,7 +37,7 @@ function Portfolio(){
   catch(e){try{checkpoint();if(!c||isAgencyReadAccessFailure(e)){setItems([]);setMore(false);}setIssue(agencyError(e))}catch{}}
   finally{try{checkpoint();setBusy(false)}catch{}c?.release()}
  },[allowed,w.captureAgencyReadContext]);
- const reload=useConsultationRefresh(`${auth.user?.id}:${auth.session?.access_token}:${w.activeAgencyId}:${w.generation}`,()=>load(),busy||!allowed);
+ const reload=useConsultationRefresh(`${auth.user?.id}:${auth.session?.access_token}:${w.activeAgencyId}:${w.generation}`,()=>Promise.all([load(),pro.reload()]),busy||!allowed);
  useFocusEffect(useCallback(()=>{focused.current=true;setItems([]);setIssue('');setBusy(false);void load();return()=>{focused.current=false;sequence.current++}},[load]));
  return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView keyboardDismissMode="on-drag" alwaysBounceVertical contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={allowed&&!busy} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}><PageTitle compact title="Cartera" subtitle={w.activeAgency?.tradeName??'Elige una inmobiliaria para consultar su cartera.'} back fallback="/agency-workspace"/>
  {!allowed?<Notice>Selecciona una inmobiliaria aprobada con una membresía activa para consultar su cartera.</Notice>:<>
@@ -47,9 +53,10 @@ function Portfolio(){
   <View style={s.datum}><Text style={s.caption}>{item.canEditCommon?'Origen de esta inmobiliaria':'Cartera autorizada'}</Text><Text style={s.value}>Referencia: {item.mandate.reference}</Text></View>
   <ActionGroup><Button label="Abrir vivienda" onPress={()=>router.push({pathname:'/agency-property/[id]',params:{id:item.property.id}})}/><Button secondary label="Ver interesados y expediente privado" onPress={()=>router.push({pathname:'/agency-deals',params:{propertyId:item.property.id}})}/></ActionGroup>
   {item.property.moderationStatus==='approved'&&item.property.status==='active'&&<AgencyShareButton propertyId={item.property.id} title={item.property.title}/>}
-  {agencyPro&&item.canEditCommon&&item.property.moderationStatus==='approved'&&item.property.status==='active'&&(canBumpNow(item.property)
+  {w.enabled&&agencyPro&&item.originAgencyId===w.activeAgencyId&&item.property.moderationStatus==='approved'&&item.property.status==='active'&&(canBumpNow(item.property)
    ?<Button secondary label="Subir anuncio" loading={bumping===item.property.id} disabled={!!bumping||busy} onPress={()=>void bump(item)}/>
-   :<Text style={s.caption}>Podrás subirla el {formatProDate(nextBumpAt(item.property))}.</Text>)}
+   :<Text style={s.caption}>Podrás subirlo el {formatProDate(nextBumpAt(item.property))}.</Text>)}
+  {bumpIssue?.id===item.property.id&&<Notice error>{bumpIssue.message}</Notice>}
  </View>)}
  {more&&<Button label="Cargar más viviendas" secondary disabled={busy} onPress={()=>void load(true)}/>}
  </>}</ScrollView></SafeAreaView>;

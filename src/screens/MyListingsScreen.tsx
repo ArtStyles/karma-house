@@ -38,6 +38,8 @@ export default function MyListingsScreen() {
   const pro = usePro();
   const personalPro = isProActive(pro.status?.personalUntil);
   const [pending, setPending] = useState('');
+  // «Pausar» and «Subir anuncio» share `pending`; this says which of the two is running.
+  const [bumpingId, setBumpingId] = useState('');
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'all' | ListingBoardState>('all');
   const visibleOwn = filter === 'all' ? own : own.filter(item => listingBoardState(item) === filter);
@@ -45,7 +47,7 @@ export default function MyListingsScreen() {
   const locked = useRef(false);
   const reload = useConsultationRefresh(`${user?.id}:${session?.access_token}`, async () => {
     setError('');
-    await Promise.all([refresh(), transfers.refresh()]);
+    await Promise.all([refresh(), transfers.refresh(), pro.reload()]);
   }, () => locked.current || !user || mode !== 'cloud', failure => setError(`${remoteErrorMessage(failure)} Desliza hacia abajo para reintentar.`));
   const effectiveConfirm = confirm && (mode === 'demo' || confirm.listing.ownerId === user?.id) ? confirm : null;
   // iOS keeps the modal mounted through the fade, so the direction has to outlive the state that closed it.
@@ -53,7 +55,7 @@ export default function MyListingsScreen() {
   if (effectiveConfirm) lastDirection.current = effectiveConfirm.next;
   const sellingOff = lastDirection.current === 'sold';
 
-  useEffect(() => { setConfirm(null); setError(''); setPending(''); setFilter('all'); }, [user?.id]);
+  useEffect(() => { setConfirm(null); setError(''); setPending(''); setBumpingId(''); setFilter('all'); }, [user?.id]);
 
   async function update(id: string, status: ListingStatus) {
     if (locked.current || reload.isRefreshing()) return;
@@ -76,10 +78,15 @@ export default function MyListingsScreen() {
   async function bump(item: Listing) {
     if (locked.current || reload.isRefreshing() || !pro.repository) return;
     locked.current = true;
-    setPending(item.id); setError('');
-    try { await pro.repository.bump(item.id); await refresh(); }
-    catch (failure) { setError(bumpErrorMessage(failure, item)); }
-    finally { locked.current = false; setPending(''); }
+    setPending(item.id); setBumpingId(item.id); setError('');
+    try {
+      await pro.repository.bump(item.id);
+      // The bump already happened: a failed refresh is a loading problem, not a failed bump.
+      try { await refresh(); } catch (failure) { setError(remoteErrorMessage(failure)); }
+    } catch (failure) {
+      setError(bumpErrorMessage(failure, item));
+      if (String((failure as { message?: unknown } | null)?.message).includes('KH_PRO_REQUIRED')) void pro.reload();
+    } finally { locked.current = false; setPending(''); setBumpingId(''); }
   }
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
@@ -123,8 +130,8 @@ export default function MyListingsScreen() {
           <ActionGroup style={styles.actions}>
             <Button label="Editar" secondary icon="create-outline" onPress={() => router.push(`/edit/${item.id}`)} style={styles.actionButton} disabled={!!pending} />
             {/* Pausing only means anything once the listing can actually reach the catalogue. */}
-            {state === 'live' && <Button label="Pausar" secondary icon="pause-outline" onPress={() => update(item.id, 'paused')} loading={pending === item.id} disabled={!!pending} style={styles.actionButton} />}
-            {state === 'live' && personalPro && canBumpNow(item) && <Button label="Subir anuncio" secondary icon="arrow-up-outline" onPress={() => void bump(item)} loading={pending === item.id} disabled={!!pending} style={styles.actionButton} />}
+            {state === 'live' && <Button label="Pausar" secondary icon="pause-outline" onPress={() => update(item.id, 'paused')} loading={pending === item.id && bumpingId !== item.id} disabled={!!pending} style={styles.actionButton} />}
+            {state === 'live' && personalPro && canBumpNow(item) && <Button label="Subir anuncio" secondary icon="arrow-up-outline" onPress={() => void bump(item)} loading={bumpingId === item.id} disabled={!!pending} style={styles.actionButton} />}
             {/* Gated on the raw status, not the chip: a paused listing under review still has to be un-pausable. */}
             {item.status === 'paused' && <Button label="Reactivar" secondary icon="play-outline" onPress={() => update(item.id, 'active')} loading={pending === item.id} disabled={!!pending} style={styles.actionButton} />}
             {state === 'sold' && <Button label="Reactivar" secondary icon="play-outline" onPress={() => setConfirm({ listing: item, next: 'active' })} disabled={!!pending} style={styles.actionButton} />}
