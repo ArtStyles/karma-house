@@ -53,10 +53,10 @@ VersionCode: $($expoConfig.android.versionCode)
 SHA-256 de KarmaHouse.apk: $hashAfter
 SHA-256 del certificado: $releaseCertificate
 
-Incluye KarmaHouse Pro para quien publica mucho: pantalla para canjear el código Pro,
-sello Pro en anuncios y perfil, y «Subir anuncio» una vez por semana para que un
-anuncio activo vuelva arriba en «Más recientes». Pro se contrata hablando con KarmaHouse.
-Publicar, buscar y conversar siguen siendo gratis.
+«Mi espacio» muestra ahora tu foto de perfil, o tus iniciales, cuando inicias sesión.
+En modo oscuro, el logo de KarmaHouse se ve en blanco.
+Sigue incluyendo KarmaHouse Pro: canje del código Pro, sello Pro en anuncios y perfil,
+y «Subir anuncio» una vez por semana. Publicar, buscar y conversar siguen siendo gratis.
 El APK conserva el certificado de las versiones anteriores.
 Android puede solicitar autorización para instalar desde el navegador y un
 análisis de Play Protect. Mantén Play Protect activado. Esta entrega no implica
