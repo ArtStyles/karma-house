@@ -53,11 +53,10 @@ VersionCode: $($expoConfig.android.versionCode)
 SHA-256 de KarmaHouse.apk: $hashAfter
 SHA-256 del certificado: $releaseCertificate
 
-Incluye espacios de inmobiliarias: registro y revisión, equipos, cartera compartida,
-conversaciones, propuestas, agenda, seguimiento y confirmación de cierres.
-La aprobación de cada inmobiliaria y su sello de verificación son decisiones separadas.
-Los cierres conservan el historial y terminan los compromisos comerciales afectados.
-Incluye avisos de inmobiliarias y consulta autorizada del historial con el módulo apagado.
+Incluye KarmaHouse Pro para quien publica mucho: pantalla para canjear el código Pro,
+sello Pro en anuncios y perfil, y «Subir anuncio» una vez por semana para que un
+anuncio activo vuelva arriba en «Más recientes». Pro se contrata hablando con KarmaHouse.
+Publicar, buscar y conversar siguen siendo gratis.
 El APK conserva el certificado de las versiones anteriores.
 Android puede solicitar autorización para instalar desde el navegador y un
 análisis de Play Protect. Mantén Play Protect activado. Esta entrega no implica
