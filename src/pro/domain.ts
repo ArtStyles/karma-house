@@ -42,20 +42,26 @@ const messages: Record<string, string> = {
   KH_ACCOUNT_DELETING: 'Esta cuenta se está eliminando.',
   KH_ACCOUNT_SUSPENDED: 'Esta cuenta está suspendida.',
   KH_ACCOUNT_CHANGED: 'La sesión cambió. Vuelve a abrir esta pantalla.',
-  KH_AGENCY_DISABLED: 'Las operaciones de inmobiliaria están pausadas por ahora.',
+  KH_AGENCY_DISABLED: 'El espacio de inmobiliarias aún no está habilitado.',
   KH_EMAIL_UNCONFIRMED: 'Confirma tu correo para operar con la inmobiliaria.',
   KH_OWNER_REQUIRED: 'Solo el propietario de KarmaHouse puede gestionar Pro.',
+  KH_ASSISTED_CONSENT_REQUIRED: 'Este anuncio necesita el consentimiento vigente de quien lo autorizó.',
+  KH_ADMIN_REQUIRED: 'Tu cuenta ya no tiene acceso a Administración.',
 };
 const messageOf = (error: unknown): string => typeof error === 'string' ? error
   : error && typeof error === 'object' && 'message' in error ? String((error as { message: unknown }).message) : '';
-/** Known server codes become guidance; anything else is a connection problem worth retrying. */
+/** Known server codes become guidance; an unknown KH_ code is a refusal; anything else is a connection problem worth retrying. */
 export function proErrorMessage(error: unknown): string {
   const text = messageOf(error);
   const code = Object.keys(messages).find(key => text.includes(key));
-  return code ? messages[code] : 'No se pudo completar. Comprueba la conexión y vuelve a intentarlo.';
+  if (code) return messages[code];
+  return /\bKH_[A-Z0-9_]+/.test(text) ? 'No se pudo completar esta acción.' : 'No se pudo completar. Comprueba la conexión y vuelve a intentarlo.';
 }
+/** Stale local data (bumped from another device) can put the computed date in the past; then the generic text is the honest one. */
 export function bumpErrorMessage(error: unknown, listing: Bumpable): string {
-  return messageOf(error).includes('KH_BUMP_TOO_SOON') ? `Podrás subir este anuncio el ${formatProDate(nextBumpAt(listing))}.` : proErrorMessage(error);
+  if (!messageOf(error).includes('KH_BUMP_TOO_SOON')) return proErrorMessage(error);
+  const next = nextBumpAt(listing);
+  return next.getTime() > Date.now() ? `Podrás subir este anuncio el ${formatProDate(next)}.` : messages.KH_BUMP_TOO_SOON;
 }
 
 const invalid = () => new Error('No se pudieron interpretar los datos de KarmaHouse Pro.');

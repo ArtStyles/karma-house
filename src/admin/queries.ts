@@ -64,7 +64,7 @@ export function buildAdminQueryArgs(input:AdminQueryInput) {
   return {p_section:input.section,p_query:(input.query??'').trim(),p_filters:filters,p_offset:input.offset??0,p_limit:ADMIN_PAGE_SIZE,p_sort:input.sort??'newest'};
 }
 
-/** Exactly PROPERTY_COLUMNS: compatible with mapRemoteListing/createRowSigner; no private evidence. */
+/** PROPERTY_COLUMNS without the Pro fields `bumped_at` and `is_pro` (the server builds review rows column by column): compatible with mapRemoteListing/createRowSigner; no private evidence. */
 export const ADMIN_REVIEW_COLUMNS = ['id','owner_id','client_request_id','title','location','province','latitude','longitude','location_precision','condition','floor','price_negotiable','price','bedrooms','bathrooms','area','type','description','amenities','photo_paths','availability','moderation','review_note','version','created_at','operation','swap_wants','swap_provinces','swap_balance','swap_amount','rent_period','rent_min_stay','wanted_operations','cover_thumb_path'] as const;
 function decodeReview(v:Record<string,unknown>):RemotePropertyRow {
   if(!exact(v,ADMIN_REVIEW_COLUMNS)||!isUuid(v.id)||!isUuid(v.owner_id)||!text(v.client_request_id,100)||!text(v.title,100)||!text(v.location,120)||!text(v.province,100)||!text(v.description,3000)||!nullableText(v.review_note)||!Array.isArray(v.photo_paths)||!v.photo_paths.every(x=>text(x,500))||!Array.isArray(v.amenities)||!v.amenities.every(x=>text(x,100)))throw invalid();

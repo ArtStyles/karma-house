@@ -33,8 +33,18 @@ test('server codes become guidance; unknown failures ask to retry', () => {
   assert.match(proErrorMessage({ message: 'KH_PRO_REQUIRED' }), /parte de KarmaHouse Pro/);
   assert.match(proErrorMessage(new Error('KH_ACCOUNT_DELETING')), /se está eliminando/);
   assert.match(proErrorMessage(new Error('fetch failed')), /Comprueba la conexión/);
-  assert.equal(bumpErrorMessage(new Error('KH_BUMP_TOO_SOON'), { createdAt: '2026-10-01T10:00:00.000Z' }),
-    `Podrás subir este anuncio el ${formatProDate('2026-10-08T10:00:00.000Z')}.`);
+  assert.match(proErrorMessage(new Error('KH_ASSISTED_CONSENT_REQUIRED')), /consentimiento vigente/);
+  assert.match(proErrorMessage(new Error('KH_ADMIN_REQUIRED')), /acceso a Administración/);
+  assert.equal(proErrorMessage(new Error('KH_AGENCY_DISABLED')), 'El espacio de inmobiliarias aún no está habilitado.');
+  // An unknown KH_ code is a refusal, not a connection problem.
+  assert.equal(proErrorMessage(new Error('KH_SOMETHING')), 'No se pudo completar esta acción.');
+  assert.equal(proErrorMessage(new TypeError('Network request failed')), 'No se pudo completar. Comprueba la conexión y vuelve a intentarlo.');
+  // The date is relative to now: a fixed one ages into the past and would hit the stale-data branch.
+  const bumpedAt = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  assert.equal(bumpErrorMessage(new Error('KH_BUMP_TOO_SOON'), { createdAt: '2026-01-01T10:00:00.000Z', bumpedAt }),
+    `Podrás subir este anuncio el ${formatProDate(nextBumpAt({ createdAt: bumpedAt }))}.`);
+  // Stale local data (bumped from another device): the computed date is past, so never show it.
+  assert.equal(bumpErrorMessage(new Error('KH_BUMP_TOO_SOON'), { createdAt: '2026-01-01T10:00:00.000Z' }), 'Este anuncio ya se subió esta semana.');
   assert.match(proContactMailto(), /^mailto:.+\?subject=Quiero%20KarmaHouse%20Pro$/);
 });
 

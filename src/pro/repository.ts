@@ -5,7 +5,7 @@ import { decodeBump, decodeProStatus, decodeRedeem, normalizeProCode, type ProBu
 export function createProRepository(client: SupabaseClient, credentials: { actorId: string; accessToken: string }) {
   const { actorId, accessToken } = credentials;
   async function call(name: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> {
-    const request = client.rpc(name, { p_actor_id: actorId, ...args }).setHeader('Authorization', `Bearer ${accessToken}`);
+    const request = client.rpc(name, { ...args, p_actor_id: actorId }).setHeader('Authorization', `Bearer ${accessToken}`);
     const { data, error } = await (signal ? request.abortSignal(signal) : request);
     if (error) throw error;
     return data;
@@ -19,7 +19,7 @@ export function createProRepository(client: SupabaseClient, credentials: { actor
 }
 export type ProRepository = ReturnType<typeof createProRepository>;
 
-/** Public badge: works signed out, so it never sends a session. */
+/** Public badge: the RPC works for anon too. The shared client may still attach the signed-in token; it is not needed. */
 export async function readProBadge(client: SupabaseClient, userId: string, signal: AbortSignal): Promise<boolean> {
   const { data, error } = await client.rpc('kh_pro_badge', { p_user_id: userId }).abortSignal(signal);
   if (error) throw error;
