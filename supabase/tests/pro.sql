@@ -1,6 +1,6 @@
 -- KarmaHouse Pro: status, codes, redemption and owner administration. Everything rolls back.
 -- O owner (…01), D admin (…02), A member (…03), B member (…04), R rate-limited (…05),
--- G agency admin (…06), M agency manager (…07). Agency a1 is approved, a2 is pending.
+-- G agency admin (…06), M agency manager (…07). Agency a1 is approved, a2 is pending, a3 has a 120-character name.
 begin;
 create function pg_temp.pro_assert(ok boolean,label text) returns void language plpgsql as $$
 begin if ok is not true then raise exception 'PRO ASSERTION: %',label; end if; end $$;
@@ -25,7 +25,8 @@ insert into kh_private.platform_owner(singleton,user_id) values(true,'43000000-0
 insert into public.kh_admins(user_id) values('43000000-0000-4000-8000-000000000002');
 insert into kh_private.agencies(id,trade_name,state) values
  ('43000000-0000-4000-8000-0000000000a1','Casas Pro Ficticias','approved'),
- ('43000000-0000-4000-8000-0000000000a2','Agencia Pendiente Ficticia','pending');
+ ('43000000-0000-4000-8000-0000000000a2','Agencia Pendiente Ficticia','pending'),
+ ('43000000-0000-4000-8000-0000000000a3',rpad('Inmobiliaria Ficticia de Nombre Larguísimo ',120,'x'),'approved');
 insert into kh_private.agency_memberships(agency_id,user_id,role) values
  ('43000000-0000-4000-8000-0000000000a1','43000000-0000-4000-8000-000000000006','admin'),
  ('43000000-0000-4000-8000-0000000000a1','43000000-0000-4000-8000-000000000007','manager');
@@ -147,7 +148,7 @@ set local role authenticated;
 
 -- New days drop an old note: a new grant writes its own, a code leaves none.
 select pg_temp.pro_as('43000000-0000-4000-8000-000000000001');
-select public.kh_admin_grant_pro('43000000-0000-4000-8000-000000000001',30,'Nueva compra','43000000-0000-4000-8000-000000000004');
+select pg_temp.pro_assert(public.kh_admin_grant_pro('43000000-0000-4000-8000-000000000001',30,'Nueva compra','43000000-0000-4000-8000-000000000004')->>'name'='Persona Pro 4','a grant returns the server name of its recipient');
 update pro_ctx set note_code=public.kh_admin_create_pro_code('43000000-0000-4000-8000-000000000001',30,'Pago con nota previa')->>'code';
 select pg_temp.pro_as('43000000-0000-4000-8000-000000000003');
 select pg_temp.pro_assert((public.kh_redeem_pro_code('43000000-0000-4000-8000-000000000003',note_code)->>'ok')::boolean,'A redeems one more code') from pro_ctx;
@@ -160,6 +161,29 @@ select pg_temp.pro_assert((select count(*) from kh_private.admin_audit where act
 -- Every admin reads the history, so notes live only in owner-only places.
 select pg_temp.pro_assert(not exists(select 1 from kh_private.admin_audit where action like 'pro\_%' and reason is not null),'Pro history rows carry no note');
 select pg_temp.pro_assert((select cancel_note from kh_private.pro_codes where note='Código que se anulará')='Cliente desistió','a cancel keeps its note for the owner');
+
+-- The owner screen reads its recipient from the server; created codes name theirs.
+set local role authenticated;
+select pg_temp.pro_as('43000000-0000-4000-8000-000000000001');
+select pg_temp.pro_assert(public.kh_admin_pro_subject('43000000-0000-4000-8000-000000000001','43000000-0000-4000-8000-000000000003')
+ =jsonb_build_object('kind','user','id','43000000-0000-4000-8000-000000000003','name','Persona Pro 3','until',first_until+interval '120 days','effective',true),'a person with Pro: 30 + 90 + 30 days') from pro_ctx;
+select pg_temp.pro_assert(public.kh_admin_pro_subject('43000000-0000-4000-8000-000000000001',null,'43000000-0000-4000-8000-0000000000a2') @> '{"kind":"agency","name":"Agencia Pendiente Ficticia","effective":false}'
+ and public.kh_admin_pro_subject('43000000-0000-4000-8000-000000000001',null,'43000000-0000-4000-8000-0000000000a2')->>'until' is not null,'a pending agency keeps its date without effect');
+select pg_temp.pro_assert(public.kh_admin_pro_subject('43000000-0000-4000-8000-000000000001',null,'43000000-0000-4000-8000-0000000000a3')
+ =jsonb_build_object('kind','agency','id','43000000-0000-4000-8000-0000000000a3','name',rpad('Inmobiliaria Ficticia de Nombre Larguísimo ',120,'x'),'until',null,'effective',false),'an agency without Pro');
+select pg_temp.pro_assert(public.kh_admin_pro_subject('43000000-0000-4000-8000-000000000001','43000000-0000-4000-8000-000000000004')->>'until' is not null,'a person granted again after a revoke');
+select pg_temp.pro_error($q$select public.kh_admin_pro_subject('43000000-0000-4000-8000-000000000001',gen_random_uuid())$q$,'KH_PRO_INVALID');
+select pg_temp.pro_error($q$select public.kh_admin_pro_subject('43000000-0000-4000-8000-000000000001',null,gen_random_uuid())$q$,'KH_PRO_INVALID');
+select pg_temp.pro_error($q$select public.kh_admin_pro_subject('43000000-0000-4000-8000-000000000001')$q$,'KH_PRO_INVALID');
+select pg_temp.pro_assert(public.kh_admin_create_pro_code('43000000-0000-4000-8000-000000000001',30,'Código libre con nombre')->'name'='null'::jsonb,'a free code names no one');
+select pg_temp.pro_assert(public.kh_admin_create_pro_code('43000000-0000-4000-8000-000000000001',30,'Código de nombre largo',null,'43000000-0000-4000-8000-0000000000a3')->>'name'
+ =rpad('Inmobiliaria Ficticia de Nombre Larguísimo ',120,'x'),'a bound code returns the full server name');
+select pg_temp.pro_as('43000000-0000-4000-8000-000000000002');
+select pg_temp.pro_error($q$select public.kh_admin_pro_subject('43000000-0000-4000-8000-000000000002','43000000-0000-4000-8000-000000000003')$q$,'KH_OWNER_REQUIRED');
+reset role;
+-- Every admin client decodes history names up to 100 characters; trade names reach 120.
+select pg_temp.pro_assert((select bool_and(char_length(target_name)<=100) and count(*)=1 from kh_private.admin_audit
+ where target_id=(select id from kh_private.pro_codes where bound_agency_id='43000000-0000-4000-8000-0000000000a3')),'a long agency name fits the history');
 -- The Pro mark of a listing comes from the stored row, never from the row passed in.
 insert into public.properties(id,owner_id,client_request_id,title,location,province,price,bedrooms,description,operation,moderation)
  values('43000000-0000-4000-8000-0000000000b1','43000000-0000-4000-8000-000000000003','pro-listing-1','Anuncio Pro sintético','Vedado','La Habana',90000,2,'Busco una vivienda sintética de prueba.','wanted','pending');

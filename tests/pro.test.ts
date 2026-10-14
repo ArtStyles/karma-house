@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { bumpErrorMessage, canBumpNow, decodeProAccounts, decodeProCodes, decodeProStatus, decodeRedeem, formatProDate, isProActive, isProCodeShape, nextBumpAt, normalizeProCode, proContactMailto, proErrorMessage } from '../src/pro/domain.ts';
+import { bumpErrorMessage, canBumpNow, decodeCreatedCode, decodeGrant, decodeProAccounts, decodeProCodes, decodeProStatus, decodeProSubject, decodeRedeem, formatProDate, isProActive, isProCodeShape, nextBumpAt, normalizeProCode, proContactMailto, proErrorMessage, proWriteErrorMessage } from '../src/pro/domain.ts';
 import { createProRepository } from '../src/pro/repository.ts';
 import { eventLabel } from '../src/admin/domain.ts';
 import { mapRemoteListing, type RemotePropertyRow } from '../src/data/remoteMapping.ts';
@@ -64,6 +64,30 @@ test('owner lists keep one page and refuse unknown states', () => {
   assert.equal(page.items.length, 30);
   assert.throws(() => decodeProCodes({ items: [{ ...row, state: 'lost' }], hasMore: false }));
   assert.equal(decodeProAccounts({ items: [{ kind: 'agency', id, name: 'Casas', until: '2026-11-13T00:00:00Z', note: null, effective: true }], hasMore: false }).items[0].kind, 'agency');
+});
+
+test('owner results carry the server name of the recipient', () => {
+  const created = { id, code: 'KH-7Q4M-X9TR-2PLW', expiresAt: '2026-11-13T00:00:00Z' };
+  assert.equal(decodeCreatedCode({ ...created, name: null }).name, null);
+  assert.equal(decodeCreatedCode({ ...created, name: 'Casas' }).name, 'Casas');
+  assert.throws(() => decodeCreatedCode(created), 'a missing name is not a free code');
+  assert.throws(() => decodeCreatedCode({ ...created, name: 'x'.repeat(121) }));
+  assert.deepEqual(decodeGrant({ until: '2026-11-13T00:00:00Z', name: 'Casas' }), { until: '2026-11-13T00:00:00Z', name: 'Casas' });
+  assert.throws(() => decodeGrant({ until: '2026-11-13T00:00:00Z', name: null }));
+  const subject = { kind: 'agency', id, name: 'Casas', until: null, effective: false };
+  assert.deepEqual(decodeProSubject(subject), subject);
+  assert.equal(decodeProSubject({ ...subject, kind: 'user', until: '2026-11-13T00:00:00Z', effective: true }).until, '2026-11-13T00:00:00Z');
+  assert.throws(() => decodeProSubject({ ...subject, kind: 'owner' }));
+  assert.throws(() => decodeProSubject({ ...subject, until: 'mañana' }));
+  assert.throws(() => decodeProSubject({ ...subject, effective: 'no' }));
+  assert.throws(() => decodeProSubject({ ...subject, name: undefined }));
+});
+
+test('a failed create or grant without a server code may have been saved', () => {
+  assert.equal(proWriteErrorMessage(new TypeError('Network request failed')), 'Puede que se haya guardado. Revisa Cuentas Pro y Códigos recientes antes de repetir.');
+  assert.equal(proWriteErrorMessage(new Error('No se pudieron interpretar los datos de KarmaHouse Pro.')), 'Puede que se haya guardado. Revisa Cuentas Pro y Códigos recientes antes de repetir.');
+  assert.equal(proWriteErrorMessage({ message: 'KH_PRO_INVALID' }), 'Revisa los días (de 1 a 365), la nota (de 3 a 500 caracteres) y el destinatario.');
+  assert.equal(proWriteErrorMessage(new Error('KH_SOMETHING')), 'No se pudo completar esta acción.');
 });
 
 test('the repository pins the actor and sends only the normalized code', async () => {

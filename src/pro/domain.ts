@@ -12,6 +12,8 @@ export type ProCodeState = 'unused' | 'redeemed' | 'expired' | 'cancelled';
 export interface ProCodeRow { id: string; days: number; note: string; boundName: string | null; state: ProCodeState; createdAt: string; expiresAt: string; redeemedAt: string | null; redeemedFor: string | null; cancelNote: string | null }
 export interface ProAccountRow { kind: 'user' | 'agency'; id: string; name: string; until: string; note: string | null; effective: boolean }
 export interface ProPage<T> { items: T[]; hasMore: boolean }
+export interface ProSubject { kind: 'user' | 'agency'; id: string; name: string; until: string | null; effective: boolean }
+export interface ProCreatedCode { id: string; code: string; expiresAt: string; name: string | null }
 interface Bumpable { createdAt: string; bumpedAt?: string }
 
 /** Mirrors kh_private.pro_code_hash: the 12-symbol body counts; a 14-symbol input carries the KH prefix. */
@@ -38,7 +40,7 @@ const messages: Record<string, string> = {
   KH_BUMP_NOT_ELIGIBLE: 'Solo se pueden subir anuncios publicados y activos.',
   KH_PRO_CODE_STATE: 'Ese código ya se usó o ya estaba anulado.',
   KH_PRO_NOT_ACTIVE: 'Esa cuenta ya no tiene Pro activo.',
-  KH_PRO_INVALID: 'Revisa los días (de 1 a 365) y escribe una nota de entre 3 y 500 caracteres.',
+  KH_PRO_INVALID: 'Revisa los días (de 1 a 365), la nota (de 3 a 500 caracteres) y el destinatario.',
   KH_ACCOUNT_DELETING: 'Esta cuenta se está eliminando.',
   KH_ACCOUNT_SUSPENDED: 'Esta cuenta está suspendida.',
   KH_ACCOUNT_CHANGED: 'La sesión cambió. Vuelve a abrir esta pantalla.',
@@ -56,6 +58,10 @@ export function proErrorMessage(error: unknown): string {
   const code = Object.keys(messages).find(key => text.includes(key));
   if (code) return messages[code];
   return /\bKH_[A-Z0-9_]+/.test(text) ? 'No se pudo completar esta acción.' : 'No se pudo completar. Comprueba la conexión y vuelve a intentarlo.';
+}
+/** A create or grant that failed without a server code may still have been saved: a blind retry could double it. */
+export function proWriteErrorMessage(error: unknown): string {
+  return /\bKH_[A-Z0-9_]+/.test(messageOf(error)) ? proErrorMessage(error) : 'Puede que se haya guardado. Revisa Cuentas Pro y Códigos recientes antes de repetir.';
 }
 /** Stale local data (bumped from another device) can put the computed date in the past; then the generic text is the honest one. */
 export function bumpErrorMessage(error: unknown, listing: Bumpable): string {
@@ -96,13 +102,17 @@ export function decodeBump(value: unknown): ProBumpResult {
   if (!record(value) || !instant(value.bumpedAt) || !instant(value.nextBumpAt)) throw invalid();
   return { bumpedAt: value.bumpedAt as string, nextBumpAt: value.nextBumpAt as string };
 }
-export function decodeCreatedCode(value: unknown): { id: string; code: string; expiresAt: string } {
-  if (!record(value) || !isUuid(value.id) || typeof value.code !== 'string' || !/^KH-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}$/.test(value.code) || !instant(value.expiresAt)) throw invalid();
-  return { id: value.id as string, code: value.code, expiresAt: value.expiresAt as string };
+export function decodeCreatedCode(value: unknown): ProCreatedCode {
+  if (!record(value) || !isUuid(value.id) || typeof value.code !== 'string' || !/^KH-[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}$/.test(value.code) || !instant(value.expiresAt) || !nullableText(value.name, 120)) throw invalid();
+  return { id: value.id as string, code: value.code, expiresAt: value.expiresAt as string, name: value.name as string | null };
 }
-export function decodeGrant(value: unknown): { until: string } {
-  if (!record(value) || !instant(value.until)) throw invalid();
-  return { until: value.until as string };
+export function decodeGrant(value: unknown): { until: string; name: string } {
+  if (!record(value) || !instant(value.until) || !text(value.name, 120)) throw invalid();
+  return { until: value.until as string, name: value.name as string };
+}
+export function decodeProSubject(value: unknown): ProSubject {
+  if (!record(value) || !['user', 'agency'].includes(String(value.kind)) || !isUuid(value.id) || !text(value.name, 120) || !nullableInstant(value.until) || typeof value.effective !== 'boolean') throw invalid();
+  return { kind: value.kind as ProSubject['kind'], id: value.id as string, name: value.name as string, until: value.until as string | null, effective: value.effective };
 }
 export function decodeProCodes(value: unknown): ProPage<ProCodeRow> {
   return page(value, item => {

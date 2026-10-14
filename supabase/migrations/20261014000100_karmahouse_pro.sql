@@ -155,7 +155,7 @@ begin
  update kh_private.pro_codes set redeemed_by=p_actor_id,redeemed_user_id=v_user,redeemed_agency_id=v_agency,redeemed_at=now() where id=c.id;
  v_until:=kh_private.extend_pro(v_user,v_agency,c.days);
  -- Pro audit rows carry no note: every admin reads the history, notes stay owner-only.
- perform kh_private.audit_action('pro_code_redeemed',c.id,kh_private.pro_subject_name(v_user,v_agency),null);
+ perform kh_private.audit_action('pro_code_redeemed',c.id,left(kh_private.pro_subject_name(v_user,v_agency),100),null);
  return jsonb_build_object('ok',true,'kind',case when v_user is null then 'agency' else 'user' end,'id',coalesce(v_user,v_agency),'until',v_until);
 end $$;
 
@@ -176,8 +176,9 @@ begin
   exception when unique_violation then null; -- 60 bits make a repeat practically impossible; the loop only guards it.
   end;
  end loop;
- perform kh_private.audit_action('pro_code_created',v_id,kh_private.pro_subject_name(p_user_id,p_agency_id),null);
- return jsonb_build_object('id',v_id,'code','KH-'||substr(v_code,1,4)||'-'||substr(v_code,5,4)||'-'||substr(v_code,9,4),'expiresAt',v_expires);
+ perform kh_private.audit_action('pro_code_created',v_id,left(kh_private.pro_subject_name(p_user_id,p_agency_id),100),null);
+ return jsonb_build_object('id',v_id,'code','KH-'||substr(v_code,1,4)||'-'||substr(v_code,5,4)||'-'||substr(v_code,9,4),'expiresAt',v_expires,
+  'name',case when num_nonnulls(p_user_id,p_agency_id)=0 then null else kh_private.pro_subject_name(p_user_id,p_agency_id) end);
 end $$;
 
 -- 31 rows answer "is there more"; the client keeps 30, like kh_admin_accounts keeps 50.
@@ -204,7 +205,7 @@ begin
  select * into c from kh_private.pro_codes where id=p_code_id for update;
  if not found or c.cancelled_at is not null or c.redeemed_at is not null then raise exception 'KH_PRO_CODE_STATE'; end if;
  update kh_private.pro_codes set cancelled_at=now(),cancel_note=v_note where id=c.id;
- perform kh_private.audit_action('pro_code_cancelled',c.id,kh_private.pro_subject_name(c.bound_user_id,c.bound_agency_id),null);
+ perform kh_private.audit_action('pro_code_cancelled',c.id,left(kh_private.pro_subject_name(c.bound_user_id,c.bound_agency_id),100),null);
 end $$;
 
 create function public.kh_admin_grant_pro(p_actor_id uuid,p_days integer,p_note text,p_user_id uuid default null,p_agency_id uuid default null) returns jsonb
@@ -216,8 +217,8 @@ begin
  perform kh_private.pro_require_subject(p_user_id,p_agency_id,false);
  v_until:=kh_private.extend_pro(p_user_id,p_agency_id,p_days);
  update kh_private.pro_status set note=v_note where user_id=p_user_id or agency_id=p_agency_id;
- perform kh_private.audit_action('pro_granted',coalesce(p_user_id,p_agency_id),kh_private.pro_subject_name(p_user_id,p_agency_id),null);
- return jsonb_build_object('until',v_until);
+ perform kh_private.audit_action('pro_granted',coalesce(p_user_id,p_agency_id),left(kh_private.pro_subject_name(p_user_id,p_agency_id),100),null);
+ return jsonb_build_object('until',v_until,'name',kh_private.pro_subject_name(p_user_id,p_agency_id));
 end $$;
 
 create function public.kh_admin_revoke_pro(p_actor_id uuid,p_note text,p_user_id uuid default null,p_agency_id uuid default null) returns void
@@ -229,7 +230,7 @@ begin
  perform kh_private.pro_require_subject(p_user_id,p_agency_id,false);
  update kh_private.pro_status set pro_until=now(),updated_at=now(),note=v_note where (user_id=p_user_id or agency_id=p_agency_id) and pro_until>now();
  if not found then raise exception 'KH_PRO_NOT_ACTIVE'; end if;
- perform kh_private.audit_action('pro_revoked',coalesce(p_user_id,p_agency_id),kh_private.pro_subject_name(p_user_id,p_agency_id),null);
+ perform kh_private.audit_action('pro_revoked',coalesce(p_user_id,p_agency_id),left(kh_private.pro_subject_name(p_user_id,p_agency_id),100),null);
 end $$;
 
 create function public.kh_admin_list_pro_accounts(p_actor_id uuid,p_offset integer default 0) returns jsonb
@@ -245,6 +246,19 @@ begin
   from kh_private.pro_status s where s.pro_until>now() order by s.pro_until,coalesce(s.user_id,s.agency_id) offset p_offset limit 31) t);
 end $$;
 
+-- The owner screen names its recipient from here, never from the link that opened it.
+create function public.kh_admin_pro_subject(p_actor_id uuid,p_user_id uuid default null,p_agency_id uuid default null) returns jsonb
+language plpgsql stable security definer set search_path='' as $$
+declare v_until timestamptz;
+begin
+ perform kh_private.admin_actor(p_actor_id,true);
+ perform kh_private.pro_require_subject(p_user_id,p_agency_id,false);
+ select pro_until into v_until from kh_private.pro_status where (user_id=p_user_id or agency_id=p_agency_id) and pro_until>now();
+ return jsonb_build_object('kind',case when p_user_id is null then 'agency' else 'user' end,'id',coalesce(p_user_id,p_agency_id),
+  'name',kh_private.pro_subject_name(p_user_id,p_agency_id),'until',v_until,
+  'effective',v_until is not null and (p_user_id is not null or exists(select 1 from kh_private.agencies where id=p_agency_id and state='approved')));
+end $$;
+
 -- 5. Privileges ---------------------------------------------------------------------------------
 revoke all on function kh_private.pro_code_hash(text),kh_private.pro_new_code(),kh_private.user_pro_until(uuid),
  kh_private.agency_pro_until(uuid),kh_private.extend_pro(uuid,uuid,integer),kh_private.pro_subject_name(uuid,uuid),
@@ -254,11 +268,11 @@ grant execute on function public.kh_is_pro(public.properties),public.kh_pro_badg
 revoke all on function public.kh_pro_status(uuid),public.kh_redeem_pro_code(uuid,text,uuid),
  public.kh_admin_create_pro_code(uuid,integer,text,uuid,uuid),public.kh_admin_list_pro_codes(uuid,integer),
  public.kh_admin_cancel_pro_code(uuid,uuid,text),public.kh_admin_grant_pro(uuid,integer,text,uuid,uuid),
- public.kh_admin_revoke_pro(uuid,text,uuid,uuid),public.kh_admin_list_pro_accounts(uuid,integer) from public,anon;
+ public.kh_admin_revoke_pro(uuid,text,uuid,uuid),public.kh_admin_list_pro_accounts(uuid,integer),public.kh_admin_pro_subject(uuid,uuid,uuid) from public,anon;
 grant execute on function public.kh_pro_status(uuid),public.kh_redeem_pro_code(uuid,text,uuid),
  public.kh_admin_create_pro_code(uuid,integer,text,uuid,uuid),public.kh_admin_list_pro_codes(uuid,integer),
  public.kh_admin_cancel_pro_code(uuid,uuid,text),public.kh_admin_grant_pro(uuid,integer,text,uuid,uuid),
- public.kh_admin_revoke_pro(uuid,text,uuid,uuid),public.kh_admin_list_pro_accounts(uuid,integer) to authenticated;
+ public.kh_admin_revoke_pro(uuid,text,uuid,uuid),public.kh_admin_list_pro_accounts(uuid,integer),public.kh_admin_pro_subject(uuid,uuid,uuid) to authenticated;
 
 -- 6. Weekly bump ---------------------------------------------------------------------------------
 -- Null until the first bump: «Más recientes» orders by greatest(bumped_at, created_at), so no row
