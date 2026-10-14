@@ -33,7 +33,27 @@ Clúster PostgreSQL 17 desechable en `127.0.0.1:56440`, bases nuevas creadas con
 1. ~~`node scripts/apply-pro.mjs --commit`~~: hecho.
 2. Comprobar que la app publicada sigue leyendo anuncios: hecho a nivel SQL como visitante anónimo; falta mirarla en un navegador o un teléfono.
 3. ~~Fusionar con `main`~~: hecho (`76e49de`). El primer despliegue de la app falló en el «Ignored Build Step» (`fatal: bad object`: el clon poco profundo de Vercel no tenía el commit anterior tras un push de 25 commits); arreglado en `pwa/vercel.json` (`5930ad8`) y publicado. Los archivos servidos contienen `kh_bump_property`, `kh_is_pro` y «Cuenta Pro de KarmaHouse».
-4. Nuevo APK. El APK 0.1.25 no tiene la pantalla Pro: verá el nuevo orden de «Más recientes», pero no el sello ni el canje. Por eso el mensaje de cada código dice que se canjea en app.karmahouse.site.
+4. ~~Nuevo APK~~: hecho, 0.1.26 (ver abajo). El APK 0.1.25 no tiene la pantalla Pro: ve el nuevo orden de «Más recientes», pero no el sello ni el canje.
+
+## Android 0.1.26
+
+| Dato | Resultado |
+| --- | --- |
+| Fuente | `93f701630d4ddb9354ec041c714cf71f1ad1b9fd` (`release: prepare Android 0.1.26 with KarmaHouse Pro`) |
+| Paquete / versión / código | `com.karmahouse.karmahouse` / `0.1.26` / `27` |
+| APK | `KarmaHouse.apk`, 85.231.031 bytes (81,28 MiB) |
+| APK SHA-256 | `d077ca0b71a8e8e6643f78cf6b0ec1548d6d631274477fdad393946f46d9b676` |
+| AAB SHA-256 (local) | `c927a7b3f3e4345f6fb2b40c195cb5c8475c71302f759e59b2784e8bcb7f3062` |
+| Certificado SHA-256 | `1752d33a3fb6e45fada4e6adbbec99af851d9ae6716a73770c382c79d3356ac6`, el mismo de las versiones anteriores |
+| Firma / Android / ABI | v2 correcta, no depurable, minSdk 24 (Android 7), arm64-v8a y armeabi-v7a |
+| Secretos | 1386 entradas sin los valores privados de `infra/.env.local` ni marcadores PEM o credenciales JSON |
+| Alineación | ZIP de 16 KB correcta; no evalúa la alineación ELF |
+| JavaScript | El bundle contiene `kh_bump_property`, `kh_is_pro`, `kh_redeem_pro_code`, `kh_admin_create_pro_code` y «Cuenta Pro de KarmaHouse» |
+
+- Compilado en el entorno aislado `artifacts/v24` (caché Android de la 0.1.25) con la fuente de `93f7016` extraída por `git archive`: 411 archivos de texto y 7 recursos binarios idénticos al commit. `versionCode`/`versionName` del proyecto nativo de `v24` actualizados a mano a 27 / 0.1.26 (las dependencias nativas no cambiaron desde la 0.1.25). `build-android-preview.ps1 -Release -RefreshBundleCache`: correcto en 1 min 54 s. Logs en `artifacts/v24/artifacts/android-build-0.1.26.log` y `distribution-0.1.26.log`; entrega en `artifacts/distribution/0.1.26/`.
+- [Release v0.1.26](https://github.com/ArtStyles/karma-house/releases/tag/v0.1.26), «KarmaHouse 0.1.26 · KarmaHouse Pro», pública y última, etiqueta en `93f7016`. Se creó como borrador, se subieron los tres archivos (`curl --limit-rate 400k`) y se publicó con sus digests ya iguales a los locales.
+- Descarga sin sesión de los tres archivos: SHA-256 idénticos a los preparados. `releases/latest/download/KarmaHouse.apk` redirige a v0.1.26.
+- Sin instalación en teléfono en esta entrega: falta probar la actualización sobre 0.1.25 y el análisis de Play Protect en un dispositivo.
 
 ## Límites
 
