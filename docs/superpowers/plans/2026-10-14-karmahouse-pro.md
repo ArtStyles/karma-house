@@ -501,6 +501,8 @@ git commit -m "feat(pro): add Pro status, single-use codes and owner administrat
 
 ### Task 3: Subida semanal, catálogo e historial de precios (servidor)
 
+> **Hecha.** La versión vigente es la del repositorio (commits ea6f69e, edd28ac). Tras la revisión: la clave de orden es `greatest(bumped_at, created_at)` (con `coalesce` el corte del cursor no usa el índice bajo RLS); las subidas de inmobiliaria pasan por `agency_require_enabled()` y `agency_account()`; `kh_bump_property` rechaza cuentas en borrado; la suite cubre anuncio pausado, otra inmobiliaria, módulo apagado, correo sin confirmar, `updated_at` intacto y escrituras de precio sin cambio. El SQL de abajo es el de partida.
+
 **Files:**
 - Create: `supabase/tests/pro_bump.sql`
 - Modify: `supabase/migrations/20261014000100_karmahouse_pro.sql` (se añade antes de la línea final `notify pgrst, 'reload schema';`)

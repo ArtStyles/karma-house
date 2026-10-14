@@ -57,7 +57,7 @@ Más fotos por anuncio, revisión prioritaria, estadísticas por anuncio, vistas
 
 ### Subir anuncio
 
-- Requisitos: anuncio `approved` y `active`, no suspendido, cubierto por un Pro vigente, y `coalesce(bumped_at, created_at) <= now() - interval '7 days'`.
+- Requisitos: anuncio `approved` y `active`, no suspendido, cubierto por un Pro vigente, y `greatest(bumped_at, created_at) <= now() - interval '7 days'`.
 - Efecto: `bumped_at = now()`. El anuncio aparece arriba en «Más recientes» para todos los clientes, incluidos los APK antiguos, porque el orden se resuelve en servidor.
 - La etiqueta «Nueva» sigue calculándose con `created_at`: un anuncio subido no finge ser nuevo.
 - Subir no dispara alertas de búsqueda, avisos de publicación ni cambios de versión.
@@ -87,7 +87,7 @@ Todo nuevo vive en `kh_private`, sin acceso directo desde `anon` ni `authenticat
 
 Cambios en tablas existentes:
 
-- `public.properties.bumped_at timestamptz`, nula hasta la primera subida. «Más recientes» ordena por `coalesce(bumped_at, created_at)` con un índice de expresión. Así no hace falta rellenar filas ni añadir disparadores, y las altas que fijan `created_at` (pruebas, traspasos) conservan su orden.
+- `public.properties.bumped_at timestamptz`, nula hasta la primera subida. «Más recientes» ordena por `greatest(bumped_at, created_at)` con un índice de expresión (`greatest` y no `coalesce`: bajo RLS solo `greatest` se puede usar como condición del índice en las páginas siguientes; el valor es el mismo porque `greatest` ignora los nulos). Así no hace falta rellenar filas ni añadir disparadores, y las altas que fijan `created_at` (pruebas, traspasos) conservan su orden.
 - `kh_private.admin_audit` registra crear, anular y canjear código, dar Pro y quitar Pro, con `target_id` igual al código, la cuenta o la inmobiliaria, **sin nota** (`reason` nula): el Historial lo lee cualquier administrador, y las notas solo las ve el propietario. Las notas viven en `pro_codes.note` (al crear), `pro_codes.cancel_note` (al anular) y `pro_status.note` (última activación o retirada directa), que solo leen las funciones de propietario.
 
 El historial de precios se llena con un disparador `after insert or update of price, operation, rent_period, availability` que solo inserta si algún valor cambió. Al migrar se copia el estado actual de cada anuncio como primer punto.
@@ -136,7 +136,7 @@ La autoridad de propietario usa `kh_private.admin_actor(p_actor_id, true)`, la m
 
 ## 6. Catálogo y disparadores existentes
 
-- `kh_search_properties` ordena `recent` por `(coalesce(bumped_at, created_at) desc, id desc)` y construye el cursor con ese mismo valor. El cliente trata el cursor como texto opaco del servidor (`next_cursor`), así que los APK actuales siguen paginando.
+- `kh_search_properties` ordena `recent` por `(greatest(bumped_at, created_at) desc, id desc)` y construye el cursor con ese mismo valor. El cliente trata el cursor como texto opaco del servidor (`next_cursor`), así que los APK actuales siguen paginando.
 - Las filas de `kh_search_properties` llevan `is_pro`. El detalle y Mis anuncios leen `properties` por PostgREST con el campo calculado `is_pro:kh_is_pro` (función `public.kh_is_pro(public.properties)`). Los APK actuales no piden ese campo y no notan el cambio; `mapRemoteListing` ignora claves que no conoce.
 - **Orden de despliegue:** primero la migración, después el cliente. Un cliente nuevo que pida `kh_is_pro` contra un servidor sin la migración no podría leer ningún anuncio.
 - **Disparadores.** Ocho disparadores de `public.properties` se ejecutan al actualizar. Revisados uno por uno:
