@@ -7,7 +7,7 @@ create table kh_private.pro_status(
  user_id uuid unique references auth.users(id) on delete cascade,
  agency_id uuid unique references kh_private.agencies(id) on delete cascade,
  pro_until timestamptz not null,
- note text check(note is null or char_length(note) between 3 and 500), -- last owner note of a direct grant or revoke
+ note text check(note is null or char_length(note) between 3 and 500), -- owner note of the last direct grant or revoke; new days clear it
  updated_at timestamptz not null default now(),
  check(num_nonnulls(user_id,agency_id)=1)
 );
@@ -64,22 +64,24 @@ create function kh_private.agency_pro_until(p_agency uuid) returns timestamptz l
  where s.agency_id=p_agency and a.state='approved'
 $$;
 -- Agency Pro covers what that agency published; personal Pro covers the owner's other listings.
+-- Private: it trusts its arguments, so clients reach it only through public.kh_is_pro.
 create function kh_private.property_pro_active(p_property uuid,p_owner uuid) returns boolean language sql stable security definer set search_path='' as $$
  select coalesce(case when o.origin_agency_id is null then kh_private.user_pro_until(p_owner)
   else kh_private.agency_pro_until(o.origin_agency_id) end>now(),false)
  from (select (select origin_agency_id from kh_private.agency_property_origins where property_id=p_property) origin_agency_id) o
 $$;
+-- Every extension drops the old owner note; a direct grant writes its own note afterwards.
 create function kh_private.extend_pro(p_user uuid,p_agency uuid,p_days integer) returns timestamptz language plpgsql security definer set search_path='' as $$
 declare v timestamptz;
 begin
  if num_nonnulls(p_user,p_agency)<>1 or p_days is null or p_days not between 1 and 365 then raise exception 'KH_PRO_INVALID'; end if;
  if p_user is not null then
   insert into kh_private.pro_status as s(user_id,pro_until) values(p_user,now()+make_interval(days=>p_days))
-  on conflict(user_id) do update set pro_until=greatest(now(),s.pro_until)+make_interval(days=>p_days),updated_at=now()
+  on conflict(user_id) do update set pro_until=greatest(now(),s.pro_until)+make_interval(days=>p_days),note=null,updated_at=now()
   returning s.pro_until into v;
  else
   insert into kh_private.pro_status as s(agency_id,pro_until) values(p_agency,now()+make_interval(days=>p_days))
-  on conflict(agency_id) do update set pro_until=greatest(now(),s.pro_until)+make_interval(days=>p_days),updated_at=now()
+  on conflict(agency_id) do update set pro_until=greatest(now(),s.pro_until)+make_interval(days=>p_days),note=null,updated_at=now()
   returning s.pro_until into v;
  end if;
  return v;
@@ -96,8 +98,9 @@ end $$;
 
 -- 2. Public reads -----------------------------------------------------------------------
 -- PostgREST computed field: select 'is_pro:kh_is_pro' next to the property columns.
+-- Anyone can pass a forged row, so only its id counts: the owner is read from the table.
 create function public.kh_is_pro(p public.properties) returns boolean language sql stable security definer set search_path='' as $$
- select kh_private.property_pro_active(p.id,p.owner_id)
+ select coalesce((select kh_private.property_pro_active(x.id,x.owner_id) from public.properties x where x.id=p.id),false)
 $$;
 -- A profile badge exists only where the profile is public: at least one live listing.
 create function public.kh_pro_badge(p_user_id uuid) returns boolean language sql stable security definer set search_path='' as $$
@@ -119,28 +122,33 @@ end $$;
 -- the hourly limit would never count.
 create function public.kh_redeem_pro_code(p_actor_id uuid,p_code text,p_agency_id uuid default null) returns jsonb
 language plpgsql security definer set search_path='' as $$
-declare c kh_private.pro_codes%rowtype; v_user uuid; v_agency uuid; v_until timestamptz;
+declare c kh_private.pro_codes%rowtype; v_user uuid; v_agency uuid; v_until timestamptz; v_may boolean:=false;
 begin
  if auth.uid() is null or auth.uid() is distinct from p_actor_id then raise exception 'KH_ACCOUNT_CHANGED' using errcode='42501'; end if;
  perform kh_private.require_active();
+ if kh_private.is_deleting(p_actor_id) then raise exception 'KH_ACCOUNT_DELETING'; end if;
  perform pg_advisory_xact_lock(hashtextextended('kh:pro:redeem:'||p_actor_id::text,0));
  if (select count(*) from kh_private.pro_code_attempts where user_id=p_actor_id and attempted_at>clock_timestamp()-interval '1 hour')>=5 then
   return jsonb_build_object('ok',false,'error','KH_PRO_CODE_RATE');
+ end if;
+ if char_length(coalesce(p_code,''))>64 then
+  insert into kh_private.pro_code_attempts(user_id) values(p_actor_id);
+  return jsonb_build_object('ok',false,'error','KH_PRO_CODE_INVALID');
  end if;
  select * into c from kh_private.pro_codes where code_hash=kh_private.pro_code_hash(p_code) for update;
  if found then
   -- A bound code decides its recipient; a free one goes to the chosen agency or to the person.
   v_user:=case when c.bound_user_id is not null then c.bound_user_id when c.bound_agency_id is null and p_agency_id is null then p_actor_id end;
   v_agency:=coalesce(c.bound_agency_id,case when c.bound_user_id is null then p_agency_id end);
-  if c.redeemed_at is not null and c.redeemed_by=p_actor_id and c.redeemed_user_id is not distinct from v_user and c.redeemed_agency_id is not distinct from v_agency then
+  -- Only for oneself, or for an approved agency one still administers; a retry is checked again.
+  v_may:=case when v_user is not null then v_user=p_actor_id else exists(select 1 from kh_private.agency_memberships m join kh_private.agencies a on a.id=m.agency_id
+   where m.agency_id=v_agency and m.user_id=p_actor_id and m.state='active' and m.role='admin' and a.state='approved') end;
+  if v_may and c.redeemed_at is not null and c.redeemed_by=p_actor_id and c.redeemed_user_id is not distinct from v_user and c.redeemed_agency_id is not distinct from v_agency then
    return jsonb_build_object('ok',true,'kind',case when v_user is null then 'agency' else 'user' end,'id',coalesce(v_user,v_agency),
     'until',case when v_user is null then kh_private.agency_pro_until(v_agency) else kh_private.user_pro_until(v_user) end);
   end if;
  end if;
- if not found or c.cancelled_at is not null or c.redeemed_at is not null or c.expires_at<=now()
-  or (v_user is not null and v_user<>p_actor_id)
-  or (v_agency is not null and not exists(select 1 from kh_private.agency_memberships m join kh_private.agencies a on a.id=m.agency_id
-      where m.agency_id=v_agency and m.user_id=p_actor_id and m.state='active' and m.role='admin' and a.state='approved')) then
+ if not found or not v_may or c.cancelled_at is not null or c.redeemed_at is not null or c.expires_at<=now() then
   insert into kh_private.pro_code_attempts(user_id) values(p_actor_id);
   return jsonb_build_object('ok',false,'error','KH_PRO_CODE_INVALID');
  end if;
@@ -183,7 +191,7 @@ begin
    'boundName',case when num_nonnulls(c.bound_user_id,c.bound_agency_id)=0 then null else kh_private.pro_subject_name(c.bound_user_id,c.bound_agency_id) end,
    'state',case when c.cancelled_at is not null then 'cancelled' when c.redeemed_at is not null then 'redeemed' when c.expires_at<=now() then 'expired' else 'unused' end,
    'createdAt',c.created_at,'expiresAt',c.expires_at,'redeemedAt',c.redeemed_at,
-   'redeemedFor',case when c.redeemed_at is null then null else kh_private.pro_subject_name(c.redeemed_user_id,c.redeemed_agency_id) end) item
+   'redeemedFor',case when c.redeemed_at is null then null else kh_private.pro_subject_name(c.redeemed_user_id,c.redeemed_agency_id) end,'cancelNote',c.cancel_note) item
   from kh_private.pro_codes c order by c.created_at desc,c.id offset p_offset limit 31) t);
 end $$;
 
@@ -231,17 +239,16 @@ begin
  if p_offset is null or p_offset<0 or p_offset>100000 then raise exception 'KH_PRO_INVALID'; end if;
  return (select jsonb_build_object('items',coalesce(jsonb_agg(t.item order by t.pro_until,t.sid),'[]'::jsonb),'hasMore',count(*)>30) from (
   select s.pro_until,coalesce(s.user_id,s.agency_id) sid,jsonb_build_object('kind',case when s.user_id is null then 'agency' else 'user' end,
-   'id',coalesce(s.user_id,s.agency_id),'name',kh_private.pro_subject_name(s.user_id,s.agency_id),'until',s.pro_until,'note',s.note) item
+   'id',coalesce(s.user_id,s.agency_id),'name',kh_private.pro_subject_name(s.user_id,s.agency_id),'until',s.pro_until,'note',s.note,
+   -- A pending or suspended agency keeps its date but has no effective Pro until approved again.
+   'effective',s.user_id is not null or exists(select 1 from kh_private.agencies a where a.id=s.agency_id and a.state='approved')) item
   from kh_private.pro_status s where s.pro_until>now() order by s.pro_until,coalesce(s.user_id,s.agency_id) offset p_offset limit 31) t);
 end $$;
 
 -- 5. Privileges ---------------------------------------------------------------------------------
 revoke all on function kh_private.pro_code_hash(text),kh_private.pro_new_code(),kh_private.user_pro_until(uuid),
  kh_private.agency_pro_until(uuid),kh_private.extend_pro(uuid,uuid,integer),kh_private.pro_subject_name(uuid,uuid),
- kh_private.pro_require_subject(uuid,uuid,boolean) from public,anon,authenticated;
--- kh_search_properties is security invoker, so anon needs this one to mark catalogue rows.
-revoke all on function kh_private.property_pro_active(uuid,uuid) from public;
-grant execute on function kh_private.property_pro_active(uuid,uuid) to anon,authenticated;
+ kh_private.pro_require_subject(uuid,uuid,boolean),kh_private.property_pro_active(uuid,uuid) from public,anon,authenticated;
 revoke all on function public.kh_is_pro(public.properties),public.kh_pro_badge(uuid) from public;
 grant execute on function public.kh_is_pro(public.properties),public.kh_pro_badge(uuid) to anon,authenticated;
 revoke all on function public.kh_pro_status(uuid),public.kh_redeem_pro_code(uuid,text,uuid),
