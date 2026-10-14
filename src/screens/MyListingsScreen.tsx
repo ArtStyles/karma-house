@@ -13,6 +13,8 @@ import { useMarketplace } from '../state/MarketplaceProvider';
 import { remoteErrorMessage } from '../state/remoteMarketplaceStore';
 import { createThemedStyles, formatMoney, internalLayout } from '../theme';
 import {useIncomingTransferCount} from '../transfers/useIncomingTransferCount';
+import { bumpErrorMessage, canBumpNow, formatProDate, isProActive, nextBumpAt } from '../pro/domain';
+import { usePro } from '../pro/usePro';
 
 const boardLabels: Record<ListingBoardState, string> = {
   sold: 'Cerrado', rejected: 'Necesita cambios', draft: 'Borrador',
@@ -33,6 +35,8 @@ export default function MyListingsScreen() {
   const { ownListings: own, setStatus, mode, ready, storageError, refresh, submitForReview } = useMarketplace();
   const { user, session, isOwner } = useAuth();
   const transfers=useIncomingTransferCount();
+  const pro = usePro();
+  const personalPro = isProActive(pro.status?.personalUntil);
   const [pending, setPending] = useState('');
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'all' | ListingBoardState>('all');
@@ -66,6 +70,15 @@ export default function MyListingsScreen() {
     locked.current = true;
     setPending(id); setError('');
     try { await submitForReview(id); } catch (failure) { setError(remoteErrorMessage(failure)); }
+    finally { locked.current = false; setPending(''); }
+  }
+
+  async function bump(item: Listing) {
+    if (locked.current || reload.isRefreshing() || !pro.repository) return;
+    locked.current = true;
+    setPending(item.id); setError('');
+    try { await pro.repository.bump(item.id); await refresh(); }
+    catch (failure) { setError(bumpErrorMessage(failure, item)); }
     finally { locked.current = false; setPending(''); }
   }
 
@@ -111,10 +124,12 @@ export default function MyListingsScreen() {
             <Button label="Editar" secondary icon="create-outline" onPress={() => router.push(`/edit/${item.id}`)} style={styles.actionButton} disabled={!!pending} />
             {/* Pausing only means anything once the listing can actually reach the catalogue. */}
             {state === 'live' && <Button label="Pausar" secondary icon="pause-outline" onPress={() => update(item.id, 'paused')} loading={pending === item.id} disabled={!!pending} style={styles.actionButton} />}
+            {state === 'live' && personalPro && canBumpNow(item) && <Button label="Subir anuncio" secondary icon="arrow-up-outline" onPress={() => void bump(item)} loading={pending === item.id} disabled={!!pending} style={styles.actionButton} />}
             {/* Gated on the raw status, not the chip: a paused listing under review still has to be un-pausable. */}
             {item.status === 'paused' && <Button label="Reactivar" secondary icon="play-outline" onPress={() => update(item.id, 'active')} loading={pending === item.id} disabled={!!pending} style={styles.actionButton} />}
             {state === 'sold' && <Button label="Reactivar" secondary icon="play-outline" onPress={() => setConfirm({ listing: item, next: 'active' })} disabled={!!pending} style={styles.actionButton} />}
           </ActionGroup>
+          {state === 'live' && personalPro && !canBumpNow(item) && <Text style={styles.location}>Podrás subirlo el {formatProDate(nextBumpAt(item))}.</Text>}
           {state !== 'sold' && <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!pending }} disabled={!!pending} onPress={() => setConfirm({ listing: item, next: 'sold' })} style={({ pressed }) => [styles.soldButton, pressed && styles.pressed, !!pending && styles.disabled]}>
             <Icon name="checkmark-circle-outline" color={colors.primary} size={19} />
             <Text style={styles.soldText}>Cerrar anuncio</Text>

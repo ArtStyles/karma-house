@@ -6,6 +6,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import React from 'react';
 import { listingBoardState } from '../src/domain/listings.ts';
+import { bumpErrorMessage, canBumpNow, formatProDate, isProActive, nextBumpAt } from '../src/pro/domain.ts';
 
 function harness(screen, overrides = {}) {
   const states = [], refs = [];
@@ -26,6 +27,8 @@ function harness(screen, overrides = {}) {
     listingFacts: () => '', operationBadge: () => '', typeLabel: () => '', formatMoney: () => '$ 1',
     listingBoardState, listingOperation: () => 'sale', priceSuffix: () => '',
     useIncomingTransferCount: () => ({ count: 0, refresh: async () => {} }),
+    usePro: () => ({ repository: null, status: null, error: '', loading: false, reload: async () => {} }),
+    bumpErrorMessage, canBumpNow, formatProDate, isProActive, nextBumpAt,
     useConsultationRefresh: () => ({ refreshing: false, refresh: async () => {}, isRefreshing: () => false }),
     remoteErrorMessage: e => e.message, adminError: e => e.message,
     accountActions: () => ['suspend'], actionLabel: { suspend: 'Suspender cuenta' }, roleLabel: { member: 'Miembro' },

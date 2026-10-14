@@ -12,10 +12,15 @@ import type {AgencyProperty} from '../agencies/properties/types';
 import {agencyError} from '../agencies/domain';
 import {ActionGroup,Button,EmptyState,Notice,PageTitle} from '../components/ui';
 import {useAgencyFormStyles} from '../components/agencies/AgencyRegistrationFields';
+import {bumpErrorMessage,canBumpNow,formatProDate,isProActive,nextBumpAt} from '../pro/domain';
+import {usePro} from '../pro/usePro';
 export default function AgencyPortfolioScreen(){const a=useAuth(),w=useAgencyWorkspace();return <Portfolio key={`${a.user?.id}:${w.activeAgencyId}:${w.generation}:${a.suspended}:${Boolean(a.session)}`}/>}
 function Portfolio(){
  const w=useAgencyWorkspace(),auth=useAuth(),{styles:s,colors}=useAgencyFormStyles();
  const [items,setItems]=useState<AgencyProperty[]>([]),[more,setMore]=useState(false),[busy,setBusy]=useState(false),[issue,setIssue]=useState('');
+ const pro=usePro(),[bumping,setBumping]=useState('');
+ const agencyPro=isProActive(pro.status?.agencies.find(agency=>agency.id===w.activeAgencyId)?.until);
+ async function bump(item:AgencyProperty){if(!pro.repository||bumping)return;setBumping(item.property.id);setIssue('');try{await pro.repository.bump(item.property.id);await load();}catch(e){setIssue(bumpErrorMessage(e,item.property));}finally{setBumping('');}}
  const focused=useRef(false),sequence=useRef(0),itemsRef=useRef(items);itemsRef.current=items;
  const allowed=w.ready&&!!w.activeAgency&&Boolean(w.membership&&auth.session&&!auth.suspended);
  const load=useCallback(async(append=false)=>{
@@ -42,6 +47,9 @@ function Portfolio(){
   <View style={s.datum}><Text style={s.caption}>{item.canEditCommon?'Origen de esta inmobiliaria':'Cartera autorizada'}</Text><Text style={s.value}>Referencia: {item.mandate.reference}</Text></View>
   <ActionGroup><Button label="Abrir vivienda" onPress={()=>router.push({pathname:'/agency-property/[id]',params:{id:item.property.id}})}/><Button secondary label="Ver interesados y expediente privado" onPress={()=>router.push({pathname:'/agency-deals',params:{propertyId:item.property.id}})}/></ActionGroup>
   {item.property.moderationStatus==='approved'&&item.property.status==='active'&&<AgencyShareButton propertyId={item.property.id} title={item.property.title}/>}
+  {agencyPro&&item.canEditCommon&&item.property.moderationStatus==='approved'&&item.property.status==='active'&&(canBumpNow(item.property)
+   ?<Button secondary label="Subir anuncio" loading={bumping===item.property.id} disabled={!!bumping||busy} onPress={()=>void bump(item)}/>
+   :<Text style={s.caption}>Podrás subirla el {formatProDate(nextBumpAt(item.property))}.</Text>)}
  </View>)}
  {more&&<Button label="Cargar más viviendas" secondary disabled={busy} onPress={()=>void load(true)}/>}
  </>}</ScrollView></SafeAreaView>;
