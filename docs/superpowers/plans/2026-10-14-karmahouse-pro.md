@@ -71,6 +71,8 @@ En adelante, «**base nueva**» significa repetir las dos primeras líneas de es
 
 ### Task 2: Estado Pro, códigos y administración (servidor)
 
+> **Hecha.** La versión vigente es la del repositorio (commits b9c68e5, 66fdb2f, 25b69d9). Tras la revisión: las notas no van a `admin_audit` (las ve cualquier administrador) sino a `pro_codes.note`, `pro_codes.cancel_note` y `pro_status.note`; `kh_is_pro` busca el anuncio por id en lugar de fiarse de la fila; `kh_private.property_pro_active` es privada; el canje rechaza cuentas en borrado y códigos de más de 64 caracteres y revalida permisos en el reintento; las listas de propietario devuelven `cancelNote`, `note` y `effective`; `scripts/local-sql/verify-pro-concurrency.mjs` prueba la carrera entre dos canjes. El SQL de abajo es el de partida.
+
 **Files:**
 - Create: `supabase/tests/pro.sql`
 - Create: `supabase/migrations/20261014000100_karmahouse_pro.sql`
@@ -787,10 +789,11 @@ begin
   v_key_col := case v_sort when 'recent' then 'coalesce(p.bumped_at, p.created_at)' when 'area-desc' then 'p.area' else 'p.price' end;
   v_agg_order := case v_sort when 'price-asc' then 'ord_key asc, ord_id asc' else 'ord_key desc, ord_id desc' end;
 
-  -- Pro: every row carries is_pro next to the property columns.
+  -- Pro: every row carries is_pro next to the property columns. kh_is_pro is the anon-callable
+  -- wrapper; kh_private.property_pro_active is private since the Task 2 review.
   execute format(
     'select coalesce(jsonb_agg(row_json order by %1$s), ''[]''::jsonb) from ('
-    || ' select (to_jsonb(p) - ''search_text'' - ''search_vector'') || jsonb_build_object(''is_pro'', kh_private.property_pro_active(p.id, p.owner_id)) as row_json,'
+    || ' select (to_jsonb(p) - ''search_text'' - ''search_vector'') || jsonb_build_object(''is_pro'', public.kh_is_pro(p)) as row_json,'
     || ' %2$s as ord_key, p.id as ord_id'
     || ' from public.properties p where %3$s%4$s%5$s order by %6$s limit %7$s) t',
     v_agg_order,
@@ -1015,11 +1018,11 @@ test('status and redemption decode strictly', () => {
 });
 
 test('owner lists keep one page and refuse unknown states', () => {
-  const row = { id, days: 30, note: 'Pago', boundName: null, state: 'unused', createdAt: '2026-10-14T00:00:00Z', expiresAt: '2026-11-13T00:00:00Z', redeemedAt: null, redeemedFor: null };
+  const row = { id, days: 30, note: 'Pago', boundName: null, state: 'unused', createdAt: '2026-10-14T00:00:00Z', expiresAt: '2026-11-13T00:00:00Z', redeemedAt: null, redeemedFor: null, cancelNote: null };
   const page = decodeProCodes({ items: Array.from({ length: 31 }, () => row), hasMore: true });
   assert.equal(page.items.length, 30);
   assert.throws(() => decodeProCodes({ items: [{ ...row, state: 'lost' }], hasMore: false }));
-  assert.equal(decodeProAccounts({ items: [{ kind: 'agency', id, name: 'Casas', until: '2026-11-13T00:00:00Z', note: null }], hasMore: false }).items[0].kind, 'agency');
+  assert.equal(decodeProAccounts({ items: [{ kind: 'agency', id, name: 'Casas', until: '2026-11-13T00:00:00Z', note: null, effective: true }], hasMore: false }).items[0].kind, 'agency');
 });
 
 test('the repository pins the actor and sends only the normalized code', async () => {
@@ -1079,8 +1082,8 @@ export interface ProStatus { personalUntil: string | null; agencies: ProAgency[]
 export interface ProRedeemResult { kind: 'user' | 'agency'; id: string; until: string }
 export interface ProBumpResult { bumpedAt: string; nextBumpAt: string }
 export type ProCodeState = 'unused' | 'redeemed' | 'expired' | 'cancelled';
-export interface ProCodeRow { id: string; days: number; note: string; boundName: string | null; state: ProCodeState; createdAt: string; expiresAt: string; redeemedAt: string | null; redeemedFor: string | null }
-export interface ProAccountRow { kind: 'user' | 'agency'; id: string; name: string; until: string; note: string | null }
+export interface ProCodeRow { id: string; days: number; note: string; boundName: string | null; state: ProCodeState; createdAt: string; expiresAt: string; redeemedAt: string | null; redeemedFor: string | null; cancelNote: string | null }
+export interface ProAccountRow { kind: 'user' | 'agency'; id: string; name: string; until: string; note: string | null; effective: boolean }
 export interface ProPage<T> { items: T[]; hasMore: boolean }
 interface Bumpable { createdAt: string; bumpedAt?: string }
 
@@ -1169,13 +1172,13 @@ export function decodeProCodes(value: unknown): ProPage<ProCodeRow> {
   return page(value, item => {
     if (!record(item) || !isUuid(item.id) || !Number.isSafeInteger(item.days) || !text(item.note, 500) || !nullableText(item.boundName, 120)
       || !['unused', 'redeemed', 'expired', 'cancelled'].includes(String(item.state)) || !instant(item.createdAt) || !instant(item.expiresAt)
-      || !nullableInstant(item.redeemedAt) || !nullableText(item.redeemedFor, 120)) throw invalid();
+      || !nullableInstant(item.redeemedAt) || !nullableText(item.redeemedFor, 120) || !nullableText(item.cancelNote, 500)) throw invalid();
     return item as unknown as ProCodeRow;
   });
 }
 export function decodeProAccounts(value: unknown): ProPage<ProAccountRow> {
   return page(value, item => {
-    if (!record(item) || !['user', 'agency'].includes(String(item.kind)) || !isUuid(item.id) || !text(item.name, 120) || !instant(item.until) || !nullableText(item.note, 500)) throw invalid();
+    if (!record(item) || !['user', 'agency'].includes(String(item.kind)) || !isUuid(item.id) || !text(item.name, 120) || !instant(item.until) || !nullableText(item.note, 500) || typeof item.effective !== 'boolean') throw invalid();
     return item as unknown as ProAccountRow;
   });
 }
@@ -1813,7 +1816,7 @@ export default function AdminProScreen() {
         <Text accessibilityRole="header" style={styles.section}>Cuentas Pro</Text>
         {accounts.length === 0 ? <Text style={styles.muted}>Ninguna cuenta tiene Pro activo.</Text> : accounts.map(row => <View key={`${row.kind}:${row.id}`} style={styles.card}>
           <Text style={styles.title}>{row.name}</Text>
-          <Text style={styles.muted}>{row.kind === 'agency' ? 'Inmobiliaria' : 'Cuenta personal'} · hasta el {formatProDate(row.until)}</Text>
+          <Text style={styles.muted}>{row.kind === 'agency' ? 'Inmobiliaria' : 'Cuenta personal'} · hasta el {formatProDate(row.until)}{row.effective ? '' : ' · sin efecto: la inmobiliaria no está aprobada'}</Text>
           {row.note ? <Text style={styles.body}>{row.note}</Text> : null}
           <Button label="Quitar Pro" secondary disabled={busy} onPress={() => setPending({ kind: 'revoke', row })} />
         </View>)}
@@ -1821,6 +1824,7 @@ export default function AdminProScreen() {
         {codes.length === 0 ? <Text style={styles.muted}>Todavía no hay códigos.</Text> : codes.map(row => <View key={row.id} style={styles.card}>
           <Text style={styles.title}>{stateLabel[row.state]} · {row.days} días</Text>
           <Text style={styles.body}>{row.note}</Text>
+          {row.cancelNote ? <Text style={styles.muted}>Anulado: {row.cancelNote}</Text> : null}
           <Text style={styles.muted}>{row.boundName ? `Para ${row.boundName}` : 'Código libre'} · creado el {formatProDate(row.createdAt)}{row.redeemedAt ? ` · canjeado el ${formatProDate(row.redeemedAt)} para ${row.redeemedFor}` : ''}</Text>
           {row.state === 'unused' && <Button label="Anular" secondary disabled={busy} onPress={() => setPending({ kind: 'cancel', row })} />}
         </View>)}
