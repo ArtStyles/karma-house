@@ -29,7 +29,7 @@ insert into kh_private.agencies(id,trade_name,state) values
 insert into kh_private.agency_memberships(agency_id,user_id,role) values
  ('43000000-0000-4000-8000-0000000000a1','43000000-0000-4000-8000-000000000006','admin'),
  ('43000000-0000-4000-8000-0000000000a1','43000000-0000-4000-8000-000000000007','manager');
-create temporary table pro_ctx(free_code text,bound_code text,agency_code text,agency_bound text,expired_code text,cancel_code text,first_until timestamptz);
+create temporary table pro_ctx(free_code text,bound_code text,agency_code text,agency_bound text,expired_code text,cancel_code text,rate_code text,first_until timestamptz);
 insert into pro_ctx default values;
 grant all on pro_ctx to authenticated;
 
@@ -39,6 +39,8 @@ select pg_temp.pro_as('43000000-0000-4000-8000-000000000003');
 select pg_temp.pro_error($q$select public.kh_admin_create_pro_code('43000000-0000-4000-8000-000000000003',30,'Pago de prueba')$q$,'KH_ADMIN_REQUIRED');
 select pg_temp.pro_as('43000000-0000-4000-8000-000000000002');
 select pg_temp.pro_error($q$select public.kh_admin_create_pro_code('43000000-0000-4000-8000-000000000002',30,'Pago de prueba')$q$,'KH_OWNER_REQUIRED');
+select pg_temp.pro_error($q$select public.kh_admin_grant_pro('43000000-0000-4000-8000-000000000002',30,'Pago de prueba','43000000-0000-4000-8000-000000000003')$q$,'KH_OWNER_REQUIRED');
+select pg_temp.pro_error($q$select public.kh_admin_list_pro_accounts('43000000-0000-4000-8000-000000000002')$q$,'KH_OWNER_REQUIRED');
 select pg_temp.pro_as('43000000-0000-4000-8000-000000000001');
 select pg_temp.pro_error($q$select public.kh_admin_create_pro_code('43000000-0000-4000-8000-000000000001',0,'Pago de prueba')$q$,'KH_PRO_INVALID');
 select pg_temp.pro_error($q$select public.kh_admin_create_pro_code('43000000-0000-4000-8000-000000000001',30,'no')$q$,'KH_PRO_INVALID');
@@ -49,10 +51,15 @@ update pro_ctx set
  agency_code=public.kh_admin_create_pro_code('43000000-0000-4000-8000-000000000001',30,'Pago inmobiliaria libre')->>'code',
  agency_bound=public.kh_admin_create_pro_code('43000000-0000-4000-8000-000000000001',365,'Pago inmobiliaria atada',null,'43000000-0000-4000-8000-0000000000a1')->>'code',
  expired_code=public.kh_admin_create_pro_code('43000000-0000-4000-8000-000000000001',30,'Código que caducará')->>'code',
- cancel_code=public.kh_admin_create_pro_code('43000000-0000-4000-8000-000000000001',30,'Código que se anulará')->>'code';
+ cancel_code=public.kh_admin_create_pro_code('43000000-0000-4000-8000-000000000001',30,'Código que se anulará')->>'code',
+ rate_code=public.kh_admin_create_pro_code('43000000-0000-4000-8000-000000000001',30,'Código para el límite')->>'code';
 select pg_temp.pro_assert(free_code ~ '^KH-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}$','codes use the unambiguous alphabet') from pro_ctx;
 
 reset role;
+-- Server normalization: case, dashes and the KH prefix of a 14-symbol input only.
+select pg_temp.pro_assert(kh_private.pro_code_hash('khq4-x9tr-2plw')=sha256(convert_to('KHQ4X9TR2PLW','UTF8')),'a 12-symbol body that starts with KH keeps it');
+select pg_temp.pro_assert(kh_private.pro_code_hash('KH-KHQ4-X9TR-2PLW')=sha256(convert_to('KHQ4X9TR2PLW','UTF8')),'the KH prefix of a 14-symbol input is dropped');
+select pg_temp.pro_assert(kh_private.pro_code_hash('KH-7Q4M-X9TR-2PLW')=kh_private.pro_code_hash('7q4mx9tr2plw'),'with or without the KH prefix');
 select pg_temp.pro_assert((select count(*)=1 from kh_private.pro_codes c,pro_ctx x where c.code_hash=sha256(convert_to(replace(substr(x.free_code,4),'-',''),'UTF8'))),'only the hash of the code body is stored');
 update kh_private.pro_codes set expires_at=now()-interval '1 second' where code_hash=kh_private.pro_code_hash((select expired_code from pro_ctx));
 set local role authenticated;
@@ -98,10 +105,13 @@ insert into kh_private.pro_status(agency_id,pro_until) values('43000000-0000-400
 select pg_temp.pro_assert(kh_private.agency_pro_until('43000000-0000-4000-8000-0000000000a2') is null,'an agency that is not approved has no effective Pro');
 set local role authenticated;
 
--- Five failures within an hour block the sixth try before the code is even read.
+-- Five failures within an hour block the sixth try before the code is even read, even a valid one.
 select pg_temp.pro_as('43000000-0000-4000-8000-000000000005');
 select public.kh_redeem_pro_code('43000000-0000-4000-8000-000000000005','KH-2222-2222-222'||n) from generate_series(2,6) n;
-select pg_temp.pro_assert(public.kh_redeem_pro_code('43000000-0000-4000-8000-000000000005',agency_code)->>'error'='KH_PRO_CODE_RATE','the sixth try within an hour is refused') from pro_ctx;
+select pg_temp.pro_assert(public.kh_redeem_pro_code('43000000-0000-4000-8000-000000000005',rate_code)->>'error'='KH_PRO_CODE_RATE','the sixth try within an hour is refused') from pro_ctx;
+reset role;
+select pg_temp.pro_assert((select redeemed_at is null from kh_private.pro_codes where code_hash=kh_private.pro_code_hash((select rate_code from pro_ctx))),'a rate-limited valid code stays unused');
+set local role authenticated;
 
 -- Direct grants add days; the list runs by expiry; revoking ends Pro once.
 select pg_temp.pro_as('43000000-0000-4000-8000-000000000001');
@@ -109,14 +119,19 @@ select pg_temp.pro_assert((public.kh_admin_grant_pro('43000000-0000-4000-8000-00
 select pg_temp.pro_error($q$select public.kh_admin_grant_pro('43000000-0000-4000-8000-000000000001',30,'Sin destinatario')$q$,'KH_PRO_INVALID');
 select pg_temp.pro_assert((select array_agg(i->>'id' order by o) from jsonb_array_elements(public.kh_admin_list_pro_accounts('43000000-0000-4000-8000-000000000001')->'items') with ordinality x(i,o))
  =array['43000000-0000-4000-8000-0000000000a2','43000000-0000-4000-8000-000000000004','43000000-0000-4000-8000-000000000003','43000000-0000-4000-8000-0000000000a1'],'Pro accounts are listed by expiry');
+select pg_temp.pro_assert((select i->>'note' from jsonb_array_elements(public.kh_admin_list_pro_accounts('43000000-0000-4000-8000-000000000001')->'items') i where i->>'id'='43000000-0000-4000-8000-000000000003')='Renovación pagada','the owner sees the note of a direct grant');
 select public.kh_admin_revoke_pro('43000000-0000-4000-8000-000000000001','Devolución del pago','43000000-0000-4000-8000-000000000004');
 select pg_temp.pro_error($q$select public.kh_admin_revoke_pro('43000000-0000-4000-8000-000000000001','Devolución del pago','43000000-0000-4000-8000-000000000004')$q$,'KH_PRO_NOT_ACTIVE');
 select pg_temp.pro_as('43000000-0000-4000-8000-000000000004');
 select pg_temp.pro_assert((public.kh_pro_status('43000000-0000-4000-8000-000000000004')->>'personalUntil')::timestamptz<=now(),'a revoked Pro has ended');
 
 reset role;
--- 6 created, 1 cancelled, 4 redeemed, 1 granted, 1 revoked; retries are not audited.
-select pg_temp.pro_assert((select count(*) from kh_private.admin_audit where action in('pro_code_created','pro_code_cancelled','pro_code_redeemed','pro_granted','pro_revoked'))=13,'every Pro action is in the history');
+-- 7 created, 1 cancelled, 4 redeemed, 1 granted, 1 revoked; retries are not audited.
+select pg_temp.pro_assert((select count(*) from kh_private.admin_audit where action in('pro_code_created','pro_code_cancelled','pro_code_redeemed','pro_granted','pro_revoked'))=14,'every Pro action is in the history');
+-- Every admin reads the history, so notes live only in owner-only places.
+select pg_temp.pro_assert(not exists(select 1 from kh_private.admin_audit where action like 'pro\_%' and reason is not null),'Pro history rows carry no note');
+select pg_temp.pro_assert((select note from kh_private.pro_status where user_id='43000000-0000-4000-8000-000000000004')='Devolución del pago','a revoke keeps its note for the owner');
+select pg_temp.pro_assert((select cancel_note from kh_private.pro_codes where note='Código que se anulará')='Cliente desistió','a cancel keeps its note for the owner');
 
 -- The public badge needs a public listing; private tables and someone else's status stay closed.
 set local role anon;

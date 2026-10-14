@@ -7,6 +7,7 @@ create table kh_private.pro_status(
  user_id uuid unique references auth.users(id) on delete cascade,
  agency_id uuid unique references kh_private.agencies(id) on delete cascade,
  pro_until timestamptz not null,
+ note text check(note is null or char_length(note) between 3 and 500), -- last owner note of a direct grant or revoke
  updated_at timestamptz not null default now(),
  check(num_nonnulls(user_id,agency_id)=1)
 );
@@ -21,6 +22,7 @@ create table kh_private.pro_codes(
  created_at timestamptz not null default now(),
  expires_at timestamptz not null,
  cancelled_at timestamptz,
+ cancel_note text check(cancel_note is null or char_length(cancel_note) between 3 and 500),
  redeemed_by uuid references auth.users(id) on delete set null,
  redeemed_user_id uuid references auth.users(id) on delete set null,
  redeemed_agency_id uuid references kh_private.agencies(id) on delete set null,
@@ -144,6 +146,7 @@ begin
  end if;
  update kh_private.pro_codes set redeemed_by=p_actor_id,redeemed_user_id=v_user,redeemed_agency_id=v_agency,redeemed_at=now() where id=c.id;
  v_until:=kh_private.extend_pro(v_user,v_agency,c.days);
+ -- Pro audit rows carry no note: every admin reads the history, notes stay owner-only.
  perform kh_private.audit_action('pro_code_redeemed',c.id,kh_private.pro_subject_name(v_user,v_agency),null);
  return jsonb_build_object('ok',true,'kind',case when v_user is null then 'agency' else 'user' end,'id',coalesce(v_user,v_agency),'until',v_until);
 end $$;
@@ -165,7 +168,7 @@ begin
   exception when unique_violation then null; -- 60 bits make a repeat practically impossible; the loop only guards it.
   end;
  end loop;
- perform kh_private.audit_action('pro_code_created',v_id,kh_private.pro_subject_name(p_user_id,p_agency_id),v_note);
+ perform kh_private.audit_action('pro_code_created',v_id,kh_private.pro_subject_name(p_user_id,p_agency_id),null);
  return jsonb_build_object('id',v_id,'code','KH-'||substr(v_code,1,4)||'-'||substr(v_code,5,4)||'-'||substr(v_code,9,4),'expiresAt',v_expires);
 end $$;
 
@@ -192,8 +195,8 @@ begin
  if char_length(v_note) not between 3 and 500 then raise exception 'KH_PRO_INVALID'; end if;
  select * into c from kh_private.pro_codes where id=p_code_id for update;
  if not found or c.cancelled_at is not null or c.redeemed_at is not null then raise exception 'KH_PRO_CODE_STATE'; end if;
- update kh_private.pro_codes set cancelled_at=now() where id=c.id;
- perform kh_private.audit_action('pro_code_cancelled',c.id,kh_private.pro_subject_name(c.bound_user_id,c.bound_agency_id),v_note);
+ update kh_private.pro_codes set cancelled_at=now(),cancel_note=v_note where id=c.id;
+ perform kh_private.audit_action('pro_code_cancelled',c.id,kh_private.pro_subject_name(c.bound_user_id,c.bound_agency_id),null);
 end $$;
 
 create function public.kh_admin_grant_pro(p_actor_id uuid,p_days integer,p_note text,p_user_id uuid default null,p_agency_id uuid default null) returns jsonb
@@ -204,7 +207,8 @@ begin
  if char_length(v_note) not between 3 and 500 then raise exception 'KH_PRO_INVALID'; end if;
  perform kh_private.pro_require_subject(p_user_id,p_agency_id,false);
  v_until:=kh_private.extend_pro(p_user_id,p_agency_id,p_days);
- perform kh_private.audit_action('pro_granted',coalesce(p_user_id,p_agency_id),kh_private.pro_subject_name(p_user_id,p_agency_id),v_note);
+ update kh_private.pro_status set note=v_note where user_id=p_user_id or agency_id=p_agency_id;
+ perform kh_private.audit_action('pro_granted',coalesce(p_user_id,p_agency_id),kh_private.pro_subject_name(p_user_id,p_agency_id),null);
  return jsonb_build_object('until',v_until);
 end $$;
 
@@ -215,9 +219,9 @@ begin
  perform kh_private.admin_actor(p_actor_id,true);
  if char_length(v_note) not between 3 and 500 then raise exception 'KH_PRO_INVALID'; end if;
  perform kh_private.pro_require_subject(p_user_id,p_agency_id,false);
- update kh_private.pro_status set pro_until=now(),updated_at=now() where (user_id=p_user_id or agency_id=p_agency_id) and pro_until>now();
+ update kh_private.pro_status set pro_until=now(),updated_at=now(),note=v_note where (user_id=p_user_id or agency_id=p_agency_id) and pro_until>now();
  if not found then raise exception 'KH_PRO_NOT_ACTIVE'; end if;
- perform kh_private.audit_action('pro_revoked',coalesce(p_user_id,p_agency_id),kh_private.pro_subject_name(p_user_id,p_agency_id),v_note);
+ perform kh_private.audit_action('pro_revoked',coalesce(p_user_id,p_agency_id),kh_private.pro_subject_name(p_user_id,p_agency_id),null);
 end $$;
 
 create function public.kh_admin_list_pro_accounts(p_actor_id uuid,p_offset integer default 0) returns jsonb
@@ -227,7 +231,7 @@ begin
  if p_offset is null or p_offset<0 or p_offset>100000 then raise exception 'KH_PRO_INVALID'; end if;
  return (select jsonb_build_object('items',coalesce(jsonb_agg(t.item order by t.pro_until,t.sid),'[]'::jsonb),'hasMore',count(*)>30) from (
   select s.pro_until,coalesce(s.user_id,s.agency_id) sid,jsonb_build_object('kind',case when s.user_id is null then 'agency' else 'user' end,
-   'id',coalesce(s.user_id,s.agency_id),'name',kh_private.pro_subject_name(s.user_id,s.agency_id),'until',s.pro_until) item
+   'id',coalesce(s.user_id,s.agency_id),'name',kh_private.pro_subject_name(s.user_id,s.agency_id),'until',s.pro_until,'note',s.note) item
   from kh_private.pro_status s where s.pro_until>now() order by s.pro_until,coalesce(s.user_id,s.agency_id) offset p_offset limit 31) t);
 end $$;
 
