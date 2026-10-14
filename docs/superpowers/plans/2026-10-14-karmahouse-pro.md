@@ -557,6 +557,7 @@ select pg_temp.pro_as('44000000-0000-4000-8000-000000000002');
 select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000002','44000000-0000-4000-8000-0000000000b1')$q$,'KH_PRO_REQUIRED');
 select pg_temp.pro_as('44000000-0000-4000-8000-000000000001');
 select public.kh_admin_grant_pro('44000000-0000-4000-8000-000000000001',30,'Pago de prueba','44000000-0000-4000-8000-000000000002');
+select pg_temp.pro_assert(public.kh_pro_badge('44000000-0000-4000-8000-000000000002'),'a Pro seller with a live listing shows the profile badge');
 select pg_temp.pro_as('44000000-0000-4000-8000-000000000002');
 select pg_temp.pro_assert((public.kh_bump_property('44000000-0000-4000-8000-000000000002','44000000-0000-4000-8000-0000000000b1')->>'nextBumpAt')::timestamptz=now()+interval '7 days','a bump allows the next one in a week');
 select pg_temp.pro_assert((select bumped_at=now() and version=1 and created_at=now()-interval '8 days' from public.properties where id='44000000-0000-4000-8000-0000000000b1'),'a bump moves only bumped_at');
@@ -1018,7 +1019,7 @@ test('owner lists keep one page and refuse unknown states', () => {
   const page = decodeProCodes({ items: Array.from({ length: 31 }, () => row), hasMore: true });
   assert.equal(page.items.length, 30);
   assert.throws(() => decodeProCodes({ items: [{ ...row, state: 'lost' }], hasMore: false }));
-  assert.equal(decodeProAccounts({ items: [{ kind: 'agency', id, name: 'Casas', until: '2026-11-13T00:00:00Z' }], hasMore: false }).items[0].kind, 'agency');
+  assert.equal(decodeProAccounts({ items: [{ kind: 'agency', id, name: 'Casas', until: '2026-11-13T00:00:00Z', note: null }], hasMore: false }).items[0].kind, 'agency');
 });
 
 test('the repository pins the actor and sends only the normalized code', async () => {
@@ -1079,7 +1080,7 @@ export interface ProRedeemResult { kind: 'user' | 'agency'; id: string; until: s
 export interface ProBumpResult { bumpedAt: string; nextBumpAt: string }
 export type ProCodeState = 'unused' | 'redeemed' | 'expired' | 'cancelled';
 export interface ProCodeRow { id: string; days: number; note: string; boundName: string | null; state: ProCodeState; createdAt: string; expiresAt: string; redeemedAt: string | null; redeemedFor: string | null }
-export interface ProAccountRow { kind: 'user' | 'agency'; id: string; name: string; until: string }
+export interface ProAccountRow { kind: 'user' | 'agency'; id: string; name: string; until: string; note: string | null }
 export interface ProPage<T> { items: T[]; hasMore: boolean }
 interface Bumpable { createdAt: string; bumpedAt?: string }
 
@@ -1174,7 +1175,7 @@ export function decodeProCodes(value: unknown): ProPage<ProCodeRow> {
 }
 export function decodeProAccounts(value: unknown): ProPage<ProAccountRow> {
   return page(value, item => {
-    if (!record(item) || !['user', 'agency'].includes(String(item.kind)) || !isUuid(item.id) || !text(item.name, 120) || !instant(item.until)) throw invalid();
+    if (!record(item) || !['user', 'agency'].includes(String(item.kind)) || !isUuid(item.id) || !text(item.name, 120) || !instant(item.until) || !nullableText(item.note, 500)) throw invalid();
     return item as unknown as ProAccountRow;
   });
 }
@@ -1813,6 +1814,7 @@ export default function AdminProScreen() {
         {accounts.length === 0 ? <Text style={styles.muted}>Ninguna cuenta tiene Pro activo.</Text> : accounts.map(row => <View key={`${row.kind}:${row.id}`} style={styles.card}>
           <Text style={styles.title}>{row.name}</Text>
           <Text style={styles.muted}>{row.kind === 'agency' ? 'Inmobiliaria' : 'Cuenta personal'} · hasta el {formatProDate(row.until)}</Text>
+          {row.note ? <Text style={styles.body}>{row.note}</Text> : null}
           <Button label="Quitar Pro" secondary disabled={busy} onPress={() => setPending({ kind: 'revoke', row })} />
         </View>)}
         <Text accessibilityRole="header" style={styles.section}>Códigos recientes</Text>

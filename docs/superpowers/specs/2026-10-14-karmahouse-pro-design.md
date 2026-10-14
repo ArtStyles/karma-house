@@ -88,7 +88,7 @@ Todo nuevo vive en `kh_private`, sin acceso directo desde `anon` ni `authenticat
 Cambios en tablas existentes:
 
 - `public.properties.bumped_at timestamptz`, nula hasta la primera subida. «Más recientes» ordena por `coalesce(bumped_at, created_at)` con un índice de expresión. Así no hace falta rellenar filas ni añadir disparadores, y las altas que fijan `created_at` (pruebas, traspasos) conservan su orden.
-- `kh_private.admin_audit` registra crear código, anular código, dar Pro y quitar Pro, con `target_id` igual al código, la cuenta o la inmobiliaria, y la nota como `reason`. No se crea otra tabla de auditoría.
+- `kh_private.admin_audit` registra crear, anular y canjear código, dar Pro y quitar Pro, con `target_id` igual al código, la cuenta o la inmobiliaria, **sin nota** (`reason` nula): el Historial lo lee cualquier administrador, y las notas solo las ve el propietario. Las notas viven en `pro_codes.note` (al crear), `pro_codes.cancel_note` (al anular) y `pro_status.note` (última activación o retirada directa), que solo leen las funciones de propietario.
 
 El historial de precios se llena con un disparador `after insert or update of price, operation, rent_period, availability` que solo inserta si algún valor cambió. Al migrar se copia el estado actual de cada anuncio como primer punto.
 
@@ -102,11 +102,11 @@ Todas son `security definer` con `search_path=''`, como las existentes. Ninguna 
 | `kh_redeem_pro_code(p_code, p_agency_id default null)` | Cuenta autenticada | Estado Pro resultante del destinatario. |
 | `kh_bump_property(p_property_id)` | Dueño o miembro con acceso | Nuevo `bumped_at` y la fecha de la próxima subida posible. |
 | `kh_admin_create_pro_code(p_days, p_note, p_user_id, p_agency_id)` | Propietario | Código en texto, una vez, más su `id` y `expires_at`. |
-| `kh_admin_list_pro_codes(p_state, p_offset)` | Propietario | Página de 30 códigos: sin usar, canjeado, caducado o anulado. |
+| `kh_admin_list_pro_codes(p_offset)` | Propietario | Página de los 30 códigos más recientes, cada uno con su estado: sin usar, canjeado, caducado o anulado. |
 | `kh_admin_cancel_pro_code(p_code_id, p_note)` | Propietario | Código anulado. |
-| `kh_admin_grant_pro(p_user_id, p_agency_id, p_days, p_note)` | Propietario | Nuevo `pro_until`. |
-| `kh_admin_revoke_pro(p_user_id, p_agency_id, p_note)` | Propietario | `pro_until = now()`. |
-| `kh_admin_list_pro_accounts(p_offset)` | Propietario | Página de 30 cuentas Pro, ordenadas por `pro_until` ascendente. |
+| `kh_admin_grant_pro(p_days, p_note, p_user_id, p_agency_id)` | Propietario | Nuevo `pro_until`. |
+| `kh_admin_revoke_pro(p_note, p_user_id, p_agency_id)` | Propietario | `pro_until = now()`. |
+| `kh_admin_list_pro_accounts(p_offset)` | Propietario | Página de 30 cuentas Pro, ordenadas por `pro_until` ascendente, con su última nota. |
 
 Como el resto de RPC del proyecto, todas reciben `p_actor_id` como primer parámetro y fallan con `KH_ACCOUNT_CHANGED` si no coincide con la sesión. Hay dos funciones públicas más, sin sesión: `kh_pro_badge(p_user_id)` para el perfil y el campo calculado `kh_is_pro(public.properties)`.
 
@@ -130,6 +130,9 @@ La autoridad de propietario usa `kh_private.admin_actor(p_actor_id, true)`, la m
 | `KH_PRO_REQUIRED` | «Subir anuncio es parte de KarmaHouse Pro.» |
 | `KH_BUMP_TOO_SOON` | «Podrás subir este anuncio el <fecha>.» |
 | `KH_BUMP_NOT_ELIGIBLE` | «Solo se pueden subir anuncios publicados y activos.» |
+| `KH_PRO_INVALID` | Solo administración: días fuera de 1-365, nota fuera de 3-500 o destinatario inválido. |
+| `KH_PRO_CODE_STATE` | Solo administración: el código ya se usó o ya estaba anulado. |
+| `KH_PRO_NOT_ACTIVE` | Solo administración: esa cuenta no tiene Pro activo que quitar. |
 
 ## 6. Catálogo y disparadores existentes
 
