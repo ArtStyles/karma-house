@@ -261,10 +261,12 @@ grant execute on function public.kh_pro_status(uuid),public.kh_redeem_pro_code(u
  public.kh_admin_revoke_pro(uuid,text,uuid,uuid),public.kh_admin_list_pro_accounts(uuid,integer) to authenticated;
 
 -- 6. Weekly bump ---------------------------------------------------------------------------------
--- Null until the first bump: «Más recientes» orders by coalesce(bumped_at, created_at), so no row
--- needs a backfill and inserts that set created_at keep their place.
+-- Null until the first bump: «Más recientes» orders by greatest(bumped_at, created_at), so no row
+-- needs a backfill and inserts that set created_at keep their place. greatest ignores nulls and a
+-- bump lands at least 7 days after created_at, so it equals coalesce here; unlike coalesce it is
+-- leakproof, so under the RLS read policy the cursor cut-off stays an Index Cond.
 alter table public.properties add column bumped_at timestamptz;
-create index properties_catalog_listed on public.properties((coalesce(bumped_at,created_at)) desc,id desc)
+create index properties_catalog_listed on public.properties((greatest(bumped_at,created_at)) desc,id desc)
  where moderation='approved' and availability='active';
 
 create function kh_private.only_bump_changed(o public.properties,n public.properties) returns boolean language sql stable set search_path='' as $$
@@ -311,7 +313,7 @@ end $$;
 create or replace function kh_private.kh_catalog_after(v_sort text)
 returns text language sql immutable parallel safe as $fn$
   select case v_sort
-    when 'recent'     then '(coalesce(p.bumped_at, p.created_at), p.id) < (($1->>''ck'')::timestamptz, ($1->>''ci'')::uuid)'
+    when 'recent'     then '(greatest(p.bumped_at, p.created_at), p.id) < (($1->>''ck'')::timestamptz, ($1->>''ci'')::uuid)'
     when 'price-asc'  then '(p.price, p.id) > (($1->>''ck'')::numeric, ($1->>''ci'')::uuid)'
     when 'price-desc' then '(p.price, p.id) < (($1->>''ck'')::numeric, ($1->>''ci'')::uuid)'
     else                   '(p.area, p.id) < (($1->>''ck'')::numeric, ($1->>''ci'')::uuid)'
@@ -319,7 +321,7 @@ returns text language sql immutable parallel safe as $fn$
 $fn$;
 
 -- Same as 20260921000100 with three changes, each marked «Pro»: 'recent' orders and pages by
--- coalesce(bumped_at, created_at), and every row carries is_pro.
+-- greatest(bumped_at, created_at), and every row carries is_pro.
 create or replace function public.kh_search_properties(p_payload jsonb)
 returns jsonb language plpgsql stable security invoker
 set search_path = public, kh_private, pg_catalog
@@ -403,12 +405,12 @@ begin
 
   -- Pro: the literal ORDER BY must match properties_catalog_listed.
   v_order := case v_sort
-    when 'recent'     then 'coalesce(p.bumped_at, p.created_at) desc, p.id desc'
+    when 'recent'     then 'greatest(p.bumped_at, p.created_at) desc, p.id desc'
     when 'price-asc'  then 'p.price asc, p.id asc'
     when 'price-desc' then 'p.price desc, p.id desc'
     else                   'p.area desc, p.id desc'
   end;
-  v_key_col := case v_sort when 'recent' then 'coalesce(p.bumped_at, p.created_at)' when 'area-desc' then 'p.area' else 'p.price' end;
+  v_key_col := case v_sort when 'recent' then 'greatest(p.bumped_at, p.created_at)' when 'area-desc' then 'p.area' else 'p.price' end;
   v_agg_order := case v_sort when 'price-asc' then 'ord_key asc, ord_id asc' else 'ord_key desc, ord_id desc' end;
 
   -- Pro: every row carries is_pro next to the property columns. kh_is_pro is the anon-callable
@@ -429,10 +431,11 @@ begin
 
   if jsonb_array_length(v_rows) = v_limit then
     v_last := v_rows -> (v_limit - 1);
-    -- Pro: the cursor key is the same coalesce the order uses.
+    -- Pro: the cursor key is the same greatest the order uses, in the row's JSON timestamp format
+    -- (ISO 8601 whatever the DateStyle), which ($1->>'ck')::timestamptz reads back exactly.
     v_next := concat_ws('|', v_sort, v_mode, v_last->>'id',
       case v_sort
-        when 'recent' then coalesce(v_last->>'bumped_at', v_last->>'created_at')
+        when 'recent' then to_jsonb(greatest((v_last->>'bumped_at')::timestamptz, (v_last->>'created_at')::timestamptz)) #>> '{}'
         when 'area-desc' then v_last->>'area'
         else v_last->>'price'
       end);
@@ -448,14 +451,20 @@ declare p public.properties%rowtype; v_origin uuid; v_now timestamptz:=now();
 begin
  if auth.uid() is null or auth.uid() is distinct from p_actor_id then raise exception 'KH_ACCOUNT_CHANGED' using errcode='42501'; end if;
  perform kh_private.require_active();
+ if kh_private.is_deleting(p_actor_id) then raise exception 'KH_ACCOUNT_DELETING'; end if;
  select * into p from public.properties where id=p_property_id for update;
  if not found or exists(select 1 from kh_private.property_aliases where property_id=p.id) then raise exception 'KH_BUMP_NOT_ELIGIBLE'; end if;
  select origin_agency_id into v_origin from kh_private.agency_property_origins where property_id=p.id;
+ -- Like every other agency write: the module kill switch, then a confirmed, live account.
+ if v_origin is not null then
+  perform kh_private.agency_require_enabled();
+  perform kh_private.agency_account(p_actor_id);
+ end if;
  if (v_origin is null and p.owner_id<>p_actor_id)
   or (v_origin is not null and not exists(select 1 from kh_private.agency_memberships where agency_id=v_origin and user_id=p_actor_id and state='active'))
   or p.moderation<>'approved' or p.availability<>'active' then raise exception 'KH_BUMP_NOT_ELIGIBLE'; end if;
  if not kh_private.property_pro_active(p.id,p.owner_id) then raise exception 'KH_PRO_REQUIRED'; end if;
- if coalesce(p.bumped_at,p.created_at)>v_now-interval '7 days' then raise exception 'KH_BUMP_TOO_SOON'; end if;
+ if greatest(p.bumped_at,p.created_at)>v_now-interval '7 days' then raise exception 'KH_BUMP_TOO_SOON'; end if;
  if v_origin is not null then
   insert into kh_private.agency_property_write_permits(transaction_id,property_id,actor_id,request_id,purpose) values(txid_current(),p.id,p_actor_id,p.client_request_id,'bump');
  end if;

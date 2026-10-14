@@ -1,6 +1,7 @@
 -- KarmaHouse Pro: weekly bump, catalogue order, alerts and price history. Everything rolls back.
 -- O owner (…01), S seller (…02), X stranger (…03), G agency admin (…04), M agency manager (…05),
--- W watcher with a saved search (…06). Listings b1-b4 sit in a province no real listing uses.
+-- W watcher with a saved search (…06), Y admin of another agency (…07). Listings b1-b5 sit in a
+-- province no real listing uses. Every email is confirmed: agency bumps require it.
 begin;
 create function pg_temp.pro_assert(ok boolean,label text) returns void language plpgsql as $$
 begin if ok is not true then raise exception 'BUMP ASSERTION: %',label; end if; end $$;
@@ -17,20 +18,24 @@ begin
  perform set_config('request.jwt.claim.sub',coalesce(actor::text,''),true);
  perform set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role',case when actor is null then 'anon' else 'authenticated' end)::text,true);
 end $$;
-insert into auth.users(id,email,raw_user_meta_data)
- select ('44000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'bump-'||n||'@example.invalid',jsonb_build_object('display_name','Persona Bump '||n)
- from generate_series(1,6) n;
+insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data)
+ select ('44000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'bump-'||n||'@example.invalid',now(),jsonb_build_object('display_name','Persona Bump '||n)
+ from generate_series(1,7) n;
 insert into kh_private.platform_owner(singleton,user_id) values(true,'44000000-0000-4000-8000-000000000001')
  on conflict(singleton) do update set user_id=excluded.user_id;
-insert into kh_private.agencies(id,trade_name,state) values('44000000-0000-4000-8000-0000000000a1','Casas Bump Ficticias','approved');
+update kh_private.agency_settings set enabled=true;
+insert into kh_private.agencies(id,trade_name,state) values('44000000-0000-4000-8000-0000000000a1','Casas Bump Ficticias','approved'),
+ ('44000000-0000-4000-8000-0000000000a2','Otra Inmobiliaria Ficticia','approved');
 insert into kh_private.agency_memberships(agency_id,user_id,role) values
  ('44000000-0000-4000-8000-0000000000a1','44000000-0000-4000-8000-000000000004','admin'),
- ('44000000-0000-4000-8000-0000000000a1','44000000-0000-4000-8000-000000000005','manager');
-insert into public.properties(id,owner_id,client_request_id,title,location,province,type,description,price,area,bedrooms,bathrooms,amenities,photo_paths,moderation,created_at) values
- ('44000000-0000-4000-8000-0000000000b1','44000000-0000-4000-8000-000000000002','pro-b1','Casa antigua para subir','Vedado','Zona Pro Prueba','Casa','Vivienda ficticia para probar la subida semanal.',50000,100,2,1,'{}',array['44000000-0000-4000-8000-000000000002/pro-b1/photo.jpg'],'approved',now()-interval '8 days'),
- ('44000000-0000-4000-8000-0000000000b2','44000000-0000-4000-8000-000000000002','pro-b2','Casa reciente','Playa','Zona Pro Prueba','Casa','Vivienda ficticia publicada ayer para la prueba.',60000,100,2,1,'{}',array['44000000-0000-4000-8000-000000000002/pro-b2/photo.jpg'],'approved',now()-interval '1 day'),
- ('44000000-0000-4000-8000-0000000000b3','44000000-0000-4000-8000-000000000002','pro-b3','Casa en revisión','Cerro','Zona Pro Prueba','Casa','Vivienda ficticia que todavía espera revisión.',70000,100,2,1,'{}',array['44000000-0000-4000-8000-000000000002/pro-b3/photo.jpg'],'pending',now()-interval '8 days'),
- ('44000000-0000-4000-8000-0000000000b4','44000000-0000-4000-8000-000000000004','pro-b4','Casa de la inmobiliaria','Centro','Zona Pro Prueba','Casa','Vivienda ficticia publicada por la inmobiliaria.',80000,100,2,1,'{}',array['44000000-0000-4000-8000-000000000004/pro-b4/photo.jpg'],'approved',now()-interval '9 days');
+ ('44000000-0000-4000-8000-0000000000a1','44000000-0000-4000-8000-000000000005','manager'),
+ ('44000000-0000-4000-8000-0000000000a2','44000000-0000-4000-8000-000000000007','admin');
+insert into public.properties(id,owner_id,client_request_id,title,location,province,type,description,price,area,bedrooms,bathrooms,amenities,photo_paths,moderation,availability,created_at,updated_at) values
+ ('44000000-0000-4000-8000-0000000000b1','44000000-0000-4000-8000-000000000002','pro-b1','Casa antigua para subir','Vedado','Zona Pro Prueba','Casa','Vivienda ficticia para probar la subida semanal.',50000,100,2,1,'{}',array['44000000-0000-4000-8000-000000000002/pro-b1/photo.jpg'],'approved','active',now()-interval '8 days',now()-interval '8 days'),
+ ('44000000-0000-4000-8000-0000000000b2','44000000-0000-4000-8000-000000000002','pro-b2','Casa reciente','Playa','Zona Pro Prueba','Casa','Vivienda ficticia publicada ayer para la prueba.',60000,100,2,1,'{}',array['44000000-0000-4000-8000-000000000002/pro-b2/photo.jpg'],'approved','active',now()-interval '1 day',now()),
+ ('44000000-0000-4000-8000-0000000000b3','44000000-0000-4000-8000-000000000002','pro-b3','Casa en revisión','Cerro','Zona Pro Prueba','Casa','Vivienda ficticia que todavía espera revisión.',70000,100,2,1,'{}',array['44000000-0000-4000-8000-000000000002/pro-b3/photo.jpg'],'pending','active',now()-interval '8 days',now()),
+ ('44000000-0000-4000-8000-0000000000b4','44000000-0000-4000-8000-000000000004','pro-b4','Casa de la inmobiliaria','Centro','Zona Pro Prueba','Casa','Vivienda ficticia publicada por la inmobiliaria.',80000,100,2,1,'{}',array['44000000-0000-4000-8000-000000000004/pro-b4/photo.jpg'],'approved','active',now()-interval '9 days',now()),
+ ('44000000-0000-4000-8000-0000000000b5','44000000-0000-4000-8000-000000000002','pro-b5','Casa en pausa','Kohly','Zona Pro Prueba','Casa','Vivienda ficticia pausada por quien la publica.',90000,100,2,1,'{}',array['44000000-0000-4000-8000-000000000002/pro-b5/photo.jpg'],'approved','paused',now()-interval '8 days',now());
 insert into kh_private.agency_property_origins(property_id,origin_agency_id,publisher_id,source_reference,consent_reference)
  values('44000000-0000-4000-8000-0000000000b4','44000000-0000-4000-8000-0000000000a1','44000000-0000-4000-8000-000000000004','ref-b4','consent-b4');
 -- b4 predates media assets: its legacy photo path would fail revalidation under the bump permit.
@@ -50,12 +55,21 @@ select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8
 select pg_temp.pro_as('44000000-0000-4000-8000-000000000001');
 select public.kh_admin_grant_pro('44000000-0000-4000-8000-000000000001',30,'Pago de prueba','44000000-0000-4000-8000-000000000002');
 select pg_temp.pro_assert(public.kh_pro_badge('44000000-0000-4000-8000-000000000002'),'a Pro seller with a live listing shows the profile badge');
+-- An account being deleted cannot bump; the same call works once the deletion is gone.
+reset role;
+insert into kh_private.account_deletions(user_id) values('44000000-0000-4000-8000-000000000002');
+set local role authenticated;
 select pg_temp.pro_as('44000000-0000-4000-8000-000000000002');
+select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000002','44000000-0000-4000-8000-0000000000b1')$q$,'KH_ACCOUNT_DELETING');
+reset role;
+delete from kh_private.account_deletions where user_id='44000000-0000-4000-8000-000000000002';
+set local role authenticated;
 select pg_temp.pro_assert((public.kh_bump_property('44000000-0000-4000-8000-000000000002','44000000-0000-4000-8000-0000000000b1')->>'nextBumpAt')::timestamptz=now()+interval '7 days','a bump allows the next one in a week');
-select pg_temp.pro_assert((select bumped_at=now() and version=1 and created_at=now()-interval '8 days' from public.properties where id='44000000-0000-4000-8000-0000000000b1'),'a bump moves only bumped_at');
+select pg_temp.pro_assert((select bumped_at=now() and version=1 and created_at=now()-interval '8 days' and updated_at=now()-interval '8 days' from public.properties where id='44000000-0000-4000-8000-0000000000b1'),'a bump moves only bumped_at');
 select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000002','44000000-0000-4000-8000-0000000000b1')$q$,'KH_BUMP_TOO_SOON');
 select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000002','44000000-0000-4000-8000-0000000000b2')$q$,'KH_BUMP_TOO_SOON');
 select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000002','44000000-0000-4000-8000-0000000000b3')$q$,'KH_BUMP_NOT_ELIGIBLE');
+select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000002','44000000-0000-4000-8000-0000000000b5')$q$,'KH_BUMP_NOT_ELIGIBLE');
 select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000002','44000000-0000-4000-8000-0000000000b4')$q$,'KH_BUMP_NOT_ELIGIBLE');
 select pg_temp.pro_as('44000000-0000-4000-8000-000000000003');
 select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000003','44000000-0000-4000-8000-0000000000b1')$q$,'KH_BUMP_NOT_ELIGIBLE');
@@ -76,7 +90,24 @@ select pg_temp.pro_as('44000000-0000-4000-8000-000000000005');
 select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000005','44000000-0000-4000-8000-0000000000b4')$q$,'KH_PRO_REQUIRED');
 select pg_temp.pro_as('44000000-0000-4000-8000-000000000001');
 select public.kh_admin_grant_pro('44000000-0000-4000-8000-000000000001',30,'Pago inmobiliaria',null,'44000000-0000-4000-8000-0000000000a1');
+-- Membership of another approved agency does not count.
+select pg_temp.pro_as('44000000-0000-4000-8000-000000000007');
+select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000007','44000000-0000-4000-8000-0000000000b4')$q$,'KH_BUMP_NOT_ELIGIBLE');
+-- The agency module checks apply: kill switch, then a confirmed email.
+reset role;
+update kh_private.agency_settings set enabled=false;
+set local role authenticated;
 select pg_temp.pro_as('44000000-0000-4000-8000-000000000005');
+select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000005','44000000-0000-4000-8000-0000000000b4')$q$,'KH_AGENCY_DISABLED');
+reset role;
+update kh_private.agency_settings set enabled=true;
+update auth.users set email_confirmed_at=null where id='44000000-0000-4000-8000-000000000005';
+set local role authenticated;
+select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000005','44000000-0000-4000-8000-0000000000b4')$q$,'KH_EMAIL_UNCONFIRMED');
+reset role;
+update auth.users set email_confirmed_at=now() where id='44000000-0000-4000-8000-000000000005';
+set local role authenticated;
+select pg_temp.pro_assert((select bumped_at is null from public.properties where id='44000000-0000-4000-8000-0000000000b4'),'refused agency bumps change nothing');
 select public.kh_bump_property('44000000-0000-4000-8000-000000000005','44000000-0000-4000-8000-0000000000b4');
 reset role;
 select pg_temp.pro_assert((select bumped_at=now() from public.properties where id='44000000-0000-4000-8000-0000000000b4')
@@ -112,8 +143,9 @@ select pg_temp.pro_assert((select count(*) from kh_private.property_price_histor
 update public.properties set price=58000 where id='44000000-0000-4000-8000-0000000000b2';
 update public.properties set description='Vivienda ficticia con otra descripción para la prueba.' where id='44000000-0000-4000-8000-0000000000b2';
 update public.properties set availability='sold' where id='44000000-0000-4000-8000-0000000000b2';
+update public.properties set price=price,availability=availability where id='44000000-0000-4000-8000-0000000000b2';
 select pg_temp.pro_assert((select array_agg(price::int||':'||availability order by id) from kh_private.property_price_history where property_id='44000000-0000-4000-8000-0000000000b2')
- =array['60000:active','58000:active','58000:sold'],'only price and availability changes are recorded');
+ =array['60000:active','58000:active','58000:sold'],'only real price and availability changes are recorded, not a same-value write');
 set local role authenticated;
 select pg_temp.pro_as('44000000-0000-4000-8000-000000000002');
 select pg_temp.pro_error($q$select * from kh_private.property_price_history$q$,'permission denied');
