@@ -102,6 +102,7 @@ export default function ProfileScreen() {
       {user && <>
         <Text style={styles.sectionLabel}>Cuenta</Text>
         <View style={styles.group}>
+          <AccountRow icon="star-outline" title="KarmaHouse Pro" onPress={() => router.push('/pro')} />
           <AccountRow icon="notifications-outline" title="Preferencias de notificaciones" onPress={() => router.push('/notification-settings')} />
           <AccountRow icon="log-out-outline" title="Cerrar sesión" danger disabled={busy} loading={busy} onPress={async () => {
             setBusy(true); setError('');
