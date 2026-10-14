@@ -52,11 +52,13 @@ Más fotos por anuncio, revisión prioritaria, estadísticas por anuncio, vistas
 - Píldora pequeña con borde azul y texto «Pro». Texto accesible: «Cuenta Pro de KarmaHouse».
 - Nunca usa «verificado», «garantizado» ni el check verde de verificación. Pro es un servicio pagado, no una revisión de identidad ni de titularidad.
 - No se llama «Destacado»: ese nombre pertenece al nivel de confianza `featured`.
+- La tarjeta y el detalle lo leen del propio anuncio (`is_pro`). El perfil público lo pide con una consulta aparte, `kh_pro_badge`, porque los APK actuales rechazan cualquier clave nueva en `kh_public_profile`.
+- La página web pública de la inmobiliaria no muestra el sello en v1: es otra aplicación (`PUBLIC_PAGES_URL`) y queda para después. Sus anuncios sí lo muestran en la app.
 
 ### Subir anuncio
 
-- Requisitos: anuncio `approved` y `active`, no suspendido, cubierto por un Pro vigente, y `listed_at <= now() - interval '7 days'`.
-- Efecto: `listed_at = now()`. El anuncio aparece arriba en «Más recientes» para todos los clientes, incluidos los APK antiguos, porque el orden se resuelve en servidor.
+- Requisitos: anuncio `approved` y `active`, no suspendido, cubierto por un Pro vigente, y `coalesce(bumped_at, created_at) <= now() - interval '7 days'`.
+- Efecto: `bumped_at = now()`. El anuncio aparece arriba en «Más recientes» para todos los clientes, incluidos los APK antiguos, porque el orden se resuelve en servidor.
 - La etiqueta «Nueva» sigue calculándose con `created_at`: un anuncio subido no finge ser nuevo.
 - Subir no dispara alertas de búsqueda, avisos de publicación ni cambios de versión.
 
@@ -85,7 +87,7 @@ Todo nuevo vive en `kh_private`, sin acceso directo desde `anon` ni `authenticat
 
 Cambios en tablas existentes:
 
-- `public.properties.listed_at timestamptz not null`, rellenado con `created_at` al migrar y con `now()` en altas nuevas. Sustituye a `created_at` en el índice y el cursor de `recent`.
+- `public.properties.bumped_at timestamptz`, nula hasta la primera subida. «Más recientes» ordena por `coalesce(bumped_at, created_at)` con un índice de expresión. Así no hace falta rellenar filas ni añadir disparadores, y las altas que fijan `created_at` (pruebas, traspasos) conservan su orden.
 - `kh_private.admin_audit` registra crear código, anular código, dar Pro y quitar Pro, con `target_id` igual al código, la cuenta o la inmobiliaria, y la nota como `reason`. No se crea otra tabla de auditoría.
 
 El historial de precios se llena con un disparador `after insert or update of price, operation, rent_period, availability` que solo inserta si algún valor cambió. Al migrar se copia el estado actual de cada anuncio como primer punto.
@@ -96,9 +98,9 @@ Todas son `security definer` con `search_path=''`, como las existentes. Ninguna 
 
 | Función | Quién | Resultado |
 |---|---|---|
-| `kh_pro_status()` | Cuenta autenticada | Su `pro_until` personal y el de cada inmobiliaria que administra. |
+| `kh_pro_status()` | Cuenta autenticada | Su `pro_until` personal y, con su función, el de cada inmobiliaria aprobada donde es miembro activo (un gestor también sube anuncios de la agencia). |
 | `kh_redeem_pro_code(p_code, p_agency_id default null)` | Cuenta autenticada | Estado Pro resultante del destinatario. |
-| `kh_bump_property(p_property_id)` | Dueño o miembro con acceso | Nuevo `listed_at` y la fecha de la próxima subida posible. |
+| `kh_bump_property(p_property_id)` | Dueño o miembro con acceso | Nuevo `bumped_at` y la fecha de la próxima subida posible. |
 | `kh_admin_create_pro_code(p_days, p_note, p_user_id, p_agency_id)` | Propietario | Código en texto, una vez, más su `id` y `expires_at`. |
 | `kh_admin_list_pro_codes(p_state, p_offset)` | Propietario | Página de 30 códigos: sin usar, canjeado, caducado o anulado. |
 | `kh_admin_cancel_pro_code(p_code_id, p_note)` | Propietario | Código anulado. |
@@ -106,10 +108,13 @@ Todas son `security definer` con `search_path=''`, como las existentes. Ninguna 
 | `kh_admin_revoke_pro(p_user_id, p_agency_id, p_note)` | Propietario | `pro_until = now()`. |
 | `kh_admin_list_pro_accounts(p_offset)` | Propietario | Página de 30 cuentas Pro, ordenadas por `pro_until` ascendente. |
 
-La autoridad de propietario usa `kh_private.is_owner(auth.uid())`, la misma que aprueba inmobiliarias.
+Como el resto de RPC del proyecto, todas reciben `p_actor_id` como primer parámetro y fallan con `KH_ACCOUNT_CHANGED` si no coincide con la sesión. Hay dos funciones públicas más, sin sesión: `kh_pro_badge(p_user_id)` para el perfil y el campo calculado `kh_is_pro(public.properties)`.
+
+La autoridad de propietario usa `kh_private.admin_actor(p_actor_id, true)`, la misma que gestiona cuentas.
 
 ### Reglas de canje
 
+0. Los fallos de canje **devuelven** `{ "ok": false, "error": "<código>" }` en lugar de lanzar una excepción: una excepción desharía también el registro del intento fallido y el límite no contaría nunca.
 1. Si el usuario acumula 5 canjes fallidos en la última hora, falla con `KH_PRO_CODE_RATE` sin consultar el código.
 2. El código se bloquea con `for update` para que dos canjes simultáneos no lo usen dos veces.
 3. Si el mismo usuario ya canjeó ese código para el mismo destinatario, devuelve éxito con el estado actual. Esto cubre reintentos tras un corte de red.
@@ -128,9 +133,23 @@ La autoridad de propietario usa `kh_private.is_owner(auth.uid())`, la misma que 
 
 ## 6. Catálogo y disparadores existentes
 
-- `kh_search_properties` ordena `recent` por `(listed_at desc, id desc)` y construye el cursor desde `listed_at`. El cliente ya trata la clave del cursor como valor del servidor (`CatalogCursor.key`); el plan debe comprobar que ningún cliente la reconstruye desde `createdAt`.
-- `kh_search_properties`, el detalle del anuncio, el perfil público y la presentación pública de inmobiliaria devuelven `is_pro boolean`. Los clientes antiguos ignoran el campo.
-- **Riesgo conocido:** siete disparadores de `public.properties` se ejecutan con cualquier actualización: `kh_account_property_write`, `kh_admin_property_audit`, `kh_owner_publication_alerts`, `kh_bind_property_media`, `kh_assisted_consent_write`, `kh_agency_property_guard` y `kh_property_alias_guard`. `kh_properties_normalize_map` solo reacciona a columnas de ubicación. `kh_owner_publication_alerts` vuelve a llamar a `alert_on_approval` cuando la cuenta oficial actualiza su anuncio aprobado, y las guardas de inmobiliaria reaccionan a cualquier actualización. `kh_bump_property` modifica solo `listed_at`, sin tocar `version` ni `updated_at`, y cada disparador debe ignorar una actualización en la que solo cambia `listed_at`. El plan revisa cada uno y deja una prueba por caso.
+- `kh_search_properties` ordena `recent` por `(coalesce(bumped_at, created_at) desc, id desc)` y construye el cursor con ese mismo valor. El cliente trata el cursor como texto opaco del servidor (`next_cursor`), así que los APK actuales siguen paginando.
+- Las filas de `kh_search_properties` llevan `is_pro`. El detalle y Mis anuncios leen `properties` por PostgREST con el campo calculado `is_pro:kh_is_pro` (función `public.kh_is_pro(public.properties)`). Los APK actuales no piden ese campo y no notan el cambio; `mapRemoteListing` ignora claves que no conoce.
+- **Orden de despliegue:** primero la migración, después el cliente. Un cliente nuevo que pida `kh_is_pro` contra un servidor sin la migración no podría leer ningún anuncio.
+- **Disparadores.** Ocho disparadores de `public.properties` se ejecutan al actualizar. Revisados uno por uno:
+
+| Disparador | Con una subida | Cambio |
+|---|---|---|
+| `kh_account_property_write` | Exige cuenta activa | Ninguno: es lo deseado |
+| `kh_admin_property_audit` | Solo actúa si cambian moderación o disponibilidad | Ninguno |
+| `kh_owner_publication_alerts` | Volvería a alertar si la cuenta oficial sube un anuncio suyo | Sale antes si solo cambió `bumped_at` |
+| `kh_bind_property_media` | Revalida fotos; con permiso de inmobiliaria podría rechazar fotos antiguas | Sale antes si solo cambió `bumped_at` |
+| `kh_assisted_consent_write` | Rechaza si el consentimiento asistido se retiró | Ninguno: no se sube un anuncio sin consentimiento |
+| `kh_guard_listing_manager` | Solo actúa si cambia `owner_id` | Ninguno |
+| `kh_agency_property_guard` | Exige un permiso de escritura en anuncios de inmobiliaria | `kh_bump_property` crea el permiso `bump` y lo borra después |
+| `kh_property_alias_guard` | Rechaza alias fusionados | `kh_bump_property` rechaza los alias antes de escribir |
+
+`kh_properties_normalize_map` solo reacciona a columnas de ubicación y el nuevo disparador de historial solo a precio, operación, periodo y disponibilidad.
 
 ## 7. Pantallas
 
@@ -152,14 +171,14 @@ La app de Expo y la versión de navegador comparten estas pantallas.
 
 ### Sello
 
-Tarjeta (`PropertyCard`), detalle junto a quien publica, perfil público e inmobiliaria pública. Pill completa, según BRAND.md, distinta del `AgencyVerifiedBadge`.
+Tarjeta (`PropertyCard`), detalle junto al título y perfil público. Pill completa, según BRAND.md, distinta del `AgencyVerifiedBadge`.
 
 ### Administración del propietario
 
 Nueva entrada «KarmaHouse Pro» en el grupo «Cuenta oficial» de `AdministrationScreen`, visible solo con `auth.isOwner`.
 
-- **Crear código:** días (30, 90 o 365), nota obligatoria, destinatario opcional buscado con el mismo buscador de Cuentas o de Inmobiliarias. El resultado muestra el código con «Copiar» y el aviso «No se podrá volver a ver».
-- **Códigos:** filtro por estado; canjeado muestra quién, para qué cuenta y cuándo; anular un código sin usar pide nota.
+- **Crear código:** días (30, 90 o 365), nota obligatoria, destinatario opcional. El destinatario se elige desde las pantallas que ya existen: el botón «KarmaHouse Pro» de cada cuenta en Cuentas y de cada inmobiliaria aprobada en Inmobiliarias abre esta pantalla con ese destinatario. El resultado muestra el código seleccionable, un botón «Compartir» (hoja nativa de compartir, que incluye copiar y WhatsApp, sin dependencias nuevas) y el aviso «No se podrá volver a ver».
+- **Códigos:** los 30 más recientes con su estado; canjeado muestra para quién y cuándo; anular un código sin usar pide nota.
 - **Cuentas Pro:** ordenadas por vencimiento; dar Pro directo y quitar Pro, siempre con nota.
 - Cada acción aparece en Historial, que ya lee `admin_audit`.
 
