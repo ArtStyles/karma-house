@@ -21,7 +21,7 @@ Decisiones del usuario:
 ### Entra en v1
 
 - Estado Pro por cuenta personal o inmobiliaria, con fecha de vencimiento.
-- Sello «Pro» en tarjeta, detalle, perfil público y presentación de inmobiliaria.
+- Sello «Pro» en tarjeta, detalle y perfil público (la página web pública de la inmobiliaria queda para después; ver §3).
 - Subir anuncio: una vez cada 7 días por anuncio.
 - Activación directa, revocación, códigos atados o libres, canje en la app.
 - Pantalla `/pro` y administración de Pro para el propietario.
