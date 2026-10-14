@@ -2,7 +2,7 @@
 
 Fecha: 14 de octubre de 2026. Rama `feat/karmahouse-pro`, commit `0a5239f`. Diseño: [spec](superpowers/specs/2026-10-14-karmahouse-pro-design.md). Plan: [plan](superpowers/plans/2026-10-14-karmahouse-pro.md).
 
-Estado: **implementado y probado en local; migración aplicada en producción el 14 de octubre de 2026 (18:59 UTC); cliente nuevo no publicado.**
+Estado: **implementado y probado en local; migración aplicada en producción el 14 de octubre de 2026 (18:59 UTC); cliente web publicado en app.karmahouse.site el mismo día (19:13 UTC); APK pendiente.**
 
 ## Local
 
@@ -32,7 +32,7 @@ Clúster PostgreSQL 17 desechable en `127.0.0.1:56440`, bases nuevas creadas con
 
 1. ~~`node scripts/apply-pro.mjs --commit`~~: hecho.
 2. Comprobar que la app publicada sigue leyendo anuncios: hecho a nivel SQL como visitante anónimo; falta mirarla en un navegador o un teléfono.
-3. Fusionar la rama con `main`. Cada push a `main` publica app.karmahouse.site, y el cliente nuevo pide `bumped_at` y `kh_is_pro`: contra un servidor sin la migración no podría leer anuncios por id.
+3. ~~Fusionar con `main`~~: hecho (`76e49de`). El primer despliegue de la app falló en el «Ignored Build Step» (`fatal: bad object`: el clon poco profundo de Vercel no tenía el commit anterior tras un push de 25 commits); arreglado en `pwa/vercel.json` (`5930ad8`) y publicado. Los archivos servidos contienen `kh_bump_property`, `kh_is_pro` y «Cuenta Pro de KarmaHouse».
 4. Nuevo APK. El APK 0.1.25 no tiene la pantalla Pro: verá el nuevo orden de «Más recientes», pero no el sello ni el canje. Por eso el mensaje de cada código dice que se canjea en app.karmahouse.site.
 
 ## Límites
