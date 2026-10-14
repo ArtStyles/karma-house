@@ -12,7 +12,7 @@ import {EmptyState,Icon,Notice,PageTitle,type IconName} from '../components/ui';
 import {createThemedStyles,internalLayout} from '../theme';
 
 type Counts=ReturnType<typeof decodeAdminDashboard>;
-const entries:{title:string;description:string;icon:IconName;path:'/admin'|'/admin-accounts'|'/admin-listings'|'/message-reports'|'/property-reports'|'/admin-history'|'/agency-reviews'|'/assisted-listings';owner?:boolean;count?:keyof Counts}[]=[
+const entries:{title:string;description:string;icon:IconName;path:'/admin'|'/admin-accounts'|'/admin-listings'|'/message-reports'|'/property-reports'|'/admin-history'|'/agency-reviews'|'/assisted-listings'|'/admin-pro';owner?:boolean;count?:keyof Counts}[]=[
  {title:'Revisar anuncios',description:'Publicaciones por aprobar.',icon:'checkmark-circle-outline',path:'/admin',count:'review'},
  {title:'Anuncios',description:'Catálogo y moderación.',icon:'home-outline',path:'/admin-listings'},
  {title:'Cuentas',description:'Personas y permisos.',icon:'people-outline',path:'/admin-accounts'},
@@ -21,6 +21,7 @@ const entries:{title:string;description:string;icon:IconName;path:'/admin'|'/adm
  {title:'Historial',description:'Gestiones y sus motivos.',icon:'time-outline',path:'/admin-history'},
  {title:'Inmobiliarias',description:'Solicitudes y verificación.',icon:'business-outline',path:'/agency-reviews',owner:true,count:'agencies'},
  {title:'Publicación asistida',description:'Colaboradores y sus anuncios.',icon:'swap-horizontal-outline',path:'/assisted-listings',owner:true},
+ {title:'KarmaHouse Pro',description:'Códigos y cuentas Pro.',icon:'star-outline',path:'/admin-pro',owner:true},
 ];
 export default function AdministrationScreen(){
  const {colors,styles:s}=useStyles(),auth=useAuth(),w=useAgencyWorkspace(),call=useAdminApi(),callRef=useRef(call);callRef.current=call;

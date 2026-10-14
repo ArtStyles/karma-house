@@ -72,6 +72,7 @@ export default function AdminManagementScreen({section}:{section:AdminSection}) 
           return <View key={row.id} style={s.card}><View style={s.row}><View style={s.initial}><Text style={s.initialText}>{row.displayName.slice(0,1).toUpperCase()}</Text></View><View style={s.copy}><Text style={s.title}>{row.displayName}</Text><Text style={s.meta}>{roleLabel[row.role]}</Text></View></View><AdminStatus label={row.suspended?'Suspendida':'Activa'} tone={row.suspended?'danger':'green'}/>
             {row.reason?<Notice error>{row.reason}</Notice>:null}
             {row.role==='owner'?<Text style={s.meta}>Cuenta propietaria protegida.</Text>:<ActionGroup>{accountActions(isOwner?'owner':'admin',row.role,row.suspended).map(action=><Button key={action} label={actionLabel[action]} secondary disabled={loading||busy} onPress={()=>choose({actor:user!.id,kind:'account',row,action})}/>)}</ActionGroup>}
+            {isOwner&&<Button label="KarmaHouse Pro" secondary disabled={loading||busy} onPress={()=>router.push({pathname:'/admin-pro',params:{userId:row.id,name:row.displayName}})}/>}
           </View>;
         }
         if(section==='listings'){

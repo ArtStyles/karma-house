@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { bumpErrorMessage, canBumpNow, decodeProAccounts, decodeProCodes, decodeProStatus, decodeRedeem, formatProDate, isProActive, isProCodeShape, nextBumpAt, normalizeProCode, proContactMailto, proErrorMessage } from '../src/pro/domain.ts';
 import { createProRepository } from '../src/pro/repository.ts';
+import { eventLabel } from '../src/admin/domain.ts';
 import { mapRemoteListing, type RemotePropertyRow } from '../src/data/remoteMapping.ts';
 
 const id = '43000000-0000-4000-8000-000000000003';
@@ -98,4 +99,9 @@ test('listings carry the bump date and the Pro mark when the server sends them',
   const source = readFileSync(new URL('../src/data/supabaseMarketplace.ts', import.meta.url), 'utf8');
   const columns = /PROPERTY_COLUMNS = '([^']+)'/.exec(source)![1].split(',');
   assert.ok(columns.includes('bumped_at') && columns.includes('is_pro:kh_is_pro'));
+});
+
+test('the history names every Pro action', () => {
+  assert.deepEqual(['pro_code_created', 'pro_code_cancelled', 'pro_code_redeemed', 'pro_granted', 'pro_revoked'].map(eventLabel),
+    ['Código Pro creado', 'Código Pro anulado', 'Código Pro canjeado', 'Pro activado', 'Pro retirado']);
 });
