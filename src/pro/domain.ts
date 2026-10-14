@@ -75,7 +75,8 @@ const invalid = () => new Error('No se pudieron interpretar los datos de KarmaHo
 const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const instant = (v: unknown): v is string => typeof v === 'string' && Number.isFinite(Date.parse(v));
 const nullableInstant = (v: unknown): v is string | null => v === null || instant(v);
-const text = (v: unknown, max: number): v is string => typeof v === 'string' && v.length <= max;
+/** The server counts characters (code points), not UTF-16 units: a 120-character name with emoji must still decode. */
+const text = (v: unknown, max: number): v is string => typeof v === 'string' && [...v].length <= max;
 const nullableText = (v: unknown, max: number): v is string | null => v === null || text(v, max);
 /** The server sends one extra row to answer «is there more»; keep 30. */
 function page<T>(value: unknown, decode: (item: unknown) => T): ProPage<T> {

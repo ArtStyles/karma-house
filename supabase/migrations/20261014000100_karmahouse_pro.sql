@@ -87,7 +87,10 @@ begin
  return v;
 end $$;
 create function kh_private.pro_subject_name(p_user uuid,p_agency uuid) returns text language sql stable security definer set search_path='' as $$
- select coalesce((select display_name from public.profiles where id=p_user),(select trade_name from kh_private.agencies where id=p_agency),'Código libre')
+ select case
+  when p_user is not null then coalesce((select display_name from public.profiles where id=p_user),'Cuenta eliminada')
+  when p_agency is not null then coalesce((select trade_name from kh_private.agencies where id=p_agency),'Inmobiliaria eliminada')
+  else 'Código libre' end
 $$;
 create function kh_private.pro_require_subject(p_user uuid,p_agency uuid,p_optional boolean) returns void language plpgsql stable security definer set search_path='' as $$
 begin

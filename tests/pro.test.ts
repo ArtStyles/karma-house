@@ -83,6 +83,12 @@ test('owner results carry the server name of the recipient', () => {
   assert.throws(() => decodeProSubject({ ...subject, name: undefined }));
 });
 
+test('lengths count characters like the server, so a name full of emoji still decodes', () => {
+  const subject = { kind: 'agency', id, name: '🏠'.repeat(120), until: null, effective: false };
+  assert.equal(decodeProSubject(subject).name, '🏠'.repeat(120));
+  assert.throws(() => decodeProSubject({ ...subject, name: '🏠'.repeat(121) }));
+});
+
 test('a failed create or grant without a server code may have been saved', () => {
   assert.equal(proWriteErrorMessage(new TypeError('Network request failed')), 'Puede que se haya guardado. Revisa Cuentas Pro y Códigos recientes antes de repetir.');
   assert.equal(proWriteErrorMessage(new Error('No se pudieron interpretar los datos de KarmaHouse Pro.')), 'Puede que se haya guardado. Revisa Cuentas Pro y Códigos recientes antes de repetir.');

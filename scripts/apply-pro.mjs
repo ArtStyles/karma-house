@@ -1,6 +1,8 @@
 // KarmaHouse Pro (supabase/migrations/20261014000100_karmahouse_pro.sql).
 // Without --commit each suite runs on top of the migration inside its own transaction, and both roll
 // back: nothing stays. With --commit the migration is committed once and the suites run after it.
+// The migration holds an exclusive lock on public.properties, so every transaction starts with short
+// timeouts, and in a dry run the migration and its suite travel as ONE query: no idle gap under the lock.
 import { readFileSync } from 'node:fs';
 import { createDatabaseClient } from './cloud-db.mjs';
 
@@ -8,25 +10,41 @@ const root = new URL('../', import.meta.url);
 const migration = readFileSync(new URL('supabase/migrations/20261014000100_karmahouse_pro.sql', root), 'utf8');
 const suites = ['pro', 'pro_bump'].map(name => readFileSync(new URL(`supabase/tests/${name}.sql`, root), 'utf8'));
 const commit = process.argv.includes('--commit');
+const guards = "set local lock_timeout='3s'; set local statement_timeout='60s'; set local idle_in_transaction_session_timeout='15s';";
+// A suite's own begin only warns inside this transaction; its trailing rollback ends it (and undoes the migration in a dry run).
+const transaction = sql => `begin; ${guards}\n${sql}`;
+// Every id the suites invent starts with one of these (pro.sql: 43…, pro_bump.sql: 44…); the 46… ids belong to the local race script only.
+const syntheticIds = ['43000000-0000-4000-8000-%', '44000000-0000-4000-8000-%'];
 const db = createDatabaseClient();
-const inventory = async () => (await db.query(
-  "select (select count(*) from auth.users)::int as users, (select count(*) from public.properties)::int as properties, (select count(*) from kh_private.notifications)::int as notifications, (select count(*) from kh_private.admin_audit)::int as audit",
-)).rows[0];
+const count = async sql => (await db.query(sql, [syntheticIds])).rows[0].n;
+// Counts only the suites' synthetic rows, so real activity in production during the run cannot look like a leftover.
+const leftovers = async () => {
+  const found = async table => (await db.query('select to_regclass($1) is not null as found', [table])).rows[0].found;
+  return {
+    users: await count('select count(*)::int n from auth.users where id::text like any($1::text[])'),
+    agencies: await count('select count(*)::int n from kh_private.agencies where id::text like any($1::text[])'),
+    properties: await count('select count(*)::int n from public.properties where owner_id::text like any($1::text[])'),
+    // These two tables exist only after the migration is committed.
+    proCodes: await found('kh_private.pro_codes') ? await count('select count(*)::int n from kh_private.pro_codes where created_by::text like any($1::text[]) or bound_user_id::text like any($1::text[]) or bound_agency_id::text like any($1::text[]) or redeemed_by::text like any($1::text[])') : 0,
+    proStatus: await found('kh_private.pro_status') ? await count('select count(*)::int n from kh_private.pro_status where user_id::text like any($1::text[]) or agency_id::text like any($1::text[])') : 0,
+  };
+};
+const total = rows => Object.values(rows).reduce((sum, n) => sum + n, 0);
 
 try {
   await db.connect();
-  const before = await inventory();
+  const before = await leftovers();
+  if (total(before)) throw new Error(`KH_LEFTOVER: ya hay filas sintéticas antes de empezar ${JSON.stringify(before)}`);
   if (commit) {
-    await db.query('begin'); await db.query(migration); await db.query('commit'); console.log('migración aplicada');
-    for (const suite of suites) await db.query(suite);
+    await db.query(`${transaction(migration)}\ncommit;`); console.log('migración aplicada');
+    for (const suite of suites) await db.query(transaction(suite));
   } else {
-    // A suite's own begin only warns inside this transaction; its rollback undoes the migration too.
-    for (const suite of suites) { await db.query('begin'); await db.query(migration); await db.query(suite); }
+    for (const suite of suites) await db.query(transaction(`${migration}\n${suite}`));
   }
-  const after = await inventory();
-  const unchanged = JSON.stringify(before) === JSON.stringify(after);
-  console.log(JSON.stringify({ commit, before, after, inventoryUnchanged: unchanged }));
-  if (!unchanged) throw new Error('KH_LEFTOVER: una suite dejó filas sintéticas');
+  const after = await leftovers();
+  const clean = total(after) === 0;
+  console.log(JSON.stringify({ commit, before, after, noLeftovers: clean }));
+  if (!clean) throw new Error('KH_LEFTOVER: una suite dejó filas sintéticas');
   console.log(commit ? 'suites superadas sobre el esquema aplicado' : 'suites superadas; nada se aplicó (usa --commit para aplicar)');
 } catch (error) {
   await db.query('rollback').catch(() => {});

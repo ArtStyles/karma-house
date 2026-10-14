@@ -38,6 +38,23 @@ test('movement and demand respect their thresholds', () => {
   assert.deepEqual(report.demand.map(d => [d.label, d.people]), [['Venta', 5], ['Alquiler', null]]);
 });
 
+test('a saved search without operations is a legacy one: sale and swap, never rent', () => {
+  const searches = Array.from({ length: 5 }, (_, n) => ({ user_id: `old${n}`, operations: [] }));
+  const report = buildProvinceReport({ ...base, listings: [], searches });
+  assert.deepEqual(report.demand.map(d => [d.label, d.people]), [['Venta', 5], ['Permuta', 5]]);
+});
+
+test('without saved searches the page says the demand is not included', () => {
+  const report = buildProvinceReport({ ...base, listings: [], searches: null });
+  assert.equal(report.demand, null);
+  const html = renderReportHtml(report);
+  assert.match(html, /Demanda por búsquedas guardadas: no incluida en este informe\./);
+  assert.doesNotMatch(html, /personas con búsquedas|se cuentan sumadas/);
+  const included = renderReportHtml(buildProvinceReport({ ...base, listings: [], searches: [] }));
+  assert.doesNotMatch(included, /no incluida en este informe/);
+  assert.match(included, /se cuentan sumadas/);
+});
+
 test('the page says what the numbers are and escapes text', () => {
   const html = renderReportHtml(buildProvinceReport({ ...base, province: 'La <Habana>', listings: [], searches: [] }));
   assert.match(html, /Precio pedido, no precio de venta/);

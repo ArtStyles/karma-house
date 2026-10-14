@@ -13,7 +13,7 @@ import { useMarketplace } from '../state/MarketplaceProvider';
 import { remoteErrorMessage } from '../state/remoteMarketplaceStore';
 import { createThemedStyles, formatMoney, internalLayout } from '../theme';
 import {useIncomingTransferCount} from '../transfers/useIncomingTransferCount';
-import { bumpErrorMessage, canBumpNow, formatProDate, isProActive, nextBumpAt } from '../pro/domain';
+import { bumpErrorMessage, canBumpNow, formatProDate, nextBumpAt } from '../pro/domain';
 import { usePro } from '../pro/usePro';
 
 const boardLabels: Record<ListingBoardState, string> = {
@@ -36,7 +36,7 @@ export default function MyListingsScreen() {
   const { user, session, isOwner } = useAuth();
   const transfers=useIncomingTransferCount();
   const pro = usePro();
-  const personalPro = isProActive(pro.status?.personalUntil);
+  // Pro is read per listing from the server: an agency listing is covered by the agency's Pro, not by the person's.
   const [pending, setPending] = useState('');
   // «Pausar» and «Subir anuncio» share `pending`; this says which of the two is running.
   const [bumpingId, setBumpingId] = useState('');
@@ -131,12 +131,12 @@ export default function MyListingsScreen() {
             <Button label="Editar" secondary icon="create-outline" onPress={() => router.push(`/edit/${item.id}`)} style={styles.actionButton} disabled={!!pending} />
             {/* Pausing only means anything once the listing can actually reach the catalogue. */}
             {state === 'live' && <Button label="Pausar" secondary icon="pause-outline" onPress={() => update(item.id, 'paused')} loading={pending === item.id && bumpingId !== item.id} disabled={!!pending} style={styles.actionButton} />}
-            {state === 'live' && personalPro && canBumpNow(item) && <Button label="Subir anuncio" secondary icon="arrow-up-outline" onPress={() => void bump(item)} loading={bumpingId === item.id} disabled={!!pending} style={styles.actionButton} />}
+            {state === 'live' && item.isPro && canBumpNow(item) && <Button label="Subir anuncio" secondary icon="arrow-up-outline" onPress={() => void bump(item)} loading={bumpingId === item.id} disabled={!!pending} style={styles.actionButton} />}
             {/* Gated on the raw status, not the chip: a paused listing under review still has to be un-pausable. */}
             {item.status === 'paused' && <Button label="Reactivar" secondary icon="play-outline" onPress={() => update(item.id, 'active')} loading={pending === item.id} disabled={!!pending} style={styles.actionButton} />}
             {state === 'sold' && <Button label="Reactivar" secondary icon="play-outline" onPress={() => setConfirm({ listing: item, next: 'active' })} disabled={!!pending} style={styles.actionButton} />}
           </ActionGroup>
-          {state === 'live' && personalPro && !canBumpNow(item) && <Text style={styles.location}>Podrás subirlo el {formatProDate(nextBumpAt(item))}.</Text>}
+          {state === 'live' && item.isPro && !canBumpNow(item) && <Text style={styles.location}>Podrás subirlo el {formatProDate(nextBumpAt(item))}.</Text>}
           {state !== 'sold' && <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!pending }} disabled={!!pending} onPress={() => setConfirm({ listing: item, next: 'sold' })} style={({ pressed }) => [styles.soldButton, pressed && styles.pressed, !!pending && styles.disabled]}>
             <Icon name="checkmark-circle-outline" color={colors.primary} size={19} />
             <Text style={styles.soldText}>Cerrar anuncio</Text>

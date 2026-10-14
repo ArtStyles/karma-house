@@ -31,7 +31,8 @@ function ProBody() {
     try {
       const result = await pro.repository.redeem(code, target);
       const agency = result.kind === 'agency' ? pro.status?.agencies.find(item => item.id === result.id) : undefined;
-      setCode(''); setNotice(`KarmaHouse Pro activo${agency ? ` para ${agency.tradeName}` : ''} hasta el ${formatProDate(result.until)}.`);
+      // An old code retried after its Pro was revoked still answers ok, with a date already past.
+      setCode(''); setNotice(isProActive(result.until) ? `KarmaHouse Pro activo${agency ? ` para ${agency.tradeName}` : ''} hasta el ${formatProDate(result.until)}.` : 'Este código ya se usó y ese Pro terminó.');
       await pro.reload();
     } catch (failure) { setError(proErrorMessage(failure)); }
     finally { setBusy(false); }

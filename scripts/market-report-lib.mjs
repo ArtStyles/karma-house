@@ -3,6 +3,7 @@
 export const MIN_LISTINGS = 10;
 export const MIN_PEOPLE = 5;
 const OPERATIONS = { sale: 'Venta', rent: 'Alquiler', swap: 'Permuta' };
+const LEGACY_OPERATIONS = ['sale', 'swap'];
 const PERIODS = { month: 'al mes', day: 'por día' };
 const DAY = 86_400_000;
 
@@ -38,13 +39,14 @@ function zoneLabel(rows) {
   return [...counts].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0][0];
 }
 
+// `searches: null` means saved searches were not read (privacy policy not updated yet): the page says so.
 export function buildProvinceReport({ province, month, cutoff, listings, searches }) {
   const zones = new Map();
   for (const row of listings) { const key = normalizeZone(row.location); zones.set(key, [...(zones.get(key) ?? []), row]); }
   const inMonth = date => !!date && new Date(date).toISOString().slice(0, 7) === month;
   const sold = listings.filter(row => inMonth(row.sold_at));
-  // An empty operations list means the search covers every operation.
-  const people = operation => new Set(searches.filter(s => s.operations.length === 0 || s.operations.includes(operation)).map(s => s.user_id)).size;
+  // A search with no operations is a legacy one: the catalogue shows it sale and swap, never rent.
+  const people = operation => new Set(searches.filter(s => (s.operations.length ? s.operations : LEGACY_OPERATIONS).includes(operation)).map(s => s.user_id)).size;
   const wanted = new Set(listings.filter(row => row.operation === 'wanted' && row.availability === 'active').map(row => row.owner_id)).size;
   return {
     province, month, cutoff,
@@ -57,7 +59,7 @@ export function buildProvinceReport({ province, month, cutoff, listings, searche
       sold: sold.length,
       medianDaysToSale: sold.length >= MIN_LISTINGS ? median(sold.map(row => (new Date(row.sold_at) - new Date(row.created_at)) / DAY)) : null,
     },
-    demand: Object.entries(OPERATIONS).map(([operation, label]) => ({ label, people: people(operation) }))
+    demand: searches === null ? null : Object.entries(OPERATIONS).map(([operation, label]) => ({ label, people: people(operation) }))
       .filter(entry => entry.people > 0).map(entry => ({ ...entry, people: entry.people >= MIN_PEOPLE ? entry.people : null })),
     wantedPeople: wanted >= MIN_PEOPLE ? wanted : null,
   };
@@ -95,8 +97,9 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px;bord
 <section><h2>Por zona</h2>${report.zones.length ? report.zones.map(z => `<h3>${escape(z.label)}</h3>${table(z.groups)}`).join('') : FEW}</section>
 <section><h2>Movimiento de ${escape(report.month)}</h2><p>Anuncios nuevos: ${report.movement.newListings}. Pasaron a vendido: ${report.movement.sold}.</p>
 <p>Días hasta la venta (mediana): ${days === null ? 'aún hay pocos datos' : Math.round(days)}.</p></section>
-<section><h2>Qué se busca</h2>${report.demand.length ? `<ul>${report.demand.map(d => `<li>${escape(d.label)}: ${d.people === null ? 'aún hay pocos datos' : `${d.people} personas con búsquedas guardadas`}</li>`).join('')}</ul>` : FEW}
-<p>Anuncios «busco» activos: ${report.wantedPeople === null ? 'aún hay pocos datos' : `${report.wantedPeople} personas`}.</p>
-<p class="note">Las búsquedas se cuentan sumadas, sin identificar a nadie, y solo desde ${MIN_PEOPLE} personas.</p></section>
+<section><h2>Qué se busca</h2>${report.demand === null ? '<p>Demanda por búsquedas guardadas: no incluida en este informe.</p>'
+  : `${report.demand.length ? `<ul>${report.demand.map(d => `<li>${escape(d.label)}: ${d.people === null ? 'aún hay pocos datos' : `${d.people} personas con búsquedas guardadas`}</li>`).join('')}</ul>` : FEW}
+<p class="note">Las búsquedas se cuentan sumadas, sin identificar a nadie, y solo desde ${MIN_PEOPLE} personas.</p>`}
+<p>Anuncios «busco» activos: ${report.wantedPeople === null ? 'aún hay pocos datos' : `${report.wantedPeople} personas`}.</p></section>
 </main></body></html>`;
 }

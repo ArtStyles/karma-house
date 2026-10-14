@@ -181,6 +181,10 @@ select pg_temp.pro_assert(public.kh_admin_create_pro_code('43000000-0000-4000-80
 select pg_temp.pro_as('43000000-0000-4000-8000-000000000002');
 select pg_temp.pro_error($q$select public.kh_admin_pro_subject('43000000-0000-4000-8000-000000000002','43000000-0000-4000-8000-000000000003')$q$,'KH_OWNER_REQUIRED');
 reset role;
+-- A deleted person or agency keeps an honest name; only a code bound to no one is «libre».
+select pg_temp.pro_assert(kh_private.pro_subject_name(gen_random_uuid(),null)='Cuenta eliminada'
+ and kh_private.pro_subject_name(null,gen_random_uuid())='Inmobiliaria eliminada'
+ and kh_private.pro_subject_name(null,null)='Código libre','a missing subject is named for what it was');
 -- Every admin client decodes history names up to 100 characters; trade names reach 120.
 select pg_temp.pro_assert((select bool_and(char_length(target_name)<=100) and count(*)=1 from kh_private.admin_audit
  where target_id=(select id from kh_private.pro_codes where bound_agency_id='43000000-0000-4000-8000-0000000000a3')),'a long agency name fits the history');

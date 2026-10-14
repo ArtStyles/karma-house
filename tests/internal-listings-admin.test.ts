@@ -101,31 +101,39 @@ test('my listings exposes the failed load without claiming that the account has 
   assert.equal(elements(tree).some(node => node.type === 'EmptyState'), false);
 });
 
-// Pro: «Subir anuncio» is for a Pro account, a week after publication or the last bump.
+// Pro: «Subir anuncio» depends on the listing being covered by Pro (item.isPro, from the server), a week after publication or the last bump.
 const day = 864e5, ago = days => new Date(Date.now() - days * day).toISOString(), future = new Date(Date.now() + 30 * day).toISOString();
 const settle = async () => { for (let n = 0; n < 4; n++) await new Promise(resolve => setImmediate(resolve)); };
 const proFor = (personalUntil, extra = {}) => ({ repository: null, status: { personalUntil, agencies: [] }, error: '', loading: false, reload: async () => {}, ...extra });
-const liveHome = (extra = {}) => ({ id: 'live-home', title: 'LIVE_HOME', ownerId: 'admin-A', price: 1, status: 'active', moderationStatus: 'approved', createdAt: ago(8), ...extra });
+const liveHome = (extra = {}) => ({ id: 'live-home', title: 'LIVE_HOME', ownerId: 'admin-A', price: 1, status: 'active', moderationStatus: 'approved', createdAt: ago(8), isPro: true, ...extra });
+const unmarkedHome = (extra = {}) => { const { isPro, ...listing } = liveHome(extra); return listing; };
 function myListings(listing, pro, marketplace = {}, overrides = {}) { return harness('MyListingsScreen', { usePro: () => pro, useMarketplace: () => ({ mode: 'cloud', ownListings: [listing], refresh: async () => {}, ...marketplace }), ...overrides }); }
 const button = (screen, label) => elements(screen.render()).find(node => node.type === 'Button' && node.props.label === label);
 const shows = (screen, text) => JSON.stringify(screen.render()).includes(text);
 const errorNotice = screen => elements(screen.render()).find(node => node.type === 'Notice' && node.props.error)?.props.children;
 
-test('my listings offers Subir anuncio to a Pro account once a week has passed since publishing', () => {
+test('my listings offers Subir anuncio on a Pro listing once a week has passed since publishing', () => {
   const screen = myListings(liveHome({ createdAt: ago(8) }), proFor(future));
   assert.ok(button(screen, 'Subir anuncio'));
   assert.equal(shows(screen, 'Podrás subirlo el'), false);
 });
 
-test('my listings tells a Pro account when a listing bumped yesterday can go up again', () => {
+test('my listings tells when a Pro listing bumped yesterday can go up again', () => {
   const screen = myListings(liveHome({ createdAt: ago(30), bumpedAt: ago(1) }), proFor(future));
   assert.equal(button(screen, 'Subir anuncio'), undefined);
   assert.ok(shows(screen, 'Podrás subirlo el'));
 });
 
-test('my listings shows neither the bump nor its date without an active Pro', () => {
+test('my listings follows the listing, not the person: an agency listing is covered without a personal Pro', () => {
   for (const pro of [proFor(null), proFor(ago(1)), { ...proFor(null), status: null }]) {
-    for (const listing of [liveHome({ createdAt: ago(8) }), liveHome({ createdAt: ago(30), bumpedAt: ago(1) })]) {
+    assert.ok(button(myListings(liveHome({ createdAt: ago(8) }), pro), 'Subir anuncio'));
+    assert.ok(shows(myListings(liveHome({ createdAt: ago(30), bumpedAt: ago(1) }), pro), 'Podrás subirlo el'));
+  }
+});
+
+test('my listings shows neither the bump nor its date on a listing Pro does not cover, even if the person has Pro', () => {
+  for (const pro of [proFor(future), proFor(null), { ...proFor(null), status: null }]) {
+    for (const listing of [unmarkedHome({ createdAt: ago(8) }), unmarkedHome({ createdAt: ago(30), bumpedAt: ago(1) })]) {
       const screen = myListings(listing, pro);
       assert.equal(button(screen, 'Subir anuncio'), undefined);
       assert.equal(shows(screen, 'Podrás subirlo el'), false);

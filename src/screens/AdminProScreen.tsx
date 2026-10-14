@@ -122,7 +122,7 @@ export default function AdminProScreen() {
   const choose = (next: Pending) => { setPending(next); setReason(''); setError(''); setNotice(''); };
   const share = (code: Created) => {
     const owner = live.current;
-    Share.share({ message: `Tu código de KarmaHouse Pro (${code.days} días): ${code.code}. Canjéalo antes del ${formatProDate(code.expiresAt)} en Mi espacio › KarmaHouse Pro.` })
+    Share.share({ message: `Tu código de KarmaHouse Pro (${code.days} días): ${code.code}. Canjéalo antes del ${formatProDate(code.expiresAt)} en app.karmahouse.site › Mi espacio › KarmaHouse Pro.` })
       .catch(() => { if (live.current === owner) setError('Copia el código para enviarlo.'); });
   };
   // Called, not rendered as a component: a component defined here would remount the input on every keystroke.
