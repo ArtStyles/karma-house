@@ -2,7 +2,7 @@
 
 Fecha: 14 de octubre de 2026. Rama `feat/karmahouse-pro`, commit `0a5239f`. Diseño: [spec](superpowers/specs/2026-10-14-karmahouse-pro-design.md). Plan: [plan](superpowers/plans/2026-10-14-karmahouse-pro.md).
 
-Estado: **implementado y probado en local; ensayo en producción superado; no aplicado en producción; no publicado.**
+Estado: **implementado y probado en local; migración aplicada en producción el 14 de octubre de 2026 (18:59 UTC); cliente nuevo no publicado.**
 
 ## Local
 
@@ -24,14 +24,15 @@ Clúster PostgreSQL 17 desechable en `127.0.0.1:56440`, bases nuevas creadas con
 - Comprobación previa (solo lectura): sin transacciones largas abiertas, 65 anuncios, última migración del ledger `20261008000200`, sin tablas Pro.
 - Ensayo `node scripts/apply-pro.mjs` (sin `--commit`), autorizado por el usuario: **superado**. Las dos suites pasaron sobre la migración dentro de transacciones que se deshicieron. Filas sintéticas antes y después: 0.
 - Comprobación posterior: producción igual que antes (sin tablas Pro, sin `bumped_at`, 65 anuncios, ledger en `20261008000200`).
-- Aplicación (`--commit`): **pendiente**. Se decidió no aplicarla sin el usuario presente: cambia el esquema de producción y nadie podría reaccionar a un fallo. `--commit` registra también la migración y su SHA-256 (`0cceb878…f388`) en `supabase_migrations`, y se niega a correr dos veces (probado en local).
-- Recorrido real del propietario (Task 11, paso 4): **pendiente** hasta aplicar la migración.
+- Aplicación (`--commit`), pedida expresamente por el usuario: **hecha** a las 18:59 UTC. Antes, sin transacciones largas abiertas. Resultado: `migración aplicada`, ambas suites superadas sobre el esquema aplicado, filas sintéticas antes y después 0. El ledger tiene `20261014000100 karmahouse_pro` con SHA-256 `0cceb878b6e00f9f2575b92a0c2239966640733dcd3746a303f4e32a2a80f388`, igual que el archivo.
+- Comprobación posterior (solo lectura): 65 anuncios, ninguno subido; `pro_status`, `pro_codes` y el historial Pro vacíos; 65 puntos iniciales de historial de precios. Como visitante anónimo, `kh_search_properties` devuelve el catálogo (9 activos) con `is_pro` y `bumped_at` en cada fila y pagina con cursor; `public.kh_is_pro(p)` responde por anuncio.
+- Recorrido real del propietario (Task 11, paso 4): **pendiente**; necesita el cliente nuevo publicado (web) y las cuentas del propietario.
 
 ## Orden de publicación
 
-1. `node scripts/apply-pro.mjs --commit`, en una hora tranquila. Con el node del sistema bloqueado (`EACCES`), usar el node incluido: `%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe`.
-2. Comprobar que la app publicada sigue leyendo anuncios.
-3. Solo entonces fusionar la rama con `main`. Cada push a `main` publica app.karmahouse.site, y el cliente nuevo pide `bumped_at` y `kh_is_pro`: contra un servidor sin la migración no podría leer anuncios por id.
+1. ~~`node scripts/apply-pro.mjs --commit`~~: hecho.
+2. Comprobar que la app publicada sigue leyendo anuncios: hecho a nivel SQL como visitante anónimo; falta mirarla en un navegador o un teléfono.
+3. Fusionar la rama con `main`. Cada push a `main` publica app.karmahouse.site, y el cliente nuevo pide `bumped_at` y `kh_is_pro`: contra un servidor sin la migración no podría leer anuncios por id.
 4. Nuevo APK. El APK 0.1.25 no tiene la pantalla Pro: verá el nuevo orden de «Más recientes», pero no el sello ni el canje. Por eso el mensaje de cada código dice que se canjea en app.karmahouse.site.
 
 ## Límites
