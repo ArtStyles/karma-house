@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, type Href } from 'expo-router';
 import { Children, type ComponentProps, type ReactNode } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type ViewStyle, type ColorValue } from 'react-native';
-import { createThemedStyles, typefaces } from '../theme';
+import { createThemedStyles, typefaces, useTheme } from '../theme';
 import { MotionPressable } from './MotionPressable';
 import { HeartIcon } from './HeartIcon';
 
@@ -16,12 +16,18 @@ export function Icon({ name, size = 22, color }: { name: IconName; size?: number
   const { colors } = useStyles();
   return <Ionicons name={name} size={size} color={color ?? colors.ink} aria-hidden />;
 }
+/** Logo symbol alone: brand blue on light grounds, white on dark ones (never another hue). */
+export function BrandMark({ height = 28 }: { height?: number }) {
+  const dark = useTheme().scheme === 'dark';
+  return <Image source={require('../../assets/karmahouse-mark.png')} accessible={false} accessibilityIgnoresInvertColors resizeMode="contain" style={{ width: Math.round(height * 1.276), height, tintColor: dark ? '#FFFFFF' : undefined }} />;
+}
 /** Logo symbol plus the two-weight wordmark; `height` sizes the symbol, the text follows. */
 export function Brand({ height = 28, color, style }: { height?: number; color?: ColorValue; style?: StyleProp<ViewStyle> }) {
   const { colors, styles } = useStyles();
+  const dark = useTheme().scheme === 'dark';
   return <View style={[styles.brand, style]}>
-    <Image source={require('../../assets/karmahouse-mark.png')} accessible={false} accessibilityIgnoresInvertColors resizeMode="contain" style={{ width: Math.round(height * 1.276), height }} />
-    <Text style={[styles.brandText, { fontSize: Math.round(height * .62), color: color ?? colors.primary }]}><Text style={styles.brandStrong}>Karma</Text>House</Text>
+    <BrandMark height={height} />
+    <Text style={[styles.brandText, { fontSize: Math.round(height * .62), color: color ?? (dark ? '#FFFFFF' : colors.primary) }]}><Text style={styles.brandStrong}>Karma</Text>House</Text>
   </View>;
 }
 export function Button({ label, onPress, secondary = false, loading = false, disabled = false, icon, style }: {

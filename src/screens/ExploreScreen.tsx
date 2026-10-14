@@ -13,7 +13,7 @@ import { PropertyCard } from '../components/PropertyCard';
 import { ExploreDiscovery } from '../components/ExploreDiscovery';
 import { CatalogRefinements } from '../components/CatalogRefinements';
 import { MotionPressable } from '../components/MotionPressable';
-import { Brand, Button, EmptyState, Icon, IconButton, Notice } from '../components/ui';
+import { Brand, BrandMark, Button, EmptyState, Icon, IconButton, Notice } from '../components/ui';
 import { CatalogFilters } from '../components/CatalogFilters';
 import { CatalogSortMenu } from '../components/CatalogSortMenu';
 import { InstallHint } from '../components/InstallHint';
@@ -102,7 +102,8 @@ export default function ExploreScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={colors.primary} />}
         ListEmptyComponent={!ready || updating ? <View style={styles.skeletons}>{Array.from({ length: columns === 1 ? 2 : columns }, (_, index) => <CardSkeleton key={index} />)}</View> : !pageError && !storageError ? <EmptyState title={hasFilters ? 'Sin coincidencias' : 'Aquí empieza tu próximo hogar'} description={hasFilters ? 'Prueba otra zona o amplía los filtros. También puedes guardar la búsqueda para volver cuando aparezca una coincidencia.' : 'Aún no hay viviendas publicadas. Si tienes una en venta, puedes preparar el primer anuncio.'} icon={hasFilters ? 'search-outline' : 'home-outline'} action={<View style={{ gap: 10 }}><Button label={hasFilters ? 'Ampliar búsqueda' : 'Publicar una vivienda'} onPress={() => hasFilters ? setFilters({ ...defaultFilters }) : router.push('/publish')} />{hasFilters && !offline && <Button label="Guardar esta búsqueda" secondary icon="bookmark-outline" onPress={saveSearch} />}</View>} /> : null}
         ListHeaderComponent={<View>
-          <View style={styles.topbar}>
+          {/* Wide screens carry the inboxes in the SideRail and the mark beside the search. */}
+          {!wide && <View style={styles.topbar}>
             <View style={styles.brand}><Brand height={width < 360 ? 22 : 26} />{mode === 'demo' && <Text style={styles.demo}>Demo</Text>}</View>
             <View style={styles.actions}>
               <NotificationBell unreadCount={notificationUnreadCount} />
@@ -110,12 +111,13 @@ export default function ExploreScreen() {
                 {unreadCount > 0 && <View pointerEvents="none" style={styles.messageBadge}><Text style={styles.messageBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text></View>}
               </View>
             </View>
-          </View>
+          </View>}
           <InstallHint />
           <View style={[styles.discovery, wide && styles.wideDiscovery]}>
             <ExploreDiscovery offline={offline} onOperation={operation => change({ operation })} onPublish={() => router.push('/publish')} />
             {/* On wide screens search and refinements share one row as wide as the results. */}
             <View style={wide && styles.controls}>
+            {wide && <View accessibilityLabel="KarmaHouse" accessibilityRole="image" style={styles.wideMark}><BrandMark height={34} /></View>}
             <View style={[styles.search, locked, wide && styles.wideSearch]}>
               <Icon name="search" size={20} color={colors.muted} />
               <TextInput accessibilityLabel="Buscar por barrio, municipio o calle" placeholder="Barrio, municipio o calle" placeholderTextColor={colors.muted} style={styles.searchInput} editable={!offline} value={filters.query} onChangeText={query => change({ query })} returnKeyType="search" />
@@ -206,7 +208,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   demo: { color: colors.muted, fontSize: 11, backgroundColor: colors.softNeutral, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   messageBadge: { position: 'absolute', right: -2, top: -2, borderRadius: 11, minWidth: 19, paddingHorizontal: 5, height: 19, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primaryFill }, messageBadgeText: { color: colors.onPrimary, fontSize: 11, fontWeight: '700' },
   discovery: { maxWidth: 640, gap: 12 }, wideDiscovery: { maxWidth: '100%' },
-  controls: { flexDirection: 'row', alignItems: 'center', gap: 12 }, wideSearch: { flex: 1.2 }, wideRefinements: { flex: 1 },
+  controls: { flexDirection: 'row', alignItems: 'center', gap: 12 }, wideSearch: { flex: 1.2 }, wideRefinements: { flex: 1 }, wideMark: { paddingHorizontal: 6 },
   search: { minHeight: 52, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 26, paddingLeft: 16, paddingRight: 4, flexDirection: 'row', alignItems: 'center', gap: 8 },
   searchInput: { flex: 1, minWidth: 0, minHeight: 50, fontSize: 16, color: colors.ink }, clearSearch: { backgroundColor: 'transparent', width: 40 },
   filterButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.softBlue }, filterActive: { backgroundColor: colors.primaryFill },
