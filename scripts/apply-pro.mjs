@@ -3,11 +3,19 @@
 // back: nothing stays. With --commit the migration is committed once and the suites run after it.
 // The migration holds an exclusive lock on public.properties, so every transaction starts with short
 // timeouts, and in a dry run the migration and its suite travel as ONE query: no idle gap under the lock.
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createDatabaseClient } from './cloud-db.mjs';
 
 const root = new URL('../', import.meta.url);
-const migration = readFileSync(new URL('supabase/migrations/20261014000100_karmahouse_pro.sql', root), 'utf8');
+const version = '20261014000100';
+const migration = readFileSync(new URL(`supabase/migrations/${version}_karmahouse_pro.sql`, root), 'utf8');
+const sha256 = createHash('sha256').update(migration).digest('hex');
+// --commit records the ledger and checksum in the same transaction, like the other apply scripts.
+const tag = '$kh_pro_ledger$';
+if (migration.includes(tag)) throw new Error('La migración contiene la marca de cita del ledger');
+const ledger = `insert into supabase_migrations.schema_migrations(version,statements,name) values('${version}',array[${tag}${migration}${tag}],'karmahouse_pro');
+insert into supabase_migrations.karmahouse_migration_checksums(version,sha256) values('${version}','${sha256}');`;
 const suites = ['pro', 'pro_bump'].map(name => readFileSync(new URL(`supabase/tests/${name}.sql`, root), 'utf8'));
 const commit = process.argv.includes('--commit');
 const guards = "set local lock_timeout='3s'; set local statement_timeout='60s'; set local idle_in_transaction_session_timeout='15s';";
@@ -36,7 +44,8 @@ try {
   const before = await leftovers();
   if (total(before)) throw new Error(`KH_LEFTOVER: ya hay filas sintéticas antes de empezar ${JSON.stringify(before)}`);
   if (commit) {
-    await db.query(`${transaction(migration)}\ncommit;`); console.log('migración aplicada');
+    if ((await db.query('select 1 from supabase_migrations.schema_migrations where version=$1', [version])).rowCount) throw new Error(`La migración ${version} ya está aplicada`);
+    await db.query(`${transaction(migration)}\n${ledger}\ncommit;`); console.log(`migración aplicada (sha256 ${sha256})`);
     for (const suite of suites) await db.query(transaction(suite));
   } else {
     for (const suite of suites) await db.query(transaction(`${migration}\n${suite}`));
