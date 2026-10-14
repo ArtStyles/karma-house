@@ -88,6 +88,7 @@ test('a failed create or grant without a server code may have been saved', () =>
   assert.equal(proWriteErrorMessage(new Error('No se pudieron interpretar los datos de KarmaHouse Pro.')), 'Puede que se haya guardado. Revisa Cuentas Pro y Códigos recientes antes de repetir.');
   assert.equal(proWriteErrorMessage({ message: 'KH_PRO_INVALID' }), 'Revisa los días (de 1 a 365), la nota (de 3 a 500 caracteres) y el destinatario.');
   assert.equal(proWriteErrorMessage(new Error('KH_SOMETHING')), 'No se pudo completar esta acción.');
+  assert.equal(proWriteErrorMessage(new Error('KH_ACCOUNT_CHANGED')), 'Puede que se haya guardado. Revisa Cuentas Pro y Códigos recientes antes de repetir.');
 });
 
 test('the repository pins the actor and sends only the normalized code', async () => {

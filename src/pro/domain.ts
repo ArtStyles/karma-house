@@ -59,9 +59,10 @@ export function proErrorMessage(error: unknown): string {
   if (code) return messages[code];
   return /\bKH_[A-Z0-9_]+/.test(text) ? 'No se pudo completar esta acción.' : 'No se pudo completar. Comprueba la conexión y vuelve a intentarlo.';
 }
-/** A create or grant that failed without a server code may still have been saved: a blind retry could double it. */
+/** A create or grant that failed without a server code may still have been saved: a blind retry could double it. KH_ACCOUNT_CHANGED is the same case: the client aborts after the server may have committed. */
 export function proWriteErrorMessage(error: unknown): string {
-  return /\bKH_[A-Z0-9_]+/.test(messageOf(error)) ? proErrorMessage(error) : 'Puede que se haya guardado. Revisa Cuentas Pro y Códigos recientes antes de repetir.';
+  const text = messageOf(error);
+  return /\bKH_[A-Z0-9_]+/.test(text) && !text.includes('KH_ACCOUNT_CHANGED') ? proErrorMessage(error) : 'Puede que se haya guardado. Revisa Cuentas Pro y Códigos recientes antes de repetir.';
 }
 /** Stale local data (bumped from another device) can put the computed date in the past; then the generic text is the honest one. */
 export function bumpErrorMessage(error: unknown, listing: Bumpable): string {
