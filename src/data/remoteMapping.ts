@@ -37,6 +37,10 @@ export interface RemotePropertyRow {
   moderation: ModerationStatus;
   review_note: string | null;
   created_at: string;
+  /** Absent on rows read before Pro existed. */
+  bumped_at?: string | null;
+  /** Catalogue rows carry it; PostgREST reads get it from the computed field kh_is_pro. */
+  is_pro?: boolean | null;
   version: number;
 }
 
@@ -67,6 +71,8 @@ export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap
       : row.rent_period != null || row.rent_min_stay != null) ||
     (operation === 'wanted' && row.wanted_operations != null && !isWantedOperations(row.wanted_operations)) ||
     !Number.isFinite(Date.parse(row.created_at)) ||
+    (row.bumped_at != null && !Number.isFinite(Date.parse(row.bumped_at))) ||
+    (row.is_pro != null && typeof row.is_pro !== 'boolean') ||
     !['active', 'paused', 'sold'].includes(row.availability) ||
     !['draft', 'pending', 'approved', 'rejected'].includes(row.moderation) ||
     !Array.isArray(row.photo_paths) || !Array.isArray(row.amenities) ||
@@ -104,6 +110,7 @@ export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap
     ...(row.cover_thumb_path ? { coverThumb: { uri: signedUrls.get(row.cover_thumb_path) ?? '', storagePath: row.cover_thumb_path } } : {}),
     status: row.availability, moderationStatus: row.moderation,
     ...(row.review_note ? { reviewNote: row.review_note } : {}), version: row.version, createdAt: row.created_at,
+    ...(row.bumped_at ? { bumpedAt: row.bumped_at } : {}), ...(row.is_pro ? { isPro: true } : {}),
   };
 }
 

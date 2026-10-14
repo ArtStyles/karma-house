@@ -56,6 +56,10 @@ export interface Listing {
   coverThumb?: { uri: string; storagePath: string };
   status: ListingStatus;
   createdAt: string;
+  /** Last bump by a Pro account; absent means never bumped. «Nueva» still reads createdAt. */
+  bumpedAt?: string;
+  /** Covered by an active Pro (personal or of the publishing agency). */
+  isPro?: boolean;
 }
 
 export interface ListingDraft {
