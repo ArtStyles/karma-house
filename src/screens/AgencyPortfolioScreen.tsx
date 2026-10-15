@@ -42,7 +42,7 @@ function Portfolio(){
  return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView keyboardDismissMode="on-drag" alwaysBounceVertical contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={allowed&&!busy} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}><PageTitle compact title="Cartera" subtitle={w.activeAgency?.tradeName??'Elige una inmobiliaria para consultar su cartera.'} back fallback="/agency-workspace"/>
  {!allowed?<Notice>Selecciona una inmobiliaria aprobada con una membresía activa para consultar su cartera.</Notice>:<>
  {!w.enabled&&<Notice>Solo lectura: las operaciones empresariales están pausadas.</Notice>}
- {Boolean(issue)&&<Notice error>{issue} Desliza hacia abajo para reintentar.</Notice>}
+ {Boolean(issue)&&<Notice error onRetry={()=>void reload.refresh()}>{issue}</Notice>}
  <ActionGroup>{w.enabled&&w.activeAgency?.state==='approved'&&w.membership?.role==='admin'&&<Button label="Añadir vivienda en venta" onPress={()=>router.push('/agency-property/new')}/>}{w.membership?.role==='admin'&&<Button label="Autorizaciones y cambios compartidos" secondary onPress={()=>router.push('/agency-property-requests')}/>}</ActionGroup>
  {busy&&!items.length&&<ActivityIndicator accessibilityLabel="Consultando cartera" color={colors.primary}/>}
  {!busy&&!issue&&!items.length&&<EmptyState plain title="Sin viviendas en cartera" description="Esta inmobiliaria todavía no tiene viviendas autorizadas."/>}

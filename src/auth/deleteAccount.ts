@@ -3,9 +3,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 const BUCKETS = ['property-photos', 'account-avatars'] as const;
 /** `started`: the server already began (listings gone, agencies left), so the account can only be finished, not kept. */
 export type AccountDeletionError = Error & { started: boolean };
-const failure = (started: boolean): AccountDeletionError => Object.assign(new Error(started
+const failure = (started: boolean, uncertain = false): AccountDeletionError => Object.assign(new Error(uncertain
+  ? 'La conexión falló y puede que tu cuenta ya haya empezado a eliminarse. Reintenta para terminar; lo borrado no se recupera.'
+  : started
   ? 'Tu cuenta ya empezó a eliminarse y lo borrado no se recupera. Comprueba tu conexión y reintenta para terminar.'
-  : 'No pudimos eliminar tu cuenta. Comprueba tu conexión y vuelve a intentarlo.'), { started });
+  : 'No pudimos eliminar tu cuenta. Comprueba tu conexión y vuelve a intentarlo.'), { started: started || uncertain });
 
 /**
  * Server first removes the listings and returns the account's files, the client deletes those through
@@ -18,7 +20,8 @@ export async function deleteAccount(client: SupabaseClient, actor: { id: string;
     checkpoint();
     const { data, error } = await client.rpc(name, { p_actor_id: actor.id }).setHeader('Authorization', `Bearer ${actor.accessToken}`);
     checkpoint();
-    if (error) throw failure(started);
+    // A server refusal carries a code; a lost response does not, and the step may have committed anyway.
+    if (error) throw failure(started, !started && !(error as { code?: string }).code);
     return data as unknown;
   };
   const files = await rpc('kh_begin_account_deletion');

@@ -48,7 +48,7 @@ export default function MyListingsScreen() {
   const reload = useConsultationRefresh(`${user?.id}:${session?.access_token}`, async () => {
     setError('');
     await Promise.all([refresh(), transfers.refresh(), pro.reload()]);
-  }, () => locked.current || !user || mode !== 'cloud', failure => setError(`${remoteErrorMessage(failure)} Desliza hacia abajo para reintentar.`));
+  }, () => locked.current || !user || mode !== 'cloud', failure => setError(remoteErrorMessage(failure)));
   const effectiveConfirm = confirm && (mode === 'demo' || confirm.listing.ownerId === user?.id) ? confirm : null;
   // iOS keeps the modal mounted through the fade, so the direction has to outlive the state that closed it.
   const lastDirection = useRef<'sold' | 'active'>('sold');
@@ -95,7 +95,7 @@ export default function MyListingsScreen() {
       {user&&!isOwner&&<Button secondary label={`Anuncios por aceptar${transfers.count===null?'':` · ${transfers.count}`}`} onPress={()=>router.push('/listing-transfers')}/>}
       {mode === 'cloud' && !user ? <AccountPrompt returnTo="/my-listings" /> : <>
       <Notice>{mode === 'cloud' ? 'Tus anuncios aparecen en el catálogo cuando están aprobados y activos. Los cambios de contenido se revisan antes de publicarse.' : 'Los anuncios de prueba se guardan en este dispositivo. Los activos aparecen en tu catálogo local.'}</Notice>
-      {error || storageError ? <Notice error>{error || storageError}</Notice> : null}
+      {error || storageError ? <Notice error onRetry={error ? () => void reload.refresh() : undefined}>{error || storageError}</Notice> : null}
 
       {!!own.length && <View style={styles.filters}>
         <Pill label="Todos" active={filter === 'all'} onPress={() => setFilter('all')} />
@@ -181,7 +181,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   image: { width: 76, height: 98, borderRadius: 12 },
   wantedImage: { backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
   details: { flex: 1, gap: 6 },
-  chip: { alignSelf: 'flex-start', flexDirection: 'row', gap: 6, alignItems: 'center', paddingVertical: 5, paddingHorizontal: 9, borderRadius: 12 },
+  chip: { alignSelf: 'flex-start', flexDirection: 'row', gap: 6, alignItems: 'center', paddingVertical: 5, paddingHorizontal: 9, borderRadius: 999 },
   statusDot: { width: 5, height: 5, borderRadius: 3 },
   status: { fontSize: 12, fontWeight: '600' },
   reviewButton: { marginTop: 16 },
@@ -198,7 +198,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   createButton: { marginTop: 6 },
   backdrop: { flex: 1, backgroundColor: colors.photoOverlay },
   modalScroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
-  modal: { backgroundColor: colors.surface, borderRadius: 16, padding: 20, gap: 16, width: '100%', maxWidth: 440, alignSelf: 'center' },
-  modalTitle: { color: colors.ink, fontSize: 23, lineHeight: 29, fontWeight: '600', letterSpacing: -.5 },
+  modal: { backgroundColor: colors.surface, borderRadius: internalLayout.radius, padding: 20, gap: 16, width: '100%', maxWidth: 520, alignSelf: 'center' },
+  modalTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '700', letterSpacing: -.5 },
   modalText: { color: colors.muted, fontSize: 15, lineHeight: 23 },
 }));

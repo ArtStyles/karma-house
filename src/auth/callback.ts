@@ -11,7 +11,7 @@ export function safeReturnTo(value: unknown): string {
   if (typeof value === 'string' && /^\/publish\?(?:operation=(?:sale|swap|rent|wanted)(?:&import=1)?|import=1)$/.test(value)) return value;
   const uuid='[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}';
   if(typeof value==='string'&&new RegExp(`^/(?:property/${uuid}\\?agencyId=${uuid}(?:&managerId=${uuid})?|agency-conversation/${uuid}(?:\\?agencyId=${uuid})?)$`).test(value))return value;
-  return typeof value === 'string' && /^(?:\/(?:profile|publish|favorites|my-listings|messages|message-reports|account-settings|requests|notifications|notification-settings)|\/(?:property|edit|messages)\/[A-Za-z0-9_-]+|\/)$/.test(value)
+  return typeof value === 'string' && /^(?:\/(?:profile|publish|favorites|my-listings|messages|message-reports|account-settings|requests|notifications|notification-settings|saved-searches|listing-transfers|pro|admin|administration|property-reports|agency-workspace|agency-team|agency-application)|\/(?:property|edit|messages)\/[A-Za-z0-9_-]+|\/)$/.test(value)
     ? value : '/profile';
 }
 

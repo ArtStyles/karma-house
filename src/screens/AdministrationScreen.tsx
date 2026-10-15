@@ -35,7 +35,7 @@ export default function AdministrationScreen(){
   {!auth.isAdmin?<EmptyState plain title="Acceso reservado" description="Inicia sesión con una cuenta administradora."/>:<>
    <View style={s.identity}><Icon name="shield-checkmark-outline" color={colors.muted} size={22}/><View style={s.copy}><Text style={s.title}>{auth.isOwner?'Cuenta propietaria de KarmaHouse':'Cuenta administradora'}</Text><Text style={s.description}>{auth.isOwner?'Acceso a moderación y gestión de permisos.':'Acceso a revisión de publicaciones y reportes.'}</Text></View></View>
    {auth.isOwner&&principal&&<Pressable accessibilityRole="button" accessibilityLabel="Abrir inmobiliaria principal" onPress={()=>router.push({pathname:'/agency-workspace',params:{agencyId:principal!.id}})} style={s.principal}><View style={s.copy}><Text style={s.title}>{principal.tradeName}</Text><AgencyVerifiedBadge verified={principal.verified} principal={principal.isPrincipal} agencyName={principal.tradeName} labelled/><Text style={s.description}>Espacio comercial de la inmobiliaria principal.</Text></View><Icon name="chevron-forward" color={colors.amber}/></Pressable>}
-   {state.error&&<Notice error>No pudimos consultar los pendientes. Desliza hacia abajo para volver a intentarlo.</Notice>}
+   {state.error&&<Notice error onRetry={()=>void controller.refresh()}>No pudimos consultar los pendientes.</Notice>}
    {[
     {title:'Publicaciones',items:entries.slice(0,2)},
     {title:'Comunidad',items:entries.slice(2,5)},

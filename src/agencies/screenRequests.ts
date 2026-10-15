@@ -12,18 +12,24 @@ export function createAgencyScreenRequestScope(){
 }
 export interface AgencyTeamPage{userId:string;agencyId:string|null;generation:number;members:AgencyMembership[];invitations:AgencyInvitation[];sent:AgencyInvitation[];membersMore:boolean;invitationsMore:boolean;sentMore:boolean}
 export interface AgencyOverview{roles:Record<string,AgencyRole>;pendingInvitations:number;application:AgencyApplication|null}
-/** Mi espacio: the role in each agency, invitations waiting for an answer and the own application. Each part fails alone. */
-export async function loadAgencyOverview(repository:AgencyRepository,agencyIds:readonly string[],context:MessagingRequestContext):Promise<AgencyOverview>{
+/** Mi espacio: the role in each agency, invitations waiting for an answer and the own application.
+ * Each part fails alone and keeps its `previous` value, so a flaky connection does not blank rows. */
+export async function loadAgencyOverview(repository:AgencyRepository,agencyIds:readonly string[],context:MessagingRequestContext,previous:AgencyOverview|null=null):Promise<AgencyOverview>{
+ const failed:unique symbol=Symbol('failed'),fail=():typeof failed=>failed;
  const [memberships,invitations,application]=await Promise.all([
-  Promise.all(agencyIds.map(id=>repository.membership(id,context).catch(()=>null))),
-  repository.listInvitations(0,context).catch(()=>null),
-  repository.application(context).catch(()=>null)]);
+  Promise.all(agencyIds.map(id=>repository.membership(id,context).catch(fail))),
+  repository.listInvitations(0,context).catch(fail),
+  repository.application(context).catch(fail)]);
  context.checkpoint();
  const roles:Record<string,AgencyRole>={};
- for(const m of memberships)if(m?.state==='active')roles[m.agencyId]=m.role;
- // ponytail: counts the newest page (30); pending invitations expire in 7 days, so they lead it.
- return {roles,pendingInvitations:invitations?.items.filter(i=>i.state==='pending').length??0,application};
+ agencyIds.forEach((id,index)=>{const m=memberships[index];if(m===failed){if(previous?.roles[id])roles[id]=previous.roles[id];}else if(m?.state==='active')roles[id]=m.role;});
+ return {roles,
+  // ponytail: counts the newest page (30); pending invitations expire in 7 days, so they lead it.
+  pendingInvitations:invitations===failed?previous?.pendingInvitations??0:invitations.items.filter(i=>i.state==='pending').length,
+  application:application===failed?previous?.application??null:application};
 }
+/** Offset pages shift when rows are added or expire between requests; keep each row once. */
+function appendNew<T>(old:T[],next:T[],key:(item:T)=>string):T[]{const seen=new Set(old.map(key));return [...old,...next.filter(item=>!seen.has(key(item)))];}
 interface TeamSource{repository:AgencyRepository;refreshAgencies():Promise<void>;getCurrentWorkspace():AgencyWorkspaceState;captureAccountContext():CapturedAccountContext;captureAgencyReadContext():CapturedAgencyContext}
 export async function loadAgencyTeamPage(source:TeamSource,append:boolean,previous:AgencyTeamPage|null,checkpoint:()=>void):Promise<AgencyTeamPage>{
  let account:CapturedAccountContext|null=null,enterprise:CapturedAgencyContext|null=null;
@@ -40,6 +46,6 @@ export async function loadAgencyTeamPage(source:TeamSource,append:boolean,previo
    // Only admins invite, so only they see who has not answered yet.
    if(state.membership.role==='admin'){const pending=await source.repository.listSentInvitations(same?previous!.sent.length:0,enterprise);enterprise.checkpoint();checkpoint();sent=pending.items;sentMore=pending.hasMore;}
   }
-  return {userId:account.userId,agencyId:state.activeAgencyId,generation:state.generation,members:same?[...previous!.members,...members]:members,invitations:same?[...previous!.invitations,...invitations.items]:invitations.items,sent:same?[...previous!.sent,...sent]:sent,membersMore,invitationsMore:invitations.hasMore,sentMore};
+  return {userId:account.userId,agencyId:state.activeAgencyId,generation:state.generation,members:same?appendNew(previous!.members,members,m=>m.userId):members,invitations:same?appendNew(previous!.invitations,invitations.items,i=>i.id):invitations.items,sent:same?appendNew(previous!.sent,sent,i=>i.id):sent,membersMore,invitationsMore:invitations.hasMore,sentMore};
  }finally{account?.release();enterprise?.release();}
 }

@@ -42,7 +42,7 @@ export default function InboxScreen() {
         <Icon name="chevron-forward" size={17} color={colors.primary} />
       </Pressable>}
       {!auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : !messaging.available ? <View style={styles.header}><EmptyState plain title="Mensajes no disponibles" description="Los mensajes estarán disponibles con el servicio conectado. La demostración no envía mensajes." /></View> : !auth.user ? <View style={styles.header}><AccountPrompt returnTo="/messages" title="Consulta tus mensajes" description="Inicia sesión para hablar con propietarios y compradores sin publicar tu teléfono." /></View> : !authorized || (!messaging.ready && !messaging.error) ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : <>
-        {messaging.error && <View style={styles.sync}><Notice error>{messaging.error} Desliza hacia abajo para reintentar.</Notice></View>}
+        {messaging.error && <View style={styles.sync}><Notice error onRetry={() => void reload.refresh()}>{messaging.error}</Notice></View>}
         <FlatList data={messaging.conversations} keyExtractor={item => item.id} alwaysBounceVertical contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={reload.refreshing} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}
           renderItem={({ item }) => <ConversationCard conversation={item} />}
           ListHeaderComponent={<AgencyInbox refreshRef={agencyRefresh}/>}

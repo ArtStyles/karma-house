@@ -50,6 +50,7 @@ export function agencyError(error:unknown):string{
  if(/KH_ACCOUNT_DELETING/.test(message))return 'Tu cuenta se está eliminando. Termina en Ajustes de cuenta › Eliminar cuenta.';
  if(/KH_AGENCY_INVITATION_EXPIRED/.test(message))return 'Esta invitación caducó. Pide a la inmobiliaria que te invite de nuevo.';
  if(/KH_AGENCY_INVITATION_RECIPIENT/.test(message))return 'Esta invitación es para otra cuenta.';
+ if(/KH_PRINCIPAL_AGENCY_PROTECTED/.test(message))return 'La cuenta propietaria de KarmaHouse sigue como administradora de la inmobiliaria principal.';
  if(/KH_AGENCY_INVITATION_OPEN/.test(message))return 'Esta cuenta ya tiene una invitación pendiente de tu inmobiliaria. Pídele que la acepte en Mi espacio › Invitaciones de inmobiliarias.';
  if(/KH_AGENCY_ALREADY_MEMBER/.test(message))return 'Esta cuenta ya forma parte del equipo.';
  if(/KH_AGENCY_RECIPIENT_INVALID/.test(message))return 'Esta cuenta no puede recibir invitaciones: debe tener el correo confirmado y estar activa.';

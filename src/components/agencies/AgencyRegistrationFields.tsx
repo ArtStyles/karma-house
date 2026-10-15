@@ -14,7 +14,7 @@ export function AgencyTextField({label,error,hint,...props}:TextInputProps&{labe
  </View>;
 }
 export function AgencyRegistrationFields({value,onChange,disabled,errors={},commercialOnly=false}:{value:AgencyApplicationInput;onChange:(value:AgencyApplicationInput)=>void;disabled:boolean;errors?:AgencyFieldErrors;commercialOnly?:boolean}){
- const {styles:s}=useAgencyFormStyles();const set=<K extends keyof AgencyApplicationInput>(key:K,next:AgencyApplicationInput[K])=>onChange({...value,[key]:next});
+ const {colors,styles:s}=useAgencyFormStyles();const set=<K extends keyof AgencyApplicationInput>(key:K,next:AgencyApplicationInput[K])=>onChange({...value,[key]:next});
  return <View style={s.form}>
   <View style={s.card}>
    <Text accessibilityRole="header" style={s.title}>Identidad de la inmobiliaria</Text>
@@ -32,7 +32,7 @@ export function AgencyRegistrationFields({value,onChange,disabled,errors={},comm
    <Text accessibilityRole="header" style={s.title}>Servicios y oficina</Text>
    <AgencyTextField label="Descripción de servicios" hint="Será pública tras la aprobación." value={value.description} onChangeText={v=>set('description',v)} editable={!disabled} multiline maxLength={1000} error={errors.description}/>
    <AgencyTextField label="Dirección de oficina · opcional" value={value.officeAddress??''} onChangeText={v=>set('officeAddress',v||null)} editable={!disabled} maxLength={200} error={errors.officeAddress}/>
-   <View style={s.switchRow}><View style={s.flex}><Text style={s.label}>Publicar dirección de oficina</Text><Text style={s.hint}>Activa esta opción para mostrarla en el perfil público.</Text></View><Switch accessibilityLabel="Publicar dirección de oficina" value={value.publishOfficeAddress} onValueChange={v=>set('publishOfficeAddress',v)} disabled={disabled}/></View>
+   <View style={s.switchRow}><View style={s.flex}><Text style={s.label}>Publicar dirección de oficina</Text><Text style={s.hint}>Activa esta opción para mostrarla en el perfil público.</Text></View><Switch accessibilityLabel="Publicar dirección de oficina" hitSlop={10} value={value.publishOfficeAddress} onValueChange={v=>set('publishOfficeAddress',v)} disabled={disabled} trackColor={{false:colors.switchTrack,true:colors.primary}} thumbColor={colors.onPrimary} ios_backgroundColor={colors.switchTrack}/></View>
   </View>
   {!commercialOnly&&<View style={s.card}>
    <Text accessibilityRole="header" style={s.title}>Referencias privadas</Text>
@@ -51,12 +51,12 @@ export const useAgencyFormStyles=createThemedStyles(colors=>StyleSheet.create({
  caption:{color:colors.muted,fontSize:12,lineHeight:18},value:{color:colors.ink,fontSize:15,lineHeight:23},date:{color:colors.ink,fontSize:20,lineHeight:28,fontWeight:'600'},
  status:{color:colors.primary,fontSize:13,lineHeight:20,fontWeight:'600'},
  card:{padding:16,backgroundColor:colors.surface,borderRadius:internalLayout.radius,borderWidth:1,borderColor:colors.border,gap:16},
- section:{gap:16,paddingVertical:8},item:{paddingVertical:16,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:colors.border,gap:12},
+ section:{gap:16,paddingVertical:8},item:{paddingVertical:16,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:colors.border,gap:12},first:{borderTopWidth:0,paddingTop:0},
  facts:{gap:12},datum:{gap:4},divider:{height:StyleSheet.hairlineWidth,backgroundColor:colors.border},
  wrap:{flexDirection:'row',flexWrap:'wrap',gap:8},row:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:12},flex:{flex:1,minWidth:0,gap:4},
  switchRow:{minHeight:52,flexDirection:'row',alignItems:'center',gap:16,paddingTop:12,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:colors.border},
  logo:{width:96,height:96,borderRadius:16},
- modalBackdrop:{flex:1,backgroundColor:colors.overlay,justifyContent:'center',padding:20},
+ modalBackdrop:{flex:1,backgroundColor:colors.photoOverlay,justifyContent:'center',padding:20},
  modalFrame:{width:'100%',maxWidth:internalLayout.maxWidth,alignSelf:'center',maxHeight:'100%',backgroundColor:colors.surface,borderRadius:internalLayout.radius,overflow:'hidden'},
  modalContent:{padding:20,gap:20},
 }));

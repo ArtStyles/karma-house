@@ -40,7 +40,12 @@ test('an account switch mid-way stops the deletion', async () => {
   assert.deepEqual(calls, ['kh_begin_account_deletion:u1']);
 });
 
-test('a failure before the server starts leaves the account untouched and says so', async () => {
-  const client = { rpc: () => ({ setHeader: () => Promise.resolve({ data: null, error: { message: 'offline' } }) }) };
+test('a server refusal of the first step leaves the account untouched and says so', async () => {
+  const client = { rpc: () => ({ setHeader: () => Promise.resolve({ data: null, error: { message: 'KH_OWNER_PROTECTED', code: 'P0001' } }) }) };
   await assert.rejects(deleteAccount(client as never, actor, () => {}), (error: Error & { started?: boolean }) => error.started === false && /No pudimos eliminar/.test(error.message));
+});
+
+test('a lost response on the first step may have committed, so only finishing is offered', async () => {
+  const client = { rpc: () => ({ setHeader: () => Promise.resolve({ data: null, error: { message: 'TypeError: Failed to fetch', code: '' } }) }) };
+  await assert.rejects(deleteAccount(client as never, actor, () => {}), (error: Error & { started?: boolean }) => error.started === true && /puede que tu cuenta ya haya empezado/.test(error.message));
 });

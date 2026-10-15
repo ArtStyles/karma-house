@@ -1,3 +1,4 @@
+import { agencyError } from '../agencies/domain.ts';
 export const NOTIFICATION_PAGE_SIZE = 30;
 export class NotificationError extends Error {}
 
@@ -19,6 +20,8 @@ export function notificationErrorMessage(error: unknown): string {
   if (/PREFERENCES_CONFLICT/.test(message)) return 'Tus preferencias cambiaron en otra sesión. Actualízalas antes de guardar.';
   if (/NOT_FOUND/.test(message)) return 'Este aviso ya no está disponible. Actualiza la bandeja.';
   if (/network|fetch|timeout|abort/i.test(message)) return 'No se pudo conectar. Vuelve a intentar cuando tengas conexión.';
+  // Opening an agency notice runs agency checks; their codes have their own explanation.
+  if (/KH_(AGENCY|ACCOUNT|PRINCIPAL)_/.test(message)) return agencyError(error);
   return 'No se pudieron actualizar los avisos. Inténtalo de nuevo.';
 }
 

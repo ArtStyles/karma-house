@@ -165,7 +165,7 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
 
   if (!conversation) return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}><View style={styles.shell}><ScrollView alwaysBounceVertical contentContainerStyle={[styles.padding,{flexGrow:1}]} refreshControl={<RefreshControl refreshing={reload.refreshing} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}>
     <PageTitle compact title="Conversación" back />
-    {opening ? <ActivityIndicator style={styles.loading} color={colors.primary} /> : <><Notice error>{issue || syncIssue || messaging.error || 'Esta conversación no está disponible para tu cuenta.'} Desliza hacia abajo para volver a consultar.</Notice><Button label="Ir a mensajes" onPress={() => router.replace('/messages')} style={{ marginTop: 12 }} /></>}
+    {opening ? <ActivityIndicator style={styles.loading} color={colors.primary} /> : <><Notice error>{issue || syncIssue || messaging.error || 'Esta conversación no está disponible para tu cuenta.'}</Notice><Button label="Ir a mensajes" onPress={() => router.replace('/messages')} style={{ marginTop: 12 }} /></>}
   </ScrollView></View></SafeAreaView>;
 
   const lastOwnKey = [...rows].reverse().find(row => !row.message?.negotiation && (row.message ?? row.pending).senderId === userId)?.key;
@@ -191,7 +191,7 @@ function ConversationBody({ id, userId }: { id: string; userId: string }) {
           <IconButton name="ellipsis-horizontal" label="Opciones de conversación" onPress={() => { Keyboard.dismiss(); setMenu(true); }} />
         </View>
         <ConversationNegotiations conversation={conversation} userId={userId} store={negotiations} mutations={negotiationMutations} request={sheet} onClose={() => setSheet(null)} />
-        {(issue || syncError) && <View style={styles.sync}><Text accessibilityRole="alert" style={styles.syncText}>{issue || syncError} Desliza hacia abajo para volver a consultar.</Text></View>}
+        {(issue || syncError) && <View style={styles.sync}><Text accessibilityRole="alert" style={styles.syncText}>{issue || syncError}</Text></View>}
         {!!negotiationMutations.issue && !sheet && <View style={styles.sync}><Text accessibilityRole="alert" style={styles.syncText}>{negotiationMutations.issue}</Text><Pressable accessibilityRole="button" onPress={negotiationMutations.clearFeedback} style={styles.retryLink}><Text style={styles.link}>Cerrar</Text></Pressable></View>}
         {!!notice && <Text accessibilityLiveRegion="polite" style={styles.notice}>{notice}</Text>}
         {readError && <View style={styles.sync}><Text style={styles.syncText}>No pudimos actualizar los mensajes leídos.</Text><Pressable accessibilityRole="button" onPress={() => setReadAttempt(value => value + 1)} style={styles.retryLink}><Text style={styles.link}>Reintentar</Text></Pressable></View>}

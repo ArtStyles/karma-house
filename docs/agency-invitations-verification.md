@@ -23,6 +23,16 @@ Fecha: 14 de octubre de 2026 (15 de octubre, UTC).
 - Aceptar una invitación termina en «Ya formas parte de X como gestor» con el botón «Ir a X».
 - `npm test`: 828 tests, 822 pasan, los mismos 2 fallos por `pwsh`. `npx expo export --platform web` compila.
 
+## Auditoría de cuentas (tercera entrega, `6a76f3b`)
+
+- Mensajes propios para invitación caducada o de otra cuenta, cuenta suspendida o en eliminación y datos no válidos.
+- Cerrar sesión muestra el motivo real; el enlace del correo lleva a una cuenta suspendida a Mi espacio en vez de cargar sin fin.
+- Eliminar la cuenta avisa de que sales de tus inmobiliarias y de que una sin administración queda suspendida; si falla después de empezar, lo dice y explica cómo terminar.
+- Mi espacio: aviso si no cargan las inmobiliarias; nombre y foto abren Ajustes; Pro solo en Mi espacio y preferencias de avisos solo en Ajustes y Notificaciones; «Anuncios por aceptar» solo si hay; títulos de sección y filas legibles por lector de pantalla.
+- Mi inmobiliaria sin «Estado de mi solicitud» (callejón sin salida); «Invitaciones recibidas».
+- Textos: «inmobiliaria» en toda la app (antes se mezclaba con «agencia»), «espacio» solo para Mi espacio, sin «verificada del sistema».
+- `npm test`: 829 tests, 823 pasan, 4 omitidos y los mismos 2 fallos por `pwsh`. `expo export --platform web` compila.
+
 ## Pruebas
 
 - Local (PostgreSQL 17, `127.0.0.1:56440`, base nueva con todas las migraciones): `agency_sent_invitations`, `pro` y `owner_administration` superadas.

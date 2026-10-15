@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Linking, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Icon, IconButton, Notice, PageTitle, type IconName } from '../components/ui';
 import { UserAvatar } from '../components/account/UserAvatar';
@@ -9,7 +9,7 @@ import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 import { useAuth } from '../auth/AuthProvider';
 import { useMarketplace } from '../state/MarketplaceProvider';
-import { createThemedStyles, layout } from '../theme';
+import { createThemedStyles, internalLayout, layout } from '../theme';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { useSavedSearches } from '../searches/useSavedSearches';
@@ -35,22 +35,31 @@ export default function ProfileScreen() {
   const agencies = useAgencyWorkspace();
   const [overview, setOverview] = useState<{ userId: string; value: AgencyOverview } | null>(null);
   const agencyIds = agencies.agencies.map(agency => agency.id).join(',');
-  const { repository: agencyRepository, ready: agenciesReady, enabled: agenciesEnabled, captureAccountContext } = agencies;
+  const { repository: agencyRepository, ready: agenciesReady, enabled: agenciesEnabled, captureAccountContext, getCurrentWorkspace } = agencies;
+  const overviewRef = useRef(overview), overviewSequence = useRef(0);
+  overviewRef.current = overview;
   // Roles, pending invitations and an application under review, so each person lands where they work.
+  // It reads the agencies at call time and only the latest call may write, so a slow older load cannot win.
   const loadOverview = useCallback(async () => {
-    if (!agencyRepository || !agenciesReady || !(agenciesEnabled || agencyIds)) return;
+    if (!agencyRepository || !agenciesReady) return;
+    const sequence = ++overviewSequence.current, workspace = getCurrentWorkspace();
+    if (!workspace.enabled && !workspace.agencies.length) { setOverview(null); return; }
     let context: ReturnType<typeof captureAccountContext>;
     try { context = captureAccountContext(); } catch { return; }
-    try { const value = await loadAgencyOverview(agencyRepository, agencyIds ? agencyIds.split(',') : [], context); setOverview({ userId: context.userId, value }); }
-    catch { /* The account changed; the next focus loads the new one. */ } finally { context.release(); }
-  }, [agencyRepository, agenciesReady, agenciesEnabled, agencyIds, captureAccountContext]);
+    try {
+      const previous = overviewRef.current?.userId === context.userId ? overviewRef.current.value : null;
+      const value = await loadAgencyOverview(agencyRepository, workspace.agencies.map(agency => agency.id), context, previous);
+      if (sequence === overviewSequence.current) setOverview({ userId: context.userId, value });
+    } catch { /* The account changed; the next focus loads the new one. */ } finally { context.release(); }
+    // agencyIds and agenciesEnabled only re-run the load when the list changes; the values come from the snapshot.
+  }, [agencyRepository, agenciesReady, agenciesEnabled, agencyIds, captureAccountContext, getCurrentWorkspace]);
   useFocusEffect(useCallback(() => { void loadOverview(); }, [loadOverview]));
   const reload = useConsultationRefresh(`${user?.id}:${session?.access_token}`, async () => {
     setError('');
-    const outcomes = await Promise.allSettled([refreshProfile(), refreshListings(), refreshMessages(), refreshSummary(), savedSearches.refresh(), agencies.refreshAgencies().then(loadOverview), transfers.refresh()]);
+    const outcomes = await Promise.allSettled([refreshProfile(), refreshListings(), refreshMessages(), refreshSummary(), savedSearches.refresh(), agencies.refreshAgencies().then(() => loadOverview()), transfers.refresh()]);
     const failed = outcomes.find(result => result.status === 'rejected');
     if (failed?.status === 'rejected') throw failed.reason;
-  }, busy || !!marking || !user || mode !== 'cloud', () => setError('No pudimos actualizar toda tu actividad. Desliza hacia abajo para volver a intentarlo.'));
+  }, busy || !!marking || !user || mode !== 'cloud', () => setError('No pudimos actualizar toda tu actividad.'));
   const refreshSearches = savedSearches.refresh;
   const seen = useRef(false);
   useFocusEffect(useCallback(() => { if (seen.current) void refreshSearches(); seen.current = true; }, [refreshSearches]));
@@ -58,7 +67,7 @@ export default function ProfileScreen() {
   async function shareAccountCode(id: string) {
     setAccountCode({ id, copied: false });
     try {
-      if (Platform.OS === 'web') { await navigator.clipboard.writeText(id); setAccountCode({ id, copied: true }); AccessibilityInfo.announceForAccessibility('Código copiado'); }
+      if (Platform.OS === 'web') { await navigator.clipboard.writeText(id); setAccountCode({ id, copied: true }); }
       else await Share.share({ message: `Mi código de cuenta en KarmaHouse: ${id}` });
     } catch { /* Dismissed or no clipboard: the code stays on screen to copy by hand. */ }
   }
@@ -92,12 +101,12 @@ export default function ProfileScreen() {
       </View>
 
       {mode === 'cloud' && !authReady ? <View style={styles.loading}><ActivityIndicator color={colors.primary} /><Text style={styles.rowDescription}>Cargando tu cuenta…</Text></View> : mode === 'cloud' && !user ? <View style={styles.guest}>
-        <Text accessibilityRole="header" style={styles.guestTitle}>Entra a tu cuenta</Text>
+        <Text accessibilityRole="header" style={styles.guestTitle}>Entra en tu cuenta</Text>
         <Text style={styles.guestText}>Guarda viviendas y consulta tus anuncios y conversaciones.</Text>
         <Button label="Entrar o crear cuenta" onPress={() => router.push({ pathname: '/auth', params: { returnTo: '/profile' } })} style={styles.guestAction} />
       </View> : null}
       {suspended && <Notice error>Tu cuenta está suspendida. No puedes publicar ni enviar mensajes. {suspensionReason}</Notice>}
-      {user && !suspended && !!agencies.error && <Notice error>No pudimos cargar tus inmobiliarias. Desliza hacia abajo para volver a intentarlo.</Notice>}
+      {user && !suspended && !!agencies.error && <Notice error onRetry={() => void reload.refresh()}>{`No pudimos cargar tus inmobiliarias. ${agencies.error}`}</Notice>}
 
       {user && (myAgencies.length > 0 || pendingInvitations > 0 || application || isAdmin) && <>
         <Text accessibilityRole="header" style={styles.sectionLabel}>Gestión</Text>
@@ -138,7 +147,7 @@ export default function ProfileScreen() {
       {user && <>
         <Text accessibilityRole="header" style={styles.sectionLabel}>Cuenta</Text>
         <View style={styles.group}>
-          <AccountRow icon="id-card-outline" title="Mi código de cuenta" description={accountCode?.id === user.id && accountCode.copied ? 'Copiado. Pégalo en un mensaje a la inmobiliaria.' : 'Compártelo con una inmobiliaria para que te invite a su equipo.'} extraLabel={accountCode?.id === user.id ? user.id : undefined} onPress={() => void shareAccountCode(user.id)}>
+          <AccountRow icon="id-card-outline" title="Mi código de cuenta" description="Compártelo con una inmobiliaria para que te invite a su equipo." extraLabel={accountCode?.id === user.id ? user.id : undefined} onPress={() => void shareAccountCode(user.id)}>
             {accountCode?.id === user.id && <Text selectable style={styles.code}>{user.id}</Text>}
           </AccountRow>
           <AccountRow icon="star-outline" title="KarmaHouse Pro" onPress={() => router.push('/pro')} />
@@ -147,15 +156,16 @@ export default function ProfileScreen() {
             try { await signOut(); } catch (cause) { setError(cause instanceof Error ? cause.message : 'No pudimos cerrar la sesión. Inténtalo de nuevo.'); } finally { setBusy(false); }
           }} />
         </View>
+        {/* A live region, so screen readers hear the copy on the web too. */}
+        {accountCode?.id === user.id && accountCode.copied && <Text accessibilityLiveRegion="polite" style={styles.copied}>Código copiado. Pégalo en un mensaje a la inmobiliaria.</Text>}
       </>}
       {mode === 'demo' && <Text style={styles.demoNote}>Esta demo no incluye cuentas, mensajes ni publicaciones públicas.</Text>}
       <View style={styles.legal}>
-        <Pressable accessibilityRole="link" style={styles.legalLink} onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.legalText}>Privacidad</Text></Pressable>
+        <Pressable accessibilityRole="link" style={styles.legalLink} onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.legalText}>Política de privacidad</Text></Pressable>
         <Text style={styles.legalText}>·</Text>
         <Pressable accessibilityRole="link" style={styles.legalLink} onPress={() => void Linking.openURL(TERMS_URL)}><Text style={styles.legalText}>Términos de uso</Text></Pressable>
       </View>
-      {error || authError ? <Notice error>{error || authError}</Notice> : null}
-      {authError && user && <Text style={styles.demoNote}>Desliza hacia abajo para volver a cargar tu perfil y actividad.</Text>}
+      {error || authError ? <Notice error onRetry={user ? () => void reload.refresh() : undefined}>{error || authError}</Notice> : null}
     </ScrollView>
   </SafeAreaView>;
 }
@@ -178,12 +188,12 @@ function AccountRow({ icon, title, description, extraLabel, count, unread = fals
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper },
-  content: { width: '100%', maxWidth: 700, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: layout.tabContentBottom },
+  content: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', paddingHorizontal: internalLayout.gutter, paddingBottom: layout.tabContentBottom },
   identity: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 2, paddingBottom: 20 },
   identityText: { flex: 1, minWidth: 0, gap: 4 }, heading: { color: colors.ink, fontSize: 17, lineHeight: 23, fontWeight: '600' },
   identityDescription: { color: colors.muted, fontSize: 13, lineHeight: 19 },
   sectionLabel: { color: colors.muted, fontSize: 13, fontWeight: '500', marginTop: 22, marginBottom: 8, marginLeft: 4 },
-  group: { backgroundColor: colors.surface, borderRadius: 16, overflow: 'hidden' },
+  group: { backgroundColor: colors.surface, borderRadius: internalLayout.radius, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   row: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 14, paddingVertical: 13 },
   accountRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   dataRow: { minHeight: 68 }, pressed: { backgroundColor: colors.softBlue }, rowCopy: { flex: 1, minWidth: 0, gap: 3 },
@@ -196,5 +206,6 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   legal: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 14 },
   legalText: { color: colors.muted, fontSize: 12, lineHeight: 18 }, legalLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 5 },
   code: { color: colors.ink, fontSize: 13, lineHeight: 19, fontVariant: ['tabular-nums'] },
+  copied: { color: colors.muted, fontSize: 13, lineHeight: 19, paddingHorizontal: 4, marginTop: 8 },
   demoNote: { color: colors.muted, fontSize: 13, lineHeight: 20, paddingHorizontal: 4, marginTop: 20 },
 }));

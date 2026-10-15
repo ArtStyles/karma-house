@@ -32,7 +32,7 @@ export default function PublicProfileScreen() {
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <PageTitle compact title="Perfil" subtitle="Información y anuncios de esta cuenta." back fallback="/" />
-      {notFound ? <EmptyState plain title={PROFILE_NOT_FOUND} description="Este perfil no está disponible para su consulta." action={<Button label="Volver a explorar" onPress={() => router.replace('/')} />} />
+      {notFound ? <EmptyState plain title={PROFILE_NOT_FOUND} description="Puede que la cuenta ya no tenga anuncios publicados o que se haya eliminado." action={<Button label="Volver a explorar" onPress={() => router.replace('/')} />} />
         : error ? <View style={styles.gap}><Notice error>{error}</Notice><Button label="Volver a cargar" secondary onPress={retry} /></View>
         : !profile ? <ActivityIndicator color={colors.primary} size="large" style={styles.loading} />
         : <>

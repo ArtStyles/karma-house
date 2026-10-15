@@ -21,7 +21,7 @@ export default function NotificationSettingsScreen() {
   const reload=useConsultationRefresh(`${auth.user?.id}:${auth.session?.access_token}`,store.loadPreferences,()=>formDirty.current||formLocked.current||store.savingPreferences||store.preferencesLoading||!auth.user||!store.available);
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
     <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!!auth.user&&!store.savingPreferences&&!formDirty.current} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}>
-      <PageTitle compact title="Tus avisos" subtitle="Preferencias y permisos de notificaciones." back fallback="/notifications" />
+      <PageTitle compact title="Preferencias de notificaciones" subtitle="Qué avisos recibes y en qué dispositivo." back fallback="/notifications" />
       {!auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} />
         : !store.available ? <EmptyState plain title="Preferencias no disponibles" description="Las preferencias estarán disponibles con el servicio conectado." />
         : !auth.user ? <AccountPrompt returnTo="/notification-settings" title="Avisos a tu medida" description="Inicia sesión para elegir los avisos de mensajes, visitas y ofertas que quieres recibir." />
@@ -39,7 +39,7 @@ function PreferencesBody({ userId, ...guard }: { userId: string }&PreferenceRefr
   useEffect(() => { if (active) void loadPreferences().catch(() => {}); }, [active, loadPreferences]);
   if (!store.preferences) return <View style={styles.form}>
     {store.preferencesLoading ? <ActivityIndicator color={colors.primary} style={styles.loading} />
-      : <Notice error>{store.preferencesError || 'No se pudieron cargar tus preferencias.'} Desliza hacia abajo para volver a consultarlas.</Notice>}
+      : <Notice error onRetry={()=>void loadPreferences().catch(() => {})}>{store.preferencesError || 'No se pudieron cargar tus preferencias.'}</Notice>}
   </View>;
   return <PreferencesForm userId={userId} preferences={store.preferences} {...guard} />;
 }
@@ -105,7 +105,7 @@ function PreferenceRow({ label, description, icon, value, disabled, onChange, la
 }) {
   const { colors, styles } = useStyles();
   return <View style={[styles.row, !last && styles.rowBorder]}>
-    <View style={styles.rowTop}><View style={styles.rowIcon}><Icon name={icon} color={colors.primary} size={20} /></View><Text style={styles.rowTitle}>{label}</Text><Switch accessibilityLabel={`Avisos de ${label.toLowerCase()}`} accessibilityHint={description} value={value} disabled={disabled} onValueChange={onChange} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.onPrimary} ios_backgroundColor={colors.switchTrack} /></View>
+    <View style={styles.rowTop}><View style={styles.rowIcon}><Icon name={icon} color={colors.primary} size={20} /></View><Text style={styles.rowTitle}>{label}</Text><Switch hitSlop={10} accessibilityLabel={`Avisos de ${label.toLowerCase()}`} accessibilityHint={description} value={value} disabled={disabled} onValueChange={onChange} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.onPrimary} ios_backgroundColor={colors.switchTrack} /></View>
     <Text style={styles.rowDescription}>{description}</Text>
   </View>;
 }

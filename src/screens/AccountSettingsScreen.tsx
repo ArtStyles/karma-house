@@ -23,9 +23,9 @@ export default function AccountSettingsScreen() {
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!!auth.user && !editing.current && !formBusy.current} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}>
-        <PageTitle compact title="Ajustes de cuenta" subtitle="Identidad, preferencias y privacidad." back />
+        <PageTitle compact title="Ajustes de cuenta" subtitle="Identidad, preferencias y privacidad." back fallback="/profile" />
         <AppearanceSettings />
-        {!isSupabaseConfigured ? <EmptyState plain title="Perfil no disponible" description="La foto y el nombre de tu cuenta estarán disponibles con el servicio conectado." /> : !auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : !auth.user ? <AccountPrompt returnTo="/account-settings" title="Personaliza tu cuenta" description="Inicia sesión para cambiar el nombre y la foto de tu cuenta." /> : !auth.profileReady ? <View style={styles.card}><Notice error={!!auth.error}>{auth.error || 'Cargando tu perfil…'} Desliza hacia abajo para volver a cargarlo.</Notice></View> : <AccountSettingsForm key={auth.user.id} ownerId={auth.user.id} editing={editing} locked={formBusy} refreshing={reload.isRefreshing} />}
+        {!isSupabaseConfigured ? <EmptyState plain title="Perfil no disponible" description="La foto y el nombre de tu cuenta estarán disponibles con el servicio conectado." /> : !auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : !auth.user ? <AccountPrompt returnTo="/account-settings" title="Personaliza tu cuenta" description="Inicia sesión para cambiar el nombre y la foto de tu cuenta." /> : !auth.profileReady ? <View style={styles.card}>{auth.error ? <Notice error onRetry={() => void reload.refresh()}>{auth.error}</Notice> : <ActivityIndicator accessibilityLabel="Cargando tu perfil" color={colors.primary} />}</View> : <AccountSettingsForm key={auth.user.id} ownerId={auth.user.id} editing={editing} locked={formBusy} refreshing={reload.isRefreshing} />}
       </ScrollView>
     </KeyboardAvoidingView>
   </SafeAreaView>;
@@ -114,7 +114,7 @@ function DeleteAccountSheet({ visible, onClose }: { visible: boolean; onClose: (
   const { colors, styles } = useStyles();
   const insets = useSafeAreaInsets();
   const auth = useAuth();
-  const { agencies } = useAgencyWorkspace();
+  const { agencies, error: agenciesError } = useAgencyWorkspace();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   // Once the server began, listings and agency memberships are already gone: the account can only be finished.
@@ -136,7 +136,8 @@ function DeleteAccountSheet({ visible, onClose }: { visible: boolean; onClose: (
         <ScrollView contentContainerStyle={styles.sheetContent}>
         <Text accessibilityRole="header" style={styles.sheetTitle}>¿Eliminar tu cuenta?</Text>
         <Text style={styles.sheetText}>Se borran para siempre tus anuncios y sus fotos, tus favoritos, tus conversaciones, visitas y ofertas, tus avisos y tu perfil. No se puede deshacer.</Text>
-        {teams ? <Text style={styles.sheetText}>También sales de {teams}. Si eres la única persona que administra una de ellas, esa inmobiliaria quedará suspendida hasta que KarmaHouse la recupere.</Text> : null}
+        {/* A suspended account or a failed load has no list here, but the server still removes the memberships. */}
+        {teams || auth.suspended || agenciesError ? <Text style={styles.sheetText}>{teams ? `También sales de ${teams}.` : 'Si perteneces a alguna inmobiliaria, también sales de su equipo.'} Si eres la única persona que administra una inmobiliaria, quedará suspendida hasta que KarmaHouse la recupere.</Text> : null}
         <Text style={styles.description}>Los reportes enviados a moderación se conservan sin tus datos de cuenta.</Text>
         {error ? <Notice error>{error}</Notice> : null}
         {started ? <Text style={styles.description}>Si sales ahora, podrás terminar después en Ajustes de cuenta › Eliminar cuenta.</Text> : null}
@@ -159,6 +160,6 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   danger: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }, dangerText: { color: colors.danger, fontSize: 16, fontWeight: '600' },
   backdrop: { flex: 1, backgroundColor: colors.photoOverlay, justifyContent: 'center', paddingHorizontal: 20 }, sheet: { width: '100%', maxWidth: 520, maxHeight: '100%', alignSelf: 'center', backgroundColor: colors.surface, borderRadius: internalLayout.radius, overflow: 'hidden' }, sheetContent: { padding: 20, gap: 16 },
   sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '700', letterSpacing: -.5 }, sheetText: { color: colors.ink, fontSize: 16, lineHeight: 24 },
-  dangerFilled: { minHeight: 52, borderRadius: 14, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 12 }, dangerFilledText: { color: colors.onPrimary, fontSize: 16, lineHeight: 23, fontWeight: '600', textAlign: 'center' },
+  dangerFilled: { minHeight: 52, borderRadius: 26, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 12 }, dangerFilledText: { color: colors.onPrimary, fontSize: 16, lineHeight: 23, fontWeight: '600', textAlign: 'center' },
   success: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingHorizontal: 4 }, successText: { color: colors.green, fontSize: 14, fontWeight: '500' },
 }));

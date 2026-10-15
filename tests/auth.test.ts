@@ -33,6 +33,8 @@ test('auth never reflects provider error details and only returns to known local
   assert.throws(() => parseAuthCallback(`${callback}?error=access_denied&error_description=secret-token`, callback), error => !error.message.includes('secret-token'));
   for (const path of ['https://attacker.example', '//attacker.example', '/\\evil', '/%2f%2fevil', '/auth?code=token', '/profile?access_token=token']) assert.equal(safeReturnTo(path), '/profile');
   assert.equal(safeReturnTo('/publish'), '/publish');
+  // Every sign-in prompt's static destination survives the round trip.
+  for (const path of ['/saved-searches', '/listing-transfers', '/pro', '/agency-workspace', '/agency-team', '/agency-application']) assert.equal(safeReturnTo(path), path);
   assert.equal(safeReturnTo('/property/home-123'), '/property/home-123');
   assert.equal(safeReturnTo('/messages'), '/messages');
   assert.equal(safeReturnTo('/messages/chat-123'), '/messages/chat-123');

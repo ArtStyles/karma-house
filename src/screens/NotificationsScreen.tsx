@@ -53,13 +53,13 @@ function NotificationsBody() {
           <Text style={styles.hint}>Abrir una conversación no marca este aviso como leído.</Text>
         </View>
         {store.unreadCount > 0 && <Button label="Marcar todos como leídos" secondary icon="checkmark-done-outline" disabled={!!store.marking || store.readThrough === '0'} loading={store.marking === 'all'} onPress={markAll} />}
-        {!!issue && <Notice error>{issue} Desliza hacia abajo para reintentar la consulta.</Notice>}
+        {!!issue && <Notice error onRetry={() => void reload.refresh()}>{issue}</Notice>}
       </View>}
       renderItem={({ item }) => <NotificationCard item={item} busy={!!store.marking} marking={store.marking === item.id} onRead={() => void store.markRead(item.id).catch(() => {})} onOpen={() => open(item.id)} />}
       ListEmptyComponent={!list.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} />
         : list.error ? null
         : list.nextCursor ? <Notice>Has revisado esta página. Carga más avisos para seguir consultando los anteriores.</Notice>
-        : list.unreadOnly && store.unreadCount > 0 ? <EmptyState plain title="Hay novedades por consultar" description="Desliza hacia abajo para ver los avisos que llegaron después de esta página." />
+        : list.unreadOnly && store.unreadCount > 0 ? <EmptyState plain title="Hay novedades por consultar" description="Llegaron avisos después de esta página." action={<Button secondary label="Ver avisos nuevos" onPress={() => void reload.refresh()} />} />
         : <EmptyState plain title={list.unreadOnly ? 'Sin avisos pendientes' : 'Sin notificaciones'} description={list.unreadOnly ? 'No tienes avisos sin leer. Puedes consultar los anteriores en Todas.' : 'Aquí aparecerán las novedades de visitas, ofertas y alertas de búsqueda. Los mensajes se consultan en el chat.'} action={<Button label={list.unreadOnly ? 'Ver todos los avisos' : 'Ir a mensajes'} secondary onPress={() => list.unreadOnly ? store.setUnreadOnly(false) : router.push('/messages')} />} />}
       ListFooterComponent={<View style={styles.footer}>{list.nextCursor && <Button label="Cargar más avisos" secondary disabled={!!store.marking} loading={list.loadingMore} onPress={() => void store.loadMore().catch(() => {})} />}<Text style={styles.hint}>El contenido de tus conversaciones se consulta dentro del chat.</Text></View>}
     />

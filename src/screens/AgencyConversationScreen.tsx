@@ -156,7 +156,7 @@ export default function AgencyConversationScreen() {
    {loading&&!c&&<ActivityIndicator accessibilityLabel="Consultando conversación privada" color={colors.primary}/>}
    {!loading&&!c&&!visible?.error&&<EmptyState plain title="Conversación no disponible" description="No se pudo abrir una conversación autorizada en esta inmobiliaria."/>}
    {c&&<Notice>Esta conversación pertenece a {c.agencyName}. Solo tú y su equipo autorizado podéis verla. Las conversaciones personales siguen siendo privadas.</Notice>}
-   {visible?.error && <Notice error>{visible.error} Desliza hacia abajo para reintentar.</Notice>}
+   {visible?.error && <Notice error onRetry={()=>void reload.refresh()}>{visible.error}</Notice>}
    {w.enabled && w.activeAgency?.state==='approved' && c && agencyId && c.assigneeId !== auth.user.id && w.membership?.role !== 'manager' && !c.closedReason && <Button label="Tomar este caso" loading={busy} onPress={() => void act(async (ctx) => { if (!supabase || !('agencyId' in ctx))
             return; await createAgencyDealRepository(supabase).assign({ dealId: c.dealId, userId: ctx.userId, expectedVersion: c.dealVersion, clientRequestId: createMessageId() }, ctx); await load(); },true)}/>}
    {visible?.hasMore && <Button label="Ver mensajes anteriores" secondary loading={busy} onPress={() => void act(async (ctx) => { if (!repo)

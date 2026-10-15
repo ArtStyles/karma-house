@@ -70,11 +70,14 @@ export function PageTitle({ title, subtitle, back = false, fallback, right, comp
     <View style={{ flex: 1, minWidth: 0 }}><Text accessibilityRole="header" style={[styles.title, compact && styles.compactTitle]}>{title}</Text>{subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}</View>{right}
   </View>;
 }
-export function Notice({ children, error = false }: { children: ReactNode; error?: boolean }) {
+/** `onRetry` adds a «Reintentar» pill: pull-to-refresh does not exist on the web, so a failed load needs a button. */
+export function Notice({ children, error = false, onRetry }: { children: ReactNode; error?: boolean; onRetry?: () => void }) {
   const { colors, styles } = useStyles();
+  // Inside the column, flex: 1 would let the text collapse to zero height.
+  const text = <Text style={[styles.noticeText, onRetry && { flex: 0, alignSelf: 'stretch' }, error && { color: colors.danger }]}>{children}</Text>;
   return <View accessibilityRole={error ? 'alert' : undefined} style={[styles.notice, error && styles.noticeError]}>
     <Icon name={error ? 'alert-circle-outline' : 'information-circle-outline'} size={19} color={error ? colors.danger : colors.muted} />
-    <Text style={[styles.noticeText, error && { color: colors.danger }]}>{children}</Text>
+    {onRetry ? <View style={styles.noticeBody}>{text}<Pressable accessibilityRole="button" hitSlop={6} onPress={onRetry} style={({ pressed }) => [styles.retry, pressed && { opacity: .7 }]}><Text style={[styles.retryText, error && { color: colors.danger }]}>Reintentar</Text></Pressable></View> : text}
   </View>;
 }
 export function EmptyState({ title, description, icon = 'home-outline', action, plain = false }: { title: string; description: string; icon?: IconName; action?: ReactNode; plain?: boolean }) {
@@ -102,6 +105,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   pageTitle: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 26, paddingBottom: 24 }, title: { fontFamily: typefaces.display, fontSize: 34, fontWeight: '700', color: colors.ink, letterSpacing: -1 },
   subtitle: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: 6 },
   compactHeader: { paddingTop: 18, paddingBottom: 22, alignItems: 'flex-start' }, compactTitle: { fontSize: 28, lineHeight: 34, fontWeight: '600', letterSpacing: -.6 },
+  noticeBody: { flex: 1, gap: 8, alignItems: 'flex-start' }, retry: { minHeight: 36, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: colors.border, justifyContent: 'center', backgroundColor: colors.surface }, retryText: { fontSize: 13, fontWeight: '600', color: colors.primary },
   notice: { paddingVertical: 14, paddingHorizontal: 4, borderRadius: 14, flexDirection: 'row', gap: 9, alignItems: 'flex-start' }, noticeError: { backgroundColor: colors.softDanger, paddingHorizontal: 14 }, noticeText: { flex: 1, fontSize: 13, color: colors.muted, lineHeight: 20 },
   empty: { width: '100%', maxWidth: 620, alignSelf: 'center', paddingVertical: 28, paddingHorizontal: 22, alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: 26, borderWidth: 1, borderColor: colors.border, boxShadow: '0 4px 18px rgba(32, 62, 94, 0.025)' },
   emptyArtwork: { width: 150, height: 90, marginBottom: 2 },

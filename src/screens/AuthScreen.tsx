@@ -15,6 +15,7 @@ import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 import {AgencyRegistrationFields} from '../components/agencies/AgencyRegistrationFields';
 import {agencyApplicationErrors,emptyAgencyApplication,recoverAgencyRegistration,type AgencyFieldErrors,type RegistrationIntent} from '../agencies/registration';
 import {agencyRegistrationAvailable} from '../agencies/assets';
+import {agencyError} from '../agencies/domain';
 import type {CapturedAccountContext} from '../agencies/controller';
 import {useAgencyWorkspace} from '../agencies/useAgencyWorkspace';
 import {supabase} from '../lib/supabase';
@@ -63,10 +64,12 @@ export default function AuthScreen() {
   async function continueToDestination() {
     const isCurrent=focus.checkpoint();
     if(!auth.user||auth.user.user_metadata.registration_intent!=='agency'){router.replace(returnTo);return;}
-    if(!workspace.repository||auth.suspended||!auth.session)return;
+    if(!workspace.repository||!auth.session)return;
+    // A suspended account cannot continue an agency registration; Mi espacio explains the suspension.
+    if(auth.suspended){router.replace('/profile');return;}
     let context:CapturedAccountContext|null=null;
-    try{context=workspace.captureAccountContext();const destination=await recoverAgencyRegistration(workspace.repository,context,auth.user.user_metadata.registration_intent==='agency'?'agency':'personal');context.checkpoint();if(!isCurrent())return;router.replace(destination==='/profile'?returnTo:destination);}
-    catch(cause){try{context?.checkpoint();if(!isCurrent())return;setIssue(cause instanceof Error?cause.message:'Actualiza para consultar tu solicitud.');}catch{}}finally{context?.release();}
+    try{context=workspace.captureAccountContext();const destination=await recoverAgencyRegistration(workspace.repository,context,auth.user.user_metadata.registration_intent==='agency'?'agency':'personal');context.checkpoint();if(!isCurrent())return;router.replace(destination==='/agency-application'?destination:returnTo);}
+    catch(cause){try{context?.checkpoint();if(!isCurrent())return;setIssue(agencyError(cause));}catch{}}finally{context?.release();}
   }
   async function cancel(explore = false) {
     if (submitting) return;
@@ -136,7 +139,7 @@ export default function AuthScreen() {
               ? registrationIntent==='agency'?'Si el registro puede completarse con esta dirección, encontrarás un enlace para confirmar tu cuenta. Revisa también spam. La solicitud de inmobiliaria estará disponible al confirmar, incluso en otro dispositivo.':'Si el registro puede completarse con esta dirección, encontrarás un enlace para confirmar tu cuenta. Revisa también spam y ábrelo en este dispositivo.'
               : notice === 'reset' ? 'Si existe una cuenta con ese correo, busca el enlace de recuperación. Revisa también spam y ábrelo en este dispositivo.'
                 : 'Ya puedes continuar en tu espacio con tu nueva contraseña.'}</Text>
-            <Button label={notice === 'updated' ? 'Ir a mi espacio' : 'Volver a entrar'} onPress={() => notice === 'updated' ? router.replace(returnTo) : changeMode('signin')} />
+            <Button label={notice === 'updated' ? 'Continuar' : 'Volver a entrar'} onPress={() => notice === 'updated' ? router.replace(returnTo) : changeMode('signin')} />
           </View> : !hasRecoverySession ? <View style={styles.form}>
             <Notice error>Abre el enlace de recuperación que solicitaste para elegir tu nueva contraseña.</Notice>
             <Button label="Solicitar otro enlace" onPress={() => changeMode('forgot')} />
@@ -191,8 +194,8 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   title: { fontFamily: typefaces.display, color: colors.ink, fontSize: 30, lineHeight: 36, fontWeight: '600', letterSpacing: -.6 },
   subtitle: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: 8, maxWidth: 420 },
   form: { marginTop: 24, gap: 18 },
-  segment: { flexDirection: 'row', backgroundColor: colors.softNeutral, padding: 4, borderRadius: 15, marginBottom: 7 },
-  segmentItem: { flex: 1, minWidth: 0, minHeight: 44, padding: 8, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  segment: { flexDirection: 'row', backgroundColor: colors.softNeutral, padding: 4, borderRadius: 999, marginBottom: 7 },
+  segmentItem: { flex: 1, minWidth: 0, minHeight: 44, padding: 8, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   segmentSelected: { backgroundColor: colors.surface, boxShadow: '0 1px 5px rgba(0, 0, 0, 0.06)' },
   segmentText: { fontSize: 15, fontWeight: '500', textAlign: 'center', color: colors.muted }, segmentTextSelected: { color: colors.ink, fontWeight: '600' },
   field: { gap: 9 }, label: { fontSize: 14, fontWeight: '500', color: colors.ink, marginLeft: 4 },

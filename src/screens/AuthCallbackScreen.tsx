@@ -11,7 +11,6 @@ import type {CapturedAccountContext} from '../agencies/controller';
 import {useAuth} from '../auth/AuthProvider';
 import {useAgencyWorkspace} from '../agencies/useAgencyWorkspace';
 import {recoverAgencyRegistration} from '../agencies/registration';
-import {agencyError} from '../agencies/domain';
 import { createThemedStyles } from '../theme';
 
 export default function AuthCallbackScreen() {
@@ -42,13 +41,13 @@ export default function AuthCallbackScreen() {
 
   useEffect(()=>{
     if(!destination||!auth.ready||!auth.user||!auth.session)return;
+    if(auth.user.user_metadata.registration_intent!=='agency'){router.replace(destination as Href);return;}
     // A suspended account cannot finish an agency registration; Mi espacio explains the suspension.
     if(auth.suspended){router.replace('/profile');return;}
     if(!workspace.ready)return;
-    if(auth.user.user_metadata.registration_intent!=='agency'){router.replace(destination as Href);return;}
     if(!workspace.repository)return;
     let active=true;
-    void (async()=>{let context:CapturedAccountContext|null=null;try{context=workspace.captureAccountContext();const route=await recoverAgencyRegistration(workspace.repository!,context,'agency');context.checkpoint();if(active)router.replace(route);}catch(cause){try{context?.checkpoint();if(active)setError(agencyError(cause));}catch{}}finally{context?.release();}})();
+    void (async()=>{let context:CapturedAccountContext|null=null;try{context=workspace.captureAccountContext();const route=await recoverAgencyRegistration(workspace.repository!,context,'agency');context.checkpoint();if(active)router.replace(route==='/agency-application'?route:destination as Href);}catch{try{context?.checkpoint();if(active)router.replace('/agency-application');}catch{}}finally{context?.release();}})();
     return ()=>{active=false;};
   },[destination,auth.ready,auth.user?.id,auth.suspended,Boolean(auth.session),workspace.ready,workspace.repository,workspace.captureAccountContext]);
 

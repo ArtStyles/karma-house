@@ -197,7 +197,7 @@ function Property({ id }: {
                 )}
                 <ActionGroup>{item&&<Button label="Agenda y ocupación" secondary onPress={()=>router.push({pathname:'/agency-agenda',params:{propertyId:item.property.id}})}/>}
                 {item&&w.membership?.role==='admin'&&<Button label="Ver autorizaciones y cambios" secondary onPress={()=>router.push('/agency-property-requests')}/>}</ActionGroup>
-                {!loaded && allowed && Boolean(issue) && <Notice>Desliza hacia abajo para volver a consultar la vivienda.</Notice>}
+                {!loaded && allowed && Boolean(issue) && <Notice onRetry={() => void reload.refresh()}>No pudimos consultar la vivienda.</Notice>}
             </ScrollView>
             {editable && (
                 <View style={{flex:1,display:matches?'none':'flex'}} pointerEvents={matches?'none':'auto'}><ListingForm

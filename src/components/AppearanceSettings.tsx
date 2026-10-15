@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { createThemedStyles, useTheme } from '../theme';
+import { createThemedStyles, internalLayout, useTheme } from '../theme';
 import type { AppearancePreference } from '../settings/appearance';
 import { Icon, Notice, type IconName } from './ui';
 
@@ -36,9 +36,9 @@ export function AppearanceSettings() {
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, borderRadius: 16, padding: 20, gap: 16, marginBottom: 20 },
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: internalLayout.radius, padding: 16, gap: 16, marginBottom: 20 },
   heading: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  copy: { flex: 1, gap: 4 }, title: { color: colors.ink, fontSize: 19, lineHeight: 25, fontWeight: '600', letterSpacing: -.35 }, description: { color: colors.muted, fontSize: 13, lineHeight: 20 },
+  copy: { flex: 1, gap: 4 }, title: { color: colors.ink, fontSize: 18, lineHeight: 24, fontWeight: '600', letterSpacing: -.3 }, description: { color: colors.muted, fontSize: 14, lineHeight: 21 },
   options: { gap: 8 }, option: { width: '100%', minHeight: 52, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
   selected: { backgroundColor: colors.softBlue, borderColor: colors.accentBorder }, label: { flex: 1, color: colors.ink, fontSize: 15, lineHeight: 21, fontWeight: '500' }, selectedLabel: { color: colors.primary, fontWeight: '600' },
   indicator: { width: 15, height: 15, borderRadius: 8, borderWidth: 1.5, borderColor: colors.muted, alignItems: 'center', justifyContent: 'center' }, indicatorSelected: { borderColor: colors.primary }, dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.primary },

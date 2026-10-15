@@ -65,7 +65,7 @@ export default function AgencyReviewsScreen(){
     </View>
     {list.error&&<Notice error>{agencyError(new Error(list.error))}</Notice>}{Boolean(issue)&&!selected&&<Notice error>{issue}</Notice>}
     {loading&&<ActivityIndicator color={colors.primary}/>}
-    {!loading&&!list.error&&!issue&&!items.length&&<EmptyState plain title="Sin solicitudes en esta vista" description="Desliza hacia abajo o elige otro estado para consultar las revisiones."/>}
+    {!loading&&!list.error&&!issue&&!items.length&&<EmptyState plain title="Sin solicitudes en esta vista" description="Elige otro estado para consultar las revisiones."/>}
     {items.map(detail=>{const a=detail.application.agency,r=detail.request,input=detail.application.input;return <View key={r?.id??a.id} style={s.card}>
      <Text style={s.title}>{a.tradeName}</Text><AgencyVerifiedBadge verified={a.verified} agencyName={a.tradeName} principal={a.isPrincipal} labelled/>
      <Text style={s.status}>{agencyStateLabel[a.state]}</Text><Text style={s.copy}>{[input.province,input.municipality].filter(Boolean).join(' · ')||(a.isPrincipal?'Identidad principal protegida del sistema':'Perfil de solicitud sin ubicación')}</Text>
