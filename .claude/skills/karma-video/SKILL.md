@@ -18,8 +18,8 @@ Carga la skill `hyperframes:hyperframes` (router del plugin HyperFrames) y sigue
 
 Entrega al router el pedido literal del usuario más este contexto, para que no pregunte lo que ya está resuelto:
 
-- **Marca:** `${CLAUDE_SKILL_DIR}/design.md`. En la pregunta de diseño la respuesta es «ya tiene uno»: tras `init`, cópialo como `design.md` a la raíz del proyecto y anótalo en `BRIEF.md` § Assets. Lo que el video puede afirmar está en su sección *Facts*; no inventes cifras, precios ni testimonios.
-- **Web oficial para capturar:** https://karmahouse.vercel.app/
+- **Marca:** `BRAND.md` en la raíz del repo (ya en contexto vía `CLAUDE.md`). En la pregunta de diseño la respuesta es «ya tiene uno»: tras `init`, cópialo como `design.md` a la raíz del proyecto y anótalo en `BRIEF.md` § Assets. Lo que el video puede afirmar está en su sección *Facts*; no inventes cifras, precios ni testimonios.
+- **Web oficial para capturar:** https://karmahouse.site/
 - **Recursos locales** (rutas desde la raíz del repo; anótalos en § Assets): logo `assets/karmahouse-logo.png`, símbolo `assets/karmahouse-mark.png`, icono `assets/karmahouse-icon.png`, fotos de ambiente `web/public/vedado.jpg` y `web/public/interior.jpg` (generadas por IA: nunca como anuncio real).
 - **Capturas reales de la app:** `artifacts/phone/*.png`. Mira cada una antes de usarla; si muestra nombres, correos, teléfonos o chats de personas reales, descártala o tapa esos datos.
 - **Público e idioma:** personas en Cuba que compran, venden, permutan o alquilan, con datos móviles caros. Español de Cuba, tuteo, textos cortos y legibles en el móvil.
@@ -43,11 +43,82 @@ Ejecuta los comandos de HyperFrames con esa carpeta como directorio actual: `ren
 
 ## 3b. Lo aprendido en el primer video (2026-10-03)
 
-- **Afirmaciones:** antes del storyboard, lee `capture/extracted/visible-text.txt`. La web publicada manda sobre `design.md` si difieren (aquel día el APK aún no era público).
+- **Afirmaciones:** antes del storyboard, lee `capture/extracted/visible-text.txt`. La web publicada manda sobre `BRAND.md` si difieren; si cambió, actualiza `BRAND.md` § Facts.
 - **Música sin cuenta HeyGen:** el paso de audio de `product-launch-video` se salta la música. Genérala aparte con el motor de `/media-use`: un `audio_request.json` con `"lines": []` y `"bgm": {"mode": "generate", "prompt": "..."}`, y `audio.mjs --only bgm`. Elige el mejor tramo con librosa (energía y golpes) y recórtalo con ffmpeg. Luego apunta `audio_meta.json` → `bgm.path` al recorte, con `bgm_pending: false`.
-- **Fuentes:** cada fuente debe existir como archivo en `assets/fonts/` del proyecto. Copia las de `artifacts/videos/2026-10-03-cartel-se-vende/assets/fonts/` (Georgia, Roboto variable, Permanent Marker) y el bloque `@font-face` de su `frame.md`. Antes de `build-frame`, cambia `-apple-system` por `Roboto` en `capture/extracted/tokens.json`; después pon a mano Georgia en los titulares de `frame.md`.
+- **Fuentes:** cada fuente debe existir como archivo en `assets/fonts/` del proyecto. Titulares en Calistoga (`web/node_modules/@fontsource/calistoga/files/calistoga-latin-400-normal.woff2`); Roboto variable desde `artifacts/videos/2026-10-03-cartel-se-vende/assets/fonts/`, con el bloque `@font-face` de su `frame.md` como modelo. Antes de `build-frame`, cambia `-apple-system` por `Roboto` en `capture/extracted/tokens.json`; después pon a mano Calistoga en los titulares de `frame.md`.
 - **Capturas de la app:** el texto de una captura se lee diminuto en un móvil. Repite en una tarjeta grande lo que tenga que leerse.
 - **ffmpeg 9:** usa `-fps_mode passthrough`; `-vsync` ya no existe.
+
+## 3c. Lo aprendido en «La puerta» (2026-10-06)
+
+- **El usuario quiere ilustración, no texto:** una palabra grande por escena, objetos 3D que salen del cuadro, rayos de luz. Bocetos con mucho texto fueron rechazados.
+- **CLI con red:** el node del sistema vuelve a dar `EACCES`. Lanza el CLI con un `.cmd` que pone primero en PATH el node de Codex (`%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin`), fija `npm_execpath` al `npm-cli.js` del sistema y llama `plugin-cli.mjs %*`. Así funcionan `auth login`, `catalog` y las instalaciones opcionales (`onnxruntime-node`).
+- **Imágenes con IA:** `media-use resolve --type image --provider codex` con `codex.exe` de la app Codex en PATH (`C:\Program Files\WindowsApps\OpenAI.Codex_*\app\resources`). Necesita la conexión del usuario (VPN); tarda ~5 min por imagen, en paralelo va bien. Pide objetos sobre fondo gris liso y recórtalos por color (distancia al gris del borde + bordes suaves): `remove-background` está hecho para personas y destroza objetos.
+- **HeyGen:** el catálogo de SFX de media-use necesita el CLI `heygen`, que no existe para Windows; solo queda el banco incluido (clics, whooshes, sin puertas).
+- **After Effects:** el MCP `aftereffects` está registrado (local) pero AE no está instalado; el 3D se hizo en CSS/GSAP.
+
+## 3d. Lo aprendido en «La historia de KarmaHouse» (2026-10-07)
+
+- **Fotos fijas con movimiento de cámara = "barato" para este usuario.** Para una historia con personas quiere video real: personas de cuerpo entero (con cara, personaje ficticio) que se muevan. El camino que funcionó: protagonista de referencia con Codex (`codex exec ... "<prompt>" -i ref.png`; el prompt va ANTES de `-i`, que es variádico) → escenas con la misma persona → clips image-to-video → montaje en HyperFrames.
+- **Generadores de video:** Sora cerró (web abril 2026, API septiembre 2026). Kling gratis rechaza tareas en horas pico ("non-member users cannot submit"). **Hailuo** (hailuoai.video) funcionó: 150 créditos al registrarse, modo Start/End Frame + modelo Hailuo 2.3-Fast, 768p · 6 s = 15 créditos por clip; marca de agua «MINIMAX | Hailuo AI» en el plan gratis (no quitarla; el usuario eligió dejarla entera: escalar a 1280×1920 y recortar `crop=1080:1920:180:0`). Los clips se descargan directo de `cdn.hailuoai.video` leyendo los `<video>` de la página.
+- **Navegador integrado:** el usuario inicia sesión; no tiene herramienta para subir archivos y bloquea el acceso de una web a `localhost`, así que el usuario sube cada imagen (copiar las imágenes a `Descargas\karma-escenas` porque `artifacts/` no se ve fácil). Claude en Chrome no estaba conectado.
+- **Etalonaje de clips:** hecho con ffmpeg antes del montaje (`eq` + `colorbalance`, `vignette`, `noise=alls=3:allf=t`, CRF 20); las transiciones van en el timeline `main` sobre los `<video>` con escala ≥ 1 (sin bordes) y el clip entrante encima (sin pantallas lechosas).
+- **Render:** con imágenes graduadas por `media-treatment`, snapshot/check/render necesitan `--no-browser-gpu` en esta PC (Intel Iris Xe).
+- **Bash heredoc:** las barras invertidas en scripts Python escritos con heredoc pueden colapsar; usa `chr(92)` para `\`.
+
+## 3e. Lo aprendido en «KarmaHouse explicado» (2026-10-07)
+
+- **Tipografía cinética que gustó:** una escena por frase sobre la rejilla de la música (compás ≈ 1,657 s), cada escena con su fondo de la paleta, letras partidas en `<span>` (volteo 3D, caída, convergencia, máquina de escribir) y el color de una frase cambiando en los golpes. Cada escena termina llenando la pantalla con el fondo de la siguiente (círculo, persiana, flash): así no hay cortes secos.
+- **Revisión previa:** guion + 3 escenas animadas de prueba (gancho, verbos y estallido) antes de construir el resto. Se aprobó a la primera.
+- **`check` y letras partidas:** si las letras van en `inline-block`, Calistoga en dos líneas necesita `line-height` ≥ 1,16, y separa más los titulares apilados; si no, salen errores `content_overlap`. Pon `white-space: nowrap` en los titulares partidos: si no, la línea se corta a mitad de palabra («priva / do.»). Las palabras apiladas a propósito (verbos que se relevan) llevan `data-layout-allow-overlap` en cada `<span>` de letra; el atributo no se hereda.
+- **No animes `letterSpacing`** (`gsap_non_transform_motion` en lint): usa `scaleX`/`scale`.
+- **Flash blanco entre escenas:** un flash que se desvanece lento se ve lechoso; déjalo en ≤ 0,15 s.
+
+## 3f. Lo aprendido en «Pestañas» (2026-10-11)
+
+- **Gustos del usuario:** quiere el texto narrado escrito en pantalla (karaoke, palabra activa en azul), pero rechazó repetir el mismo recurso en todas las escenas («en todos usas el efecto del buscador»): un recurso de texto distinto por escena. Pidió un fondo que reaccione a las animaciones y un diseño menos escueto (más capas, ornamento, profundidad). Voz elegida: Kokoro `em_alex` (hombre) a 0,95.
+- **Kokoro y la palabra «app»:** se oye como «API»; escribe «aplicación» en el guion de voz.
+- **Red y sandbox:** `capture` falla dentro del sandbox de Bash (`net::ERR_NETWORK_ACCESS_DENIED`) y el `audio.mjs` de product-launch falla al llamar `npx hyperframes tts` con el node del sistema. Ejecuta ambos con el sandbox desactivado y a través del lanzador `.cmd` con el node de Codex (`hf2.cmd --script <ruta>\audio.mjs …`). Si una línea de TTS falla, vuelve a ejecutar el mismo comando: reutiliza las que ya existen.
+- **Pausas en la voz:** `sync-durations` pone a cada escena la duración exacta de su voz, sin respiros. Para tener pausas, alarga cada WAV con `ffmpeg apad`/`adelay`, actualiza `duration_s` y los tiempos de palabra en `audio_meta.json` y vuelve a ejecutar `sync-durations`.
+- **No ejecutes `fetch-sfx`:** reescribe `audio_meta.json` desde el sidecar y borra la música y las voces con pausas. Escribe tú las entradas `sfx` (`frame`, `file`, `offset_s`, `duration_s`, `volume`) con los archivos de `media-use/audio/assets/sfx/`.
+- **Capas persistentes:** un fondo vivo (`compositions/fondo.html`) y una barra de pestañas (`compositions/pestanas.html`) montados a mano en `index.html` después de `assemble-index` (fondo justo tras abrir `#root`, pestañas al final) y antes de `transitions inject`. Los frames quedan transparentes y las transiciones solo mueven el contenido. Rejilla común de baldosas de 180 px en (0,0); el fondo se desplaza en múltiplos de 180 px para no desalinear las reacciones de cada frame.
+- **Karaoke fiable:** `karaoke.json` con las palabras de pantalla y los tiempos de la transcripción (unir «Karma»+«House»). Los workers lo usan tal cual; la transcripción ASR tiene errores («Pública», «Si conversa»).
+- **Workers de frames:** dales en el contexto las excepciones aprobadas (texto narrado en pantalla, raíz transparente, sin salida), una escena ya aprobada como referencia de estilo, ids que empiecen por letra (`f03-…`) y menos de 20 elementos con blur/gradiente radial/clip-path. Revisa que la «palabra de color» del boceto se quede azul (los workers la pasan a tinta por la regla de karaoke).
+- **Vista previa de bocetos:** la entrada `videos` de `.claude/launch.json` sirve `artifacts/videos` en el puerto 8097; `file://` en el navegador integrado no carga fuentes ni imágenes relativas.
+- **Prueba rápida:** con `prueba.html` como `index.html` (solo las escenas de prueba en sus tiempos reales), render en ~1 min y corte de tramos con ffmpeg. Saca de la raíz cualquier otro HTML con `data-composition-id` (error `multiple_root_compositions`).
+- **Volumen final:** el render sale cerca de −20 LUFS; normaliza a −14 LUFS para Reels y Estados (`loudnorm=I=-14:TP=-1.5`, vídeo copiado).
+- **Receta `karma-pestanas` (v1):** el usuario aprobó este formato como receta (`~/.media/recipes/karma-pestanas/`). `recipe.mjs use` solo copia `frame.md` y los esqueletos; las capas persistentes y el modelo de `karaoke.json` están en `extras/` de la receta (y en `artifacts/videos/2026-10-11-pestanas/`): cópialos a `compositions/` y ajusta sus tiempos de acto al nuevo guion.
+
+## 3h. Lo aprendido en «Inmobiliarias PRO» (2026-10-13)
+
+- **Inmobiliarias:** la web no las menciona; las afirmaciones salen del código de la app (lista en `artifacts/videos/2026-10-13-inmobiliarias/TREATMENT.md` §7). Solo venta, nunca alquiler; no «verificada», «gratis» ni comisiones. CTA: Android + navegador (`app.karmahouse.site`).
+- **Lanzador:** si falta, recrea `hf2.cmd` en el scratchpad (node de Codex primero en PATH, `npm_execpath` al `npm-cli.js` del sistema, `plugin-cli.mjs %*`) y llámalo desde PowerShell con `& "<ruta>\hf2.cmd"`. Este CLI no tiene `usage`.
+- **JSON desde PowerShell:** `Out-File -Encoding utf8` mete BOM y el motor de audio falla al leerlo; escribe los JSON con `printf` en Bash o con Python.
+- **Voz:** `audio.mjs` acepta `--speed 0.95`. Antes de `captions.mjs build`, une «Karma»+«House» en las palabras de `audio_meta.json` (si no, el subtítulo dice «Karma House»).
+- **Workers:** los paquetes de `frame-packets.mjs` no llevan el `## Video direction`. Escribe `_shared.md` (dirección, el elemento que cruza cada costura con medidas exactas, tokens y textos reales de la app, franjas reservadas) y `_words.txt` (tiempos por palabra de cada frame) junto a los paquetes y pásalos en el prompt de cada worker. Con eso las costuras salieron alineadas a la primera.
+- **Capa persistente:** el reloj se montó con un `<div data-composition-src>` justo después del último frame en `index.html` y antes de `transitions inject`. Una cámara con zoom dentro de un frame puede invadir la franja de esa capa: `check` lo marca como `content_overlap` con la capa.
+
+## 3i. Lo aprendido en «Inmobiliarias v2» (2026-10-14)
+
+- **«Profesional» para este usuario no es sobrio:** rechazó la v1 de tarjetas blancas sobre crema plano («necesito algo visualmente más impactante») y pidió «lo más animado posible en cuanto a los efectos y la calidad de las texturas». Lo que aprobó: pared de cal con textura real de yeso, luz de tarde y franjas de persiana; palabras gigantes en Calistoga con textura de piedra que caen con temblor; objetos en 3D que llegan desde el fondo con sombra de contacto y brillo especular; campo azul con textura; sellos con destello ≤ 0,12 s y onda de choque; olas de losa hidráulica que se voltean; grano.
+- **Texturas:** `hyperframes add texture-mask-text` instala 66 máscaras reales (ambientCG) en `assets/texture-mask-text/masks/`. Sirven como máscara de luminancia para letras y también para dar textura a fondos (`painted-plaster-017`, `travertine-009`, `concrete-047-a`).
+- **Voz:** em_alex «no le gustó mucho»; prefirió Kokoro `em_santa` (muestra 4) frente a las voces neuronales de Microsoft (es-CU-ManuelNeural, etc.). Enviar 3–4 muestras con la misma frase funcionó para elegir.
+- **Flujo que funcionó:** 3 escenas de prueba escritas a mano por el orquestador, cortadas en un clip de 15 s, aprobación, y luego los workers con `_v2.md` (contrato de estilo) más las 3 escenas aprobadas como referencia.
+- **Peso:** el grano hace el render enorme (152 MB para 42 s). Recodifica con x264 CRF 22 (unos 33 MB) y saca una versión ligera a 1,3 Mbps (unos 7,5 MB).
+
+## 3g. Continuidad: que no parezca un pase de diapositivas (2026-10-13)
+
+Ideas del repo onetake (github.com/feitangyuan/onetake). Su licencia es no comercial: no instales su código ni copies sus archivos para KarmaHouse; aplica solo estas reglas.
+
+- **Tres conceptos antes del guion:** cada uno es una frase sobre la imagen central, no sobre el producto, y se diferencian en esa idea (un objeto que se transforma en todo, un solo movimiento de cámara que cruza escalas, una reacción en cadena). Con la marca: la ventana mediopunto que se enciende panel a panel, la losa que se despliega, la puerta que se abre a la escena siguiente. Enséñalos y que el usuario elija.
+- **Cada frontera dice qué pasa al otro lado:** en el storyboard, por cada cambio de escena, escribe qué elemento sobrevive y qué hace (el botón pulsado se convierte en el resultado, la tarjeta crece hasta ser la pantalla, la cámara entra en un panel de la ventana hasta que es la escena). Un fundido o un deslizamiento entre escenas sin relación no cuenta. Hazlo con un solo elemento que cambia de tamaño o forma, no con dos capas que se cruzan.
+- **Cortes secos solo en una ráfaga o al cierre:** tres o más golpes en 1,5 s, o el paso a la tarjeta final.
+- **Ritmo con forma:** las duraciones de plano varían 4× o más (palabras de 0,25 s junto a esperas de 2,5 s). Planos todos iguales = diapositivas, aunque cada uno se mueva.
+- **Reposos quietos de verdad:** al menos un tramo de 1 s o más sin nada en movimiento (sin deriva ni zoom lento); cerca de un cuarto del video quieto. El reposo es lo que hace pegar los movimientos grandes.
+- **Se ve la causa:** algo provoca cada reacción (un dedo que toca, la luz que entra, una puerta que empuja). Una pantalla que cambia sola parece salvapantallas.
+- **Elementos pequeños, mucho fondo:** la interfaz como componente vivo en una tarjeta, o a pantalla completa solo en una espera con el dedo visible. Una página entera en miniatura no se lee.
+- **No termines dos planos seguidos igual:** alterna muelle, desenfoque, crecimiento y corte.
+- **Movimientos rápidos:** más de ~80 px por frame a 30 fps se ve a saltos. Hazlos más lentos o revisa ese tramo fotograma a fotograma en el render.
 
 ## 4. Entrega
 
