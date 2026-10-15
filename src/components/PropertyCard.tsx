@@ -11,7 +11,6 @@ import { createThemedStyles, formatMoney } from '../theme';
 import { PropertyImage } from './PropertyImage';
 import { Icon, IconButton } from './ui';
 import { MotionPressable } from './MotionPressable';
-import { ProBadge } from './ProBadge';
 
 /** Photo first: the image carries the card, and the text sits on the screen's own background. */
 export function PropertyCard({ listing, horizontal = false, offline = false }: { listing: Listing; horizontal?: boolean; offline?: boolean }) {
@@ -40,7 +39,7 @@ export function PropertyCard({ listing, horizontal = false, offline = false }: {
     } catch { setError('No se pudo guardar el favorito. Inténtalo de nuevo.'); } finally { setSaving(false); }
   }
   return <View style={horizontal && styles.horizontalCard}>
-    <MotionPressable pressedScale={.995} accessibilityRole="button" accessibilityLabel={`Ver ${listing.title}, ${priceLabel(listing)} ${formatMoney(listing.price)} USD${priceSuffix(listing)}, ${place}${listing.isPro ? ', cuenta Pro de KarmaHouse' : ''}`} onPress={() => router.push(`/property/${listing.id}`)} style={({ pressed }) => [horizontal && styles.horizontal, pressed && { opacity: .85 }]}>
+    <MotionPressable pressedScale={.995} accessibilityRole="button" accessibilityLabel={`Ver ${listing.title}, ${priceLabel(listing)} ${formatMoney(listing.price)} USD${priceSuffix(listing)}, ${place}`} onPress={() => router.push(`/property/${listing.id}`)} style={({ pressed }) => [horizontal && styles.horizontal, pressed && { opacity: .85 }]}>
       <View style={horizontal && styles.wideImage}>
         {listing.operation === 'wanted' && !(listing.photos?.length)
           ? <View style={[horizontal ? styles.horizontalImage : styles.image, styles.wantedImage]}><Icon name="search-outline" size={37} color={colors.primary} /><Text style={styles.wantedText}>Busco vivienda</Text></View>
@@ -53,7 +52,6 @@ export function PropertyCard({ listing, horizontal = false, offline = false }: {
           {listing.operation === 'wanted'
             ? <Text style={styles.price}>Hasta {formatMoney(listing.price)} <Text style={styles.currency}>USD</Text></Text>
             : <Text style={styles.price}>{formatMoney(listing.price)} <Text style={styles.currency}>{listing.operation === 'swap' ? 'USD · valor est.' : `USD${priceSuffix(listing)}`}</Text></Text>}
-          {listing.isPro && <ProBadge decorative style={{ alignSelf: 'center' }} />}
           {listing.priceNegotiable && <Text style={styles.negotiable}>Negociable</Text>}
         </View>
         <Text numberOfLines={2} style={styles.title}>{listing.title}</Text>

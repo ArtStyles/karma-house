@@ -5,11 +5,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../auth/AuthProvider';
 import { UserAvatar } from '../components/account/UserAvatar';
 import { PropertyCard } from '../components/PropertyCard';
-import { ProBadge } from '../components/ProBadge';
 import { ActionGroup, Button, EmptyState, Icon, Notice, PageTitle, type IconName } from '../components/ui';
 import { levelDescription, levelLabel, memberSinceText, PROFILE_NOT_FOUND, responseText } from '../profiles/domain';
 import { usePublicProfile } from '../profiles/usePublicProfile';
-import { useProBadge } from '../pro/useProBadge';
 import { createThemedStyles, internalLayout } from '../theme';
 
 export default function PublicProfileScreen() {
@@ -17,7 +15,6 @@ export default function PublicProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const auth = useAuth();
   const { profile, avatarUrl, listings, loading, notFound, error, saving, saveError, retry, setVerified } = usePublicProfile(id, { withListings: true });
-  const pro = useProBadge(profile && !profile.identityOnly ? profile.id : undefined);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const modalInsets = { paddingTop: Math.max(insets.top, 20), paddingBottom: Math.max(insets.bottom, 20) };
@@ -40,7 +37,6 @@ export default function PublicProfileScreen() {
             <UserAvatar size={64} avatarUrl={avatarUrl} name={profile.displayName} accessibilityLabel={`Foto de ${profile.displayName}`} />
             <View style={styles.identityCopy}>
               <Text accessibilityRole="header" style={styles.name}>{profile.displayName}</Text>
-              {pro && <ProBadge />}
               {profile.verified && <View style={styles.verified}><Icon name="shield-checkmark" size={16} color={colors.green} /><Text style={styles.verifiedText}>Verificado por KarmaHouse</Text></View>}
               {!profile.identityOnly && <Pressable accessibilityRole="button" accessibilityLabel={`Nivel ${levelLabel(profile.level)}. Ver qué significa`} onPress={() => setLevelSheet(true)} style={({ pressed }) => [styles.level, pressed && { opacity: .7 }]}>
                 <Icon name="sparkles-outline" size={15} color={colors.primary} /><Text style={styles.levelText}>{levelLabel(profile.level)}</Text><Icon name="information-circle-outline" size={15} color={colors.primary} />

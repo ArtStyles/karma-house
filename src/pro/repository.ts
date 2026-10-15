@@ -19,9 +19,3 @@ export function createProRepository(client: SupabaseClient, credentials: { actor
 }
 export type ProRepository = ReturnType<typeof createProRepository>;
 
-/** Public badge: the RPC works for anon too. The shared client may still attach the signed-in token; it is not needed. */
-export async function readProBadge(client: SupabaseClient, userId: string, signal: AbortSignal): Promise<boolean> {
-  const { data, error } = await client.rpc('kh_pro_badge', { p_user_id: userId }).abortSignal(signal);
-  if (error) throw error;
-  return data === true;
-}

@@ -4,6 +4,9 @@ import { ActivityIndicator, Linking, Platform, Pressable, RefreshControl, Scroll
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Icon, IconButton, Notice, PageTitle, type IconName } from '../components/ui';
 import { UserAvatar } from '../components/account/UserAvatar';
+import { ProBadge } from '../components/ProBadge';
+import { usePro } from '../pro/usePro';
+import { formatProDate, isProActive } from '../pro/domain';
 import { AgencyVerifiedBadge } from '../components/agencies/AgencyVerifiedBadge';
 import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
@@ -33,6 +36,7 @@ export default function ProfileScreen() {
   const dataSaver = useDataSaver();
   const transfers = useIncomingTransferCount();
   const agencies = useAgencyWorkspace();
+  const pro = usePro();
   const [overview, setOverview] = useState<{ userId: string; value: AgencyOverview } | null>(null);
   const agencyIds = agencies.agencies.map(agency => agency.id).join(',');
   const { repository: agencyRepository, ready: agenciesReady, enabled: agenciesEnabled, captureAccountContext, getCurrentWorkspace } = agencies;
@@ -56,7 +60,7 @@ export default function ProfileScreen() {
   useFocusEffect(useCallback(() => { void loadOverview(); }, [loadOverview]));
   const reload = useConsultationRefresh(`${user?.id}:${session?.access_token}`, async () => {
     setError('');
-    const outcomes = await Promise.allSettled([refreshProfile(), refreshListings(), refreshMessages(), refreshSummary(), savedSearches.refresh(), agencies.refreshAgencies().then(() => loadOverview()), transfers.refresh()]);
+    const outcomes = await Promise.allSettled([refreshProfile(), refreshListings(), refreshMessages(), refreshSummary(), savedSearches.refresh(), agencies.refreshAgencies().then(() => loadOverview()), transfers.refresh(), pro.reload()]);
     const failed = outcomes.find(result => result.status === 'rejected');
     if (failed?.status === 'rejected') throw failed.reason;
   }, busy || !!marking || !user || mode !== 'cloud', () => setError('No pudimos actualizar toda tu actividad.'));
@@ -72,6 +76,10 @@ export default function ProfileScreen() {
     } catch { /* Dismissed or no clipboard: the code stays on screen to copy by hand. */ }
   }
   const mine = overview && overview.userId === user?.id ? overview.value : null;
+  // Pro is shown only to its holder, here; listings and the public profile carry no label.
+  const personalPro = isProActive(pro.status?.personalUntil ?? null) ? pro.status!.personalUntil! : null;
+  const agencyPro = pro.status?.agencies.find(agency => isProActive(agency.until));
+  const proDetail = personalPro ? `Activo hasta el ${formatProDate(personalPro)}` : agencyPro ? `Activo para ${agencyPro.tradeName} hasta el ${formatProDate(agencyPro.until!)}` : undefined;
   const myAgencies = [...agencies.agencies].sort((a, b) => Number(b.isPrincipal) - Number(a.isPrincipal));
   const pendingInvitations = mine?.pendingInvitations ?? 0;
   // An applicant joins the agency only once it is approved; until then the application is the way in.
@@ -82,10 +90,11 @@ export default function ProfileScreen() {
       <PageTitle title="Mi espacio" right={<IconButton name="settings-outline" label="Ajustes de cuenta" onPress={() => router.push('/account-settings')} />} />
 
       {/* Name and photo are edited in Ajustes de cuenta, so the identity opens it. */}
-      {(user || mode === 'demo') && <Pressable disabled={!user} accessibilityRole={user ? 'button' : undefined} accessibilityLabel={user ? `${displayName || 'Mi cuenta'}, ${user.email ?? ''}. Editar nombre y foto` : undefined} onPress={() => router.push('/account-settings')} style={({ pressed }) => [styles.identity, pressed && { opacity: .7 }]}>
+      {(user || mode === 'demo') && <Pressable disabled={!user} accessibilityRole={user ? 'button' : undefined} accessibilityLabel={user ? `${displayName || 'Mi cuenta'}${proDetail ? ', cuenta Pro' : ''}, ${user.email ?? ''}. Editar nombre y foto` : undefined} onPress={() => router.push('/account-settings')} style={({ pressed }) => [styles.identity, pressed && { opacity: .7 }]}>
         <UserAvatar size={48} avatarUrl={user ? avatarUrl : null} name={user ? displayName : ''} />
         <View style={styles.identityText}>
           <Text style={styles.heading}>{user ? displayName || 'Mi cuenta' : 'Demostración local'}</Text>
+          {user && proDetail && <ProBadge decorative />}
           <Text style={styles.identityDescription}>{mode === 'demo' ? 'Guardado en este dispositivo' : user?.email}</Text>
         </View>
         {user && <Icon name="chevron-forward" size={16} color={colors.muted} />}
@@ -150,7 +159,7 @@ export default function ProfileScreen() {
           <AccountRow icon="id-card-outline" title="Mi código de cuenta" description="Compártelo con una inmobiliaria para que te invite a su equipo." extraLabel={accountCode?.id === user.id ? user.id : undefined} onPress={() => void shareAccountCode(user.id)}>
             {accountCode?.id === user.id && <Text selectable style={styles.code}>{user.id}</Text>}
           </AccountRow>
-          <AccountRow icon="star-outline" title="KarmaHouse Pro" onPress={() => router.push('/pro')} />
+          <AccountRow icon="star-outline" title="KarmaHouse Pro" description={proDetail} onPress={() => router.push('/pro')} />
           <AccountRow icon="log-out-outline" title="Cerrar sesión" danger disabled={busy} loading={busy} onPress={async () => {
             setBusy(true); setError('');
             try { await signOut(); } catch (cause) { setError(cause instanceof Error ? cause.message : 'No pudimos cerrar la sesión. Inténtalo de nuevo.'); } finally { setBusy(false); }

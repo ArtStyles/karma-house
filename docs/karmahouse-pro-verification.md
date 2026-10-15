@@ -55,6 +55,10 @@ Clúster PostgreSQL 17 desechable en `127.0.0.1:56440`, bases nuevas creadas con
 - Descarga sin sesión de los tres archivos: SHA-256 idénticos a los preparados. `releases/latest/download/KarmaHouse.apk` redirige a v0.1.26.
 - Sin instalación en teléfono en esta entrega: falta probar la actualización sobre 0.1.25 y el análisis de Play Protect en un dispositivo.
 
+## Cambio del 15 de octubre de 2026: Pro solo para quien lo tiene
+
+Por decisión del usuario, los anuncios, el detalle y el perfil público ya no muestran la etiqueta «Pro»: solo le interesa a quien lo tiene. Mi espacio enseña la etiqueta junto a tu nombre y «Activo hasta el …» en la fila KarmaHouse Pro; la pantalla Pro lo explica. «Subir anuncio» y el orden de «Más recientes» no cambian. El servidor sigue devolviendo `is_pro` en el catálogo y la RPC pública `kh_pro_badge`, que el cliente ya no usa.
+
 ## Límites
 
 - La página web pública de la inmobiliaria no muestra el sello (spec §3).

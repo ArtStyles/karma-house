@@ -53,9 +53,8 @@ function ProBody() {
         </View>
         <View style={styles.card}>
           <Text accessibilityRole="header" style={styles.title}>Qué incluye</Text>
-          <Text style={styles.body}>El sello Pro en tus anuncios y en tu perfil público.</Text>
           <Text style={styles.body}>Subir anuncio: una vez por semana, cada anuncio activo vuelve arriba en «Más recientes».</Text>
-          <Text style={styles.muted}>Publicar, buscar y conversar siguen siendo gratis.</Text>
+          <Text style={styles.muted}>Tu Pro solo lo ves tú: tus anuncios y tu perfil no muestran ninguna etiqueta. Publicar, buscar y conversar siguen siendo gratis.</Text>
         </View>
         <View style={styles.card}>
           <Text accessibilityRole="header" style={styles.title}>Canjear código</Text>
