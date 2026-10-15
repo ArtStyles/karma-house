@@ -1,0 +1,3 @@
+Mi espacio te avisa cuando hay una versión nueva de KarmaHouse para Android: ves qué cambia y cuánto pesa, y la descargas solo si quieres.
+«Ver mi perfil público» aparece en Mi espacio desde que creas tu cuenta, antes de tu primer anuncio.
+Si un enlace de confirmación ya no sirve, la app te explica por qué y, al entrar, te deja reenviar el correo.
