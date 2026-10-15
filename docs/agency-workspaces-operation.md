@@ -112,6 +112,6 @@ Después, el usuario pidió que la inmobiliaria principal fuera el único origen
 
 - **No se puede deshacer**: las filas de origen no cambian nunca.
 - Las ventas salen del perfil público de la cuenta propietaria (quedan los 16 alquileres), solo se editan desde la inmobiliaria y ya no abren chats personales.
-- Las cubre el Pro de la inmobiliaria, no el personal: sin Pro de la inmobiliaria no se pueden subir.
+- Las cubre el Pro de la inmobiliaria, no el personal. El 15 de octubre de 2026 la cuenta propietaria le concedió 365 días de Pro con `kh_admin_grant_pro` (hasta el 15 de octubre de 2027, como su Pro personal): las 46 ventas se pueden subir.
 - «Mis anuncios» muestra «Lo gestiona …» y «Gestionar en la inmobiliaria» en lugar de editar, pausar o cerrar.
 
