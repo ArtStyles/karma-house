@@ -1,5 +1,5 @@
 // Every fact and line of copy on the landing page. Only claims from BRAND.md § Facts and the live site.
-export const VERSION = '0.1.26';
+export const VERSION = '0.1.28';
 export const SITE = 'https://www.karmahouse.site/';
 export const RELEASE = 'https://github.com/ArtStyles/karma-house/releases';
 export const APK = `${RELEASE}/download/v${VERSION}/KarmaHouse.apk`;

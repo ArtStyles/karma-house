@@ -60,3 +60,23 @@ Fecha: 14 de octubre de 2026 (15 de octubre, UTC).
 - APK nuevo para Android (la web se publica al subir a `main`).
 - Probar el recorrido real con dos cuentas en la web publicada.
 - Cancelar una invitación pendiente no existe todavía.
+
+## Android 0.1.28
+
+| Dato | Resultado |
+| --- | --- |
+| Fuente | `77f8d343d2bdadd01472b2462ff3ee7dfa3c2b77` (rediseño de la Cartera; versión preparada en `c63d146`) |
+| Paquete / versión / código | `com.karmahouse.karmahouse` / `0.1.28` / `29` |
+| APK | `KarmaHouse.apk`, 85.268.595 bytes (81,32 MiB) |
+| APK SHA-256 | `9e31f311a8c1ba54d65572065d31dcc7ae26c320b91daaae84bd621d89d1456a` |
+| AAB SHA-256 (local) | `1a715b7e732915b5768b910080ab04b79b3de614fd12877a8547f7c51f85ac70` |
+| Certificado SHA-256 | `1752d33a3fb6e45fada4e6adbbec99af851d9ae6716a73770c382c79d3356ac6`, el mismo de las versiones anteriores |
+| Firma / Android / ABI | v2 correcta, no depurable, minSdk 24 (Android 7), arm64-v8a y armeabi-v7a |
+| Secretos | 1386 entradas sin los valores privados de `infra/.env.local` ni marcadores PEM o credenciales JSON |
+| Alineación | ZIP de 16 KB correcta; no evalúa la alineación ELF |
+| JavaScript | El bundle contiene `kh_listing_agency`, `kh_leave_agency`, `kh_list_agency_sent_invitations` y «Gestionar en la inmobiliaria» |
+
+- Compilado en `artifacts/v24` con la fuente de `77f8d34` extraída por `git archive` (`src/` idéntico salvo finales de línea; se quitó `src/pro/useProBadge.ts`, borrado desde la 0.1.27). `versionCode`/`versionName` nativos a mano: 29 / 0.1.28. `build-android-preview.ps1 -Release -RefreshBundleCache -SdkPath …rtifactsndroid-sdk`: correcto. Una primera compilación desde `c63d146` se descartó porque no tenía la Cartera nueva. Logs en `artifacts/v24/artifacts/android-build-0.1.28.log` y `distribution-0.1.28.log`; entrega en `artifacts/distribution/0.1.28/`.
+- La 0.1.27 (borrador) nunca se publicó; las notas de la 0.1.28 cubren lo nuevo desde la 0.1.26.
+- Sin instalación en teléfono: falta probar la actualización sobre 0.1.26 y el análisis de Play Protect en un dispositivo.
+
