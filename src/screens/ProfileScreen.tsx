@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Linking, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Linking, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Icon, IconButton, Notice, PageTitle, type IconName } from '../components/ui';
 import { UserAvatar } from '../components/account/UserAvatar';
@@ -58,7 +58,7 @@ export default function ProfileScreen() {
   async function shareAccountCode(id: string) {
     setAccountCode({ id, copied: false });
     try {
-      if (Platform.OS === 'web') { await navigator.clipboard.writeText(id); setAccountCode({ id, copied: true }); }
+      if (Platform.OS === 'web') { await navigator.clipboard.writeText(id); setAccountCode({ id, copied: true }); AccessibilityInfo.announceForAccessibility('Código copiado'); }
       else await Share.share({ message: `Mi código de cuenta en KarmaHouse: ${id}` });
     } catch { /* Dismissed or no clipboard: the code stays on screen to copy by hand. */ }
   }
@@ -72,13 +72,15 @@ export default function ProfileScreen() {
     <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!busy && !!user && mode === 'cloud'} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}>
       <PageTitle title="Mi espacio" right={<IconButton name="settings-outline" label="Ajustes de cuenta" onPress={() => router.push('/account-settings')} />} />
 
-      {(user || mode === 'demo') && <View style={styles.identity}>
+      {/* Name and photo are edited in Ajustes de cuenta, so the identity opens it. */}
+      {(user || mode === 'demo') && <Pressable disabled={!user} accessibilityRole={user ? 'button' : undefined} accessibilityLabel={user ? `${displayName || 'Mi cuenta'}, ${user.email ?? ''}. Editar nombre y foto` : undefined} onPress={() => router.push('/account-settings')} style={({ pressed }) => [styles.identity, pressed && { opacity: .7 }]}>
         <UserAvatar size={48} avatarUrl={user ? avatarUrl : null} name={user ? displayName : ''} />
         <View style={styles.identityText}>
           <Text style={styles.heading}>{user ? displayName || 'Mi cuenta' : 'Demostración local'}</Text>
           <Text style={styles.identityDescription}>{mode === 'demo' ? 'Guardado en este dispositivo' : user?.email}</Text>
         </View>
-      </View>}
+        {user && <Icon name="chevron-forward" size={16} color={colors.muted} />}
+      </Pressable>}
 
       {/* A device preference stays reachable before any private activity, including for guests. */}
       <View style={styles.group}>
@@ -95,14 +97,15 @@ export default function ProfileScreen() {
         <Button label="Entrar o crear cuenta" onPress={() => router.push({ pathname: '/auth', params: { returnTo: '/profile' } })} style={styles.guestAction} />
       </View> : null}
       {suspended && <Notice error>Tu cuenta está suspendida. No puedes publicar ni enviar mensajes. {suspensionReason}</Notice>}
+      {user && !suspended && !!agencies.error && <Notice error>No pudimos cargar tus inmobiliarias. Desliza hacia abajo para volver a intentarlo.</Notice>}
 
       {user && (myAgencies.length > 0 || pendingInvitations > 0 || application || isAdmin) && <>
-        <Text style={styles.sectionLabel}>Gestión</Text>
+        <Text accessibilityRole="header" style={styles.sectionLabel}>Gestión</Text>
         <View style={styles.group}>
           {myAgencies.map(agency => {
             const role = mine?.roles[agency.id];
             const detail = [role && agencyRoleLabel[role], agency.state !== 'approved' && agencyStateLabel[agency.state]].filter(Boolean).join(' · ');
-            return <AccountRow key={agency.id} icon="business-outline" title={agency.tradeName} description={detail || undefined} onPress={() => router.push({ pathname: '/agency-workspace', params: { agencyId: agency.id } })}>
+            return <AccountRow key={agency.id} icon="business-outline" title={agency.tradeName} description={detail || undefined} extraLabel={agency.verified ? (agency.isPrincipal ? 'Inmobiliaria principal' : 'Inmobiliaria verificada por KarmaHouse') : undefined} onPress={() => router.push({ pathname: '/agency-workspace', params: { agencyId: agency.id } })}>
               <AgencyVerifiedBadge agencyName={agency.tradeName} verified={agency.verified} principal={agency.isPrincipal} labelled />
             </AccountRow>;
           })}
@@ -113,13 +116,13 @@ export default function ProfileScreen() {
       </>}
 
       {(user || mode === 'demo') && <>
-        <Text style={styles.sectionLabel}>Actividad</Text>
+        <Text accessibilityRole="header" style={styles.sectionLabel}>Actividad</Text>
         <View style={styles.group}>
           <AccountRow icon="chatbubbles-outline" title="Mensajes" count={unreadCount} unread description={mode === 'demo' ? 'Disponible con una cuenta conectada' : undefined} onPress={() => router.push('/messages')} />
           <AccountRow icon="notifications-outline" title="Notificaciones" count={notificationUnreadCount} unread onPress={() => router.push('/notifications')} />
           <AccountRow icon="calendar-outline" title="Visitas y ofertas" onPress={() => router.push('/requests')} />
         </View>
-        <Text style={styles.sectionLabel}>Viviendas</Text>
+        <Text accessibilityRole="header" style={styles.sectionLabel}>Viviendas</Text>
         <View style={styles.group}>
           <AccountRow icon="home-outline" title="Mis anuncios" count={own.length} onPress={() => router.push('/my-listings')} />
           <AccountRow icon="heart-outline" title="Favoritos" count={favoriteIds.length} onPress={() => router.push('/favorites')} />
@@ -127,21 +130,21 @@ export default function ProfileScreen() {
             <AccountRow icon="bookmark-outline" title="Mis alertas" count={savedSearches.items.length} onPress={() => router.push('/saved-searches')} />
             {user && own.some(item => item.status === 'active' && item.moderationStatus === 'approved') && <AccountRow icon="person-circle-outline" title="Ver mi perfil público" onPress={() => router.push(`/user/${user.id}`)} />}
           </>}
-          {user && !isOwner && <AccountRow icon="swap-horizontal-outline" title="Anuncios por aceptar" count={transfers.count} onPress={() => router.push('/listing-transfers')} />}
+          {/* Always reachable from Mis anuncios; here only when something waits. */}
+          {user && !isOwner && (transfers.count ?? 0) > 0 && <AccountRow icon="swap-horizontal-outline" title="Anuncios por aceptar" count={transfers.count} onPress={() => router.push('/listing-transfers')} />}
         </View>
       </>}
 
       {user && <>
-        <Text style={styles.sectionLabel}>Cuenta</Text>
+        <Text accessibilityRole="header" style={styles.sectionLabel}>Cuenta</Text>
         <View style={styles.group}>
-          <AccountRow icon="id-card-outline" title="Mi código de cuenta" description={accountCode?.id === user.id && accountCode.copied ? 'Copiado. Pégalo en un mensaje a la inmobiliaria.' : 'Compártelo con una inmobiliaria para que te invite a su equipo.'} onPress={() => void shareAccountCode(user.id)}>
+          <AccountRow icon="id-card-outline" title="Mi código de cuenta" description={accountCode?.id === user.id && accountCode.copied ? 'Copiado. Pégalo en un mensaje a la inmobiliaria.' : 'Compártelo con una inmobiliaria para que te invite a su equipo.'} extraLabel={accountCode?.id === user.id ? user.id : undefined} onPress={() => void shareAccountCode(user.id)}>
             {accountCode?.id === user.id && <Text selectable style={styles.code}>{user.id}</Text>}
           </AccountRow>
           <AccountRow icon="star-outline" title="KarmaHouse Pro" onPress={() => router.push('/pro')} />
-          <AccountRow icon="notifications-outline" title="Preferencias de notificaciones" onPress={() => router.push('/notification-settings')} />
           <AccountRow icon="log-out-outline" title="Cerrar sesión" danger disabled={busy} loading={busy} onPress={async () => {
             setBusy(true); setError('');
-            try { await signOut(); } catch { setError('No pudimos cerrar la sesión. Inténtalo de nuevo.'); } finally { setBusy(false); }
+            try { await signOut(); } catch (cause) { setError(cause instanceof Error ? cause.message : 'No pudimos cerrar la sesión. Inténtalo de nuevo.'); } finally { setBusy(false); }
           }} />
         </View>
       </>}
@@ -157,13 +160,15 @@ export default function ProfileScreen() {
   </SafeAreaView>;
 }
 
-function AccountRow({ icon, title, description, count, unread = false, danger = false, disabled = false, loading = false, children, onPress }: {
-  icon: IconName; title: string; description?: string; count?: number | null; unread?: boolean; danger?: boolean;
+function AccountRow({ icon, title, description, extraLabel, count, unread = false, danger = false, disabled = false, loading = false, children, onPress }: {
+  icon: IconName; title: string; description?: string; extraLabel?: string; count?: number | null; unread?: boolean; danger?: boolean;
   disabled?: boolean; loading?: boolean; children?: ReactNode; onPress(): void;
 }) {
   const { colors, styles } = useStyles();
   const hasCount = count != null && (!unread || count > 0);
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}${count != null ? `, ${count}${unread ? ' sin leer' : ''}` : ''}`} accessibilityHint={description} accessibilityState={{ disabled, busy: loading }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.row, styles.accountRow, pressed && styles.pressed]}>
+  // The label replaces what the row shows, so it carries the badge or code (extraLabel) and the description too.
+  const label = [title, count != null ? `${count}${unread ? ' sin leer' : ''}` : '', extraLabel, description].filter(Boolean).join(', ');
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled, busy: loading }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.row, styles.accountRow, pressed && styles.pressed]}>
     {loading ? <ActivityIndicator size="small" color={danger ? colors.danger : colors.primary} /> : <Icon name={icon} color={danger ? colors.danger : colors.primary} size={21} />}
     <View style={styles.rowCopy}><Text style={[styles.rowTitle, danger && { color: colors.danger }]}>{title}</Text>{children}{description && <Text style={styles.rowDescription}>{description}</Text>}</View>
     {hasCount && <Text style={[styles.count, unread && styles.unread]}>{unread && count! > 99 ? '99+' : count}</Text>}

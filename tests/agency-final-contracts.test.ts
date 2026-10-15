@@ -18,7 +18,7 @@ test('share producer pins current agency JWT and renders canonical link; public 
 });
 test('commercial edit cannot send private application fields and rejects cross-agency return',async()=>{
  const repo=createAgencyProfileRepository(client(async()=>Response.json({agencyId:other})));
- await assert.rejects(repo.get(c),/otra agencia/);
+ await assert.rejects(repo.get(c),/otra inmobiliaria/);
  await assert.rejects(repo.save({input:{responsibleFullName:'private'} as any,expectedVersion:1,clientRequestId:id},c),/inválido/);
 });
 for(const change of ['account','agency','removed'] as const)test(`live history delayed success and error cannot restore private scope after ${change}`,async()=>{

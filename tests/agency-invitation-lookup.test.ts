@@ -20,4 +20,10 @@ test('invitation refusals and dropped connections explain what happened', () => 
  assert.match(agencyError({message:'TimeoutError: La conexión con KarmaHouse tardó demasiado. Inténtalo de nuevo.'}),/Puede que se haya guardado/);
  assert.match(agencyError({message:'TypeError: Failed to fetch'}),/Puede que se haya guardado/);
  assert.match(agencyError({message:'KH_AGENCY_REQUEST_CONFLICT'}),/Los datos cambiaron/);
+ assert.match(agencyError({message:'KH_AGENCY_INVITATION_EXPIRED'}),/caducó/);
+ assert.match(agencyError({message:'KH_AGENCY_INVITATION_RECIPIENT'}),/otra cuenta/);
+ assert.match(agencyError({message:'KH_ACCOUNT_SUSPENDED'}),/suspendida/);
+ assert.match(agencyError({message:'KH_ACCOUNT_DELETING'}),/eliminando/);
+ assert.match(agencyError({message:'KH_AGENCY_INVALID'}),/Revisa los datos/);
+ assert.match(agencyError({message:'KH_AGENCY_INVALID_REQUEST'}),/Revisa los datos/);
 });

@@ -6,7 +6,7 @@ import { ActionGroup, Button, Icon, type IconName } from '../ui';
 const categoryIcons: Record<AppNotification['category'], IconName> = {
   message: 'chatbubble-outline', visit: 'calendar-outline', offer: 'pricetag-outline', alert: 'search-outline', agency: 'business-outline',
 };
-const categoryLabels: Record<AppNotification['category'], string> = { message: 'Mensaje', visit: 'Visita', offer: 'Oferta', alert: 'Alerta', agency: 'Agencia' };
+const categoryLabels: Record<AppNotification['category'], string> = { message: 'Mensaje', visit: 'Visita', offer: 'Oferta', alert: 'Alerta', agency: 'Inmobiliaria' };
 
 export function NotificationCard({ item, busy, marking, onOpen, onRead }: {
   item: AppNotification; busy: boolean; marking: boolean; onOpen(): void; onRead(): void;

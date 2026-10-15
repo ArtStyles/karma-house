@@ -40,15 +40,20 @@ export function canPerformAgencyAction(role:AgencyRole,action:AgencyAction):bool
 export function agencyError(error:unknown):string{
  const message=error instanceof Error?error.message:error&&typeof error==='object'&&'message'in error&&typeof error.message==='string'?error.message:String(error);
  if(/ACCOUNT_CHANGED|SESSION_REQUIRED/.test(message))return 'La sesión cambió. Actualiza antes de continuar.';
- if(/KH_AGENCY_DISABLED/.test(message))return 'El espacio de inmobiliarias aún no está habilitado.';
+ if(/KH_AGENCY_DISABLED/.test(message))return 'La gestión de inmobiliarias aún no está habilitada.';
  if(/KH_AGENCY_NOT_APPROVED/.test(message))return 'La inmobiliaria debe ser aprobada por KarmaHouse antes de operar.';
  if(/KH_AGENCY_LAST_ADMIN/.test(message))return 'Debe quedar al menos un administrador activo en la inmobiliaria.';
  if(/CONFLICT|VERSION/.test(message))return 'Los datos cambiaron. Actualiza antes de volver a guardar.';
  if(/ROLE_REQUIRED|MEMBERSHIP_REQUIRED|OWNER_REQUIRED|ADMIN_REQUIRED/.test(message))return 'Tu cuenta no tiene permiso para esta acción.';
  if(/EMAIL_UNCONFIRMED/.test(message))return 'Confirma el correo antes de continuar.';
+ if(/KH_ACCOUNT_SUSPENDED/.test(message))return 'Tu cuenta está suspendida. No puedes trabajar con inmobiliarias hasta que se reactive.';
+ if(/KH_ACCOUNT_DELETING/.test(message))return 'Tu cuenta se está eliminando. Termina en Ajustes de cuenta › Eliminar cuenta.';
+ if(/KH_AGENCY_INVITATION_EXPIRED/.test(message))return 'Esta invitación caducó. Pide a la inmobiliaria que te invite de nuevo.';
+ if(/KH_AGENCY_INVITATION_RECIPIENT/.test(message))return 'Esta invitación es para otra cuenta.';
  if(/KH_AGENCY_INVITATION_OPEN/.test(message))return 'Esta cuenta ya tiene una invitación pendiente de tu inmobiliaria. Pídele que la acepte en Mi espacio › Invitaciones de inmobiliarias.';
  if(/KH_AGENCY_ALREADY_MEMBER/.test(message))return 'Esta cuenta ya forma parte del equipo.';
  if(/KH_AGENCY_RECIPIENT_INVALID/.test(message))return 'Esta cuenta no puede recibir invitaciones: debe tener el correo confirmado y estar activa.';
+ if(/KH_AGENCY_INVALID/.test(message))return 'Revisa los datos e inténtalo de nuevo.';
  // supabase-js reports a dropped or slow connection as "<name>: <message>"; the write may still have reached the server.
  if(/TimeoutError|Failed to fetch|Network request failed|NetworkError|Load failed/.test(message))return 'La conexión falló o tardó demasiado. Puede que se haya guardado: actualiza para comprobarlo antes de repetir.';
  return /^(Revisa|Selecciona|Completa) /.test(message)?message:'No se pudo completar la acción. Actualiza y vuelve a intentar.';

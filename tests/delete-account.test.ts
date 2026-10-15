@@ -23,7 +23,7 @@ test('files are removed between the two server steps, never after the account is
 
 test('a storage failure stops before the account is deleted, so a retry can finish it', async () => {
   const { client, calls } = fakeClient({ 'property-photos': ['u1/a/p.jpg'], 'account-avatars': [] }, { message: 'offline' });
-  await assert.rejects(deleteAccount(client, actor, () => {}), /vuelve a intentarlo/);
+  await assert.rejects(deleteAccount(client, actor, () => {}), (error: Error & { started?: boolean }) => error.started === true && /reintenta para terminar/.test(error.message));
   assert.ok(!calls.includes('kh_delete_account:u1'));
 });
 
@@ -38,4 +38,9 @@ test('an account switch mid-way stops the deletion', async () => {
   let checks = 0;
   await assert.rejects(deleteAccount(client, actor, () => { if (++checks > 2) throw new Error('KH_ACCOUNT_CHANGED'); }), /KH_ACCOUNT_CHANGED/);
   assert.deepEqual(calls, ['kh_begin_account_deletion:u1']);
+});
+
+test('a failure before the server starts leaves the account untouched and says so', async () => {
+  const client = { rpc: () => ({ setHeader: () => Promise.resolve({ data: null, error: { message: 'offline' } }) }) };
+  await assert.rejects(deleteAccount(client as never, actor, () => {}), (error: Error & { started?: boolean }) => error.started === false && /No pudimos eliminar/.test(error.message));
 });

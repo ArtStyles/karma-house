@@ -26,7 +26,7 @@ export function decodePublicAgencyProfile(value:unknown):PublicAgencyProfile{
 }
 export function createAgencyProfileRepository(client:SupabaseClient){
  const rpc=createScopedRpc(client),decode=(raw:unknown,c:AgencyRequestContext):CommercialProfile=>{
-  const v=object(raw);if(v.agencyId!==c.agencyId)throw Error('Perfil de otra agencia.');
+  const v=object(raw);if(v.agencyId!==c.agencyId)throw Error('Perfil de otra inmobiliaria.');
   const isPrincipal=decodePrincipalStatus(v.isPrincipal,true),commercialProfileComplete=v.commercialProfileComplete===undefined?true:v.commercialProfileComplete;
   if(typeof commercialProfileComplete!=='boolean'||(!commercialProfileComplete&&!isPrincipal))throw Error('Perfil comercial inválido.');
   let input:CommercialInput;

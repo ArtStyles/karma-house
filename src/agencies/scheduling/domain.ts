@@ -70,7 +70,7 @@ export function schedulingError(e: unknown): string {
     if (/ASSIGNEE_REQUIRED|ASSIGNMENT_CHANGED/.test(message))
         return 'Un coordinador o administrador debe asignar el caso antes de confirmar la visita.';
     if (/JOINT_PERMISSION/.test(message))
-        return 'La visita conjunta requiere el código autorizado por la agencia de origen y su horario exacto.';
+        return 'La visita conjunta requiere el código autorizado por la inmobiliaria de origen y su horario exacto.';
     if (/VISIT_NOT_STARTED/.test(message))
         return 'La visita todavía no ha comenzado. Su resultado se registra después.';
     if (/OUTCOME_RECORDED/.test(message))

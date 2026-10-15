@@ -112,7 +112,7 @@ async function fixture(staff = false, inbox = false) {
         return tree;
     }
     render(); hooks.focus(); await settle(); render(); await settle(); render();
-    if (staff && inbox) { control(tree!, 'Equipo de mi agencia').onPress(); render(); hooks.focus(); await settle(); render(); }
+    if (staff && inbox) { control(tree!, 'Equipo de mi inmobiliaria').onPress(); render(); hooks.focus(); await settle(); render(); }
     return { controller, auth, w, hooks, render, reads, proposalPayloads, messagePayloads, get tree() { return tree!; }, get panelTree() { return panelTree; }, get mounts() { return mounts; }, get proposals() { return proposalPayloads.length; }, get sends() { return messagePayloads.length; }, fail(method: string, error: any = Error('temporary network failure')) { fault = { method, error }; }, recover() { fault = null; }, delayed(method: string) { let finish!: (v: any) => void; const promise = new Promise(r => finish = r); delay = { method, finish, promise }; return finish; }, async refresh() { if(inbox)void inboxRefresh.current();else {const scroll=elements(tree!).find(e=>e.type==='ScrollView'&&e.props.refreshControl);assert.ok(scroll);scroll.props.refreshControl.props.onRefresh();}await settle();render(); }, async press(label: string, onPanel = false) { control(onPanel ? panelTree! : tree!, label).onPress(); await settle(); render(); }, input(label: string, value: string, onPanel = false) { control(onPanel ? panelTree! : tree!, label).onChangeText(value); render(); } };
 }
 function chatMessages(f: Awaited<ReturnType<typeof fixture>>) { return elements(f.tree).filter(e => e.type === 'Text' && e.props?.selectable).map(e => e.props.children[0]); }
@@ -196,12 +196,12 @@ test('actual chat keeps an unsent proposal draft on transient read failure', asy
     assert.ok(f.panelTree); assert.equal(control(f.panelTree!, 'Nota de la propuesta').value, 'Preserved note');
 });
 test('actual inbox keeps pages and hasMore through list failure and healthy recovery', async () => {
-    const f = await fixture(false, true); await f.press('Más conversaciones de agencia');
+    const f = await fixture(false, true); await f.press('Más conversaciones de inmobiliaria');
     assert.equal(inboxHomes(f).length, 60);
     f.fail('kh_list_agency_conversations'); await f.refresh();
-    assert.equal(inboxHomes(f).length, 60); control(f.tree, 'Más conversaciones de agencia');
+    assert.equal(inboxHomes(f).length, 60); control(f.tree, 'Más conversaciones de inmobiliaria');
     f.recover(); await f.refresh();
-    assert.equal(inboxHomes(f).length, 60); assert.equal(new Set(inboxHomes(f)).size, 60); control(f.tree, 'Más conversaciones de agencia');
+    assert.equal(inboxHomes(f).length, 60); assert.equal(new Set(inboxHomes(f)).size, 60); control(f.tree, 'Más conversaciones de inmobiliaria');
 });
 for (const inbox of [false, true]) for (const staff of [false, true]) test(`actual ${inbox ? 'inbox' : 'chat'} clears current explicit denial (${staff ? 'staff invalidation' : 'buyer'})`, async () => {
     const f = await fixture(staff, inbox);

@@ -41,7 +41,10 @@ export default function AuthCallbackScreen() {
   }, [linkingUrl]);
 
   useEffect(()=>{
-    if(!destination||!auth.ready||!auth.user||auth.suspended||!auth.session||!workspace.ready)return;
+    if(!destination||!auth.ready||!auth.user||!auth.session)return;
+    // A suspended account cannot finish an agency registration; Mi espacio explains the suspension.
+    if(auth.suspended){router.replace('/profile');return;}
+    if(!workspace.ready)return;
     if(auth.user.user_metadata.registration_intent!=='agency'){router.replace(destination as Href);return;}
     if(!workspace.repository)return;
     let active=true;

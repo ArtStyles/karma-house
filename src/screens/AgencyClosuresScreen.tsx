@@ -246,7 +246,7 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
             <Text style={s.title}>{r.propertyTitle}</Text>
             <Text style={s.status}>{states[r.state]}</Text>
             <View style={s.divider}/>
-            <View style={s.datum}><Text style={s.caption}>Agencia y gestor ejecutores</Text><Text selectable style={s.value}>{r.executingAgencyName}</Text><Text style={s.copy}>{r.executingManagerName}</Text></View>
+            <View style={s.datum}><Text style={s.caption}>Inmobiliaria y gestor ejecutores</Text><Text selectable style={s.value}>{r.executingAgencyName}</Text><Text style={s.copy}>{r.executingManagerName}</Text></View>
             <View style={s.datum}><Text style={s.caption}>Comprador</Text><Text selectable style={s.value}>{r.buyerLabel}</Text></View>
             <View style={s.datum}><Text style={s.caption}>Importe final</Text><Text style={s.date}>{r.amountUsd.toLocaleString('es')} USD</Text></View>
             <View style={s.datum}><Text style={s.caption}>Fecha de la venta · hora de Cuba</Text><Text style={s.value}>{new Date(r.occurredAt).toLocaleString('es', {timeZone: NEGOTIATION_TIME_ZONE})}</Text></View>
@@ -261,7 +261,7 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
             <PageTitle compact title={personal ? 'Cierres de mis viviendas' : 'Cierres'}
                 subtitle={personal ? 'Solicitudes para tu confirmación personal' : w.activeAgency?.tradeName}
                 back fallback={personal ? '/requests' : '/agency-workspace'}/>
-            {!allowed ? <Notice>Inicia sesión y selecciona un espacio autorizado para consultar los cierres.</Notice> : <>
+            {!allowed ? <Notice>Inicia sesión y elige una inmobiliaria en Mi inmobiliaria para consultar los cierres.</Notice> : <>
                 {Boolean(issue) && <Notice error>{issue}</Notice>}
                 {Boolean(feedback) && <Notice>{feedback}</Notice>}
                 {pending.current && <>
@@ -276,7 +276,7 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
                 {deal && property && !deal.closedReason && <View style={s.card}>
                     <Text accessibilityRole="header" style={s.title}>Solicitar cierre</Text><Text style={s.value}>{property.propertyTitle}</Text>
                     <Notice>Declara los ejecutores y el importe final. La autoridad del origen revisará la operación antes de marcar la vivienda como vendida.</Notice>
-                    <Text style={s.copy}>Agencia ejecutora: {w.activeAgency?.tradeName}</Text>
+                    <Text style={s.copy}>Inmobiliaria ejecutora: {w.activeAgency?.tradeName}</Text>
                     <Text selectable style={s.copy}>Responsable actual: {property.executingManagerName ?? 'Sin responsable elegible'}</Text>
                     {property.executingManagerId ? <Pill
                         label={(manager ? 'Gestor ejecutor confirmado: ' : 'Confirmar gestor ejecutor: ') + property.executingManagerName}
@@ -293,7 +293,7 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
                 </View>}
                 {review ? <View style={s.card}>
                     {facts(review)}
-                    <Notice error>Confirmar registra una venta única y termina la comercialización de la vivienda en todas sus agencias.</Notice>
+                    <Notice error>Confirmar registra una venta única y termina la comercialización de la vivienda en todas sus inmobiliarias.</Notice>
                     <AgencyTextField label="Nota de decisión · opcional" placeholder="Nota de decisión"
                         value={note} maxLength={500} onChangeText={setNote} editable={!disabled}/>
                     <ActionGroup><Button label="Confirmar venta y terminar los procesos" disabled={disabled} onPress={() => decide(review, 'confirm')}/>
@@ -301,7 +301,7 @@ function Closures({personal, dealId}: {personal: boolean; dealId?: string}) {
                 </View> : <>
                     {!personal && <View style={s.wrap}>
                         <Pill label="Recibidas como origen" active={!outgoing} onPress={() => { if (!disabled) setOutgoing(false); }}/>
-                        <Pill label="Enviadas por mi agencia" active={outgoing} onPress={() => { if (!disabled) setOutgoing(true); }}/>
+                        <Pill label="Enviadas por mi inmobiliaria" active={outgoing} onPress={() => { if (!disabled) setOutgoing(true); }}/>
                     </View>}
                     {items.map(r => <View key={r.id} style={s.card}>
                         {facts(r)}

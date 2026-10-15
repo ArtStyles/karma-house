@@ -4,6 +4,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Pressable, Ref
 import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
+import { useAgencyWorkspace } from '../agencies/useAgencyWorkspace';
 import { accountProfileError } from '../auth/accountProfile';
 import { pickAccountAvatar, type PreparedAvatar } from '../auth/prepareAvatar';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -92,11 +93,6 @@ function AccountSettingsForm({ ownerId, editing, locked, refreshing }: { ownerId
       <Button label="Preferencias de notificaciones" secondary icon="notifications-outline" onPress={() => router.push('/notification-settings')} />
     </View>
     <View style={styles.card}>
-      <Text accessibilityRole="header" style={styles.cardTitle}>KarmaHouse Pro</Text>
-      <Text style={styles.description}>Consulta tu estado o canjea un código.</Text>
-      <Button label="Ver mi Pro" secondary icon="star-outline" onPress={() => router.push('/pro')} />
-    </View>
-    <View style={styles.card}>
       <Text accessibilityRole="header" style={styles.cardTitle}>Privacidad</Text>
       <View style={styles.links}>
         <Pressable accessibilityRole="link" style={styles.legalRow} onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.link}>Política de privacidad</Text><Icon name="open-outline" size={18} color={colors.muted} /></Pressable>
@@ -118,27 +114,36 @@ function DeleteAccountSheet({ visible, onClose }: { visible: boolean; onClose: (
   const { colors, styles } = useStyles();
   const insets = useSafeAreaInsets();
   const auth = useAuth();
+  const { agencies } = useAgencyWorkspace();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // Once the server began, listings and agency memberships are already gone: the account can only be finished.
+  const [started, setStarted] = useState(false);
   async function confirm() {
     if (busy) return;
     setBusy(true); setError('');
     try { await auth.deleteAccount(); onClose(); router.replace('/'); }
-    catch (failure) { setError(failure instanceof Error ? failure.message : 'No pudimos eliminar tu cuenta. Vuelve a intentarlo.'); }
+    catch (failure) {
+      if ((failure as { started?: unknown })?.started === true) setStarted(true);
+      setError(failure instanceof Error ? failure.message : 'No pudimos eliminar tu cuenta. Vuelve a intentarlo.');
+    }
     finally { setBusy(false); }
   }
+  const teams = agencies.map(agency => agency.tradeName).join(', ');
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={() => !busy && onClose()}>
     <View style={[styles.backdrop, { paddingTop: Math.max(insets.top, 20), paddingBottom: Math.max(insets.bottom, 20) }]}>
       <View accessibilityViewIsModal style={styles.sheet}>
         <ScrollView contentContainerStyle={styles.sheetContent}>
         <Text accessibilityRole="header" style={styles.sheetTitle}>¿Eliminar tu cuenta?</Text>
         <Text style={styles.sheetText}>Se borran para siempre tus anuncios y sus fotos, tus favoritos, tus conversaciones, visitas y ofertas, tus avisos y tu perfil. No se puede deshacer.</Text>
+        {teams ? <Text style={styles.sheetText}>También sales de {teams}. Si eres la única persona que administra una de ellas, esa inmobiliaria quedará suspendida hasta que KarmaHouse la recupere.</Text> : null}
         <Text style={styles.description}>Los reportes enviados a moderación se conservan sin tus datos de cuenta.</Text>
         {error ? <Notice error>{error}</Notice> : null}
+        {started ? <Text style={styles.description}>Si sales ahora, podrás terminar después en Ajustes de cuenta › Eliminar cuenta.</Text> : null}
         <ActionGroup direction="vertical"><Pressable accessibilityRole="button" accessibilityLabel={error ? 'Reintentar eliminación' : 'Eliminar definitivamente'} accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={() => void confirm()} style={({ pressed }) => [styles.dangerFilled, (pressed || busy) && { opacity: .7 }]}>
           {busy ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.dangerFilledText}>{error ? 'Reintentar eliminación' : 'Eliminar definitivamente'}</Text>}
         </Pressable>
-        <Button label="Cancelar" secondary disabled={busy} onPress={onClose} /></ActionGroup>
+        <Button label={started ? 'Terminar más tarde' : 'Cancelar'} secondary disabled={busy} onPress={onClose} /></ActionGroup>
         </ScrollView>
       </View>
     </View>

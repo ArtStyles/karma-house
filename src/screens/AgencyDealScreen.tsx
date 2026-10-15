@@ -51,7 +51,7 @@ function Deal({id}:{id:string}){
  {!operational&&<Notice>Solo lectura: el historial se conserva y las operaciones están pausadas.</Notice>}
  {issue?<Notice error>{issue}</Notice>:null}
  {loading&&!deal&&<ActivityIndicator accessibilityLabel="Consultando expediente privado" color={colors.primary}/>}
- {!loading&&!deal&&!issue&&<EmptyState plain title="Expediente no disponible" description="No hay un expediente disponible en este espacio autorizado."/>}
+ {!loading&&!deal&&!issue&&<EmptyState plain title="Expediente no disponible" description="No hay un expediente disponible en esta inmobiliaria."/>}
  {pending.current&&<><Notice>Conservamos el intento con su contenido original.</Notice><ActionGroup><Button label="Reintentar acción" loading={busy} onPress={()=>void act(pending.current!.run)}/><Button secondary label="Descartar intento" disabled={busy} onPress={()=>{pending.current=null;setIssue('');}}/></ActionGroup></>}
  {deal&&<>
  <View style={s.card}><Text style={s.caption}>Interesado · expediente privado</Text><Text style={s.title}>{deal.buyerName}</Text><View style={s.datum}><Text style={s.caption}>Vivienda</Text><Text style={s.value}>{deal.propertyTitle}</Text></View>{deal.privateContact?.phone&&<Text selectable style={s.copy}>{deal.privateContact.phone}</Text>}<Text style={s.status}>{dealStageLabel[deal.stage]}</Text><View style={s.datum}><Text style={s.caption}>Responsable del caso</Text><Text style={s.value}>{responsible}</Text></View>{deal.closedReason&&<Notice>Este seguimiento terminó · {deal.closedReason}. Las comunicaciones pendientes se completan por separado.</Notice>}

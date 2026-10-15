@@ -44,7 +44,7 @@ const messages: Record<string, string> = {
   KH_ACCOUNT_DELETING: 'Esta cuenta se está eliminando.',
   KH_ACCOUNT_SUSPENDED: 'Esta cuenta está suspendida.',
   KH_ACCOUNT_CHANGED: 'La sesión cambió. Vuelve a abrir esta pantalla.',
-  KH_AGENCY_DISABLED: 'El espacio de inmobiliarias aún no está habilitado.',
+  KH_AGENCY_DISABLED: 'La gestión de inmobiliarias aún no está habilitada.',
   KH_EMAIL_UNCONFIRMED: 'Confirma tu correo para operar con la inmobiliaria.',
   KH_OWNER_REQUIRED: 'Solo el propietario de KarmaHouse puede gestionar Pro.',
   KH_ASSISTED_CONSENT_REQUIRED: 'Este anuncio necesita el consentimiento vigente de quien lo autorizó.',

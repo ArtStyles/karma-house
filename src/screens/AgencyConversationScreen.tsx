@@ -56,7 +56,7 @@ export default function AgencyConversationScreen() {
         if (!isUuid(id) || (agencyId && !isUuid(agencyId)))
             throw Error('Enlace de conversación inválido.');
         if (agencyId && w.activeAgencyId !== agencyId)
-            throw Error('Selecciona el espacio de esta inmobiliaria para abrir su conversación.');
+            throw Error('Selecciona esta inmobiliaria en Mi inmobiliaria para abrir su conversación.');
         const base = agencyId ? (write?w.captureAgencyContext():w.captureAgencyReadContext()) : w.captureAccountContext(), version = epoch.current, key = current.current;
         return { ...base, checkpoint() { base.checkpoint(); if (version !== epoch.current || key !== current.current)
                 throw Error('KH_AGENCY_CONTEXT_CHANGED'); } };
@@ -154,7 +154,7 @@ export default function AgencyConversationScreen() {
   <PageTitle compact title={c?.agencyName ?? 'Conversación con inmobiliaria'} subtitle={c?.propertyTitle} back/>
   {!auth.user ? <AccountPrompt returnTo={`/agency-conversation/${id}${agencyId ? `?agencyId=${agencyId}` : ''}`}/> : <>
    {loading&&!c&&<ActivityIndicator accessibilityLabel="Consultando conversación privada" color={colors.primary}/>}
-   {!loading&&!c&&!visible?.error&&<EmptyState plain title="Conversación no disponible" description="No se pudo abrir una conversación autorizada en este espacio."/>}
+   {!loading&&!c&&!visible?.error&&<EmptyState plain title="Conversación no disponible" description="No se pudo abrir una conversación autorizada en esta inmobiliaria."/>}
    {c&&<Notice>Esta conversación pertenece a {c.agencyName}. Solo tú y su equipo autorizado podéis verla. Las conversaciones personales siguen siendo privadas.</Notice>}
    {visible?.error && <Notice error>{visible.error} Desliza hacia abajo para reintentar.</Notice>}
    {w.enabled && w.activeAgency?.state==='approved' && c && agencyId && c.assigneeId !== auth.user.id && w.membership?.role !== 'manager' && !c.closedReason && <Button label="Tomar este caso" loading={busy} onPress={() => void act(async (ctx) => { if (!supabase || !('agencyId' in ctx))
