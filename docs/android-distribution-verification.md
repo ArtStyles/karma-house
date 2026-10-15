@@ -3,6 +3,27 @@
 Revisión inicial del 2 de octubre y publicación del 3 de octubre de 2026. La distribución elegida es la descarga directa
 desde la página oficial, sin una cuenta de pago de Google Play.
 
+## Entrega 0.1.29 del 15 de octubre de 2026
+
+Se publicó la [release `v0.1.29`](https://github.com/ArtStyles/karma-house/releases/tag/v0.1.29), con tag en `86069cceeb80a5e1749ec752f35a61ed4c704182` y marcada como última. Es la primera versión con el aviso de actualización en Mi espacio. Compilada en el repositorio tras `expo prebuild` (permiso `REQUEST_INSTALL_PACKAGES` y módulo `expo-intent-launcher`), con `build-android-preview.ps1 -Release -RefreshBundleCache`.
+
+| Comprobación | Resultado |
+| --- | --- |
+| Paquete / versión / código | `com.karmahouse.karmahouse` / `0.1.29` / `30` |
+| APK público | `KarmaHouse.apk`, 85.299.695 bytes (85,3 MB) |
+| APK SHA-256 | `356285e77c34dd43a099c8f605d8e3c1a086407ceca7d995482cc67093a9db9e` |
+| AAB SHA-256 (local) | `7eac1fdb0794641280e66657060fabca2b6185ef2f9446e31331e5a2c5cfb2c0` |
+| Certificado SHA-256 | `1752d33a3fb6e45fada4e6adbbec99af851d9ae6716a73770c382c79d3356ac6`, el mismo de las versiones anteriores |
+| Firma / Android / ABI | v2 correcta, no depurable, minSdk 24 (Android 7), arm64-v8a y armeabi-v7a |
+| Secretos | 1.386 entradas sin los valores privados ni marcadores de credenciales que comprueba el verificador |
+| Aviso de actualización | El bundle lee `android/latest.json`; el manifiesto del APK declara `REQUEST_INSTALL_PACKAGES`; `expo-intent-launcher` está en el código nativo |
+| Archivos remotos | APK, checksum e instrucciones `uploaded`, con digests iguales a los locales |
+| Descargas anónimas | Los tres archivos completos coinciden en tamaño y SHA-256 con los preparados |
+
+Logs locales: `artifacts/android-build-0.1.29.log`, `artifacts/distribution-0.1.29.log` y `artifacts/release-0.1.29-upload.log`. Entrega en `artifacts/distribution/0.1.29/`; descargas públicas en `artifacts/release-0.1.29-public/`.
+
+No se instaló en un teléfono. El aviso solo se verá cuando exista una versión posterior: la descarga, el permiso para instalar desde KarmaHouse y el instalador quedan por probar en esa entrega.
+
 ## Entrega 0.1.19 del 7 de octubre de 2026
 
 Se publicó el APK existente de la versión 0.1.19 en la [release pública `v0.1.19`](https://github.com/ArtStyles/karma-house/releases/tag/v0.1.19), asociada al commit `1ab359cfa216360c05d6d5a6fca30b7961a8ff69` y marcada como última entrega estable. Incluye los modos Claro/Oscuro/Sistema, los filtros compactos y la franja deslizante de Explorar.
