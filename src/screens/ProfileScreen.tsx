@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Icon, IconButton, Notice, PageTitle, type IconName } from '../components/ui';
 import { UserAvatar } from '../components/account/UserAvatar';
@@ -25,6 +25,7 @@ export default function ProfileScreen() {
   const { unreadCount: notificationUnreadCount, refreshSummary, marking } = useNotifications();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [accountCode, setAccountCode] = useState<{ id: string; copied: boolean } | null>(null);
   const savedSearches = useSavedSearches();
   const dataSaver = useDataSaver();
   const transfers = useIncomingTransferCount();
@@ -39,6 +40,14 @@ export default function ProfileScreen() {
   const seen = useRef(false);
   useFocusEffect(useCallback(() => { if (seen.current) void refreshSearches(); seen.current = true; }, [refreshSearches]));
   const principal = agencies.principalAgency;
+  // The account id is what an agency pastes into «Invitar a una persona».
+  async function shareAccountCode(id: string) {
+    setAccountCode({ id, copied: false });
+    try {
+      if (Platform.OS === 'web') { await navigator.clipboard.writeText(id); setAccountCode({ id, copied: true }); }
+      else await Share.share({ message: `Mi código de cuenta en KarmaHouse: ${id}` });
+    } catch { /* Dismissed or no clipboard: the code stays on screen to copy by hand. */ }
+  }
   const agencyInvitations = user && !principal && (agencies.enabled || agencies.agencies.length > 0);
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
@@ -102,6 +111,9 @@ export default function ProfileScreen() {
       {user && <>
         <Text style={styles.sectionLabel}>Cuenta</Text>
         <View style={styles.group}>
+          <AccountRow icon="id-card-outline" title="Mi código de cuenta" description={accountCode?.id === user.id && accountCode.copied ? 'Copiado. Pégalo en un mensaje a la inmobiliaria.' : 'Compártelo con una inmobiliaria para que te invite a su equipo.'} onPress={() => void shareAccountCode(user.id)}>
+            {accountCode?.id === user.id && <Text selectable style={styles.code}>{user.id}</Text>}
+          </AccountRow>
           <AccountRow icon="star-outline" title="KarmaHouse Pro" onPress={() => router.push('/pro')} />
           <AccountRow icon="notifications-outline" title="Preferencias de notificaciones" onPress={() => router.push('/notification-settings')} />
           <AccountRow icon="log-out-outline" title="Cerrar sesión" danger disabled={busy} loading={busy} onPress={async () => {
@@ -155,5 +167,6 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   guestText: { fontSize: 16, lineHeight: 25, color: colors.muted, maxWidth: 350 }, guestAction: { alignSelf: 'flex-start' },
   legal: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 14 },
   legalText: { color: colors.muted, fontSize: 12, lineHeight: 18 }, legalLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 5 },
+  code: { color: colors.ink, fontSize: 13, lineHeight: 19, fontVariant: ['tabular-nums'] },
   demoNote: { color: colors.muted, fontSize: 13, lineHeight: 20, paddingHorizontal: 4, marginTop: 20 },
 }));
