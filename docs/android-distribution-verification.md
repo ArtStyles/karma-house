@@ -3,6 +3,26 @@
 Revisión inicial del 2 de octubre y publicación del 3 de octubre de 2026. La distribución elegida es la descarga directa
 desde la página oficial, sin una cuenta de pago de Google Play.
 
+## Entrega 0.1.19 del 7 de octubre de 2026
+
+Se publicó el APK existente de la versión 0.1.19 en la [release pública `v0.1.19`](https://github.com/ArtStyles/karma-house/releases/tag/v0.1.19), asociada al commit `1ab359cfa216360c05d6d5a6fca30b7961a8ff69` y marcada como última entrega estable. Incluye los modos Claro/Oscuro/Sistema, los filtros compactos y la franja deslizante de Explorar.
+
+| Comprobación | Resultado |
+| --- | --- |
+| Paquete / versión / código | `com.karmahouse.karmahouse` / `0.1.19` / `20` |
+| APK público | `KarmaHouse.apk`, 84.560.003 bytes (84,6 MB) |
+| APK SHA-256 | `4a5e1f80c31c48376f4a6bea87046468b0dd62aab5256e9cf4fff62b3d333071` |
+| Certificado oficial SHA-256 | `1752d33a3fb6e45fada4e6adbbec99af851d9ae6716a73770c382c79d3356ac6` |
+| Android / ABI / firma | Android 7+, arm64-v8a y armeabi-v7a, firma v2 válida, no depurable |
+| Bundle y secretos | Configuración pública incluida; 1.386 entradas sin los valores privados ni marcadores de credenciales que comprueba el verificador |
+| Archivos remotos | APK, checksum e instrucciones en estado `uploaded`, con tamaños y digests iguales a los originales |
+| Descargas anónimas | Los tres archivos completos coinciden en tamaño y SHA-256 con los originales |
+| Web preparada | Build de producción correcto; HTML prerenderizado con versión 0.1.19, tamaño 84,6 MB y los cuatro enlaces versionados |
+
+El verificador Android se ejecutó nuevamente sobre el APK que se publicó, comprobando el certificado esperado y la alineación ZIP de 16 KB. El APK original no se recompiló ni se modificó. La comprobación de distribución no instala la aplicación ni comprueba nuevas funciones en un teléfono.
+
+Evidencia local: `artifacts/release-0.1.19-cloud/upload-verified.json`, `anonymous-downloads.json` y `public-downloads/`. Archivos preparados en `artifacts/distribution/0.1.19/`.
+
 ## Entrega 0.1.16 del 6 de octubre de 2026
 
 Se reconstruyeron APK y AAB desde la aplicación integrada en `99e175648e50615be7b5251cf8ad9f68241d1eff`, regenerando el proyecto Android desde Expo 57 y refrescando el bundle. La release apunta a `2095f02279b7a2e7b1960e56c3ee50006a3a657b`: ese commit solo añade el workflow y controles de distribución; `src/`, configuración, dependencias y migraciones coinciden con las fuentes compiladas.
