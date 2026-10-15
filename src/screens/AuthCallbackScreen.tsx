@@ -19,6 +19,7 @@ export default function AuthCallbackScreen() {
   const [destination,setDestination]=useState<string|null>(null);
   const linkingUrl = Linking.useLinkingURL();
   const [error, setError] = useState<string | null>(null);
+  const [recoveryLink, setRecoveryLink] = useState(false);
   useEffect(() => {
     let alive = true;
     const url = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.href : linkingUrl;
@@ -34,6 +35,7 @@ export default function AuthCallbackScreen() {
     }).catch(cause => {
       if (!alive) return;
       if (Platform.OS === 'web' && typeof window !== 'undefined') window.history.replaceState(window.history.state, '', '/auth/callback');
+      setRecoveryLink(/[?&]mode=recovery(?:[&#]|$)/.test(url));
       setError(cause instanceof Error ? cause.message : 'No se pudo verificar el enlace. Solicita uno nuevo.');
     });
     return () => { alive = false; };
@@ -56,7 +58,10 @@ export default function AuthCallbackScreen() {
     <View style={styles.content}>
       <View style={styles.symbol}><Icon name={error ? 'key-outline' : 'mail-outline'} color={colors.primary} size={29} /></View>
       <Text accessibilityRole="header" style={styles.title}>{error ? 'Revisemos ese enlace' : 'Abriendo tu cuenta'}</Text>
-      {error ? <><Notice error>{error}</Notice><Button label="Solicitar recuperación" onPress={() => router.replace({ pathname: '/auth', params: { mode: 'forgot' } })} /><Button label="Volver a entrar" secondary onPress={() => router.replace('/auth')} /></>
+      {error ? <><Notice error>{error}</Notice>{recoveryLink
+        ? <><Button label="Solicitar recuperación" onPress={() => router.replace({ pathname: '/auth', params: { mode: 'forgot' } })} /><Button label="Volver a entrar" secondary onPress={() => router.replace('/auth')} /></>
+        // A sign-up link that failed usually means the account is already confirmed or a newer email exists.
+        : <Button label="Entrar" onPress={() => router.replace('/auth')} />}</>
         : <><Text style={styles.copy}>Estamos verificando el enlace de tu correo.</Text><ActivityIndicator color={colors.primary} size="large" /></>}
     </View>
     </ScrollView>

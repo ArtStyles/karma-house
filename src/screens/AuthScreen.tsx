@@ -4,6 +4,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Linking, Pressable, ScrollView
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { safeReturnTo } from '../auth/callback';
+import { EMAIL_NOT_CONFIRMED } from '../auth/errors';
 import { pendingIntentDestination, pendingIntentReason, type PendingIntent } from '../auth/pendingIntent';
 import { pendingIntentStore } from '../auth/pendingIntentStorage';
 import { createAuthFocusScope } from '../auth/intentLifecycle';
@@ -119,6 +120,10 @@ export default function AuthScreen() {
   const subtitle = mode === 'signup' ? 'Completa tus datos para guardar viviendas y publicar anuncios.' : mode === 'forgot' ? 'Escribe tu correo para solicitar un enlace de recuperación.' : mode === 'recovery' ? 'Elige una contraseña para volver a tu espacio.' : 'Consulta tus favoritos, anuncios y conversaciones.';
   const submitLabel = mode === 'signup' ? 'Crear cuenta' : mode === 'forgot' ? 'Solicitar enlace' : mode === 'recovery' ? 'Guardar contraseña' : 'Entrar';
   const hasRecoverySession = mode !== 'recovery' || Boolean(auth.user);
+  const resendButton = <Button secondary label={resend.waiting ? 'Reenviar correo en un minuto' : 'Reenviar correo'} loading={resend.busy} disabled={resend.waiting} onPress={() => {
+    setResend({ busy: true, message: null, waiting: false });
+    auth.resendConfirmation(email).then(() => setResend({ busy: false, message: 'Si la cuenta espera confirmación, te enviamos otro enlace. Usa el más reciente.', waiting: true }), (cause: unknown) => setResend({ busy: false, message: cause instanceof Error ? cause.message : 'No pudimos reenviar el correo.', waiting: true }));
+  }} />;
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
@@ -140,15 +145,12 @@ export default function AuthScreen() {
             <View style={styles.successIcon}><Icon name={notice === 'updated' ? 'checkmark' : 'mail-outline'} color={colors.green} size={26} /></View>
             <Text style={styles.cardTitle}>{notice === 'updated' ? 'Contraseña actualizada' : 'Revisa tu correo'}</Text>
             <Text style={styles.cardCopy}>{notice === 'confirmation'
-              ? registrationIntent==='agency'?'Si el registro puede completarse con esta dirección, encontrarás un enlace para confirmar tu cuenta. Revisa también spam. La solicitud de inmobiliaria estará disponible al confirmar, incluso en otro dispositivo.':'Si el registro puede completarse con esta dirección, encontrarás un enlace para confirmar tu cuenta. Revisa también spam y ábrelo en este dispositivo.'
+              ? registrationIntent==='agency'?'Si el registro puede completarse con esta dirección, encontrarás un enlace para confirmar tu cuenta. Revisa también spam. La solicitud de inmobiliaria estará disponible al confirmar, incluso en otro dispositivo. Cada correo nuevo anula el anterior: abre siempre el último.':'Si el registro puede completarse con esta dirección, encontrarás un enlace para confirmar tu cuenta. Revisa también spam y ábrelo en este dispositivo. Cada correo nuevo anula el anterior: abre siempre el último.'
               : notice === 'reset' ? 'Si existe una cuenta con ese correo, busca el enlace de recuperación. Revisa también spam y ábrelo en este dispositivo.'
                 : 'Ya puedes continuar en tu espacio con tu nueva contraseña.'}</Text>
             {notice === 'confirmation' && <>
               {resend.message ? <Text accessibilityLiveRegion="polite" style={styles.cardCopy}>{resend.message}</Text> : null}
-              <Button secondary label={resend.waiting ? 'Reenviar correo en un minuto' : 'Reenviar correo'} loading={resend.busy} disabled={resend.waiting} onPress={() => {
-                setResend({ busy: true, message: null, waiting: false });
-                auth.resendConfirmation(email).then(() => setResend({ busy: false, message: 'Si la cuenta espera confirmación, te enviamos otro enlace. Usa el más reciente.', waiting: true }), (cause: unknown) => setResend({ busy: false, message: cause instanceof Error ? cause.message : 'No pudimos reenviar el correo.', waiting: true }));
-              }} />
+              {resendButton}
             </>}
             <Button label={notice === 'updated' ? 'Continuar' : 'Volver a entrar'} onPress={() => notice === 'updated' ? router.replace(returnTo) : changeMode('signin')} />
           </View> : !hasRecoverySession ? <View style={styles.form}>
@@ -172,6 +174,11 @@ export default function AuthScreen() {
             <Button label={submitLabel} loading={submitting} onPress={submit} style={{ marginTop: 5 }} />
             {/* Under the button the error appears where the tap was, and never pushes the button away. */}
             {issue && <Notice error>{issue}</Notice>}
+            {/* Without this, people sign up again to get a new email, and each sign-up voids the previous link. */}
+            {mode === 'signin' && issue === EMAIL_NOT_CONFIRMED && <>
+              {resend.message ? <Text accessibilityLiveRegion="polite" style={styles.helper}>{resend.message}</Text> : null}
+              {resendButton}
+            </>}
             {mode === 'signup' && <Text style={styles.helper}>Te pediremos confirmar tu correo antes de entrar.</Text>}
             {mode === 'signup' && <Text style={styles.helper}>Al crear tu cuenta aceptas los <Text accessibilityRole="link" style={styles.linkText} onPress={() => void Linking.openURL(TERMS_URL)}>Términos de uso</Text> y la <Text accessibilityRole="link" style={styles.linkText} onPress={() => void Linking.openURL(PRIVACY_URL)}>Política de privacidad</Text>.</Text>}
             {mode === 'forgot' && <Button label="Volver a entrar" secondary disabled={submitting} onPress={() => changeMode('signin')} />}

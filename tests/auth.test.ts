@@ -31,6 +31,10 @@ test('auth rejects foreign URLs, unsupported token types, duplicates and ambiguo
 
 test('auth never reflects provider error details and only returns to known local screens', () => {
   assert.throws(() => parseAuthCallback(`${callback}?error=access_denied&error_description=secret-token`, callback), error => !error.message.includes('secret-token'));
+  // Supabase's real answer to a used or replaced link repeats the error in the query and the fragment.
+  const dead = 'error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired';
+  assert.throws(() => parseAuthCallback(`karmahouse://auth/callback?${dead}#${dead}&sb=`, 'karmahouse://auth/callback'), error => /último correo/.test(error.message) && /entra con tu contraseña/.test(error.message) && !/Email link/.test(error.message));
+  assert.throws(() => parseAuthCallback(`karmahouse://auth/callback?${dead}&mode=recovery#${dead}&sb=`, 'karmahouse://auth/callback'), /Solicita uno nuevo/);
   for (const path of ['https://attacker.example', '//attacker.example', '/\\evil', '/%2f%2fevil', '/auth?code=token', '/profile?access_token=token']) assert.equal(safeReturnTo(path), '/profile');
   assert.equal(safeReturnTo('/publish'), '/publish');
   // Every sign-in prompt's static destination survives the round trip.

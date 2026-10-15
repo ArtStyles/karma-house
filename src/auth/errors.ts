@@ -1,10 +1,12 @@
+export const EMAIL_NOT_CONFIRMED = 'Confirma tu correo antes de entrar. Revisa también la carpeta de spam.';
+
 /** Never show raw upstream messages: callback failures can contain URLs or credential details. */
 export function authErrorMessage(error: unknown): string {
   const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
   const status = error && typeof error === 'object' && 'status' in error ? Number(error.status) : 0;
   switch (code) {
     case 'invalid_credentials': return 'El correo o la contraseña no son correctos.';
-    case 'email_not_confirmed': return 'Confirma tu correo antes de entrar. Revisa también la carpeta de spam.';
+    case 'email_not_confirmed': return EMAIL_NOT_CONFIRMED;
     case 'user_already_exists': case 'email_exists': return 'Ya existe una cuenta con ese correo. Prueba a iniciar sesión.';
     case 'weak_password': return 'Elige una contraseña más segura, de al menos 8 caracteres.';
     case 'same_password': return 'Elige una contraseña distinta de la anterior.';

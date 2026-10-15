@@ -6,6 +6,7 @@ export type AuthCallback = CallbackDestination & (
 );
 
 const invalidLink = () => new Error('El enlace no es válido o ha caducado. Solicita uno nuevo e inténtalo otra vez.');
+const usedSignupLink = () => new Error('Este enlace ya no sirve: se usó, caducó o te enviamos uno más nuevo. Si ya confirmaste tu correo, entra con tu contraseña. Si no, abre el último correo de KarmaHouse.');
 
 export function safeReturnTo(value: unknown): string {
   if (typeof value === 'string' && /^\/publish\?(?:operation=(?:sale|swap|rent|wanted)(?:&import=1)?|import=1)$/.test(value)) return value;
@@ -35,9 +36,13 @@ export function parseAuthCallback(rawUrl: string, expectedCallbackUrl: string): 
   if (url.protocol !== expected.protocol || url.host !== expected.host || url.pathname !== expected.pathname || url.username || url.password) throw invalidLink();
   const query = url.searchParams;
   const fragment = new URLSearchParams(url.hash.slice(1));
-  const keys = ['code', 'token_hash', 'access_token', 'refresh_token', 'type', 'mode', 'returnTo', 'error', 'error_description'];
+  // Supabase repeats its error in the query and the fragment, so it is read before the duplicate check.
+  // Each new sign-up or resend replaces the previous link, and people often open an older email.
+  if (query.has('error') || fragment.has('error') || query.has('error_description') || fragment.has('error_description')) {
+    throw query.get('mode') === 'recovery' || query.get('type') === 'recovery' ? invalidLink() : usedSignupLink();
+  }
+  const keys = ['code', 'token_hash', 'access_token', 'refresh_token', 'type', 'mode', 'returnTo'];
   for (const key of keys) if (query.getAll(key).length + fragment.getAll(key).length > 1) throw invalidLink();
-  if (query.has('error') || fragment.has('error') || query.has('error_description') || fragment.has('error_description')) throw invalidLink();
   const type = query.get('type') ?? fragment.get('type');
   if (type && !['email', 'signup', 'recovery'].includes(type)) throw invalidLink();
   const destination = { recovery: type === 'recovery' || query.get('mode') === 'recovery', returnTo: safeReturnTo(query.get('returnTo')) };
