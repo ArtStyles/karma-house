@@ -28,6 +28,7 @@ function harness(screen, overrides = {}) {
     listingBoardState, listingOperation: () => 'sale', priceSuffix: () => '',
     useIncomingTransferCount: () => ({ count: 0, refresh: async () => {} }),
     usePro: () => ({ repository: null, status: null, error: '', loading: false, reload: async () => {} }),
+    useAgencyWorkspace: () => ({ agencies: [] }),
     bumpErrorMessage, canBumpNow, formatProDate, isProActive, nextBumpAt,
     useConsultationRefresh: () => ({ refreshing: false, refresh: async () => {}, isRefreshing: () => false }),
     remoteErrorMessage: e => e.message, adminError: e => e.message,
@@ -174,4 +175,17 @@ test('pull to refresh also re-reads Pro', async () => {
   const screen = myListings(liveHome(), proFor(future, { reload: async () => { reloads++; } }), {}, { useConsultationRefresh: (key, work) => ({ refreshing: false, refresh: work, isRefreshing: () => false }) });
   await elements(screen.render()).find(node => node.type === 'ScrollView').props.refreshControl.props.onRefresh(); await settle();
   assert.equal(reloads, 1);
+});
+
+test('my listings sends an agency listing to the agency instead of offering personal edits', () => {
+  const agency = { id: 'agency-1', tradeName: 'Casas Principal' };
+  const screen = myListings(liveHome({ createdAt: ago(8), agencyId: agency.id }), proFor(null), {}, { useAgencyWorkspace: () => ({ agencies: [agency] }) });
+  assert.ok(button(screen, 'Gestionar en la inmobiliaria'));
+  assert.ok(shows(screen, 'Lo gestiona Casas Principal.'));
+  for (const label of ['Editar', 'Pausar', 'Reactivar']) assert.equal(button(screen, label), undefined, label);
+  assert.equal(shows(screen, 'Cerrar anuncio'), false);
+  assert.ok(button(screen, 'Subir anuncio'), 'the agency Pro still lets members bump it');
+  const personal = myListings(liveHome({ createdAt: ago(8) }), proFor(null));
+  assert.ok(button(personal, 'Editar'));
+  assert.equal(button(personal, 'Gestionar en la inmobiliaria'), undefined);
 });

@@ -60,6 +60,8 @@ export interface Listing {
   bumpedAt?: string;
   /** Covered by an active Pro (personal or of the publishing agency). */
   isPro?: boolean;
+  /** Set when an agency is its origin and the viewer may know it (its owner or a member): managed from the agency screens. */
+  agencyId?: string;
 }
 
 export interface ListingDraft {

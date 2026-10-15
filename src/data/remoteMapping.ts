@@ -1,6 +1,7 @@
 import type { Listing, ListingOperation, ListingStatus, ListingType, ModerationStatus, RentPeriod, SwapBalance } from '../domain/listings.ts';
 import { isMapLocation, normalizeMapLocation } from '../domain/geo.ts';
 import { isListingCondition, isListingOperation, isProvince, isRentMinStay, isRentPeriod, isSwapBalance, isWantedOperations, type ListingCondition } from '../domain/listingOptions.ts';
+import { isUuid } from '../messaging/domain.ts';
 
 export interface RemotePropertyRow {
   id: string;
@@ -41,6 +42,8 @@ export interface RemotePropertyRow {
   bumped_at?: string | null;
   /** Catalogue rows carry it; PostgREST reads get it from the computed field kh_is_pro. */
   is_pro?: boolean | null;
+  /** Computed field kh_listing_agency: the agency it belongs to, told only to its owner and that agency's members. */
+  agency_id?: string | null;
   version: number;
 }
 
@@ -73,6 +76,7 @@ export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap
     !Number.isFinite(Date.parse(row.created_at)) ||
     (row.bumped_at != null && !Number.isFinite(Date.parse(row.bumped_at))) ||
     (row.is_pro != null && typeof row.is_pro !== 'boolean') ||
+    (row.agency_id != null && !isUuid(row.agency_id)) ||
     !['active', 'paused', 'sold'].includes(row.availability) ||
     !['draft', 'pending', 'approved', 'rejected'].includes(row.moderation) ||
     !Array.isArray(row.photo_paths) || !Array.isArray(row.amenities) ||
@@ -111,6 +115,7 @@ export function mapRemoteListing(row: RemotePropertyRow, signedUrls: ReadonlyMap
     status: row.availability, moderationStatus: row.moderation,
     ...(row.review_note ? { reviewNote: row.review_note } : {}), version: row.version, createdAt: row.created_at,
     ...(row.bumped_at ? { bumpedAt: row.bumped_at } : {}), ...(row.is_pro ? { isPro: true } : {}),
+    ...(row.agency_id ? { agencyId: row.agency_id } : {}),
   };
 }
 

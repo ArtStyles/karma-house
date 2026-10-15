@@ -15,6 +15,7 @@ import { createThemedStyles, formatMoney, internalLayout } from '../theme';
 import {useIncomingTransferCount} from '../transfers/useIncomingTransferCount';
 import { bumpErrorMessage, canBumpNow, formatProDate, nextBumpAt } from '../pro/domain';
 import { usePro } from '../pro/usePro';
+import { useAgencyWorkspace } from '../agencies/useAgencyWorkspace';
 
 const boardLabels: Record<ListingBoardState, string> = {
   sold: 'Cerrado', rejected: 'Necesita cambios', draft: 'Borrador',
@@ -36,6 +37,7 @@ export default function MyListingsScreen() {
   const { user, session, isOwner } = useAuth();
   const transfers=useIncomingTransferCount();
   const pro = usePro();
+  const { agencies } = useAgencyWorkspace();
   // Pro is read per listing from the server: an agency listing is covered by the agency's Pro, not by the person's.
   const [pending, setPending] = useState('');
   // «Pausar» and «Subir anuncio» share `pending`; this says which of the two is running.
@@ -106,6 +108,8 @@ export default function MyListingsScreen() {
         {!visibleOwn.length && <EmptyState plain title="Sin anuncios en este estado" description="Selecciona otro estado para consultar tus anuncios." action={<Button secondary label="Ver todos" onPress={() => setFilter('all')} />} />}
         {visibleOwn.map(item => {
           const state = listingBoardState(item);
+          // An agency is its origin: personal edits are refused by the server, so it is managed from the agency screens.
+          const managedBy = item.agencyId ? agencies.find(agency => agency.id === item.agencyId)?.tradeName ?? 'tu inmobiliaria' : null;
           const tone = boardTones[state];
           return <View key={item.id} style={styles.card}>
           <Pressable accessibilityRole="button" accessibilityLabel={`${item.title}. ${boardLabels[state]}. ${formatMoney(item.price)} USD${priceSuffix(item)}. ${item.location}.`} onPress={() => router.push(`/property/${item.id}`)} style={({ pressed }) => [styles.overview, pressed && styles.pressed]}>
@@ -126,18 +130,20 @@ export default function MyListingsScreen() {
           </Pressable>
           {item.reviewNote && <Notice error>{item.reviewNote}</Notice>}
 
-          {(state === 'draft' || state === 'rejected') && <Button label={isOwner ? 'Publicar ahora' : 'Enviar a revisión'} icon="paper-plane-outline" loading={pending === item.id} disabled={!!pending} onPress={() => submit(item.id)} style={styles.reviewButton} />}
+          {managedBy && <Text style={styles.location}>{`Lo gestiona ${managedBy}.`}</Text>}
+          {!managedBy && (state === 'draft' || state === 'rejected') && <Button label={isOwner ? 'Publicar ahora' : 'Enviar a revisión'} icon="paper-plane-outline" loading={pending === item.id} disabled={!!pending} onPress={() => submit(item.id)} style={styles.reviewButton} />}
           <ActionGroup style={styles.actions}>
-            <Button label="Editar" secondary icon="create-outline" onPress={() => router.push(`/edit/${item.id}`)} style={styles.actionButton} disabled={!!pending} />
+            {managedBy ? <Button label="Gestionar en la inmobiliaria" secondary icon="business-outline" onPress={() => router.push({ pathname: '/agency-workspace', params: { agencyId: item.agencyId! } })} style={styles.actionButton} />
+              : <Button label="Editar" secondary icon="create-outline" onPress={() => router.push(`/edit/${item.id}`)} style={styles.actionButton} disabled={!!pending} />}
             {/* Pausing only means anything once the listing can actually reach the catalogue. */}
-            {state === 'live' && <Button label="Pausar" secondary icon="pause-outline" onPress={() => update(item.id, 'paused')} loading={pending === item.id && bumpingId !== item.id} disabled={!!pending} style={styles.actionButton} />}
+            {!managedBy && state === 'live' && <Button label="Pausar" secondary icon="pause-outline" onPress={() => update(item.id, 'paused')} loading={pending === item.id && bumpingId !== item.id} disabled={!!pending} style={styles.actionButton} />}
             {state === 'live' && item.isPro && canBumpNow(item) && <Button label="Subir anuncio" secondary icon="arrow-up-outline" onPress={() => void bump(item)} loading={bumpingId === item.id} disabled={!!pending} style={styles.actionButton} />}
             {/* Gated on the raw status, not the chip: a paused listing under review still has to be un-pausable. */}
-            {item.status === 'paused' && <Button label="Reactivar" secondary icon="play-outline" onPress={() => update(item.id, 'active')} loading={pending === item.id} disabled={!!pending} style={styles.actionButton} />}
-            {state === 'sold' && <Button label="Reactivar" secondary icon="play-outline" onPress={() => setConfirm({ listing: item, next: 'active' })} disabled={!!pending} style={styles.actionButton} />}
+            {!managedBy && item.status === 'paused' && <Button label="Reactivar" secondary icon="play-outline" onPress={() => update(item.id, 'active')} loading={pending === item.id} disabled={!!pending} style={styles.actionButton} />}
+            {!managedBy && state === 'sold' && <Button label="Reactivar" secondary icon="play-outline" onPress={() => setConfirm({ listing: item, next: 'active' })} disabled={!!pending} style={styles.actionButton} />}
           </ActionGroup>
           {state === 'live' && item.isPro && !canBumpNow(item) && <Text style={styles.location}>Podrás subirlo el {formatProDate(nextBumpAt(item))}.</Text>}
-          {state !== 'sold' && <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!pending }} disabled={!!pending} onPress={() => setConfirm({ listing: item, next: 'sold' })} style={({ pressed }) => [styles.soldButton, pressed && styles.pressed, !!pending && styles.disabled]}>
+          {!managedBy && state !== 'sold' && <Pressable accessibilityRole="button" accessibilityState={{ disabled: !!pending }} disabled={!!pending} onPress={() => setConfirm({ listing: item, next: 'sold' })} style={({ pressed }) => [styles.soldButton, pressed && styles.pressed, !!pending && styles.disabled]}>
             <Icon name="checkmark-circle-outline" color={colors.primary} size={19} />
             <Text style={styles.soldText}>Cerrar anuncio</Text>
           </Pressable>}

@@ -130,6 +130,11 @@ test('listings carry the bump date and the Pro mark when the server sends them',
   const source = readFileSync(new URL('../src/data/supabaseMarketplace.ts', import.meta.url), 'utf8');
   const columns = /PROPERTY_COLUMNS = '([^']+)'/.exec(source)![1].split(',');
   assert.ok(columns.includes('bumped_at') && columns.includes('is_pro:kh_is_pro'));
+  // The agency a listing belongs to arrives only for its owner and the agency's members.
+  assert.ok(columns.includes('agency_id:kh_listing_agency'));
+  assert.equal(plain.agencyId, undefined);
+  assert.equal(mapRemoteListing({ ...row, agency_id: '45000000-0000-4000-8001-000000000001' }, new Map()).agencyId, '45000000-0000-4000-8001-000000000001');
+  assert.throws(() => mapRemoteListing({ ...row, agency_id: 'principal' }, new Map()));
 });
 
 test('the history names every Pro action', () => {

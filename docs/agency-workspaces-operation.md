@@ -106,3 +106,12 @@ El 15 de octubre de 2026, por decisión del usuario, las 46 ventas activas y apr
 - Los 16 alquileres no entran: el módulo de inmobiliarias solo admite ventas.
 - Los gestores ven las ventas en Cartera y las comparten con su enlace; cada interesado que llega por ese enlace queda asignado a quien lo compartió. Coordinación y administración reasignan casos en Seguimientos. No existe una asignación de vivienda a gestor; la asignación es por caso.
 
+### Origen definitivo (mismo día)
+
+Después, el usuario pidió que la inmobiliaria principal fuera el único origen de esas ventas. La migración `20261015000300_owner_listings_to_agency` añade `kh_private.adopt_owner_listing` (privada: solo la cuenta propietaria, con sus propias ventas aprobadas y hacia una inmobiliaria que administre; escribe las mismas filas que `kh_admin_link_assisted_agency` sin colaborador asistido) y el campo calculado `kh_listing_agency`, que dice a qué inmobiliaria pertenece un anuncio solo a su dueño y a los miembros de esa inmobiliaria. Aplicada tras un ensayo deshecho; ledger `20261015000300`, SHA-256 `fd9f3a4a4c0cff6d79bd6969b1c8c8eb98ec580fac0924d05fc46ba30072dc5f`. `node scripts/adopt-owner-sales.mjs --commit` adoptó las 46 ventas (ensayo previo correcto; repetirlo no encuentra nada pendiente).
+
+- **No se puede deshacer**: las filas de origen no cambian nunca.
+- Las ventas salen del perfil público de la cuenta propietaria (quedan los 16 alquileres), solo se editan desde la inmobiliaria y ya no abren chats personales.
+- Las cubre el Pro de la inmobiliaria, no el personal: sin Pro de la inmobiliaria no se pueden subir.
+- «Mis anuncios» muestra «Lo gestiona …» y «Gestionar en la inmobiliaria» en lugar de editar, pausar o cerrar.
+

@@ -16,7 +16,7 @@ const BUCKET = 'property-photos';
 // One cache for every signer: the catalogue, the account and public profiles reuse the same links,
 // so the image cache keeps hitting the same URL. Kept on sign-out: they are links to public photos.
 const photoLinks = createSignedUrlCache({ storage: AsyncStorage, now: Date.now });
-export const PROPERTY_COLUMNS = 'id,owner_id,client_request_id,title,location,province,latitude,longitude,location_precision,condition,floor,price_negotiable,price,bedrooms,bathrooms,area,type,description,amenities,photo_paths,availability,moderation,review_note,version,created_at,operation,swap_wants,swap_provinces,swap_balance,swap_amount,rent_period,rent_min_stay,wanted_operations,cover_thumb_path,bumped_at,is_pro:kh_is_pro';
+export const PROPERTY_COLUMNS = 'id,owner_id,client_request_id,title,location,province,latitude,longitude,location_precision,condition,floor,price_negotiable,price,bedrooms,bathrooms,area,type,description,amenities,photo_paths,availability,moderation,review_note,version,created_at,operation,swap_wants,swap_provinces,swap_balance,swap_amount,rent_period,rent_min_stay,wanted_operations,cover_thumb_path,bumped_at,is_pro:kh_is_pro,agency_id:kh_listing_agency';
 
 /** Shared by the marketplace repository and the paginated catalogue repository. */
 export function createRowSigner(client: SupabaseClient): SignRows {
