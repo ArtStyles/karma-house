@@ -191,16 +191,20 @@ select pg_temp.pro_assert((select bool_and(char_length(target_name)<=100) and co
 -- The Pro mark of a listing comes from the stored row, never from the row passed in.
 insert into public.properties(id,owner_id,client_request_id,title,location,province,price,bedrooms,description,operation,moderation)
  values('43000000-0000-4000-8000-0000000000b1','43000000-0000-4000-8000-000000000003','pro-listing-1','Anuncio Pro sintético','Vedado','La Habana',90000,2,'Busco una vivienda sintética de prueba.','wanted','pending');
-select pg_temp.pro_assert((select public.kh_is_pro(p) from public.properties p where p.id='43000000-0000-4000-8000-0000000000b1'),'a listing of A carries Pro');
+-- Only A sees it (20261015000200_pro_private): Pro matters to whoever has it.
+select pg_temp.pro_as('43000000-0000-4000-8000-000000000003');
+select pg_temp.pro_assert((select public.kh_is_pro(p) from public.properties p where p.id='43000000-0000-4000-8000-0000000000b1'),'a listing of A carries Pro for A');
+select pg_temp.pro_as('43000000-0000-4000-8000-000000000004');
+select pg_temp.pro_assert((select public.kh_is_pro(p) from public.properties p where p.id='43000000-0000-4000-8000-0000000000b1') is false,'nobody else sees the Pro of A');
 
--- The public badge needs a public listing; private tables and someone else's status stay closed.
+-- Anonymous visitors see no Pro; private tables and someone else's status stay closed.
 set local role anon;
 select pg_temp.pro_as(null);
 select pg_temp.pro_assert(public.kh_is_pro(jsonb_populate_record(null::public.properties,jsonb_build_object('id',gen_random_uuid(),'owner_id','43000000-0000-4000-8000-000000000003'))) is false,'a forged row gets no Pro mark although A has Pro');
 select pg_temp.pro_error($q$select kh_private.property_pro_active(gen_random_uuid(),'43000000-0000-4000-8000-000000000003')$q$,'permission denied');
 select pg_temp.pro_error($q$select public.kh_redeem_pro_code('43000000-0000-4000-8000-000000000003','KH-2222-2222-2222')$q$,'permission denied');
 select pg_temp.pro_error($q$select public.kh_admin_list_pro_codes('43000000-0000-4000-8000-000000000001')$q$,'permission denied');
-select pg_temp.pro_assert(public.kh_pro_badge('43000000-0000-4000-8000-000000000003') is false,'no badge without a public listing');
+select pg_temp.pro_assert(public.kh_pro_badge('43000000-0000-4000-8000-000000000003') is false,'anon never learns who has Pro');
 select pg_temp.pro_error($q$select public.kh_pro_status('43000000-0000-4000-8000-000000000003')$q$,'permission denied');
 set local role authenticated;
 select pg_temp.pro_as('43000000-0000-4000-8000-000000000003');

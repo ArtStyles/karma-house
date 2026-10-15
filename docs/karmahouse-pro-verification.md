@@ -57,7 +57,7 @@ Clúster PostgreSQL 17 desechable en `127.0.0.1:56440`, bases nuevas creadas con
 
 ## Cambio del 15 de octubre de 2026: Pro solo para quien lo tiene
 
-Por decisión del usuario, los anuncios, el detalle y el perfil público ya no muestran la etiqueta «Pro»: solo le interesa a quien lo tiene. Mi espacio enseña la etiqueta junto a tu nombre y «Activo hasta el …» en la fila KarmaHouse Pro; la pantalla Pro lo explica. «Subir anuncio» y el orden de «Más recientes» no cambian. El servidor sigue devolviendo `is_pro` en el catálogo y la RPC pública `kh_pro_badge`, que el cliente ya no usa.
+Por decisión del usuario, los anuncios, el detalle y el perfil público ya no muestran la etiqueta «Pro»: solo le interesa a quien lo tiene. Mi espacio enseña la etiqueta junto a tu nombre y «Activo hasta el …» en la fila KarmaHouse Pro; la pantalla Pro lo explica. «Subir anuncio» y el orden de «Más recientes» no cambian. Migración `20261015000200_pro_private` (aplicada el mismo día tras un ensayo deshecho, con `node scripts/apply-reviewed-migration.mjs 20261015000200_pro_private --commit`): `kh_is_pro` solo responde `true` a quien puede subir ese anuncio (el dueño de un anuncio personal o un miembro activo de la inmobiliaria que lo publicó) y `kh_pro_badge` solo a la propia cuenta. El catálogo (`kh_search_properties`) hereda la regla. Ledger `20261015000200`, SHA-256 `8af85398003a374affb9b5411d8e1de03e1cebc61cdddeca5703a15697e8d2f4`, igual que el archivo. Tras aplicar: 64 anuncios cubiertos por Pro y 0 visibles sin sesión. Suites locales `pro_private`, `pro`, `pro_bump`, `agency_member_exits` y `agency_sent_invitations` superadas; `pro_private` falla sin la migración.
 
 ## Límites
 

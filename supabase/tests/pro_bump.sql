@@ -54,7 +54,11 @@ select pg_temp.pro_as('44000000-0000-4000-8000-000000000002');
 select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000002','44000000-0000-4000-8000-0000000000b1')$q$,'KH_PRO_REQUIRED');
 select pg_temp.pro_as('44000000-0000-4000-8000-000000000001');
 select public.kh_admin_grant_pro('44000000-0000-4000-8000-000000000001',30,'Pago de prueba','44000000-0000-4000-8000-000000000002');
-select pg_temp.pro_assert(public.kh_pro_badge('44000000-0000-4000-8000-000000000002'),'a Pro seller with a live listing shows the profile badge');
+-- Pro is visible only to its holder (20261015000200_pro_private).
+select pg_temp.pro_as('44000000-0000-4000-8000-000000000002');
+select pg_temp.pro_assert(public.kh_pro_badge('44000000-0000-4000-8000-000000000002'),'a Pro seller sees their own Pro');
+select pg_temp.pro_as('44000000-0000-4000-8000-000000000003');
+select pg_temp.pro_assert(public.kh_pro_badge('44000000-0000-4000-8000-000000000002') is false,'nobody else learns that the seller has Pro');
 -- An account being deleted cannot bump; the same call works once the deletion is gone.
 reset role;
 insert into kh_private.account_deletions(user_id) values('44000000-0000-4000-8000-000000000002');
@@ -75,7 +79,9 @@ select pg_temp.pro_as('44000000-0000-4000-8000-000000000003');
 select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000003','44000000-0000-4000-8000-0000000000b1')$q$,'KH_BUMP_NOT_ELIGIBLE');
 select pg_temp.pro_error($q$select public.kh_bump_property('44000000-0000-4000-8000-000000000002','44000000-0000-4000-8000-0000000000b1')$q$,'KH_ACCOUNT_CHANGED');
 
--- «Más recientes» puts the bumped listing first, marks Pro rows and pages by the same key.
+-- «Más recientes» puts the bumped listing first, marks Pro rows for their holder only and pages by the same key.
+select pg_temp.pro_assert((select bool_and(not (r->>'is_pro')::boolean) from jsonb_array_elements(pg_temp.bump_page()->'rows') r),'a stranger sees no Pro rows');
+select pg_temp.pro_as('44000000-0000-4000-8000-000000000002');
 update bump_ctx set page=pg_temp.bump_page();
 select pg_temp.pro_assert((select array_agg(r->>'id' order by o) from bump_ctx,jsonb_array_elements(page->'rows') with ordinality t(r,o))
  =array['44000000-0000-4000-8000-0000000000b1','44000000-0000-4000-8000-0000000000b2'],'the bumped listing leads «Más recientes»');
