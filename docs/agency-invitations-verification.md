@@ -14,6 +14,15 @@ Fecha: 14 de octubre de 2026 (15 de octubre, UTC).
 - Equipo e invitaciones: acepta código, enlace o el mensaje compartido entero (`accountIdFrom`); un mismo `clientRequestId` por intención hasta que se guarda; mensajes propios para invitación abierta, miembro existente, destinatario no válido y conexión caída; lista «Invitaciones enviadas» para administradores; un error deja la lista y la vuelve a cargar.
 - `public.kh_list_agency_sent_invitations(uuid,uuid,integer,integer)`: solo administradores (`agency_reader … 'admin'`), solo pendientes sin caducar, con el nombre de quien la recibe. Sin permiso para `anon`.
 
+## Mi espacio (segunda entrega)
+
+- Gestión muestra una fila por inmobiliaria con nombre, rol y estado si no está aprobada; abre esa inmobiliaria directamente.
+- «Invitaciones de inmobiliarias · N» aparece solo con invitaciones pendientes y lleva a ellas. Quien solicitó una inmobiliaria aún no aprobada ve «Solicitud de X». Sin inmobiliaria, invitación, solicitud ni administración, Gestión no aparece.
+- `loadAgencyOverview` lee rol, invitaciones y solicitud con las RPC existentes; cada parte falla por separado.
+- Mi inmobiliaria aplica la inmobiliaria del enlace una sola vez por cuenta (volver a la pantalla ya no deshace la elección) y elige sola cuando solo hay una.
+- Aceptar una invitación termina en «Ya formas parte de X como gestor» con el botón «Ir a X».
+- `npm test`: 828 tests, 822 pasan, los mismos 2 fallos por `pwsh`. `npx expo export --platform web` compila.
+
 ## Pruebas
 
 - Local (PostgreSQL 17, `127.0.0.1:56440`, base nueva con todas las migraciones): `agency_sent_invitations`, `pro` y `owner_administration` superadas.

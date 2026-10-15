@@ -1,7 +1,7 @@
 import type {MessagingRequestContext} from '../messaging/types.ts';
 import type {CapturedAccountContext,CapturedAgencyContext,AgencyWorkspaceState} from './controller.ts';
 import type {AgencyRepository} from './repository.ts';
-import type {AgencyInvitation,AgencyMembership} from './types.ts';
+import type {AgencyApplication,AgencyInvitation,AgencyMembership,AgencyRole} from './types.ts';
 export function agencyPrivateScreenKey(actor:string|null|undefined,agency:string|null|undefined,generation:number){return `${actor??''}:${agency??''}:${generation}`;}
 export function createAgencyScreenRequestScope(){
  let epoch=0,focused=false,key='';
@@ -11,6 +11,19 @@ export function createAgencyScreenRequestScope(){
  }};
 }
 export interface AgencyTeamPage{userId:string;agencyId:string|null;generation:number;members:AgencyMembership[];invitations:AgencyInvitation[];sent:AgencyInvitation[];membersMore:boolean;invitationsMore:boolean;sentMore:boolean}
+export interface AgencyOverview{roles:Record<string,AgencyRole>;pendingInvitations:number;application:AgencyApplication|null}
+/** Mi espacio: the role in each agency, invitations waiting for an answer and the own application. Each part fails alone. */
+export async function loadAgencyOverview(repository:AgencyRepository,agencyIds:readonly string[],context:MessagingRequestContext):Promise<AgencyOverview>{
+ const [memberships,invitations,application]=await Promise.all([
+  Promise.all(agencyIds.map(id=>repository.membership(id,context).catch(()=>null))),
+  repository.listInvitations(0,context).catch(()=>null),
+  repository.application(context).catch(()=>null)]);
+ context.checkpoint();
+ const roles:Record<string,AgencyRole>={};
+ for(const m of memberships)if(m?.state==='active')roles[m.agencyId]=m.role;
+ // ponytail: counts the newest page (30); pending invitations expire in 7 days, so they lead it.
+ return {roles,pendingInvitations:invitations?.items.filter(i=>i.state==='pending').length??0,application};
+}
 interface TeamSource{repository:AgencyRepository;refreshAgencies():Promise<void>;getCurrentWorkspace():AgencyWorkspaceState;captureAccountContext():CapturedAccountContext;captureAgencyReadContext():CapturedAgencyContext}
 export async function loadAgencyTeamPage(source:TeamSource,append:boolean,previous:AgencyTeamPage|null,checkpoint:()=>void):Promise<AgencyTeamPage>{
  let account:CapturedAccountContext|null=null,enterprise:CapturedAgencyContext|null=null;

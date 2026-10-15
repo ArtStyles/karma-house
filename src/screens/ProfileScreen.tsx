@@ -15,6 +15,9 @@ import { useNotifications } from '../notifications/NotificationsProvider';
 import { useSavedSearches } from '../searches/useSavedSearches';
 import { setDataSaver, useDataSaver } from '../settings/useDataSaver';
 import { useAgencyWorkspace } from '../agencies/useAgencyWorkspace';
+import { loadAgencyOverview, type AgencyOverview } from '../agencies/screenRequests';
+import { agencyStateLabel } from '../agencies/registration';
+import { agencyRoleLabel } from './AgencyWorkspaceScreen';
 import { useIncomingTransferCount } from '../transfers/useIncomingTransferCount';
 
 export default function ProfileScreen() {
@@ -30,16 +33,27 @@ export default function ProfileScreen() {
   const dataSaver = useDataSaver();
   const transfers = useIncomingTransferCount();
   const agencies = useAgencyWorkspace();
+  const [overview, setOverview] = useState<{ userId: string; value: AgencyOverview } | null>(null);
+  const agencyIds = agencies.agencies.map(agency => agency.id).join(',');
+  const { repository: agencyRepository, ready: agenciesReady, enabled: agenciesEnabled, captureAccountContext } = agencies;
+  // Roles, pending invitations and an application under review, so each person lands where they work.
+  const loadOverview = useCallback(async () => {
+    if (!agencyRepository || !agenciesReady || !(agenciesEnabled || agencyIds)) return;
+    let context: ReturnType<typeof captureAccountContext>;
+    try { context = captureAccountContext(); } catch { return; }
+    try { const value = await loadAgencyOverview(agencyRepository, agencyIds ? agencyIds.split(',') : [], context); setOverview({ userId: context.userId, value }); }
+    catch { /* The account changed; the next focus loads the new one. */ } finally { context.release(); }
+  }, [agencyRepository, agenciesReady, agenciesEnabled, agencyIds, captureAccountContext]);
+  useFocusEffect(useCallback(() => { void loadOverview(); }, [loadOverview]));
   const reload = useConsultationRefresh(`${user?.id}:${session?.access_token}`, async () => {
     setError('');
-    const outcomes = await Promise.allSettled([refreshProfile(), refreshListings(), refreshMessages(), refreshSummary(), savedSearches.refresh(), agencies.refreshAgencies(), transfers.refresh()]);
+    const outcomes = await Promise.allSettled([refreshProfile(), refreshListings(), refreshMessages(), refreshSummary(), savedSearches.refresh(), agencies.refreshAgencies().then(loadOverview), transfers.refresh()]);
     const failed = outcomes.find(result => result.status === 'rejected');
     if (failed?.status === 'rejected') throw failed.reason;
   }, busy || !!marking || !user || mode !== 'cloud', () => setError('No pudimos actualizar toda tu actividad. Desliza hacia abajo para volver a intentarlo.'));
   const refreshSearches = savedSearches.refresh;
   const seen = useRef(false);
   useFocusEffect(useCallback(() => { if (seen.current) void refreshSearches(); seen.current = true; }, [refreshSearches]));
-  const principal = agencies.principalAgency;
   // The account id is what an agency pastes into «Invitar a una persona».
   async function shareAccountCode(id: string) {
     setAccountCode({ id, copied: false });
@@ -48,7 +62,11 @@ export default function ProfileScreen() {
       else await Share.share({ message: `Mi código de cuenta en KarmaHouse: ${id}` });
     } catch { /* Dismissed or no clipboard: the code stays on screen to copy by hand. */ }
   }
-  const agencyInvitations = user && !principal && (agencies.enabled || agencies.agencies.length > 0);
+  const mine = overview && overview.userId === user?.id ? overview.value : null;
+  const myAgencies = [...agencies.agencies].sort((a, b) => Number(b.isPrincipal) - Number(a.isPrincipal));
+  const pendingInvitations = mine?.pendingInvitations ?? 0;
+  // An applicant joins the agency only once it is approved; until then the application is the way in.
+  const application = mine?.application && !agencies.agencies.some(agency => agency.id === mine.application!.agency.id) ? mine.application.agency : null;
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
     <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!busy && !!user && mode === 'cloud'} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}>
@@ -78,13 +96,18 @@ export default function ProfileScreen() {
       </View> : null}
       {suspended && <Notice error>Tu cuenta está suspendida. No puedes publicar ni enviar mensajes. {suspensionReason}</Notice>}
 
-      {user && (principal || agencyInvitations || isAdmin) && <>
+      {user && (myAgencies.length > 0 || pendingInvitations > 0 || application || isAdmin) && <>
         <Text style={styles.sectionLabel}>Gestión</Text>
         <View style={styles.group}>
-          {principal && <AccountRow icon="business-outline" title={principal.tradeName} description={principal.isPrincipal ? undefined : 'Inmobiliaria principal'} onPress={() => router.push({ pathname: '/agency-workspace', params: { agencyId: principal.id } })}>
-            <AgencyVerifiedBadge agencyName={principal.tradeName} verified={principal.verified} principal={principal.isPrincipal} labelled />
-          </AccountRow>}
-          {agencyInvitations && <AccountRow icon="business-outline" title="Mi inmobiliaria e invitaciones" onPress={() => router.push('/agency-workspace')} />}
+          {myAgencies.map(agency => {
+            const role = mine?.roles[agency.id];
+            const detail = [role && agencyRoleLabel[role], agency.state !== 'approved' && agencyStateLabel[agency.state]].filter(Boolean).join(' · ');
+            return <AccountRow key={agency.id} icon="business-outline" title={agency.tradeName} description={detail || undefined} onPress={() => router.push({ pathname: '/agency-workspace', params: { agencyId: agency.id } })}>
+              <AgencyVerifiedBadge agencyName={agency.tradeName} verified={agency.verified} principal={agency.isPrincipal} labelled />
+            </AccountRow>;
+          })}
+          {pendingInvitations > 0 && <AccountRow icon="mail-unread-outline" title="Invitaciones de inmobiliarias" count={pendingInvitations} unread onPress={() => router.push('/agency-team')} />}
+          {application && <AccountRow icon="document-text-outline" title={`Solicitud de ${application.tradeName}`} description={agencyStateLabel[application.state]} onPress={() => router.push('/agency-application')} />}
           {isAdmin && <AccountRow icon="shield-checkmark-outline" title="Administración" onPress={() => router.push('/administration')} />}
         </View>
       </>}

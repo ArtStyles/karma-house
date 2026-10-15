@@ -46,7 +46,7 @@ export function agencyError(error:unknown):string{
  if(/CONFLICT|VERSION/.test(message))return 'Los datos cambiaron. Actualiza antes de volver a guardar.';
  if(/ROLE_REQUIRED|MEMBERSHIP_REQUIRED|OWNER_REQUIRED|ADMIN_REQUIRED/.test(message))return 'Tu cuenta no tiene permiso para esta acción.';
  if(/EMAIL_UNCONFIRMED/.test(message))return 'Confirma el correo antes de continuar.';
- if(/KH_AGENCY_INVITATION_OPEN/.test(message))return 'Esta cuenta ya tiene una invitación pendiente de tu inmobiliaria. Pídele que la acepte en Mi espacio › Mi inmobiliaria e invitaciones.';
+ if(/KH_AGENCY_INVITATION_OPEN/.test(message))return 'Esta cuenta ya tiene una invitación pendiente de tu inmobiliaria. Pídele que la acepte en Mi espacio › Invitaciones de inmobiliarias.';
  if(/KH_AGENCY_ALREADY_MEMBER/.test(message))return 'Esta cuenta ya forma parte del equipo.';
  if(/KH_AGENCY_RECIPIENT_INVALID/.test(message))return 'Esta cuenta no puede recibir invitaciones: debe tener el correo confirmado y estar activa.';
  // supabase-js reports a dropped or slow connection as "<name>: <message>"; the write may still have reached the server.
