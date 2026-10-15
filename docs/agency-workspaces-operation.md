@@ -97,3 +97,12 @@ Atribuir un nuevo origen asistido exige ON incluso para el propietario protegido
 Si un smoke pausa worker en otra conexión, hacer la limpieza exacta del fixture manteniendo esa pausa, **liberar worker antes de llamar configure --disable desde otra conexión**. Mantenerlo mientras se espera configure bloquearía al propio operador. Una rutina en la misma sesión tendría que tomar el mismo orden y mantener toda la transacción; los CLI aquí abren su propia sesión.
 
 Ante incidencia: desactivar explícitamente, comprobar OFF y cancelación, conservar la evidencia sanitizada y los recibos, corregir y repetir gates. La desactivación es reversión operativa: no borra migraciones ni deshace ventas. La restauración de respaldo es una recuperación extraordinaria del entorno completo, coordinada con datos/Storage/Auth posteriores al respaldo, nunca una forma rutinaria de reabrir negocios vendidos.
+
+## Ventas de la cuenta propietaria en la inmobiliaria principal
+
+El 15 de octubre de 2026, por decisión del usuario, las 46 ventas activas y aprobadas de la cuenta propietaria quedaron bajo mandato de la inmobiliaria principal («Cartera autorizada») con `node scripts/mandate-owner-sales.mjs --commit`, tras un ensayo deshecho. El script actúa como la cuenta propietaria dentro de una transacción y usa las mismas RPC que la app (`kh_request_agency_mandate` como administradora de la principal y `kh_decide_agency_mandate` como dueña). Repetirlo solo añade las ventas nuevas que falten.
+
+- Los anuncios siguen siendo personales: los edita la cuenta propietaria, siguen en su perfil público y los cubre su Pro personal. No hay origen de inmobiliaria, así que se puede deshacer anuncio a anuncio con `kh_withdraw_agency_mandate`.
+- Los 16 alquileres no entran: el módulo de inmobiliarias solo admite ventas.
+- Los gestores ven las ventas en Cartera y las comparten con su enlace; cada interesado que llega por ese enlace queda asignado a quien lo compartió. Coordinación y administración reasignan casos en Seguimientos. No existe una asignación de vivienda a gestor; la asignación es por caso.
+
