@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { createThemedStyles } from '../theme';
+import { useAppUpdate } from '../updates/useAppUpdate';
 import { UserAvatar } from './account/UserAvatar';
 import { MotionPressable } from './MotionPressable';
 import { Icon, type IconName } from './ui';
@@ -28,15 +29,17 @@ export function SideRail() {
   const path = usePathname();
   const { user, displayName, avatarUrl } = useAuth();
   const unread = { notices: useNotifications().unreadCount, messages: useMessaging().unreadCount };
+  const updateDot = useAppUpdate().pending;
   const current = (href: string) => href === '/' ? path === '/' : path === href || path.startsWith(`${href}/`);
   // Each section starts from the tabs, so moving around the rail never piles up screens.
   const go = (href: Href) => { if (router.canDismiss()) router.dismissAll(); router.navigate(href); };
-  const item = (href: Href, title: string, badge: number, icon: (focused: boolean) => ReactNode) => {
+  // `dot` marks a new version of the app, which waits in Mi espacio.
+  const item = (href: Href, title: string, badge: number, icon: (focused: boolean) => ReactNode, dot = false) => {
     const focused = current(href as string);
     return <MotionPressable key={title} accessibilityRole="tab" aria-selected={focused}
-      accessibilityLabel={badge ? `${title}, ${badge} sin leer` : title} onPress={() => go(href)}
+      accessibilityLabel={badge ? `${title}, ${badge} sin leer` : dot ? `${title}, nueva versión disponible` : title} onPress={() => go(href)}
       style={({ pressed }) => [styles.item, focused && styles.focused, pressed && { opacity: .7 }]}>
-      <View>{icon(focused)}{badge > 0 && <View pointerEvents="none" style={styles.badge}><Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text></View>}</View>
+      <View>{icon(focused)}{badge > 0 ? <View pointerEvents="none" style={styles.badge}><Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text></View> : dot && <View pointerEvents="none" style={styles.dot} />}</View>
       <Text numberOfLines={1} style={[styles.label, focused && { color: colors.primary }]}>{title}</Text>
     </MotionPressable>;
   };
@@ -46,7 +49,7 @@ export function SideRail() {
     <View style={styles.divider} />
     {item('/profile', 'Mi espacio', 0, focused => user
       ? <View style={[styles.ring, focused && { borderColor: colors.primary }]}><UserAvatar size={36} avatarUrl={avatarUrl} name={displayName} accessibilityLabel="" /></View>
-      : <Icon name={focused ? 'person-circle' : 'person-circle-outline'} size={28} color={focused ? colors.primary : colors.muted} />)}
+      : <Icon name={focused ? 'person-circle' : 'person-circle-outline'} size={28} color={focused ? colors.primary : colors.muted} />, updateDot)}
   </View>;
 }
 
@@ -57,6 +60,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   label: { fontSize: 12, fontWeight: '500', color: colors.muted },
   badge: { position: 'absolute', right: -10, top: -6, minWidth: 19, height: 19, paddingHorizontal: 5, borderRadius: 10, backgroundColor: colors.primaryFill, justifyContent: 'center', alignItems: 'center' },
   badgeText: { color: colors.onPrimary, fontSize: 11, fontWeight: '700' },
+  dot: { position: 'absolute', right: -2, top: -2, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primaryFill, borderWidth: 2, borderColor: colors.surface },
   spacer: { flex: 1 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginHorizontal: 10, marginBottom: 8 },
   ring: { borderRadius: 22, borderWidth: 2, borderColor: 'transparent' },

@@ -22,6 +22,9 @@ import { loadAgencyOverview, type AgencyOverview } from '../agencies/screenReque
 import { agencyStateLabel } from '../agencies/registration';
 import { agencyRoleLabel } from './AgencyWorkspaceScreen';
 import { useIncomingTransferCount } from '../transfers/useIncomingTransferCount';
+import { UpdateSheet } from '../components/UpdateSheet';
+import { formatSize } from '../updates/release';
+import { useAppUpdate } from '../updates/useAppUpdate';
 
 export default function ProfileScreen() {
   const { colors, styles } = useStyles();
@@ -37,6 +40,8 @@ export default function ProfileScreen() {
   const transfers = useIncomingTransferCount();
   const agencies = useAgencyWorkspace();
   const pro = usePro();
+  const update = useAppUpdate();
+  const [updateSheet, setUpdateSheet] = useState(false);
   const [overview, setOverview] = useState<{ userId: string; value: AgencyOverview } | null>(null);
   const agencyIds = agencies.agencies.map(agency => agency.id).join(',');
   const { repository: agencyRepository, ready: agenciesReady, enabled: agenciesEnabled, captureAccountContext, getCurrentWorkspace } = agencies;
@@ -99,6 +104,12 @@ export default function ProfileScreen() {
         </View>
         {user && <Icon name="chevron-forward" size={16} color={colors.muted} />}
       </Pressable>}
+
+      {/* Android only: a newer APK on karmahouse.site, for guests too. Nothing downloads until the sheet asks. */}
+      {update.release && <View style={[styles.group, styles.updateGroup]}>
+        <AccountRow icon="cloud-download-outline" title={`Nueva versión ${update.release.version}`} dot={update.pending} onPress={() => setUpdateSheet(true)}
+          description={update.phase === 'downloading' ? `Descargando… ${update.percent} %` : update.downloaded ? 'Lista para instalar' : `${formatSize(update.release.size)} · Mira qué cambia`} />
+      </View>}
 
       {/* A device preference stays reachable before any private activity, including for guests. */}
       <View style={styles.group}>
@@ -176,11 +187,12 @@ export default function ProfileScreen() {
       </View>
       {error || authError ? <Notice error onRetry={user ? () => void reload.refresh() : undefined}>{error || authError}</Notice> : null}
     </ScrollView>
+    <UpdateSheet visible={updateSheet} onClose={() => setUpdateSheet(false)} />
   </SafeAreaView>;
 }
 
-function AccountRow({ icon, title, description, extraLabel, count, unread = false, danger = false, disabled = false, loading = false, children, onPress }: {
-  icon: IconName; title: string; description?: string; extraLabel?: string; count?: number | null; unread?: boolean; danger?: boolean;
+function AccountRow({ icon, title, description, extraLabel, count, unread = false, dot = false, danger = false, disabled = false, loading = false, children, onPress }: {
+  icon: IconName; title: string; description?: string; extraLabel?: string; count?: number | null; unread?: boolean; dot?: boolean; danger?: boolean;
   disabled?: boolean; loading?: boolean; children?: ReactNode; onPress(): void;
 }) {
   const { colors, styles } = useStyles();
@@ -191,6 +203,7 @@ function AccountRow({ icon, title, description, extraLabel, count, unread = fals
     {loading ? <ActivityIndicator size="small" color={danger ? colors.danger : colors.primary} /> : <Icon name={icon} color={danger ? colors.danger : colors.primary} size={21} />}
     <View style={styles.rowCopy}><Text style={[styles.rowTitle, danger && { color: colors.danger }]}>{title}</Text>{children}{description && <Text style={styles.rowDescription}>{description}</Text>}</View>
     {hasCount && <Text style={[styles.count, unread && styles.unread]}>{unread && count! > 99 ? '99+' : count}</Text>}
+    {dot && <View style={styles.dot} />}
     {!danger && <Icon name="chevron-forward" size={16} color={colors.muted} />}
   </Pressable>;
 }
@@ -209,6 +222,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   rowTitle: { fontSize: 15, lineHeight: 21, fontWeight: '500', color: colors.ink }, rowDescription: { color: colors.muted, fontSize: 12, lineHeight: 18 },
   count: { color: colors.muted, fontSize: 13, lineHeight: 18, fontVariant: ['tabular-nums'], minWidth: 22, textAlign: 'center', paddingHorizontal: 5, paddingVertical: 3 },
   unread: { color: colors.primary, backgroundColor: colors.softBlue, borderRadius: 12, fontWeight: '600' },
+  dot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.primaryFill }, updateGroup: { marginBottom: 12 },
   loading: { flexDirection: 'row', gap: 10, alignItems: 'center', paddingVertical: 24 },
   guest: { gap: 14, paddingVertical: 32 }, guestTitle: { fontSize: 23, lineHeight: 29, fontWeight: '600', letterSpacing: -.4, color: colors.ink },
   guestText: { fontSize: 16, lineHeight: 25, color: colors.muted, maxWidth: 350 }, guestAction: { alignSelf: 'flex-start' },

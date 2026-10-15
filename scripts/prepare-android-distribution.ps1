@@ -1,4 +1,4 @@
-param(
+﻿param(
   [Parameter(Mandatory = $true)]
   [string]$ApkPath,
   [string]$SdkPath = '',
@@ -11,6 +11,11 @@ $ErrorActionPreference = 'Stop'
 $projectPath = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $expoConfig = (Get-Content -LiteralPath (Join-Path $projectPath 'app.json') -Raw | ConvertFrom-Json).expo
 if ($expoConfig.version -notmatch '^\d+\.\d+\.\d+$') { throw 'La versión de distribución debe tener el formato x.y.z.' }
+# One line per change, for the people who update: the release notes and the app's update sheet show them.
+$notesPath = Join-Path $projectPath "docs\release-notes\$($expoConfig.version).txt"
+if (!(Test-Path -LiteralPath $notesPath)) { throw "Faltan las notas de la versión: $notesPath (una línea por cambio)." }
+$notes = @(Get-Content -LiteralPath $notesPath -Encoding UTF8 | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+if (!$notes.Count) { throw "Las notas de la versión están vacías: $notesPath." }
 if (!$SdkPath) {
   $localSdk = Join-Path $projectPath 'artifacts\android-sdk'
   $SdkPath = if (Test-Path -LiteralPath $localSdk) { $localSdk } else { "$env:LOCALAPPDATA\Android\Sdk" }
@@ -44,6 +49,23 @@ if ((Get-FileHash -LiteralPath $publicApk -Algorithm SHA256).Hash.ToLowerInvaria
 "$hashAfter  KarmaHouse.apk" | Set-Content -LiteralPath (Join-Path $output 'KarmaHouse.apk.sha256') -Encoding ascii
 Copy-Item -LiteralPath (Join-Path $projectPath 'docs\android-installation.txt') -Destination (Join-Path $output 'INSTALACION.txt')
 $verification | Set-Content -LiteralPath (Join-Path $output 'VERIFICACION-local.txt') -Encoding utf8
+# The app reads this from https://www.karmahouse.site/android/latest.json and accepts only this URL and hash.
+$manifest = [ordered]@{
+  version = $expoConfig.version
+  versionCode = [int]$expoConfig.android.versionCode
+  date = (Get-Date).ToString('yyyy-MM-dd')
+  size = (Get-Item -LiteralPath $publicApk).Length
+  sha256 = $hashAfter
+  url = "https://github.com/ArtStyles/karma-house/releases/download/v$($expoConfig.version)/KarmaHouse.apk"
+  notes = $notes
+} | ConvertTo-Json
+# UTF-8 without a BOM: JSON.parse rejects one.
+$utf8 = New-Object System.Text.UTF8Encoding $false
+foreach ($path in @((Join-Path $output 'latest.json'), (Join-Path $projectPath 'web\public\android\latest.json'))) {
+  # .NET needs the provider path: PowerShell accepts backslashes on every platform, .NET only on Windows.
+  [System.IO.File]::WriteAllText($ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path), $manifest + [Environment]::NewLine, $utf8)
+}
+$changes = ($notes | ForEach-Object { "- $_" }) -join [Environment]::NewLine
 @"
 KarmaHouse $($expoConfig.version) para Android
 
@@ -53,17 +75,17 @@ VersionCode: $($expoConfig.android.versionCode)
 SHA-256 de KarmaHouse.apk: $hashAfter
 SHA-256 del certificado: $releaseCertificate
 
-«Mi espacio» muestra ahora tu foto de perfil, o tus iniciales, cuando inicias sesión.
-En modo oscuro, el logo de KarmaHouse se ve en blanco.
-Sigue incluyendo KarmaHouse Pro: canje del código Pro, sello Pro en anuncios y perfil,
-y «Subir anuncio» una vez por semana. Publicar, buscar y conversar siguen siendo gratis.
-El APK conserva el certificado de las versiones anteriores.
+Novedades:
+$changes
+
+Para actualizar, instala sobre la versión anterior: el APK conserva el certificado de las versiones anteriores.
 Android puede solicitar autorización para instalar desde el navegador y un
 análisis de Play Protect. Mantén Play Protect activado. Esta entrega no implica
 una aprobación de Google ni garantiza la ausencia de avisos.
 
 Archivos públicos: KarmaHouse.apk, KarmaHouse.apk.sha256, INSTALACION.txt.
 VERIFICACION-local.txt es evidencia local; no hace falta publicarlo.
+latest.json ya está copiado en web/public/android/: despliega la web solo después de publicar la release.
 "@ | Set-Content -LiteralPath (Join-Path $output 'NOTAS-RELEASE.txt') -Encoding utf8
 $verification | ForEach-Object { Write-Output $_ }
 Write-Output "Entrega preparada: $output"

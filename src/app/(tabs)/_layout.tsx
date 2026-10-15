@@ -7,6 +7,7 @@ import { Icon, type IconName } from '../../components/ui';
 import { layout, useTheme } from '../../theme';
 import { useMessaging } from '../../messaging/MessagingProvider';
 import { useNotifications } from '../../notifications/NotificationsProvider';
+import { useAppUpdate } from '../../updates/useAppUpdate';
 
 export default function TabLayout() {
   const { colors } = useTheme();
@@ -16,6 +17,9 @@ export default function TabLayout() {
   const { unreadCount: noticeUnread } = useNotifications();
   // Mi espacio is the only tab that carries both inboxes, so its badge counts both.
   const unreadCount = messageUnread + noticeUnread;
+  // Without unread items, a plain dot says a new version waits in Mi espacio.
+  const updatePending = useAppUpdate().pending;
+  const updateDot = !unreadCount && updatePending;
   const { user, displayName, avatarUrl } = useAuth();
   const tabIcon = (name: IconName, active: IconName) =>
     ({ color, focused }: { color: ColorValue; focused: boolean }) => <Icon name={focused ? active : name} color={color} size={24} />;
@@ -46,7 +50,8 @@ export default function TabLayout() {
       <Tabs.Screen name="index" options={{ title: 'Explorar', tabBarIcon: tabIcon('compass-outline', 'compass') }} />
       <Tabs.Screen name="favorites" options={{ title: 'Favoritos', tabBarIcon: tabIcon('heart-outline', 'heart') }} />
       <Tabs.Screen name="publish" options={{ title: 'Publicar', tabBarIcon: tabIcon('add-circle-outline', 'add-circle') }} />
-      <Tabs.Screen name="profile" options={{ title: 'Mi espacio', tabBarIcon: accountIcon, tabBarBadge: unreadCount ? (unreadCount > 99 ? '99+' : unreadCount) : undefined, tabBarBadgeStyle: { backgroundColor: colors.primaryFill, color: colors.onPrimary, fontSize: 11 } }} />
+      <Tabs.Screen name="profile" options={{ title: 'Mi espacio', tabBarIcon: accountIcon, tabBarBadge: unreadCount ? (unreadCount > 99 ? '99+' : unreadCount) : updateDot ? '' : undefined, tabBarAccessibilityLabel: updateDot ? 'Mi espacio, nueva versión disponible' : undefined,
+        tabBarBadgeStyle: updateDot ? { backgroundColor: colors.primaryFill, minWidth: 10, width: 10, height: 10, borderRadius: 5, paddingHorizontal: 0, top: 0, end: 0 } : { backgroundColor: colors.primaryFill, color: colors.onPrimary, fontSize: 11 } }} />
     </Tabs>
   );
 }

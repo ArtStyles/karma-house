@@ -1,0 +1,15 @@
+{
+    "version":  "0.1.28",
+    "versionCode":  29,
+    "date":  "2026-10-15",
+    "size":  85268595,
+    "sha256":  "9e31f311a8c1ba54d65572065d31dcc7ae26c320b91daaae84bd621d89d1456a",
+    "url":  "https://github.com/ArtStyles/karma-house/releases/download/v0.1.28/KarmaHouse.apk",
+    "notes":  [
+                  "Mi espacio: tu foto o tus iniciales, tus inmobiliarias con tu rol, las invitaciones pendientes y «Mi código de cuenta» para que una inmobiliaria te invite a su equipo.",
+                  "Equipos de inmobiliaria: invitar con el código o el enlace, ver y cancelar invitaciones enviadas, aceptar y entrar directo a la inmobiliaria y salir de un equipo cuando quieras.",
+                  "Cartera de la inmobiliaria con buscador, filtros y tarjetas nuevas; «Compartir» lleva a quien abre el enlace a escribirte a ti dentro de la inmobiliaria.",
+                  "Tu Pro solo lo ves tú: los anuncios y el perfil ya no muestran ninguna etiqueta. «Subir anuncio» sigue igual.",
+                  "«Reenviar correo» al crear la cuenta, mensajes de error más claros y un botón «Reintentar» cuando algo no carga."
+              ]
+}

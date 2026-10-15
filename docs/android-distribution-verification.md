@@ -320,10 +320,29 @@ la entrega 0.1.15 ya preparada.
   -ApkPath artifacts/releases/KarmaHouse-0.1.15.apk
 ```
 
+Antes de ejecutarlo, escribe `docs/release-notes/<versión>.txt`: una línea por cambio, en UTF-8, para
+quien actualiza. El script se detiene si falta. Esas líneas van a `NOTAS-RELEASE.txt` y a `latest.json`.
+
 El script genera el APK con nombre público estable, SHA-256, instrucciones,
-notas de entrega y el registro de comprobación local. El registro local no es
+notas de entrega, `latest.json` y el registro de comprobación local. El registro local no es
 necesario como archivo público. Se mantiene el verificador de previews separado
 para poder comprobar builds de desarrollo sin tratarlas como entregas públicas.
+
+### Aviso de actualización en la app
+
+Desde la 0.1.29, la app de Android lee `https://www.karmahouse.site/android/latest.json` como mucho una vez
+al día. El manifiesto indica versión, versionCode, fecha, tamaño, SHA-256, URL y notas. Si el versionCode es
+mayor que el instalado, Mi espacio muestra la versión nueva. El APK solo se descarga cuando la persona lo
+pide. La app solo acepta `…/releases/download/v<versión>/KarmaHouse.apk` de este repositorio y comprueba el
+SHA-256 antes de abrir el instalador de Android.
+
+El script deja el manifiesto en `web/public/android/latest.json`. Ese archivo publica la versión en cuanto
+se despliega la web, así que el orden es:
+
+1. Publicar la release estable con los tres archivos y comprobar la descarga anónima y su hash.
+2. En el mismo commit, añadir `web/public/android/latest.json` y cambiar `VERSION` en `web/src/content.ts`.
+   `tests/app-update.test.ts` falla si las dos versiones no coinciden.
+3. Desplegar la web.
 
 La carpeta temporal `artifacts/distribution-audit/clean-install` permanece en el
 disco: la revisión automática bloqueó su eliminación por política. Los logs y
