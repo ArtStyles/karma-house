@@ -52,6 +52,56 @@
         "--strictPort"
       ],
       "port": 8094
+    },
+    {
+      "name": "videos",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8097",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "artifacts/videos"
+      ],
+      "port": 8097
+    },
+    {
+      "name": "walk-proposals",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8098",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "C:/Users/ACERNI~1/AppData/Local/Temp/claude/D--work-karma-house/07ba9ee2-3886-4145-a177-d257b3a61579/scratchpad/proposals"
+      ],
+      "port": 8098
+    },
+    {
+      "name": "walk-slow-before",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-P",
+        "C:/Users/ACERNI~1/AppData/Local/Temp/claude/D--work-karma-house/07ba9ee2-3886-4145-a177-d257b3a61579/scratchpad/slow_server.py",
+        "C:/Users/ACERNI~1/AppData/Local/Temp/claude/D--work-karma-house/07ba9ee2-3886-4145-a177-d257b3a61579/scratchpad/dist-before",
+        "8095"
+      ],
+      "port": 8095
+    },
+    {
+      "name": "walk-slow-after",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-P",
+        "C:/Users/ACERNI~1/AppData/Local/Temp/claude/D--work-karma-house/07ba9ee2-3886-4145-a177-d257b3a61579/scratchpad/slow_server.py",
+        "C:/Users/ACERNI~1/AppData/Local/Temp/claude/D--work-karma-house/07ba9ee2-3886-4145-a177-d257b3a61579/scratchpad/kh-wr/web/dist",
+        "8096"
+      ],
+      "port": 8096
     }
   ],
   "autoVerify": true
