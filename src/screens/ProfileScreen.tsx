@@ -146,7 +146,7 @@ export default function ProfileScreen() {
           <AccountRow icon="heart-outline" title="Favoritos" count={favoriteIds.length} onPress={() => router.push('/favorites')} />
           {mode === 'cloud' && <>
             <AccountRow icon="bookmark-outline" title="Mis alertas" count={savedSearches.items.length} onPress={() => router.push('/saved-searches')} />
-            {user && own.some(item => item.status === 'active' && item.moderationStatus === 'approved') && <AccountRow icon="person-circle-outline" title="Ver mi perfil público" onPress={() => router.push(`/user/${user.id}`)} />}
+            {user && <AccountRow icon="person-circle-outline" title="Ver mi perfil público" onPress={() => router.push(`/user/${user.id}`)} />}
           </>}
           {/* Always reachable from Mis anuncios; here only when something waits. */}
           {user && !isOwner && (transfers.count ?? 0) > 0 && <AccountRow icon="swap-horizontal-outline" title="Anuncios por aceptar" count={transfers.count} onPress={() => router.push('/listing-transfers')} />}
