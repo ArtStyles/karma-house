@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AppState, Platform } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { authErrorMessage, validateEmail, validateNewPassword } from './errors';
+import { keepVerifierOnFailure, type VerifierStore } from './pkce';
 import { authCallbackUrl } from './links';
 import { randomUUID } from 'expo-crypto';
 import { createDeadlineFetch } from '../lib/fetchTimeout';
@@ -246,10 +247,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const resendConfirmation = useCallback(async (email: string) => {
     const normalizedEmail = validateEmail(email);
-    setError(null);
-    const result = await client().auth.resend({ type: 'signup', email: normalizedEmail, options: { emailRedirectTo: authCallbackUrl() } }).catch(fail);
-    if (result.error) fail(result.error);
-  }, [fail]);
+    // A failed resend must not break the first email on this device; the error stays on the sign-up card.
+    const auth = client().auth;
+    const result = await keepVerifierOnFailure(auth as unknown as VerifierStore, () => auth.resend({ type: 'signup', email: normalizedEmail, options: { emailRedirectTo: authCallbackUrl() } }))
+      .catch((cause: unknown) => { throw new Error(authErrorMessage(cause)); });
+    if (result.error) throw new Error(authErrorMessage(result.error));
+  }, []);
 
   const requestPasswordReset = useCallback(async (email: string) => {
     const normalizedEmail = validateEmail(email);

@@ -42,8 +42,10 @@ export default function AuthScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [notice, setNotice] = useState<'confirmation' | 'reset' | 'updated' | null>(null);
-  const [resend, setResend] = useState<{ busy: boolean; message: string | null }>({ busy: false, message: null });
-  useEffect(() => setResend({ busy: false, message: null }), [notice]);
+  // Supabase sends one email per address and minute; asking earlier only fails.
+  const [resend, setResend] = useState<{ busy: boolean; message: string | null; waiting: boolean }>({ busy: false, message: null, waiting: true });
+  useEffect(() => setResend({ busy: false, message: null, waiting: true }), [notice]);
+  useEffect(() => { if (!resend.waiting) return; const timer = setTimeout(() => setResend(value => ({ ...value, waiting: false })), 60_000); return () => clearTimeout(timer); }, [resend.waiting]);
   const returnTo = safeReturnTo(params.returnTo) as Href;
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -143,9 +145,9 @@ export default function AuthScreen() {
                 : 'Ya puedes continuar en tu espacio con tu nueva contraseña.'}</Text>
             {notice === 'confirmation' && <>
               {resend.message ? <Text accessibilityLiveRegion="polite" style={styles.cardCopy}>{resend.message}</Text> : null}
-              <Button secondary label="Reenviar correo" loading={resend.busy} onPress={() => {
-                setResend({ busy: true, message: null });
-                auth.resendConfirmation(email).then(() => setResend({ busy: false, message: 'Si la cuenta espera confirmación, te enviamos otro enlace.' }), (cause: unknown) => setResend({ busy: false, message: cause instanceof Error ? cause.message : 'No pudimos reenviar el correo.' }));
+              <Button secondary label={resend.waiting ? 'Reenviar correo en un minuto' : 'Reenviar correo'} loading={resend.busy} disabled={resend.waiting} onPress={() => {
+                setResend({ busy: true, message: null, waiting: false });
+                auth.resendConfirmation(email).then(() => setResend({ busy: false, message: 'Si la cuenta espera confirmación, te enviamos otro enlace. Usa el más reciente.', waiting: true }), (cause: unknown) => setResend({ busy: false, message: cause instanceof Error ? cause.message : 'No pudimos reenviar el correo.', waiting: true }));
               }} />
             </>}
             <Button label={notice === 'updated' ? 'Continuar' : 'Volver a entrar'} onPress={() => notice === 'updated' ? router.replace(returnTo) : changeMode('signin')} />
