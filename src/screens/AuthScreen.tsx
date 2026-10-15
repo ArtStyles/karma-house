@@ -42,6 +42,8 @@ export default function AuthScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
   const [notice, setNotice] = useState<'confirmation' | 'reset' | 'updated' | null>(null);
+  const [resend, setResend] = useState<{ busy: boolean; message: string | null }>({ busy: false, message: null });
+  useEffect(() => setResend({ busy: false, message: null }), [notice]);
   const returnTo = safeReturnTo(params.returnTo) as Href;
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
@@ -139,6 +141,13 @@ export default function AuthScreen() {
               ? registrationIntent==='agency'?'Si el registro puede completarse con esta dirección, encontrarás un enlace para confirmar tu cuenta. Revisa también spam. La solicitud de inmobiliaria estará disponible al confirmar, incluso en otro dispositivo.':'Si el registro puede completarse con esta dirección, encontrarás un enlace para confirmar tu cuenta. Revisa también spam y ábrelo en este dispositivo.'
               : notice === 'reset' ? 'Si existe una cuenta con ese correo, busca el enlace de recuperación. Revisa también spam y ábrelo en este dispositivo.'
                 : 'Ya puedes continuar en tu espacio con tu nueva contraseña.'}</Text>
+            {notice === 'confirmation' && <>
+              {resend.message ? <Text accessibilityLiveRegion="polite" style={styles.cardCopy}>{resend.message}</Text> : null}
+              <Button secondary label="Reenviar correo" loading={resend.busy} onPress={() => {
+                setResend({ busy: true, message: null });
+                auth.resendConfirmation(email).then(() => setResend({ busy: false, message: 'Si la cuenta espera confirmación, te enviamos otro enlace.' }), (cause: unknown) => setResend({ busy: false, message: cause instanceof Error ? cause.message : 'No pudimos reenviar el correo.' }));
+              }} />
+            </>}
             <Button label={notice === 'updated' ? 'Continuar' : 'Volver a entrar'} onPress={() => notice === 'updated' ? router.replace(returnTo) : changeMode('signin')} />
           </View> : !hasRecoverySession ? <View style={styles.form}>
             <Notice error>Abre el enlace de recuperación que solicitaste para elegir tu nueva contraseña.</Notice>

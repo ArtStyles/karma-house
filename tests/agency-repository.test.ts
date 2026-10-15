@@ -32,3 +32,12 @@ test('PostgREST error objects preserve the actionable agency rule without exposi
 });
 
 test('invitation response must match the role selected by administrator',async()=>{const response={id:'45000000-0000-4000-8002-000000000001',agencyId:agency,recipientId:actor,role:'admin',state:'pending',version:1,expiresAt:'2026-10-15T12:00:00Z'};await assert.rejects(repository(response).inviteMember({userId:actor,role:'manager',clientRequestId:'45000000-0000-4000-8002-000000000002'},context),/interpretar/);});
+test('leaving and withdrawing only succeed when the server reports the finished state',async()=>{
+ const request='45000000-0000-4000-8002-000000000009',invitationId='45000000-0000-4000-8002-000000000001';
+ let body:unknown=null;const left=await repository({agencyId:agency,userId:actor,role:'manager',state:'removed',version:2},(url,init)=>{assert.match(url,/kh_leave_agency$/);body=JSON.parse(String(init.body));}).leaveAgency({expectedVersion:1,clientRequestId:request},context);
+ assert.equal(left.state,'removed');assert.deepEqual(body,{p_agency_id:agency,p_payload:{expectedVersion:1,clientRequestId:request},p_actor_id:actor});
+ await assert.rejects(repository({agencyId:agency,userId:actor,role:'manager',state:'active',version:1}).leaveAgency({expectedVersion:1,clientRequestId:request},context),/interpretar/);
+ const invitation={id:invitationId,agencyId:agency,recipientId:'45000000-0000-4000-8000-000000000003',role:'manager',state:'cancelled',version:2,expiresAt:'2026-10-22T12:00:00Z'};
+ assert.equal((await repository(invitation).cancelInvitation({invitationId,expectedVersion:1,clientRequestId:request},context)).state,'cancelled');
+ await assert.rejects(repository({...invitation,state:'accepted'}).cancelInvitation({invitationId,expectedVersion:1,clientRequestId:request},context),/interpretar/);
+});

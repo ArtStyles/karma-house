@@ -35,6 +35,7 @@ export type AuthContextValue = {
   signOut(): Promise<void>;
   deleteAccount(): Promise<void>;
   requestPasswordReset(email: string): Promise<void>;
+  resendConfirmation(email: string): Promise<void>;
   updatePassword(password: string): Promise<void>;
   refreshProfile(): Promise<void>;
   saveProfile(input: AccountProfileInput): Promise<void>;
@@ -243,6 +244,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!sessionRef.current || sessionRef.current.user.id === actorId) acceptSession(null);
   }, [acceptSession]);
 
+  const resendConfirmation = useCallback(async (email: string) => {
+    const normalizedEmail = validateEmail(email);
+    setError(null);
+    const result = await client().auth.resend({ type: 'signup', email: normalizedEmail, options: { emailRedirectTo: authCallbackUrl() } }).catch(fail);
+    if (result.error) fail(result.error);
+  }, [fail]);
+
   const requestPasswordReset = useCallback(async (email: string) => {
     const normalizedEmail = validateEmail(email);
     setError(null);
@@ -262,7 +270,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const matchingProfile = profile?.ownerId === user?.id ? profile : null;
   const metadataName = typeof user?.user_metadata?.display_name === 'string' ? user.user_metadata.display_name : '';
   const displayName = (matchingProfile?.displayName || metadataName || 'Mi cuenta').slice(0, 80);
-  const value = useMemo<AuthContextValue>(() => ({ ready, user, session, displayName, avatarUrl: matchingProfile?.avatarUrl ?? null, hasAvatar: !!matchingProfile?.avatarPath, profileReady: !!matchingProfile, isAdmin: matchingProfile?.isAdmin ?? false, isOwner: matchingProfile?.access.role === 'owner', suspended: matchingProfile?.access.suspended ?? false, suspensionReason: matchingProfile?.access.reason ?? null, error, signIn, signUp, signOut, deleteAccount: removeAccount, requestPasswordReset, updatePassword, refreshProfile, saveProfile }), [ready, user, session, displayName, matchingProfile, error, signIn, signUp, signOut, removeAccount, requestPasswordReset, updatePassword, refreshProfile, saveProfile]);
+  const value = useMemo<AuthContextValue>(() => ({ ready, user, session, displayName, avatarUrl: matchingProfile?.avatarUrl ?? null, hasAvatar: !!matchingProfile?.avatarPath, profileReady: !!matchingProfile, isAdmin: matchingProfile?.isAdmin ?? false, isOwner: matchingProfile?.access.role === 'owner', suspended: matchingProfile?.access.suspended ?? false, suspensionReason: matchingProfile?.access.reason ?? null, error, signIn, signUp, signOut, deleteAccount: removeAccount, requestPasswordReset, resendConfirmation, updatePassword, refreshProfile, saveProfile }), [ready, user, session, displayName, matchingProfile, error, signIn, signUp, signOut, removeAccount, requestPasswordReset, resendConfirmation, updatePassword, refreshProfile, saveProfile]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

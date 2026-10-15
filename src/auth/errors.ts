@@ -8,6 +8,8 @@ export function authErrorMessage(error: unknown): string {
     case 'user_already_exists': case 'email_exists': return 'Ya existe una cuenta con ese correo. Prueba a iniciar sesión.';
     case 'weak_password': return 'Elige una contraseña más segura, de al menos 8 caracteres.';
     case 'same_password': return 'Elige una contraseña distinta de la anterior.';
+    // PKCE keeps the verifier where the link was requested; the email itself was confirmed before this exchange.
+    case 'pkce_code_verifier_not_found': return 'Abriste el enlace en otro dispositivo o navegador. Si era para confirmar tu correo, ya quedó confirmado: entra con tu correo y contraseña.';
     case 'otp_expired': case 'flow_state_expired': case 'flow_state_not_found': case 'bad_code_verifier': return 'El enlace ha caducado o pertenece a otro dispositivo. Solicita uno nuevo y ábrelo aquí.';
     case 'over_email_send_rate_limit': case 'over_request_rate_limit': return 'Se han realizado demasiados intentos. Espera unos minutos antes de volver a probar.';
     case 'email_address_invalid': case 'validation_failed': return 'Revisa el correo y los datos que has introducido.';

@@ -33,6 +33,16 @@ Fecha: 14 de octubre de 2026 (15 de octubre, UTC).
 - Textos: «inmobiliaria» en toda la app (antes se mezclaba con «agencia»), «espacio» solo para Mi espacio, sin «verificada del sistema».
 - `npm test`: 829 tests, 823 pasan, 4 omitidos y los mismos 2 fallos por `pwsh`. `expo export --platform web` compila.
 
+## Segunda auditoría (`f194c72` y siguiente)
+
+- Lógica: el inicio de sesión respeta el destino salvo que la solicitud de inmobiliaria necesite atención; avisos de sesión de inmobiliaria con palabras; cuenta suspendida a Mi espacio; los avisos de inicio de sesión en páginas de inmobiliaria, Pro, alertas y traspasos vuelven a ellas; borrar la cuenta trata una respuesta perdida como posible inicio; Mi espacio muestra el motivo real, conserva el último valor bueno y solo escribe la carga más reciente; recibos antiguos de invitación, propietario de la principal y bucles sin inmobiliaria corregidos.
+- Diseño: `Notice` con «Reintentar» en lugar de «Desliza hacia abajo» (no existe en la web); botones y chips en píldora; tarjetas, modales e interruptores con los tokens comunes; un nombre por destino.
+- Salir de una inmobiliaria y cancelar invitaciones: migración `20261015000100_agency_member_exits` con `kh_leave_agency` (mismos controles que retirar a un miembro: último administrador, propietario de la principal, recibo antes de la comprobación de miembro para que un reintento funcione) y `kh_cancel_agency_invitation` (solo administradores, con versión; la persona ya no puede aceptarla). Botones «Salir de la inmobiliaria» y «Cancelar invitación».
+- Registro: «Reenviar correo» tras crear la cuenta; un enlace abierto en otro dispositivo explica que el correo ya quedó confirmado.
+- Producción: ensayo superado y aplicación hecha con `node scripts/apply-reviewed-migration.mjs 20261015000100_agency_member_exits --commit`. Ledger `20261015000100`, SHA-256 `57eeb64472537b7b7cb19df76b8fe7202c6f425133982e9a431e7964aa77a620`, igual que el archivo. `anon` sin permiso; `authenticated` sí. Datos reales intactos.
+- Local: `agency_member_exits`, `agency_sent_invitations`, `pro` y `owner_administration` superadas. `npm test`: 832 tests, 826 pasan, 4 omitidos y los 2 fallos de siempre por `pwsh`. `expo export --platform web` compila.
+- No se tocó (funciones privadas fijadas por el verificador de inmobiliarias): una solicitud pendiente cuyo responsable borró la cuenta, y suspender a la última persona administradora sin suspender la inmobiliaria.
+
 ## Pruebas
 
 - Local (PostgreSQL 17, `127.0.0.1:56440`, base nueva con todas las migraciones): `agency_sent_invitations`, `pro` y `owner_administration` superadas.
@@ -40,7 +50,7 @@ Fecha: 14 de octubre de 2026 (15 de octubre, UTC).
 
 ## Producción
 
-- Ensayo `node scripts/apply-agency-sent-invitations.mjs` (migración y suite en una transacción deshecha): superado.
+- Ensayo `node scripts/apply-agency-sent-invitations.mjs` (hoy `node scripts/apply-reviewed-migration.mjs 20261014000200_agency_sent_invitations`) (migración y suite en una transacción deshecha): superado.
 - Aplicación `--commit`: hecha. Ledger `20261014000200 agency_sent_invitations`, SHA-256 `7dcd5aeda99da8f89d0a7842358f0935f8d3b13a20a5b628c56d70684a807f54`, igual que el archivo. Suite superada sobre el esquema aplicado, sin filas sintéticas. `anon` no puede ejecutarla; `authenticated` sí.
 - El verificador de inmobiliarias fija sus funciones por nombre; esta función nueva no cambia su inventario.
 

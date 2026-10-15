@@ -105,6 +105,7 @@ test('auth validation normalizes emails and rejects unsafe or incomplete form in
   const issue = authErrorMessage({ code: 'unknown', message: 'secret-token-in-server-response' });
   assert.ok(!issue.includes('secret-token'));
   assert.match(authErrorMessage({ code: 'email_not_confirmed' }), /confirma/i);
+  assert.match(authErrorMessage({ code: 'pkce_code_verifier_not_found' }), /otro dispositivo.*ya quedó confirmado/);
 });
 
 test('email callback shares a single pending exchange but retries the same link after a connection failure', async () => {
