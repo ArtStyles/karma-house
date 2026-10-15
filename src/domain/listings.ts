@@ -184,6 +184,10 @@ export function filterRangeError(filters: ListingFilters): string | null {
 }
 
 export type ListingBoardState = 'sold' | 'rejected' | 'draft' | 'pending' | 'paused' | 'live';
+export const listingBoardLabels: Record<ListingBoardState, string> = {
+  sold: 'Cerrado', rejected: 'Necesita cambios', draft: 'Borrador',
+  pending: 'En revisión', paused: 'En pausa', live: 'En el catálogo',
+};
 
 /**
  * One answer to «¿está mi vivienda en el catálogo?». Commercial status and moderation each hide

@@ -7,7 +7,8 @@ import { useAuth } from '../auth/AuthProvider';
 import { AccountPrompt } from '../components/AccountPrompt';
 import { PropertyImage } from '../components/PropertyImage';
 import { ActionGroup, Button, EmptyState, Icon, Notice, PageTitle, Pill } from '../components/ui';
-import { listingBoardState, type Listing, type ListingBoardState, type ListingStatus } from '../domain/listings';
+import { listingBoardLabels, listingBoardState, type Listing, type ListingBoardState, type ListingStatus } from '../domain/listings';
+import { ListingStateChip } from '../components/ListingStateChip';
 import { listingOperation, operationBadge, priceSuffix } from '../domain/operations';
 import { useMarketplace } from '../state/MarketplaceProvider';
 import { remoteErrorMessage } from '../state/remoteMarketplaceStore';
@@ -17,22 +18,11 @@ import { bumpErrorMessage, canBumpNow, formatProDate, nextBumpAt } from '../pro/
 import { usePro } from '../pro/usePro';
 import { useAgencyWorkspace } from '../agencies/useAgencyWorkspace';
 
-const boardLabels: Record<ListingBoardState, string> = {
-  sold: 'Cerrado', rejected: 'Necesita cambios', draft: 'Borrador',
-  pending: 'En revisión', paused: 'En pausa', live: 'En el catálogo',
-};
+const boardLabels = listingBoardLabels;
 
 
 export default function MyListingsScreen() {
   const { colors, styles } = useStyles();
-  const boardTones: Record<ListingBoardState, { color: string; background: string }> = {
-    sold: { color: colors.muted, background: colors.paper },
-    rejected: { color: colors.danger, background: colors.softDanger },
-    draft: { color: colors.muted, background: colors.paper },
-    pending: { color: colors.amber, background: colors.softAmber },
-    paused: { color: colors.amber, background: colors.softAmber },
-    live: { color: colors.green, background: colors.softGreen },
-  };
   const { ownListings: own, setStatus, mode, ready, storageError, refresh, submitForReview } = useMarketplace();
   const { user, session, isOwner } = useAuth();
   const transfers=useIncomingTransferCount();
@@ -110,17 +100,13 @@ export default function MyListingsScreen() {
           const state = listingBoardState(item);
           // An agency is its origin: personal edits are refused by the server, so it is managed from the agency screens.
           const managedBy = item.agencyId ? agencies.find(agency => agency.id === item.agencyId)?.tradeName ?? 'tu inmobiliaria' : null;
-          const tone = boardTones[state];
           return <View key={item.id} style={styles.card}>
           <Pressable accessibilityRole="button" accessibilityLabel={`${item.title}. ${boardLabels[state]}. ${formatMoney(item.price)} USD${priceSuffix(item)}. ${item.location}.`} onPress={() => router.push(`/property/${item.id}`)} style={({ pressed }) => [styles.overview, pressed && styles.pressed]}>
             {listingOperation(item) === 'wanted'
               ? <View style={[styles.image, styles.wantedImage]}><Icon name="search-outline" size={28} color={colors.primary} /></View>
               : <PropertyImage listing={item} variant="thumb" style={styles.image} />}
             <View style={styles.details}>
-              <View style={[styles.chip, { backgroundColor: tone.background }]}>
-                <View style={[styles.statusDot, { backgroundColor: tone.color }]} />
-                <Text style={[styles.status, { color: tone.color }]}>{boardLabels[state]}</Text>
-              </View>
+              <ListingStateChip state={state} />
               {!!operationBadge(item) && <Text style={styles.operation}>{operationBadge(item)}</Text>}
               <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
               <Text style={styles.price}>{listingOperation(item) === 'wanted' ? 'Hasta ' : ''}{formatMoney(item.price)} <Text style={styles.currency}>USD{priceSuffix(item)}</Text></Text>
@@ -187,9 +173,6 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   image: { width: 76, height: 98, borderRadius: 12 },
   wantedImage: { backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
   details: { flex: 1, gap: 6 },
-  chip: { alignSelf: 'flex-start', flexDirection: 'row', gap: 6, alignItems: 'center', paddingVertical: 5, paddingHorizontal: 9, borderRadius: 999 },
-  statusDot: { width: 5, height: 5, borderRadius: 3 },
-  status: { fontSize: 12, fontWeight: '600' },
   reviewButton: { marginTop: 16 },
   operation: { color: colors.primary, fontSize: 12, fontWeight: '600' },
   title: { color: colors.ink, fontSize: 17, lineHeight: 22, fontWeight: '600', letterSpacing: -.3 },
