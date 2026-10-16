@@ -20,8 +20,10 @@ const subscribe = (listener: () => void) => { listeners.add(listener); return ()
  * `thumb` prefers the small cover copy lists need; either variant falls back to the other when only one was signed.
  * Under «Ahorro de datos» the photo waits for a tap unless `eager` (the detail's selected photo); `onReveal` runs after that tap.
  */
-export function PropertyImage({ listing, style, photoIndex = 0, variant = 'full', eager = false, onReveal }: {
+export function PropertyImage({ listing, style, photoIndex = 0, variant = 'full', eager = false, fit, onReveal }: {
   listing: Pick<Listing, 'id' | 'photoUri' | 'imageKey' | 'title' | 'owner' | 'photos' | 'coverThumb'>; style?: StyleProp<ViewStyle>; photoIndex?: number; variant?: 'thumb' | 'full'; eager?: boolean; onReveal?: () => void;
+  /** `contain` shows the whole photo on photo-ground (the detail and the gallery); lists crop it. */
+  fit?: 'cover' | 'contain';
 }) {
   const { colors, styles } = useStyles();
   const full = listing.photos?.[photoIndex]?.uri || (photoIndex === 0 ? listing.photoUri : undefined);
@@ -39,7 +41,7 @@ export function PropertyImage({ listing, style, photoIndex = 0, variant = 'full'
       onPress={(event) => { event.stopPropagation(); reveal(key); onReveal?.(); }} style={({ pressed }) => [styles.tap, pressed && { opacity: .7 }]}>
       <Icon name="image-outline" size={28} color={colors.muted} /><Text style={styles.placeholderText}>Tocar para ver la foto</Text>
     </Pressable>
-    : !source ? <View style={styles.placeholder} accessibilityLabel="Sin fotografía disponible"><Icon name="image-outline" size={32} color={colors.muted} /><Text style={styles.placeholderText}>Sin fotografía</Text></View> : <LoadedPropertyPhoto key={`${key}:${listing.owner}`} source={source} label={`${listing.title}${listing.photos && listing.photos.length > 1 ? `, foto ${photoIndex + 1}` : ''}`} />}</View>;
+    : !source ? <View style={styles.placeholder} accessibilityLabel="Sin fotografía disponible"><Icon name="image-outline" size={32} color={colors.muted} /><Text style={styles.placeholderText}>Sin fotografía</Text></View> : <LoadedPropertyPhoto key={`${key}:${listing.owner}`} fit={fit} source={source} label={`${listing.title}${listing.photos && listing.photos.length > 1 ? `, foto ${photoIndex + 1}` : ''}`} />}</View>;
 }
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   container: { backgroundColor: colors.softNeutral, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },

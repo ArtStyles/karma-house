@@ -4,8 +4,9 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { formatNegotiationValue, negotiationErrorMessage, validateCreateNegotiation } from '../../negotiations/domain';
 import type { CreateNegotiationInput, Negotiation } from '../../negotiations/types';
 import type { ProposalDraft, ProposalTarget } from '../../negotiations/proposalDraft';
-import { createThemedStyles } from '../../theme';
-import { ActionGroup, Button, Icon, Notice } from '../ui';
+import { createThemedStyles, rounded, typography } from '../../theme';
+import { Mediopunto } from '../Mediopunto';
+import { ActionGroup, Button, Notice } from '../ui';
 import { VisitDateTimeFields } from './VisitDateTimeFields';
 
 export type { ProposalTarget } from '../../negotiations/proposalDraft';
@@ -34,13 +35,13 @@ export function NegotiationComposer({ target, draft, updateDraft, disabled, disa
     }catch(failure){updateDraft({error:negotiationErrorMessage(failure)});}
     finally{lock.current=false;if(mounted.current)setBusy(false);}
   }
-  if(confirmed)return <View style={styles.form}><View style={styles.successHeading}><Icon name="checkmark-circle-outline" size={22} color={colors.green}/><Text accessibilityRole="header" style={styles.title}>Propuesta enviada</Text></View><Text style={styles.value}>{formatNegotiationValue(confirmed)}</Text><Text style={styles.copy}>Quedó registrada en esta conversación. La otra persona podrá responder desde KarmaHouse.</Text><Button label="Ver historial" onPress={onConfirmed}/></View>;
+  if(confirmed)return <View style={[styles.form,styles.done]}><Mediopunto width={140} ground={colors.sheet}/><Text accessibilityRole="header" style={[styles.title,styles.center]}>Propuesta enviada</Text><Text style={[confirmed.kind==='offer'?styles.amountValue:styles.value,styles.center]}>{formatNegotiationValue(confirmed)}</Text><Text style={[styles.copy,styles.center]}>Quedó registrada en esta conversación. La otra persona podrá responder desde KarmaHouse.</Text><Button label="Ver historial" onPress={onConfirmed} style={styles.stretch}/></View>;
   const fieldsDisabled=busy||uncertain||disabled;
   return <View style={styles.form}>
     <Text accessibilityRole="header" style={styles.title}>{target.previous?'Proponer una alternativa':target.kind==='visit'?'Proponer una visita':'Hacer una oferta'}</Text>
     <Text style={styles.copy}>{target.kind==='visit'?'Acuerda un día y una hora para conocer la vivienda.':'Indica el importe que propones para esta vivienda, en dólares estadounidenses.'}</Text>
     {target.previous&&<View style={styles.previous}><Text style={styles.label}>Propuesta anterior</Text><Text style={styles.previousValue}>{formatNegotiationValue(target.previous)}</Text></View>}
-    {target.kind==='visit'?<VisitDateTimeFields date={date} time={time} disabled={fieldsDisabled} onDate={setDate} onTime={setTime}/>:<View style={styles.field}><Text style={styles.label}>Importe propuesto en USD</Text><TextInput accessibilityLabel="Importe de la oferta en USD" value={amount} onChangeText={setAmount} editable={!fieldsDisabled} keyboardType="decimal-pad" placeholder="Ej. 60000" placeholderTextColor={colors.muted} maxLength={16} style={styles.input}/><Text style={styles.help}>Puedes usar hasta dos decimales. La propuesta caduca a los siete días.</Text></View>}
+    {target.kind==='visit'?<VisitDateTimeFields date={date} time={time} disabled={fieldsDisabled} onDate={setDate} onTime={setTime}/>:<View style={styles.field}><Text style={[styles.label,styles.center]}>Importe propuesto en USD</Text><View style={styles.amountBox}><Text style={styles.dollar}>$</Text><TextInput accessibilityLabel="Importe de la oferta en USD" value={amount} onChangeText={setAmount} editable={!fieldsDisabled} keyboardType="decimal-pad" inputMode="decimal" placeholder="Ej. 60000" placeholderTextColor={colors.muted} maxLength={16} style={styles.amountInput}/></View><Text style={[styles.help,styles.center]}>Puedes usar hasta dos decimales. La propuesta caduca a los siete días.</Text></View>}
     <View style={styles.field}><Text style={styles.label}>Nota opcional</Text><TextInput accessibilityLabel="Nota de la propuesta" value={note} onChangeText={value=>setNote([...value].slice(0,500).join(''))} editable={!fieldsDisabled} multiline placeholder={target.kind==='visit'?'Añade algo que deban tener en cuenta.':'Cuéntale algo más sobre tu propuesta.'} placeholderTextColor={colors.muted} textAlignVertical="top" style={[styles.input,styles.note]}/><Text style={styles.help}>{[...note].length}/500 caracteres</Text></View>
     {target.kind==='offer'&&<Notice>Aceptar una oferta registra una negociación. No realiza pagos, reservas ni cambios en la disponibilidad de la vivienda.</Notice>}
     {disabled&&<Notice>{disabledReason??'Ahora no se pueden enviar nuevas propuestas en esta conversación.'}</Notice>}
@@ -51,4 +52,13 @@ export function NegotiationComposer({ target, draft, updateDraft, disabled, disa
     <Button label="Volver al historial" secondary disabled={busy} onPress={onBack}/></ActionGroup>
   </View>;
 }
-const useStyles = createThemedStyles(colors => StyleSheet.create({form:{gap:20},title:{color:colors.ink,fontSize:22,lineHeight:28,fontWeight:'600',letterSpacing:-.4},copy:{color:colors.muted,fontSize:14,lineHeight:21},field:{gap:8},label:{color:colors.ink,fontSize:13,lineHeight:19,fontWeight:'600'},input:{minHeight:52,borderRadius:12,borderWidth:1,borderColor:colors.border,backgroundColor:colors.paper,paddingHorizontal:14,paddingVertical:12,color:colors.ink,fontSize:17},note:{minHeight:104,fontSize:16,lineHeight:23},help:{color:colors.muted,fontSize:12,lineHeight:19},previous:{paddingVertical:16,borderTopWidth:StyleSheet.hairlineWidth,borderBottomWidth:StyleSheet.hairlineWidth,borderColor:colors.border,gap:8},previousValue:{color:colors.ink,fontSize:17,lineHeight:24,fontWeight:'500'},successHeading:{flexDirection:'row',alignItems:'center',gap:10,flexWrap:'wrap'},value:{fontSize:22,lineHeight:29,fontWeight:'600',color:colors.ink}}));
+const useStyles = createThemedStyles(colors => StyleSheet.create({form:{gap:16},done:{alignItems:'center',paddingTop:12},stretch:{alignSelf:'stretch'},center:{textAlign:'center'},
+  title:{...typography.displayLong,color:colors.ink},copy:{color:colors.body,fontSize:15,lineHeight:21},field:{gap:8},label:{color:colors.body,fontSize:13,lineHeight:18,fontWeight:'600'},
+  input:{minHeight:52,borderRadius:rounded.pill,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surface,paddingHorizontal:18,paddingVertical:12,color:colors.ink,fontSize:16},
+  note:{minHeight:96,borderRadius:rounded.card,fontSize:15,lineHeight:21},help:{color:colors.muted,fontSize:12,lineHeight:17},
+  // The offer is the figure of the form: a large Calistoga amount in a framed box.
+  amountBox:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,paddingVertical:14,paddingHorizontal:18,borderRadius:30,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.accentBorder},
+  dollar:{...typography.numeralLg,color:colors.muted},amountInput:{...typography.numeralLg,minWidth:120,maxWidth:240,flexShrink:1,color:colors.ink,paddingVertical:4},
+  amountValue:{...typography.numeralLg,color:colors.ink},value:{fontSize:17,lineHeight:22,fontWeight:'600',color:colors.ink},
+  previous:{padding:14,borderRadius:rounded.inner,backgroundColor:colors.surface,gap:4},previousValue:{fontSize:16,lineHeight:22,fontWeight:'600',color:colors.ink},
+  successHeading:{flexDirection:'row',alignItems:'center',gap:8}}));

@@ -57,7 +57,7 @@ export function SideRail() {
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  rail: { width: layout.railWidth, paddingRight: 16, gap: 4, backgroundColor: colors.sheet },
+  rail: { width: layout.railWidth, paddingRight: 16, gap: 4, backgroundColor: colors.sheet, borderRightWidth: 1, borderRightColor: colors.border },
   brand: { paddingHorizontal: 8, paddingBottom: 18 },
   item: { minHeight: 46, borderRadius: rounded.pill, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 6 },
   // A solid step up from the rail, so the mediopunto's leading matches it.

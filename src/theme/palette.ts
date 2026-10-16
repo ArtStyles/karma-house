@@ -2,7 +2,8 @@
 // alpha (#RRGGBBAA) so a state chip reads the same over ground, surface or a sheet.
 export const lightColors = {
   ink: '#1A2B3B', body: '#4D5A66', muted: '#66717D', primary: '#0153A8', primaryFill: '#0153A8',
-  softBlue: '#0153A81F', paper: '#FAF6EE', sheet: '#FFFFFF', surface: '#FFFFFF', raised: '#F2EADC', border: '#E6DCCB',
+  // By day a sheet is cal, so the white cards inside it still read as cards.
+  softBlue: '#0153A81F', paper: '#FAF6EE', sheet: '#FAF6EE', surface: '#FFFFFF', raised: '#F2EADC', border: '#E6DCCB',
   green: '#3F6B4F', greenFill: '#3F6B4F', softGreen: '#3F6B4F1F',
   danger: '#C32935', dangerFill: '#C32935', softDanger: '#C329351A',
   // Sol is decoration only by day; as text, `amber` is ocre.

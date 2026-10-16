@@ -25,16 +25,16 @@ async function fixture(guest = false, agency = false) {
     pendingIntentStore: { write: async () => {}, take: async () => null }, pendingIntentDestination: () => '/property/property',
     usePublicProfile: () => ({ profile: null }), listingPresentation: () => 'ready', useWindowDimensions: () => ({ width: 390, height: 844 }),
     useSafeAreaInsets: () => ({ top: 0, bottom: 0 }), useReducedMotion: () => false,
-    listingOperation: () => 'sale', operationBadge: () => 'Venta', formatMoney: () => '$100', priceSuffix: () => '',
+    listingOperation: () => 'sale', cartelLabel: () => 'Se vende', formatMoney: () => '$100', priceSuffix: () => '',
     StyleSheet: { absoluteFill: {} }, PROPERTY_REPORT_REASONS: [], CONDITIONS: [], NEEDS_CONNECTION: 'Sin conexión',
     createMessageId: () => 'request', agencyError: (error: Error) => error.message,
     router: { push: (destination: unknown) => destinations.push(destination) },
   };
-  for (const name of ['ActivityIndicator', 'View', 'Text', 'Pressable', 'SafeAreaView', 'ScrollView', 'Button', 'Icon', 'IconButton', 'PropertyImage', 'Notice', 'Modal', 'Feature', 'ReportConversationSheet', 'AgencyVerifiedBadge']) bindings[name] = name;
+  for (const name of ['ActivityIndicator', 'View', 'Text', 'Pressable', 'SafeAreaView', 'ScrollView', 'Button', 'Icon', 'IconButton', 'PropertyImage', 'Notice', 'Sheet', 'Feature', 'Detail', 'Cartel', 'StateChip', 'ArchImage', 'PhotoGallery', 'ReportConversationSheet', 'AgencyVerifiedBadge']) bindings[name] = name;
   const component = executeComponent('src/screens/DetailScreen.tsx', 'DetailScreen', hooks, bindings);
   const render = () => hooks.render(() => component());
   render(); await settle(); render(); control(render(), 'Contactar').onPress();
-  const sheet = () => elements(render()).find(element => element.type === 'Modal' && elements(element).some(child => child.props?.label === 'Cerrar'))!;
+  const sheet = () => elements(render()).find(element => element.type === 'Sheet' && elements(element).some(child => child.props?.label === 'Cerrar'))!;
   const contact = () => control(sheet(), agency ? 'Contactar con Inmobiliaria' : 'Contactar con el responsable personal').onPress();
   return { render, sheet, contact, refresh, start, starts, destinations, close: () => control(render(), 'Cerrar').onPress(), blur: () => hooks.dispose() };
 }

@@ -3,8 +3,9 @@ import { KeyboardAvoidingView, Modal, ScrollView, StyleSheet, Text, TextInput, V
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createMessageId } from '../../messaging/domain';
 import type { ReportReason } from '../../messaging/types';
-import { createThemedStyles, internalLayout } from '../../theme';
-import { ActionGroup, Button, Notice, Pill } from '../ui';
+import { createThemedStyles, rounded, typography } from '../../theme';
+import { SheetHandle } from '../Sheet';
+import { Button, Notice, Pill } from '../ui';
 
 const chatReasons: { value: ReportReason; label: string }[] = [
   { value: 'spam', label: 'Spam' }, { value: 'fraud', label: 'Posible fraude' },
@@ -52,8 +53,9 @@ export function ReportConversationSheet<R extends string = ReportReason>({ visib
 
   return <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-    <View style={[styles.backdrop, { paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 16) }]}>
-      <View accessibilityViewIsModal style={styles.sheet}>
+    <View style={[styles.backdrop, { paddingTop: Math.max(insets.top, 16) }]}>
+      <View accessibilityViewIsModal style={[styles.sheet, { paddingBottom: insets.bottom }]}>
+        <SheetHandle />
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text accessibilityRole="header" style={styles.title}>{confirmed ? 'Reporte recibido' : title}</Text>
           {confirmed ? <>
@@ -68,8 +70,8 @@ export function ReportConversationSheet<R extends string = ReportReason>({ visib
             <Text style={styles.counter}>{details.length}/1000</Text>
             </View>
             {!!error && <Notice error>{error}</Notice>}
-            <ActionGroup><Button label={error ? 'Reintentar reporte' : 'Enviar reporte'} onPress={submit} loading={busy} />
-            <Button label="Cancelar" secondary onPress={close} disabled={busy} /></ActionGroup>
+            <View style={styles.actions}><Button label="Cancelar" secondary onPress={close} disabled={busy} style={styles.cancel} />
+            <Button label={error ? 'Reintentar reporte' : 'Enviar reporte'} onPress={submit} loading={busy} style={styles.send} /></View>
           </>}
         </ScrollView>
       </View>
@@ -79,10 +81,11 @@ export function ReportConversationSheet<R extends string = ReportReason>({ visib
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', paddingHorizontal: internalLayout.gutter },
-  sheet: { backgroundColor: colors.surface, width: '100%', maxWidth: 520, maxHeight: '100%', alignSelf: 'center', borderRadius: internalLayout.radius, overflow: 'hidden' },
-  content: { padding: 20, gap: 20 }, field: { gap: 8 },
-  title: { fontSize: 24, lineHeight: 30, fontWeight: '600', letterSpacing: -0.5, color: colors.ink }, description: { fontSize: 14, lineHeight: 21, color: colors.muted },
-  reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, label: { fontSize: 13, fontWeight: '600', color: colors.ink },
-  input: { minHeight: 112, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, fontSize: 16, lineHeight: 23, color: colors.ink }, counter: { color: colors.muted, fontSize: 12, lineHeight: 18, textAlign: 'right' },
+  backdrop: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
+  sheet: { backgroundColor: colors.sheet, width: '100%', maxWidth: 560, maxHeight: '100%', alignSelf: 'center', borderTopLeftRadius: rounded.sheet, borderTopRightRadius: rounded.sheet, borderWidth: 1, borderBottomWidth: 0, borderColor: colors.border, overflow: 'hidden' },
+  content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24, gap: 18 }, field: { gap: 8 },
+  title: { ...typography.sheetTitle, color: colors.ink }, description: { fontSize: 15, lineHeight: 21, color: colors.body },
+  reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, label: { fontSize: 13, lineHeight: 18, fontWeight: '600', color: colors.body },
+  input: { minHeight: 96, borderWidth: 1, borderColor: colors.border, borderRadius: rounded.card, backgroundColor: colors.surface, paddingHorizontal: 18, paddingVertical: 14, fontSize: 15, lineHeight: 21, color: colors.ink }, counter: { color: colors.muted, fontSize: 12, lineHeight: 16, textAlign: 'right' },
+  actions: { flexDirection: 'row', gap: 10 }, cancel: { flexShrink: 1 }, send: { flex: 1 },
 }));
