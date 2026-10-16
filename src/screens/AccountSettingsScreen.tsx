@@ -142,7 +142,7 @@ function DeleteAccountSheet({ visible, onClose }: { visible: boolean; onClose: (
         {error ? <Notice error>{error}</Notice> : null}
         {started ? <Text style={styles.description}>Si sales ahora, podrás terminar después en Ajustes de cuenta › Eliminar cuenta.</Text> : null}
         <ActionGroup direction="vertical"><Pressable accessibilityRole="button" accessibilityLabel={error ? 'Reintentar eliminación' : 'Eliminar definitivamente'} accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={() => void confirm()} style={({ pressed }) => [styles.dangerFilled, (pressed || busy) && { opacity: .7 }]}>
-          {busy ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.dangerFilledText}>{error ? 'Reintentar eliminación' : 'Eliminar definitivamente'}</Text>}
+          {busy ? <ActivityIndicator color={colors.onDark} /> : <Text style={styles.dangerFilledText}>{error ? 'Reintentar eliminación' : 'Eliminar definitivamente'}</Text>}
         </Pressable>
         <Button label={started ? 'Terminar más tarde' : 'Cancelar'} secondary disabled={busy} onPress={onClose} /></ActionGroup>
         </ScrollView>
@@ -160,6 +160,6 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   danger: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }, dangerText: { color: colors.danger, fontSize: 16, fontWeight: '600' },
   backdrop: { flex: 1, backgroundColor: colors.photoOverlay, justifyContent: 'center', paddingHorizontal: 20 }, sheet: { width: '100%', maxWidth: 520, maxHeight: '100%', alignSelf: 'center', backgroundColor: colors.surface, borderRadius: internalLayout.radius, overflow: 'hidden' }, sheetContent: { padding: 20, gap: 16 },
   sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '700', letterSpacing: -.5 }, sheetText: { color: colors.ink, fontSize: 16, lineHeight: 24 },
-  dangerFilled: { minHeight: 52, borderRadius: 26, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 12 }, dangerFilledText: { color: colors.onPrimary, fontSize: 16, lineHeight: 23, fontWeight: '600', textAlign: 'center' },
+  dangerFilled: { minHeight: 52, borderRadius: 26, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 12 }, dangerFilledText: { color: colors.onDark, fontSize: 16, lineHeight: 23, fontWeight: '600', textAlign: 'center' },
   success: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingHorizontal: 4 }, successText: { color: colors.green, fontSize: 14, fontWeight: '500' },
 }));

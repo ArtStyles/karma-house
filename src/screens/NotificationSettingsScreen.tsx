@@ -105,7 +105,7 @@ function PreferenceRow({ label, description, icon, value, disabled, onChange, la
 }) {
   const { colors, styles } = useStyles();
   return <View style={[styles.row, !last && styles.rowBorder]}>
-    <View style={styles.rowTop}><View style={styles.rowIcon}><Icon name={icon} color={colors.primary} size={20} /></View><Text style={styles.rowTitle}>{label}</Text><Switch hitSlop={10} accessibilityLabel={`Avisos de ${label.toLowerCase()}`} accessibilityHint={description} value={value} disabled={disabled} onValueChange={onChange} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.onPrimary} ios_backgroundColor={colors.switchTrack} /></View>
+    <View style={styles.rowTop}><View style={styles.rowIcon}><Icon name={icon} color={colors.primary} size={20} /></View><Text style={styles.rowTitle}>{label}</Text><Switch hitSlop={10} accessibilityLabel={`Avisos de ${label.toLowerCase()}`} accessibilityHint={description} value={value} disabled={disabled} onValueChange={onChange} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.switchThumb} ios_backgroundColor={colors.switchTrack} /></View>
     <Text style={styles.rowDescription}>{description}</Text>
   </View>;
 }

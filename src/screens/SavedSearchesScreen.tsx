@@ -44,7 +44,7 @@ function SavedSearchesBody() {
       : items.map(item => <View key={item.id} style={styles.card}>
         <View style={styles.cardTop}>
           <View style={styles.cardCopy}><Text accessibilityRole="header" style={styles.name}>{item.name}</Text><Text style={[styles.status, !item.enabled && styles.paused]}>{item.enabled ? 'Avisos activos' : 'Avisos en pausa'}</Text></View>
-          <Switch accessibilityLabel={`Alerta ${item.name}`} accessibilityHint={item.enabled ? 'Pausar avisos' : 'Activar avisos'} value={item.enabled} disabled={saving} onValueChange={() => void toggle(item)} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.onPrimary} ios_backgroundColor={colors.switchTrack} />
+          <Switch accessibilityLabel={`Alerta ${item.name}`} accessibilityHint={item.enabled ? 'Pausar avisos' : 'Activar avisos'} value={item.enabled} disabled={saving} onValueChange={() => void toggle(item)} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.switchThumb} ios_backgroundColor={colors.switchTrack} />
         </View>
         <View style={styles.criteria}><Text style={styles.label}>Criterios de búsqueda</Text><Text style={styles.summary}>{describeSearch(item.filters)}</Text></View>
         <ActionGroup>
@@ -60,7 +60,7 @@ function SavedSearchesBody() {
           <Text style={styles.sheetText}>Dejarás de recibir avisos de «{deleting?.name}».</Text>
           {failed && error ? <Notice error>{error}</Notice> : null}
           <ActionGroup><Pressable accessibilityRole="button" accessibilityLabel={failed ? 'Reintentar eliminación de alerta' : 'Borrar alerta'} accessibilityState={{ disabled: saving, busy: saving }} disabled={saving} onPress={() => void confirmDelete()} style={({ pressed }) => [styles.dangerFilled, (pressed || saving) && { opacity: .7 }]}>
-            {saving ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.dangerFilledText}>{failed ? 'Reintentar' : 'Borrar'}</Text>}
+            {saving ? <ActivityIndicator color={colors.onDark} /> : <Text style={styles.dangerFilledText}>{failed ? 'Reintentar' : 'Borrar'}</Text>}
           </Pressable>
           <Button label="Cancelar" secondary disabled={saving} onPress={() => setDeleting(null)} /></ActionGroup>
           </ScrollView>
@@ -79,5 +79,5 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   status: { color: colors.green, fontSize: 12, lineHeight: 18, fontWeight: '600' }, paused: { color: colors.muted }, criteria: { gap: 6, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }, label: { color: colors.ink, fontSize: 13, fontWeight: '600' },
   backdrop: { flex: 1, backgroundColor: colors.photoOverlay, justifyContent: 'center', paddingHorizontal: 20 }, sheet: { width: '100%', maxWidth: 520, maxHeight: '100%', alignSelf: 'center', backgroundColor: colors.surface, borderRadius: internalLayout.radius, overflow: 'hidden' }, sheetContent: { padding: 20, gap: 16 },
   sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '700', letterSpacing: -.5 }, sheetText: { color: colors.ink, fontSize: 16, lineHeight: 24 },
-  dangerFilled: { minHeight: 52, borderRadius: 14, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 12 }, dangerFilledText: { color: colors.onPrimary, fontSize: 16, lineHeight: 23, fontWeight: '600' },
+  dangerFilled: { minHeight: 52, borderRadius: 14, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 12 }, dangerFilledText: { color: colors.onDark, fontSize: 16, lineHeight: 23, fontWeight: '600' },
 }));

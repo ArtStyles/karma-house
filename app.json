@@ -68,11 +68,16 @@
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF",
           "dark": {
-            "backgroundColor": "#10141C"
+            "backgroundColor": "#0A1626"
           }
         }
       ],
-      "expo-font",
+      [
+        "expo-font",
+        {
+          "fonts": ["./assets/fonts/Calistoga.ttf"]
+        }
+      ],
       "expo-secure-store",
       "@maplibre/maplibre-react-native",
       "./plugins/withActivityRecreationFix.cjs"

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import { Appearance, Platform, useColorScheme, View } from 'react-native';
+import { useFonts } from 'expo-font';
 import * as SystemUI from 'expo-system-ui';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -23,6 +24,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
   const scheme = resolveAppearance(state.preference, systemScheme);
   const colors = scheme === 'dark' ? darkColors : lightColors;
+  // Native builds embed Calistoga (expo-font plugin), so this resolves at once; the web fetches a 41 KB Latin subset.
+  // A failed load falls back to the system font rather than holding the app.
+  const [fontLoaded, fontError] = useFonts({ Calistoga: Platform.OS === 'web' ? require('../../assets/fonts/Calistoga.woff2') : require('../../assets/fonts/Calistoga.ttf') });
+  const ready = state.ready && (fontLoaded || !!fontError);
   useEffect(() => { void preferenceStore.hydrate(); }, []);
   useLayoutEffect(() => {
     if (state.ready && Platform.OS !== 'web') Appearance.setColorScheme(state.preference === 'system' ? 'unspecified' : state.preference);
@@ -31,14 +36,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     void SystemUI.setBackgroundColorAsync(colors.paper).catch(() => undefined);
     if (Platform.OS === 'web' && typeof document !== 'undefined') document.documentElement.style.colorScheme = scheme;
   }, [colors, scheme]);
-  useEffect(() => { if (state.ready) void SplashScreen.hideAsync().catch(() => undefined); }, [state.ready]);
+  useEffect(() => { if (ready) void SplashScreen.hideAsync().catch(() => undefined); }, [ready]);
   const theme = useMemo<Theme>(() => ({
     preference: state.preference, scheme, colors, saveFailed: state.saveFailed,
     setPreference: preference => { void preferenceStore.setPreference(preference); },
   }), [state.preference, state.saveFailed, scheme, colors]);
   return <ThemeContext.Provider value={theme}>
     <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-    {state.ready ? children : <View style={{ flex: 1, backgroundColor: colors.paper }} />}
+    {ready ? children : <View style={{ flex: 1, backgroundColor: colors.paper }} />}
   </ThemeContext.Provider>;
 }
 

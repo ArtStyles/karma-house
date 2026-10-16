@@ -1,31 +1,41 @@
+// Values come from DESIGN.md: `colorsDay` here, `colors` (night) below. Tints are the token plus
+// alpha (#RRGGBBAA) so a state chip reads the same over ground, surface or a sheet.
 export const lightColors = {
-  ink: '#1D1D1F', muted: '#68686D', primary: '#0153A8', primaryFill: '#0153A8',
-  softBlue: '#EAF3FF', paper: '#F5F5F7', surface: '#FFFFFF', border: '#E3E8F0',
-  green: '#227A46', greenFill: '#227A46', softGreen: '#EDF8F0',
-  danger: '#C32935', dangerFill: '#C32935', softDanger: '#FCEEF0',
-  amber: '#8A5C15', softAmber: '#FFF3DA', rose: '#A84562', softRose: '#F8ECEF',
-  inkBlue: '#143658', mutedBlue: '#4C6C93', softNeutral: '#EEF1F5', skeleton: '#E6E9EE',
+  ink: '#1A2B3B', body: '#4D5A66', muted: '#66717D', primary: '#0153A8', primaryFill: '#0153A8',
+  softBlue: '#0153A81F', paper: '#FAF6EE', sheet: '#FFFFFF', surface: '#FFFFFF', raised: '#F2EADC', border: '#E6DCCB',
+  green: '#3F6B4F', greenFill: '#3F6B4F', softGreen: '#3F6B4F1F',
+  danger: '#C32935', dangerFill: '#C32935', softDanger: '#C329351A',
+  // Sol is decoration only by day; as text, `amber` is ocre.
+  amber: '#8A5C15', softAmber: '#E3B04B29', sol: '#E3B04B', onSol: '#0A1626', ocre: '#8A5C15', softOcre: '#8A5C151F',
+  rose: '#C32935', softRose: '#C329351A',
+  inkBlue: '#1A2B3B', mutedBlue: '#66717D', softNeutral: '#F2EADC', skeleton: '#F2EADC',
   accentBorder: '#A9C8EC', blueDecoration: '#DCE9F9', blueLine: '#BCD2EF',
-  onPrimary: '#FFFFFF', onPrimaryMuted: '#E0EEFF', inverseSurface: '#1D1D1F', inverseInk: '#FFFFFF',
+  onPrimary: '#FFFFFF', onPrimaryMuted: '#E0EEFF', inverseSurface: '#1A2B3B', inverseInk: '#FAF6EE',
+  // Text and icons on danger-fill, on the photo scrim and on the navy banner, in both modes.
+  onDark: '#FFFFFF',
   banner: '#173B60', bannerIcon: '#305577', bannerText: '#CADBEB',
-  overlay: '#14283D70', subtleOverlay: '#142E461A', photoOverlay: '#000000A6',
-  navigation: '#FFFFFF', navigationGlass: '#FFFFFFB8', navigationBorder: '#FFFFFFCC', navigationActive: '#E5EFFACC',
-  switchTrack: '#DADCE2',
+  cream: '#FFFFFF', creamInk: '#1A2B3B', glow: '#E3B04B29', photoGround: '#F2EADC',
+  overlay: '#050D189E', subtleOverlay: '#142E461A', photoOverlay: '#0A16269E',
+  navigation: '#FFFFFF', navigationGlass: '#FFFFFFF0', navigationBorder: '#E6DCCB', navigationActive: '#0153A814',
+  switchTrack: '#D8CDB9', switchThumb: '#FFFFFF',
 };
 
 export type ThemeColors = typeof lightColors;
 
 export const darkColors: ThemeColors = {
-  ink: '#F2F4F8', muted: '#A9B2C1', primary: '#83BCFF', primaryFill: '#2265AC',
-  softBlue: '#1B304A', paper: '#10141C', surface: '#1A202B', border: '#323C4D',
-  green: '#7CD6A2', greenFill: '#246B45', softGreen: '#19372A',
-  danger: '#FF929D', dangerFill: '#B32839', softDanger: '#40232C',
-  amber: '#E8BD72', softAmber: '#3C3020', rose: '#F09AB5', softRose: '#392734',
-  inkBlue: '#DBE9FF', mutedBlue: '#A3BCDB', softNeutral: '#272F3D', skeleton: '#2C3544',
-  accentBorder: '#496C97', blueDecoration: '#294362', blueLine: '#5176A0',
-  onPrimary: '#FFFFFF', onPrimaryMuted: '#E0EEFF', inverseSurface: '#E6EDF7', inverseInk: '#17202E',
+  ink: '#F3EFE7', body: '#C3CDD6', muted: '#8FA2B5', primary: '#8CC0F7', primaryFill: '#8CC0F7',
+  softBlue: '#8CC0F724', paper: '#0A1626', sheet: '#0F1E31', surface: '#13233A', raised: '#1B3654', border: '#D7E2EC1F',
+  green: '#8CC7A1', greenFill: '#8CC7A1', softGreen: '#8CC7A129',
+  danger: '#FF929D', dangerFill: '#B32839', softDanger: '#FF929D24',
+  amber: '#E3B04B', softAmber: '#E3B04B29', sol: '#E3B04B', onSol: '#0A1626', ocre: '#E7BF72', softOcre: '#E7BF7224',
+  rose: '#FF929D', softRose: '#FF929D24',
+  inkBlue: '#F3EFE7', mutedBlue: '#8FA2B5', softNeutral: '#1B3654', skeleton: '#1B3654',
+  accentBorder: '#8CC0F773', blueDecoration: '#1B3654', blueLine: '#8CC0F759',
+  onPrimary: '#0B1A29', onPrimaryMuted: '#0B1A29B8', inverseSurface: '#F3EFE7', inverseInk: '#0A1626',
+  onDark: '#FFFFFF',
   banner: '#173B60', bannerIcon: '#305577', bannerText: '#CADBEB',
-  overlay: '#000000A6', subtleOverlay: '#00000066', photoOverlay: '#000000A6',
-  navigation: '#1A202B', navigationGlass: '#1A202BE6', navigationBorder: '#3C475ACC', navigationActive: '#294362CC',
-  switchTrack: '#4B5565',
+  cream: '#FAF6EE', creamInk: '#1A2B3B', glow: '#E3B04B33', photoGround: '#050D18',
+  overlay: '#050D189E', subtleOverlay: '#050D1866', photoOverlay: '#0A16269E',
+  navigation: '#13233A', navigationGlass: '#13233AF0', navigationBorder: '#D7E2EC1A', navigationActive: '#8CC0F71F',
+  switchTrack: '#D7E2EC38', switchThumb: '#F3EFE7',
 };

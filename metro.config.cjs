@@ -14,4 +14,7 @@ config.resolver.blockList = [
   new RegExp(`^${artifacts}(?:[\\\\/]|$)`),
 ];
 
+// The web loads Calistoga as a Latin woff2 subset (assets/fonts); Metro does not list woff2 by default.
+config.resolver.assetExts.push('woff2');
+
 module.exports = config;

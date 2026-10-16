@@ -158,7 +158,7 @@ export default function ExploreScreen() {
             : current && !updating && !hasMore && result.length > 0 && !offline ? <Text style={styles.listEnd}>{total === 1 ? 'Has visto la única vivienda que coincide.' : `Has visto las ${total} viviendas que coinciden.`}</Text> : null}
           {/* The seller invitation closes a real list; under an empty or failed one it reads as the answer. */}
           {result.length > 0 && !storageError && <MotionPressable accessibilityRole="button" accessibilityLabel="Publicar una vivienda" onPress={() => router.push('/publish')} style={({ pressed }) => [styles.sellerBanner, pressed && { opacity: .85 }]}>
-            <View style={styles.sellerIcon}><Icon name="key-outline" size={25} color={colors.onPrimary} /></View><View style={{ flex: 1 }}><Text style={styles.sellerTitle}>Tu vivienda, aquí.</Text><Text style={styles.sellerText}>Dale su próximo capítulo.</Text></View><Icon name="arrow-forward" size={21} color={colors.onPrimary} />
+            <View style={styles.sellerIcon}><Icon name="key-outline" size={25} color={colors.onDark} /></View><View style={{ flex: 1 }}><Text style={styles.sellerTitle}>Tu vivienda, aquí.</Text><Text style={styles.sellerText}>Dale su próximo capítulo.</Text></View><Icon name="arrow-forward" size={21} color={colors.onDark} />
           </MotionPressable>}
           {mode === 'demo' && <Notice>Viviendas e imágenes de demostración. Tus anuncios y favoritos se guardan solo en este dispositivo.</Notice>}
         </View>}
@@ -230,5 +230,5 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   skeletonImage: { height: 200, borderRadius: 16, backgroundColor: colors.skeleton, marginBottom: 4 }, skeletonLine: { height: 14, borderRadius: 7, backgroundColor: colors.skeleton },
   sellerBanner: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: colors.banner, borderRadius: 22, padding: 20, marginTop: 18, marginBottom: 10 },
   sellerIcon: { width: 46, height: 46, borderRadius: 15, backgroundColor: colors.bannerIcon, alignItems: 'center', justifyContent: 'center' },
-  sellerTitle: { color: colors.onPrimary, fontSize: 19, fontWeight: '600', letterSpacing: -.3 }, sellerText: { fontSize: 13, lineHeight: 18, color: colors.bannerText, marginTop: 4 },
+  sellerTitle: { color: colors.onDark, fontSize: 19, fontWeight: '600', letterSpacing: -.3 }, sellerText: { fontSize: 13, lineHeight: 18, color: colors.bannerText, marginTop: 4 },
 }));

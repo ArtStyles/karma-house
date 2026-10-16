@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, type Href } from 'expo-router';
 import { Children, type ComponentProps, type ReactNode } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type ViewStyle, type ColorValue } from 'react-native';
-import { createThemedStyles, typefaces, useTheme } from '../theme';
+import { createThemedStyles, typography, useTheme } from '../theme';
 import { MotionPressable } from './MotionPressable';
 import { HeartIcon } from './HeartIcon';
 
@@ -102,9 +102,9 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   iconButton: { width: 44, minHeight: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
   pill: { minHeight: 44, borderRadius: 22, paddingHorizontal: 14, paddingVertical: 11, backgroundColor: colors.surface, flexDirection: 'row', gap: 7, alignItems: 'center' },
   pillActive: { backgroundColor: colors.softBlue }, pillText: { fontSize: 14, fontWeight: '600', color: colors.ink, flexShrink: 1 },
-  pageTitle: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 26, paddingBottom: 24 }, title: { fontFamily: typefaces.display, fontSize: 34, fontWeight: '700', color: colors.ink, letterSpacing: -1 },
+  pageTitle: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 26, paddingBottom: 24 }, title: { ...typography.display, color: colors.ink },
   subtitle: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: 6 },
-  compactHeader: { paddingTop: 18, paddingBottom: 22, alignItems: 'flex-start' }, compactTitle: { fontSize: 28, lineHeight: 34, fontWeight: '600', letterSpacing: -.6 },
+  compactHeader: { paddingTop: 18, paddingBottom: 22, alignItems: 'flex-start' }, compactTitle: typography.displayLong,
   noticeBody: { flex: 1, gap: 8, alignItems: 'flex-start' }, retry: { minHeight: 36, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: colors.border, justifyContent: 'center', backgroundColor: colors.surface }, retryText: { fontSize: 13, fontWeight: '600', color: colors.primary },
   notice: { paddingVertical: 14, paddingHorizontal: 4, borderRadius: 14, flexDirection: 'row', gap: 9, alignItems: 'flex-start' }, noticeError: { backgroundColor: colors.softDanger, paddingHorizontal: 14 }, noticeText: { flex: 1, fontSize: 13, color: colors.muted, lineHeight: 20 },
   empty: { width: '100%', maxWidth: 620, alignSelf: 'center', paddingVertical: 28, paddingHorizontal: 22, alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: 26, borderWidth: 1, borderColor: colors.border, boxShadow: '0 4px 18px rgba(32, 62, 94, 0.025)' },

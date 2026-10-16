@@ -10,7 +10,7 @@ import { pendingIntentStore } from '../auth/pendingIntentStorage';
 import { createAuthFocusScope } from '../auth/intentLifecycle';
 import { Brand, Button, goBack, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { isSupabaseConfigured } from '../lib/supabase';
-import { createThemedStyles, typefaces } from '../theme';
+import { createThemedStyles, typography } from '../theme';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 
 import {AgencyRegistrationFields} from '../components/agencies/AgencyRegistrationFields';
@@ -209,7 +209,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, paddingBottom: 20 },
   backSpace: { width: 44 },
   content: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingTop: 4 },
-  title: { fontFamily: typefaces.display, color: colors.ink, fontSize: 30, lineHeight: 36, fontWeight: '600', letterSpacing: -.6 },
+  title: { ...typography.display, color: colors.ink },
   subtitle: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: 8, maxWidth: 420 },
   form: { marginTop: 24, gap: 18 },
   segment: { flexDirection: 'row', backgroundColor: colors.softNeutral, padding: 4, borderRadius: 999, marginBottom: 7 },

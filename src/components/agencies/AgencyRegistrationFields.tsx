@@ -32,7 +32,7 @@ export function AgencyRegistrationFields({value,onChange,disabled,errors={},comm
    <Text accessibilityRole="header" style={s.title}>Servicios y oficina</Text>
    <AgencyTextField label="Descripción de servicios" hint="Será pública tras la aprobación." value={value.description} onChangeText={v=>set('description',v)} editable={!disabled} multiline maxLength={1000} error={errors.description}/>
    <AgencyTextField label="Dirección de oficina · opcional" value={value.officeAddress??''} onChangeText={v=>set('officeAddress',v||null)} editable={!disabled} maxLength={200} error={errors.officeAddress}/>
-   <View style={s.switchRow}><View style={s.flex}><Text style={s.label}>Publicar dirección de oficina</Text><Text style={s.hint}>Activa esta opción para mostrarla en el perfil público.</Text></View><Switch accessibilityLabel="Publicar dirección de oficina" hitSlop={10} value={value.publishOfficeAddress} onValueChange={v=>set('publishOfficeAddress',v)} disabled={disabled} trackColor={{false:colors.switchTrack,true:colors.primary}} thumbColor={colors.onPrimary} ios_backgroundColor={colors.switchTrack}/></View>
+   <View style={s.switchRow}><View style={s.flex}><Text style={s.label}>Publicar dirección de oficina</Text><Text style={s.hint}>Activa esta opción para mostrarla en el perfil público.</Text></View><Switch accessibilityLabel="Publicar dirección de oficina" hitSlop={10} value={value.publishOfficeAddress} onValueChange={v=>set('publishOfficeAddress',v)} disabled={disabled} trackColor={{false:colors.switchTrack,true:colors.primary}} thumbColor={colors.switchThumb} ios_backgroundColor={colors.switchTrack}/></View>
   </View>
   {!commercialOnly&&<View style={s.card}>
    <Text accessibilityRole="header" style={s.title}>Referencias privadas</Text>

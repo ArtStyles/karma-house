@@ -20,7 +20,7 @@ import {
   type DraftValidation,
   type ListingDraft,
 } from '../domain/listings';
-import { createThemedStyles, formatMoney, layout, typefaces } from '../theme';
+import { createThemedStyles, formatMoney, layout, typography } from '../theme';
 import { createDraftPersistence, draftToken, hasDraftVersionConflict } from '../domain/draftPersistence';
 import { restorePublicationDraft } from '../domain/publicationEntry';
 import { preparePublicationImport } from '../domain/publicationImport';
@@ -809,7 +809,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   stepLabelActive: { color: colors.ink, fontWeight: '600' },
   section: { gap: 16 },
   sectionHeading: { gap: 6, paddingTop: 4, paddingBottom: 2 },
-  sectionTitle: { color: colors.ink, fontFamily: typefaces.display, fontSize: 24, fontWeight: '600', lineHeight: 30, letterSpacing: -0.5 },
+  sectionTitle: { color: colors.ink, ...typography.sheetTitle },
   sectionDescription: { color: colors.muted, fontSize: 15, lineHeight: 21, maxWidth: 560 },
   fieldCard: { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, borderRadius: 16, padding: 16, gap: 20 },
   fieldGroup: { gap: 7 },
@@ -840,7 +840,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   reviewPhoto: { width: '100%', aspectRatio: 16 / 9, borderRadius: 20, backgroundColor: colors.paper },
   reviewPhotoPlaceholder: { minHeight: 150, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', gap: 10 },
   reviewCard: { backgroundColor: colors.surface, borderRadius: 20, padding: 20, gap: 10 },
-  reviewTitle: { color: colors.ink, fontFamily: typefaces.display, fontSize: 24, fontWeight: '600', lineHeight: 30, letterSpacing: -0.4 },
+  reviewTitle: { color: colors.ink, ...typography.sheetTitle },
   reviewLocation: { color: colors.muted, fontSize: 15 },
   reviewPrice: { color: colors.ink, fontSize: 24, fontWeight: '600', marginTop: 4 },
   reviewFacts: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 5 },

@@ -14,13 +14,13 @@ function storage(initial: string | null = null) {
   };
 }
 
-test('a new installation follows the system after loading its preference', async () => {
+test('a new installation opens at night, whatever the system uses', async () => {
   const store = createAppearanceStore({ storage: storage() });
   assert.equal(store.getState().ready, false);
   await store.hydrate();
   assert.equal(store.getState().ready, true);
   assert.equal(resolveAppearance(store.getState().preference, 'dark'), 'dark');
-  assert.equal(resolveAppearance(store.getState().preference, 'light'), 'light');
+  assert.equal(resolveAppearance(store.getState().preference, 'light'), 'dark');
 });
 
 test('manual choices override the system, while system handles unavailable appearance', () => {
@@ -43,11 +43,11 @@ test('every appearance choice survives a restart', async () => {
   }
 });
 
-test('invalid stored preferences fall back to system', async () => {
+test('invalid stored preferences fall back to the dark default', async () => {
   for (const invalid of ['LIGHT', 'unknown', '', '{}']) {
     const store = createAppearanceStore({ storage: storage(invalid) });
     await store.hydrate();
-    assert.equal(resolveAppearance(store.getState().preference, 'dark'), 'dark');
+    assert.equal(store.getState().preference, 'dark');
   }
 });
 
@@ -55,7 +55,7 @@ test('a storage read failure does not block startup', async () => {
   const store = createAppearanceStore({ storage: { ...storage(), async getItem() { throw new Error('Unavailable'); } } });
   await store.hydrate();
   assert.equal(store.getState().ready, true);
-  assert.equal(store.getState().preference, 'system');
+  assert.equal(store.getState().preference, 'dark');
 });
 
 test('a choice updates subscribers before its storage write completes', async () => {
@@ -138,7 +138,7 @@ test('both palettes keep body text, secondary text and action labels readable', 
       assert.ok(contrast(colors.primary, background) >= 4.5, 'link contrast');
     }
     assert.ok(contrast(colors.onPrimary, colors.primaryFill) >= 4.5, 'button contrast');
-    assert.ok(contrast(colors.onPrimary, colors.dangerFill) >= 4.5, 'destructive button contrast');
+    assert.ok(contrast(colors.onDark, colors.dangerFill) >= 4.5, 'destructive button contrast');
     assert.ok(contrast(colors.inverseInk, colors.inverseSurface) >= 4.5, 'floating action contrast');
   }
 });
@@ -150,6 +150,21 @@ test('white photo labels stay readable even over a fully white image', () => {
       const foreground = parseInt(colors.photoOverlay.slice(offset, offset + 2), 16);
       return Math.round(foreground * opacity + 255 * (1 - opacity)).toString(16).padStart(2, '0');
     }).join('');
-    assert.ok(contrast(colors.onPrimary, background) >= 4.5, 'photo label contrast');
+    assert.ok(contrast(colors.onDark, background) >= 4.5, 'photo label contrast');
+  }
+});
+
+test('state chips stay readable on their tint over a card', () => {
+  // A #RRGGBBAA tint composited over an opaque #RRGGBB surface.
+  const over = (tint: string, base: string) => {
+    const alpha = tint.length === 9 ? parseInt(tint.slice(7, 9), 16) / 255 : 1;
+    return '#' + [1, 3, 5].map(offset => Math.round(parseInt(tint.slice(offset, offset + 2), 16) * alpha + parseInt(base.slice(offset, offset + 2), 16) * (1 - alpha)).toString(16).padStart(2, '0')).join('');
+  };
+  for (const colors of [lightColors, darkColors]) {
+    for (const [text, tint] of [[colors.green, colors.softGreen], [colors.amber, colors.softAmber], [colors.danger, colors.softDanger], [colors.ocre, colors.softOcre], [colors.body, colors.softNeutral]]) {
+      assert.ok(contrast(text, over(tint, colors.surface)) >= 4.5, `${text} on ${tint}`);
+    }
+    assert.ok(contrast(colors.onSol, colors.sol) >= 4.5, 'unread badge contrast');
+    assert.ok(contrast(colors.creamInk, colors.cream) >= 4.5, 'cartel contrast');
   }
 });

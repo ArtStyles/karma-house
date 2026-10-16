@@ -45,7 +45,7 @@ export function PropertyCard({ listing, horizontal = false, offline = false }: {
           ? <View style={[horizontal ? styles.horizontalImage : styles.image, styles.wantedImage]}><Icon name="search-outline" size={37} color={colors.primary} /><Text style={styles.wantedText}>Busco vivienda</Text></View>
           : <PropertyImage listing={listing} variant="thumb" style={horizontal ? styles.horizontalImage : styles.image} />}
         {badge ? <Text style={[styles.badge, badge === 'Nueva' && styles.newBadge, !!operation && badge === operation && styles.operationBadge]}>{badge}</Text> : null}
-        {photos > 1 && <View style={styles.photoCount}><Icon name="images-outline" size={13} color={colors.onPrimary} /><Text style={styles.photoCountText}>{photos}</Text></View>}
+        {photos > 1 && <View style={styles.photoCount}><Icon name="images-outline" size={13} color={colors.onDark} /><Text style={styles.photoCountText}>{photos}</Text></View>}
       </View>
       <View style={horizontal ? styles.horizontalBody : styles.body}>
         <View style={styles.priceRow}>
@@ -71,7 +71,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   badge: { position: 'absolute', top: 12, left: 12, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.navigationGlass, paddingVertical: 5, paddingHorizontal: 10, fontSize: 12, fontWeight: '600', color: colors.ink },
   newBadge: { color: colors.green }, operationBadge: { color: colors.primary },
   wantedImage: { backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center', gap: 8 }, wantedText: { color: colors.primary, fontWeight: '600' },
-  photoCount: { position: 'absolute', bottom: 10, right: 10, borderRadius: 9, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: colors.photoOverlay, flexDirection: 'row', gap: 5, alignItems: 'center' }, photoCountText: { color: colors.onPrimary, fontSize: 12, fontWeight: '600' },
+  photoCount: { position: 'absolute', bottom: 10, right: 10, borderRadius: 9, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: colors.photoOverlay, flexDirection: 'row', gap: 5, alignItems: 'center' }, photoCountText: { color: colors.onDark, fontSize: 12, fontWeight: '600' },
   heart: { position: 'absolute', top: 8, right: 8, width: 44, minHeight: 44, backgroundColor: colors.navigationGlass },
   body: { paddingTop: 10, paddingHorizontal: 2, gap: 2 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
