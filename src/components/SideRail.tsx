@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
-import { createThemedStyles, rounded, typography } from '../theme';
+import { createThemedStyles, layout, rounded, typography } from '../theme';
 import { useAppUpdate } from '../updates/useAppUpdate';
 import { UserAvatar } from './account/UserAvatar';
 import { Mediopunto } from './Mediopunto';
@@ -57,7 +57,7 @@ export function SideRail() {
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  rail: { width: 248, paddingRight: 16, gap: 4, backgroundColor: colors.sheet },
+  rail: { width: layout.railWidth, paddingRight: 16, gap: 4, backgroundColor: colors.sheet },
   brand: { paddingHorizontal: 8, paddingBottom: 18 },
   item: { minHeight: 46, borderRadius: rounded.pill, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 6 },
   // A solid step up from the rail, so the mediopunto's leading matches it.

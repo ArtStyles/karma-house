@@ -1,14 +1,15 @@
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { AccountPrompt } from '../components/AccountPrompt';
-import { ActionGroup, Button, EmptyState, Notice, PageTitle } from '../components/ui';
+import { Sheet } from '../components/Sheet';
+import { Button, EmptyState, Icon, IconButton, Notice, PageTitle } from '../components/ui';
 import { describeSearch } from '../searches/domain';
 import type { SavedSearch } from '../searches/types';
 import { useSavedSearches } from '../searches/useSavedSearches';
-import { createThemedStyles, internalLayout } from '../theme';
+import { createThemedStyles, internalLayout, rounded, typography } from '../theme';
 
 export default function SavedSearchesScreen() {
   const { colors, styles } = useStyles();
@@ -23,7 +24,6 @@ export default function SavedSearchesScreen() {
 
 function SavedSearchesBody() {
   const { colors, styles } = useStyles();
-  const insets = useSafeAreaInsets();
   const { items, loading, error, saving, refresh, toggle, remove } = useSavedSearches();
   const [deleting, setDeleting] = useState<SavedSearch | null>(null);
   const [failed, setFailed] = useState(false);
@@ -43,41 +43,46 @@ function SavedSearchesBody() {
       : !items.length ? !error && <EmptyState plain title="Sin búsquedas guardadas" description="Guarda una búsqueda desde Explorar para recibir avisos de viviendas que coincidan." action={<Button label="Ir a Explorar" onPress={() => router.navigate('/')} />} />
       : items.map(item => <View key={item.id} style={styles.card}>
         <View style={styles.cardTop}>
-          <View style={styles.cardCopy}><Text accessibilityRole="header" style={styles.name}>{item.name}</Text><Text style={[styles.status, !item.enabled && styles.paused]}>{item.enabled ? 'Avisos activos' : 'Avisos en pausa'}</Text></View>
+          <View style={styles.cardCopy}>
+            <Text accessibilityRole="header" style={styles.name}>{item.name}</Text>
+            <View style={styles.statusRow}><View style={[styles.dot, !item.enabled && styles.pausedDot]} /><Text style={[styles.status, !item.enabled && styles.paused]}>{item.enabled ? 'Avisos activos' : 'Avisos en pausa'}</Text></View>
+          </View>
           <Switch accessibilityLabel={`Alerta ${item.name}`} accessibilityHint={item.enabled ? 'Pausar avisos' : 'Activar avisos'} value={item.enabled} disabled={saving} onValueChange={() => void toggle(item)} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.switchThumb} ios_backgroundColor={colors.switchTrack} />
         </View>
-        <View style={styles.criteria}><Text style={styles.label}>Criterios de búsqueda</Text><Text style={styles.summary}>{describeSearch(item.filters)}</Text></View>
-        <ActionGroup>
-          <Button label="Ver resultados" icon="search-outline" onPress={() => router.push({ pathname: '/', params: { search: item.id } })} />
-          <Button label="Borrar alerta" secondary icon="trash-outline" disabled={saving} onPress={() => { setFailed(false); setDeleting(item); }} />
-        </ActionGroup>
-      </View>)}
-    <Modal visible={!!deleting} transparent animationType="fade" onRequestClose={() => !saving && setDeleting(null)}>
-      <View style={[styles.backdrop, { paddingTop: Math.max(insets.top, 20), paddingBottom: Math.max(insets.bottom, 20) }]}>
-        <View accessibilityViewIsModal style={styles.sheet}>
-          <ScrollView contentContainerStyle={styles.sheetContent}>
-          <Text accessibilityRole="header" style={styles.sheetTitle}>¿Borrar esta alerta?</Text>
-          <Text style={styles.sheetText}>Dejarás de recibir avisos de «{deleting?.name}».</Text>
-          {failed && error ? <Notice error>{error}</Notice> : null}
-          <ActionGroup><Pressable accessibilityRole="button" accessibilityLabel={failed ? 'Reintentar eliminación de alerta' : 'Borrar alerta'} accessibilityState={{ disabled: saving, busy: saving }} disabled={saving} onPress={() => void confirmDelete()} style={({ pressed }) => [styles.dangerFilled, (pressed || saving) && { opacity: .7 }]}>
-            {saving ? <ActivityIndicator color={colors.onDark} /> : <Text style={styles.dangerFilledText}>{failed ? 'Reintentar' : 'Borrar'}</Text>}
-          </Pressable>
-          <Button label="Cancelar" secondary disabled={saving} onPress={() => setDeleting(null)} /></ActionGroup>
-          </ScrollView>
+        <View accessible accessibilityLabel={`Criterios de búsqueda: ${describeSearch(item.filters)}`} style={styles.criteria}>{describeSearch(item.filters).split(' · ').map(part => <Text key={part} style={styles.chip}>{part}</Text>)}</View>
+        <View style={styles.actions}>
+          <Button label="Ver resultados" secondary onPress={() => router.push({ pathname: '/', params: { search: item.id } })} style={styles.results} />
+          <IconButton name="trash-outline" label={`Borrar alerta ${item.name}`} onPress={() => { if (saving) return; setFailed(false); setDeleting(item); }} style={styles.trash} />
         </View>
+      </View>)}
+    <Sheet visible={!!deleting} onClose={() => { if (!saving) setDeleting(null); }}>
+      <View style={styles.warning}><Icon name="trash-outline" size={22} color={colors.danger} /></View>
+      <Text accessibilityRole="header" style={styles.sheetTitle}>¿Borrar esta alerta?</Text>
+      <Text style={styles.sheetText}>Dejarás de recibir avisos de «{deleting?.name}».</Text>
+      {failed && error ? <Notice error>{error}</Notice> : null}
+      <View style={styles.sheetActions}>
+        <Button label="Cancelar" secondary disabled={saving} onPress={() => setDeleting(null)} style={styles.sheetAction} />
+        <Pressable accessibilityRole="button" accessibilityLabel={failed ? 'Reintentar eliminación de alerta' : 'Borrar alerta'} accessibilityState={{ disabled: saving, busy: saving }} disabled={saving} onPress={() => void confirmDelete()} style={({ pressed }) => [styles.dangerFilled, styles.sheetAction, (pressed || saving) && { opacity: .7 }]}>
+          {saving ? <ActivityIndicator color={colors.onDark} /> : <Text style={styles.dangerFilledText}>{failed ? 'Reintentar' : 'Borrar'}</Text>}
+        </Pressable>
       </View>
-    </Modal>
+    </Sheet>
   </ScrollView>;
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper }, shell: { flex: 1, width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center' }, inset: { paddingHorizontal: internalLayout.gutter },
-  list: { paddingHorizontal: 20, paddingBottom: 28, gap: 16, flexGrow: 1 }, loading: { padding: 40 }, error: { gap: 12 },
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: internalLayout.radius, padding: 16, gap: 16 },
-  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 }, cardCopy: { flex: 1, minWidth: 0, gap: 6 },
-  name: { color: colors.ink, fontSize: 17, lineHeight: 23, fontWeight: '600' }, summary: { color: colors.muted, fontSize: 13, lineHeight: 19 },
-  status: { color: colors.green, fontSize: 12, lineHeight: 18, fontWeight: '600' }, paused: { color: colors.muted }, criteria: { gap: 6, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }, label: { color: colors.ink, fontSize: 13, fontWeight: '600' },
-  backdrop: { flex: 1, backgroundColor: colors.photoOverlay, justifyContent: 'center', paddingHorizontal: 20 }, sheet: { width: '100%', maxWidth: 520, maxHeight: '100%', alignSelf: 'center', backgroundColor: colors.surface, borderRadius: internalLayout.radius, overflow: 'hidden' }, sheetContent: { padding: 20, gap: 16 },
-  sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '700', letterSpacing: -.5 }, sheetText: { color: colors.ink, fontSize: 16, lineHeight: 24 },
-  dangerFilled: { minHeight: 52, borderRadius: 14, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 12 }, dangerFilledText: { color: colors.onDark, fontSize: 16, lineHeight: 23, fontWeight: '600' },
+  safe: { flex: 1, backgroundColor: colors.paper }, shell: { flex: 1, width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center' }, inset: { paddingHorizontal: 16 },
+  list: { paddingHorizontal: 16, paddingBottom: 28, gap: 12, flexGrow: 1 }, loading: { padding: 40 }, error: { gap: 12 },
+  card: { backgroundColor: colors.surface, borderRadius: rounded.cardLg, padding: 18, gap: 14 },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 }, cardCopy: { flex: 1, minWidth: 0, gap: 4 },
+  name: { ...typography.section, color: colors.ink },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 }, dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.sol }, pausedDot: { backgroundColor: colors.outline },
+  status: { color: colors.amber, fontSize: 13, lineHeight: 18 }, paused: { color: colors.muted },
+  criteria: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: { fontSize: 13, lineHeight: 18, color: colors.body, backgroundColor: colors.softNeutral, paddingHorizontal: 10, paddingVertical: 5, borderRadius: rounded.pill, overflow: 'hidden' },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 8 }, results: { flex: 1, minHeight: 44, paddingVertical: 10 }, trash: { backgroundColor: colors.softNeutral },
+  warning: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.softDanger },
+  sheetTitle: { ...typography.sheetTitle, color: colors.ink, marginTop: 4 }, sheetText: { color: colors.body, fontSize: 15, lineHeight: 22 },
+  sheetActions: { flexDirection: 'row', gap: 10, marginTop: 10 }, sheetAction: { flex: 1 },
+  dangerFilled: { minHeight: 56, borderRadius: rounded.pill, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 12 }, dangerFilledText: { color: colors.onDark, fontSize: 16, lineHeight: 20, fontWeight: '600' },
 }));

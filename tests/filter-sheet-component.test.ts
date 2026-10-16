@@ -24,7 +24,7 @@ function fixture(deferBridge = false) {
     cancelAnimation() {}, scheduleOnRN: (work: (...args: any[]) => void, ...args: any[]) => { if (deferBridge) bridge.push(() => work(...args)); else work(...args); },
     ReduceMotion: { System: 'system', Never: 'never' }, SHEET_SPRING: { duration: 300, dampingRatio: 1, overshootClamping: true },
     Gesture: { Pan: () => pan }, GestureDetector: 'GestureDetector', GestureHandlerRootView: 'GestureHandlerRootView',
-    Modal: 'Modal', KeyboardAvoidingView: 'KeyboardAvoidingView', Pressable: 'Pressable', View: 'View', Animated: { View: 'AnimatedView' },
+    Modal: 'Modal', KeyboardAvoidingView: 'KeyboardAvoidingView', Pressable: 'Pressable', View: 'View', Animated: { View: 'AnimatedView' }, SheetHandle: 'SheetHandle',
     Keyboard: { isVisible: () => keyboard, dismiss: () => { keyboard = false; dismissedKeyboard++; } },
     StyleSheet: { absoluteFill: {} },
   });

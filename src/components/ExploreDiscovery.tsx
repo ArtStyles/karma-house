@@ -1,97 +1,93 @@
-import { useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, Text, useWindowDimensions, View,type ScrollView } from 'react-native';
-import Animated,{useAnimatedReaction,useAnimatedScrollHandler,useAnimatedStyle,useSharedValue} from 'react-native-reanimated';
-import {scheduleOnRN} from 'react-native-worklets';
-import {useReducedMotion} from '../settings/useReducedMotion';
-import { createThemedStyles, layout } from '../theme';
-import { Icon, type IconName } from './ui';
+import { useRef, useState } from 'react';
+import { PanResponder, StyleSheet, Text, View } from 'react-native';
+import Animated, { Easing, FadeIn } from 'react-native-reanimated';
+import type { Listing } from '../domain/listings';
+import { cartelLabel, listingFacts, priceSuffix } from '../domain/operations';
+import { useReducedMotion } from '../settings/useReducedMotion';
+import { createThemedStyles, formatMoney, rounded, typography } from '../theme';
+import { ArchImage } from './ArchImage';
+import { Cartel } from './Cartel';
 import { MotionPressable } from './MotionPressable';
+import { PropertyImage } from './PropertyImage';
 
-type DiscoveryOperation = 'sale' | 'rent' | 'swap';
-const cards: { title: string; description: string; action: string; icon: IconName; accent: IconName; operation?: DiscoveryOperation }[] = [
-  { title: 'Un hogar para ti', description: 'Viviendas en venta', action: 'Comprar', icon: 'home-outline', accent: 'key-outline', operation: 'sale' },
-  { title: 'Vive a tu manera', description: 'Opciones de alquiler', action: 'Alquilar', icon: 'log-in-outline', accent: 'key-outline', operation: 'rent' },
-  { title: 'Cambia de hogar', description: 'Descubre permutas', action: 'Permutar', icon: 'home-outline', accent: 'swap-horizontal-outline', operation: 'swap' },
-  { title: 'Tu vivienda, aquí', description: 'Dale su próximo capítulo', action: 'Publicar anuncio', icon: 'document-text-outline', accent: 'camera-outline' },
-];
+const ease = Easing.bezier(.22, 1, .36, 1);
 
-/** Scrolling discovers options; only a deliberate press changes the search. */
-export function ExploreDiscovery({ offline, onOperation, onPublish }: {
-  offline: boolean; onOperation(operation: DiscoveryOperation): void; onPublish(): void;
-}) {
-  const { colors, styles } = useStyles();
-  const { width } = useWindowDimensions();
-  const [viewport, setViewport] = useState(Math.min(640, width - 40));
-  const [page, setPage] = useState(0);
-  const scroll = useRef<ScrollView>(null);
-  const cardWidth = Math.max(1, viewport - 24);
-  const interval = cardWidth + 10;
-  const narrow = viewport < 320;
-  // With room for every option there is nothing to swipe: they sit side by side.
-  const grid = width >= layout.wideMinWidth;
-  const reduced=useReducedMotion(),progress=useSharedValue(0);
-  const trackScroll=useAnimatedScrollHandler(event=>{progress.value=Math.max(0,Math.min(cards.length-1,event.contentOffset.x/interval))},[interval]);
-  useAnimatedReaction(()=>Math.round(progress.value),(next,previous)=>{if(next!==previous)scheduleOnRN(setPage,next)});
-  const indicator=useAnimatedStyle(()=>({transform:[{translateX:(reduced?Math.round(progress.value):progress.value)*10}]}));
-  // Rotation and desktop breakpoints keep the same option at the front.
-  useEffect(() => { progress.value=page;scroll.current?.scrollTo({ x: page * interval, animated: false }); }, [interval]);
-  const renderCard = (card: typeof cards[number]) => {
-    const disabled = offline && !!card.operation;
-    return <MotionPressable key={card.action} accessibilityRole="button"
-      accessibilityLabel={`${card.action}: ${card.title}`}
-      accessibilityHint={card.operation ? 'Selecciona esta operación para tu búsqueda' : 'Abre el formulario para publicar una vivienda'}
-      accessibilityState={{ disabled }} disabled={disabled}
-      onPress={() => card.operation ? onOperation(card.operation) : onPublish()}
-      style={({ pressed }) => [styles.card, grid ? styles.gridCard : { width: cardWidth }, narrow && styles.narrowCard, disabled && { opacity: .45 }, pressed && { opacity: .7 }]}>
-      <View pointerEvents="none" aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.scene, narrow && styles.narrowScene]}>
-        <View style={styles.halo} />
-        <Icon name={card.icon} size={34} color={colors.primary} />
-        <View style={styles.accent}><Icon name={card.accent} size={19} color={colors.primary} /></View>
-      </View>
-      <View style={styles.copy}>
-        <Text style={[styles.title, narrow && styles.narrowTitle]}>{card.title}</Text>
-        <Text style={styles.description}>{card.description}</Text>
-        <Text style={styles.action}>{card.action}</Text>
-      </View>
-      <View style={styles.arrow}><Icon name="arrow-up-outline" size={14} color={colors.primary} /></View>
+/**
+ * The arch carousel that opens Explorar: the first homes of the search, the centre one large and lit,
+ * its neighbours dimmed at the edges. A swipe, a tap on a neighbour or a dot moves it; only the centre opens a home.
+ */
+export function ExploreDiscovery({ listings, onOpen }: { listings: readonly Listing[]; onOpen(listing: Listing): void }) {
+  const { styles } = useStyles();
+  const reduced = useReducedMotion();
+  const [viewport, setViewport] = useState(358);
+  const [index, setIndex] = useState(0);
+  const count = listings.length;
+  const step = useRef((_delta: number) => {});
+  step.current = delta => setIndex(current => (current + delta + count) % count);
+  const pan = useRef(PanResponder.create({
+    onMoveShouldSetPanResponder: (_event, gesture) => Math.abs(gesture.dx) > 12 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
+    onPanResponderRelease: (_event, gesture) => { if (Math.abs(gesture.dx) > 40) step.current(gesture.dx < 0 ? 1 : -1); },
+  })).current;
+  if (!count) return null;
+  const current = listings[Math.min(index, count - 1)];
+  const at = (delta: number) => listings[(index + delta + count) % count];
+  const archWidth = Math.min(240, Math.round(viewport * .62)), archHeight = Math.round(archWidth * 1.55);
+  const sideWidth = Math.round(archWidth * .79), sideHeight = Math.round(sideWidth * 1.53);
+  const centreLeft = Math.round((viewport - archWidth) / 2);
+  // How much of each neighbour shows beside the centre arch.
+  const peek = centreLeft - 17;
+  const side = (delta: -1 | 1) => {
+    const listing = at(delta);
+    return <MotionPressable key={delta} accessibilityRole="button" accessibilityLabel={`${delta < 0 ? 'Anterior' : 'Siguiente'}: ${listing.title}`} onPress={() => step.current(delta)}
+      style={[styles.side, { top: 8 + archHeight - sideHeight - 30, width: sideWidth }, delta < 0 ? { left: peek - sideWidth } : { left: viewport - peek }]}>
+      <ArchImage width={sideWidth} height={sideHeight} bottom={22}><PropertyImage listing={listing} variant="thumb" style={styles.fill} /></ArchImage>
     </MotionPressable>;
   };
-  if (grid) return <View style={[styles.root, styles.grid]}>{cards.map(renderCard)}</View>;
-  return <View style={styles.root} onLayout={event => {
-    const next = event.nativeEvent.layout.width;
-    if (next > 0) setViewport(next);
-  }}>
-    <Animated.ScrollView ref={scroll} horizontal showsHorizontalScrollIndicator={false}
-      directionalLockEnabled nestedScrollEnabled keyboardShouldPersistTaps="handled"
-      pagingEnabled={Platform.OS === 'web'}
-      snapToInterval={interval} snapToAlignment="start" decelerationRate="fast"
-      contentContainerStyle={styles.track} scrollEventThrottle={16} onScroll={trackScroll}>
-      {cards.map(renderCard)}
-    </Animated.ScrollView>
-    <View accessible accessibilityLabel={`Tarjeta ${page + 1} de ${cards.length}: ${cards[page].action}`} style={styles.status}>
-      <View pointerEvents="none" aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.dots}>{cards.map(card => <View key={card.action} style={styles.dot} />)}<Animated.View style={[styles.currentDot,indicator]}/></View>
-      <View style={styles.cue}><Text style={styles.cueText}>Desliza</Text><Icon name="arrow-back" size={12} color={colors.muted} /></View>
+  return <View>
+    <View {...pan.panHandlers} onLayout={event => { const next = event.nativeEvent.layout.width; if (next > 0) setViewport(next); }} style={[styles.stage, { height: archHeight + 22 }]}>
+      {count > 1 && peek > 24 && [side(-1), side(1)]}
+      <View style={{ position: 'absolute', top: 8, left: centreLeft, width: archWidth }}>
+        <View pointerEvents="none" style={[styles.ring, { width: archWidth + 14, height: archHeight + 14, borderTopLeftRadius: (archWidth + 14) / 2, borderTopRightRadius: (archWidth + 14) / 2 }]} />
+        <Animated.View key={current.id} entering={FadeIn.duration(reduced ? 120 : 320).easing(ease)}>
+          <MotionPressable accessibilityRole="button" accessibilityLabel={`Ver ${current.title}, ${cartelLabel(current)}, ${formatMoney(current.price)} USD${priceSuffix(current)}, ${current.location}`} onPress={() => onOpen(current)}>
+            <ArchImage width={archWidth} height={archHeight} bottom={28} glow>
+              <PropertyImage listing={current} variant="thumb" style={styles.fill} />
+              <View pointerEvents="none" style={styles.info}>
+                <Text numberOfLines={2} style={styles.title}>{current.title}</Text>
+                <Text numberOfLines={1} style={styles.place}>{current.location}, {current.province}</Text>
+                <View style={styles.priceRow}>
+                  <Text numberOfLines={1} style={styles.price}>{formatMoney(current.price)}<Text style={styles.small}> USD{priceSuffix(current)}</Text></Text>
+                  <Text numberOfLines={1} style={styles.small}>{listingFacts(current)}</Text>
+                </View>
+              </View>
+            </ArchImage>
+          </MotionPressable>
+        </Animated.View>
+        <View pointerEvents="none" style={[styles.sign, { top: Math.round(archHeight * .38) }]}><Cartel label={cartelLabel(current)} tilt={-4} /></View>
+      </View>
     </View>
+    {count > 1 && <View style={styles.dots}>{listings.map((listing, position) => <MotionPressable key={listing.id} accessibilityRole="button" accessibilityLabel={`Ver ${listing.title}`}
+      accessibilityState={{ selected: position === index }} onPress={() => setIndex(position)} style={styles.dotTarget}>
+      <View style={[styles.dot, position === index && styles.currentDot]} />
+    </MotionPressable>)}</View>}
   </View>;
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  root: { marginBottom: 2 },
-  track: { gap: 10, paddingRight: 24 },
-  card: { minHeight: 86, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 4, paddingVertical: 8, borderRadius: 16 },
-  narrowCard: { gap: 7 },
-  grid: { flexDirection: 'row', gap: 10 }, gridCard: { flex: 1, minWidth: 0 },
-  scene: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center' }, narrowScene: { width: 50 },
-  halo: { position: 'absolute', width: 52, height: 48, borderRadius: 20, backgroundColor: colors.softBlue, transform: [{ rotate: '-10deg' }] },
-  accent: { position: 'absolute', right: 0, bottom: 3, padding: 2, borderRadius: 8, backgroundColor: colors.paper },
-  copy: { flex: 1, minWidth: 0, gap: 3 },
-  arrow: { transform: [{ rotate: '45deg' }] },
-  title: { color: colors.ink, fontSize: 16, lineHeight: 22, fontWeight: '500' }, narrowTitle: { fontSize: 14, lineHeight: 20 },
-  description: { color: colors.muted, fontSize: 12, lineHeight: 17 },
-  action: { color: colors.primary, fontSize: 12, lineHeight: 17, fontWeight: '500' },
-  status: { minHeight: 18, marginTop: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },
-  dots: { width:44,height:4,flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.border },
-  currentDot: { position:'absolute',left:0,top:0,width: 14,height:4,borderRadius:2, backgroundColor: colors.primary },
-  cue: { flexDirection: 'row', alignItems: 'center', gap: 5 }, cueText: { color: colors.muted, fontSize: 11, lineHeight: 16 },
+  // Bleeds over the list's 16 px gutter so on a phone the neighbours reach the screen edges.
+  stage: { marginHorizontal: -16, overflow: 'hidden' },
+  side: { position: 'absolute', opacity: .42 },
+  fill: { width: '100%', height: '100%' },
+  ring: { position: 'absolute', left: -7, top: -7, borderBottomLeftRadius: 34, borderBottomRightRadius: 34, borderWidth: 1, borderColor: colors.outline },
+  info: { position: 'absolute', left: 10, right: 10, bottom: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: rounded.inner, backgroundColor: colors.photoOverlay },
+  title: { ...typography.section, color: colors.onDark },
+  place: { marginTop: 2, fontSize: 13, lineHeight: 18, color: colors.onDark, opacity: .82 },
+  priceRow: { marginTop: 8, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 },
+  price: { flexShrink: 0, fontSize: 17, lineHeight: 22, fontWeight: '700', color: colors.onDark, fontVariant: ['tabular-nums'] },
+  small: { flexShrink: 1, fontSize: 12, fontWeight: '500', color: colors.onDark, opacity: .82 },
+  sign: { position: 'absolute', left: -16 },
+  dots: { flexDirection: 'row', justifyContent: 'center' },
+  dotTarget: { height: 44, minWidth: 30, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center' },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.outline },
+  currentDot: { width: 22, backgroundColor: colors.sol },
 }));

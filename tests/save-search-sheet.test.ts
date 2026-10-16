@@ -15,6 +15,7 @@ test('save-search sheet sends one request while the current save is pending', as
     useSafeAreaInsets: () => ({ top: 0, bottom: 0 }), searchName, toSavedFilters, describeSearch,
     Modal: 'Modal', KeyboardAvoidingView: 'KeyboardAvoidingView', View: 'View', ScrollView: 'ScrollView',
     Icon: 'Icon', Text: 'Text', TextInput: 'TextInput', Button: 'Button', ActionGroup: 'ActionGroup',
+    Sheet: 'Sheet', Notice: 'Notice',
   });
   const tree = hooks.render(() => component({ filters: defaultFilters, onClose() {}, onSaved: () => saved++ }));
   const save = control(tree, 'Guardar').onPress;

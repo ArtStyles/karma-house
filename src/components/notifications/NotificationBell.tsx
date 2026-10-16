@@ -19,8 +19,8 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   badge: {
     position: 'absolute', right: -2, top: -2, minWidth: 19, height: 19,
-    paddingHorizontal: 5, borderRadius: 11, backgroundColor: colors.primaryFill,
+    paddingHorizontal: 5, borderRadius: 11, backgroundColor: colors.sol,
     justifyContent: 'center', alignItems: 'center',
   },
-  count: { color: colors.onPrimary, fontSize: 10, fontWeight: '700' },
+  count: { color: colors.onSol, fontSize: 10, fontWeight: '700' },
 }));

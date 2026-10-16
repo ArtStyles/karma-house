@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { createThemedStyles } from '../theme';
+import { createThemedStyles, rounded, typography } from '../theme';
 import { Icon, IconButton } from './ui';
 
 export type SelectOption = { value: string; label: string };
@@ -42,7 +42,7 @@ export function SelectionField({ label, value, options, onChange, placeholder = 
       <View style={[styles.overlay, { paddingTop: Math.max(insets.top, 20), paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cancelar selección" onPress={close} style={StyleSheet.absoluteFill} />
         <View accessibilityViewIsModal style={styles.sheet}>
-          <View style={styles.header}><View style={styles.headerText}><Text accessibilityRole="header" style={styles.title}>{label}</Text></View><IconButton name="close" label="Cerrar selector" onPress={close} style={{ backgroundColor: colors.paper }} /></View>
+          <View style={styles.header}><View style={styles.headerText}><Text accessibilityRole="header" style={styles.title}>{label}</Text></View><IconButton name="close" label="Cerrar selector" onPress={close} /></View>
           {choices}
         </View>
       </View>
@@ -62,12 +62,13 @@ export function SelectionField({ label, value, options, onChange, placeholder = 
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  flex: { flex: 1 }, field: { gap: 8 }, label: { color: colors.ink, fontSize: 14, fontWeight: '600' },
-  trigger: { minHeight: 52, borderRadius: 15, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }, triggerOpen: { borderColor: colors.primary, backgroundColor: colors.softBlue }, triggerError: { borderColor: colors.danger },
+  flex: { flex: 1 }, field: { gap: 8 }, label: { color: colors.body, fontSize: 13, lineHeight: 18, fontWeight: '600' },
+  // A one-line field is a pill (DESIGN.md §6).
+  trigger: { minHeight: 52, borderRadius: rounded.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingLeft: 18, paddingRight: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }, triggerOpen: { borderColor: colors.primary }, triggerError: { borderColor: colors.danger },
   value: { flex: 1, fontSize: 16, lineHeight: 22, color: colors.ink }, hint: { fontSize: 12, lineHeight: 18, color: colors.muted }, error: { color: colors.danger, fontSize: 13, lineHeight: 19 },
-  overlay: { flex: 1, backgroundColor: colors.overlay, paddingHorizontal: 16, justifyContent: 'center' }, sheet: { backgroundColor: colors.surface, borderRadius: 20, maxHeight: '90%', width: '100%', maxWidth: 480, alignSelf: 'center', overflow: 'hidden', flexShrink: 1 },
-  header: { padding: 20, flexDirection: 'row', gap: 12, alignItems: 'center' }, headerText: { flex: 1, minWidth: 0, gap: 5 }, title: { color: colors.ink, fontSize: 23, lineHeight: 29, fontWeight: '600', letterSpacing: -.5 },
-  list: { flexShrink: 1 }, options: { padding: 12, gap: 5 }, option: { minHeight: 50, borderRadius: 13, paddingVertical: 13, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }, selectedOption: { backgroundColor: colors.softBlue }, optionText: { flex: 1, color: colors.ink, fontSize: 15, lineHeight: 21 }, selectedText: { color: colors.primary, fontWeight: '600' },
-  search: { marginHorizontal: 16, marginBottom: 8, backgroundColor: colors.paper, borderRadius: 13, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 8 }, searchInput: { flex: 1, minWidth: 0, minHeight: 44, fontSize: 15, color: colors.ink }, noResults: { padding: 20, textAlign: 'center', color: colors.muted, fontSize: 14 },
-  inlinePanel: { borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingTop: 12, backgroundColor: colors.surface }, inlineList: { maxHeight: 230 },
+  overlay: { flex: 1, backgroundColor: colors.overlay, paddingHorizontal: 16, justifyContent: 'center' }, sheet: { backgroundColor: colors.sheet, borderRadius: 28, borderWidth: 1, borderColor: colors.border, maxHeight: '90%', width: '100%', maxWidth: 480, alignSelf: 'center', overflow: 'hidden', flexShrink: 1 },
+  header: { padding: 20, flexDirection: 'row', gap: 12, alignItems: 'center' }, headerText: { flex: 1, minWidth: 0, gap: 5 }, title: { ...typography.sheetTitle, color: colors.ink },
+  list: { flexShrink: 1 }, options: { padding: 12, gap: 5 }, option: { minHeight: 50, borderRadius: 18, paddingVertical: 13, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }, selectedOption: { backgroundColor: colors.softBlue }, optionText: { flex: 1, color: colors.ink, fontSize: 15, lineHeight: 21 }, selectedText: { color: colors.primary, fontWeight: '600' },
+  search: { marginHorizontal: 16, marginBottom: 8, backgroundColor: colors.surface, borderRadius: rounded.pill, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 8 }, searchInput: { flex: 1, minWidth: 0, minHeight: 44, fontSize: 15, color: colors.ink }, noResults: { padding: 20, textAlign: 'center', color: colors.muted, fontSize: 14 },
+  inlinePanel: { borderWidth: 1, borderColor: colors.border, borderRadius: rounded.card, paddingTop: 12, backgroundColor: colors.surface }, inlineList: { maxHeight: 230 },
 }));

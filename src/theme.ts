@@ -5,7 +5,7 @@ export type { ThemeColors } from './theme/palette';
 // Calistoga ships one weight (400): never set another, or the platform fakes a bold.
 export const typefaces = { display: Platform.select({ web: 'Calistoga, Georgia, serif', default: 'Calistoga' }) };
 // From `wideMinWidth` (a computer, or a tablet held sideways) navigation moves to a side rail.
-export const layout = { tabContentBottom: 24, wideMinWidth: 1024 };
+export const layout = { tabContentBottom: 24, wideMinWidth: 1024, railWidth: 248 };
 export const internalLayout = { maxWidth: 720, gutter: 20, radius: 16, gap: 16, actionGap: 12 };
 
 // DESIGN.md scale. Calistoga for titles and figures (never under 16 px), the system font for the rest.

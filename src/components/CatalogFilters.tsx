@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-nat
 import { activeFilterCount, defaultFilters, filterRangeError, type ListingFilters } from '../domain/listings';
 import { AMENITY_GROUPS, CONDITIONS, PROVINCES } from '../domain/listingOptions';
 import { normalizeDecimalInput } from '../domain/numericInput';
-import { createThemedStyles } from '../theme';
+import { createThemedStyles, rounded, typography } from '../theme';
 import { Button, Icon, IconButton, Notice, Pill } from './ui';
 import { SelectionField } from './SelectionField';
 import { SORT_OPTIONS } from '../catalog/sortOptions';
@@ -17,13 +17,14 @@ export function CatalogFilters({ filters, onApply, onClose }: { filters: Listing
   const error = filterRangeError(draft);
   const selectedCount = activeFilterCount({ ...draft, query: '' });
   return <FilterSheet onClose={onClose}>{close => <>
-          <View style={styles.header}><View style={styles.headerIcon}><Icon name="options-outline" color={colors.primary} size={23} /></View><View style={styles.heading}><Text accessibilityRole="header" style={styles.title}>Tu búsqueda, a medida</Text><Text style={styles.subtitle}>{selectedCount ? `${selectedCount} ${selectedCount === 1 ? 'filtro seleccionado' : 'filtros seleccionados'}` : 'Elige lo que importa para tu hogar'}</Text></View><IconButton name="close" label="Cerrar filtros sin aplicar" onPress={() => close()} style={{ backgroundColor: colors.paper }} /></View>
+          <View style={styles.header}><View style={styles.heading}><Text accessibilityRole="header" style={styles.title}>Tu búsqueda, a medida</Text><Text style={styles.subtitle}>{selectedCount ? `${selectedCount} ${selectedCount === 1 ? 'filtro seleccionado' : 'filtros seleccionados'}` : 'Elige lo que importa para tu hogar'}</Text></View><IconButton name="close" label="Cerrar filtros sin aplicar" onPress={() => close()} /></View>
           <ScrollView keyboardShouldPersistTaps="handled" style={styles.scroll} contentContainerStyle={styles.content}>
             {!!draft.query && <View style={styles.query}><Icon name="search-outline" size={17} color={colors.primary} /><Text style={styles.queryText}>Buscando «{draft.query}»</Text></View>}
             <View style={styles.section}><Text style={styles.sectionTitle}>Vivienda y ubicación</Text>
               <Text style={styles.label}>Operación</Text>
               <View style={styles.choices}>{([['offers', 'Venta y permuta'], ['sale', 'Venta'], ['swap', 'Permuta'], ['rent', 'Alquiler'], ['wanted', 'Busco']] as const).map(([value, label]) =>
                 <Pill key={value} label={label} active={(draft.operation ?? 'offers') === value} onPress={() => change({ operation: value })} />)}</View>
+              <Text style={styles.label}>Tipo</Text>
               <View style={styles.choices}>{(['Todas', 'Casa', 'Apartamento'] as const).map(type => <Pill key={type} label={type} active={draft.type === type} onPress={() => change({ type })} />)}</View>
               <SelectionField inline label="Provincia" value={draft.province ?? ''} options={[{ value: '', label: 'Todas las provincias' }, ...PROVINCES.map(value => ({ value, label: value }))]} onChange={province => change({ province })} />
             </View>
@@ -54,16 +55,21 @@ export function CatalogFilters({ filters, onApply, onClose }: { filters: Listing
 function RangeFields({ label, unit, min, max, onMin, onMax }: { label: string; unit: string; min: string; max: string; onMin(value: string): void; onMax(value: string): void }) {
   const { colors, styles } = useStyles();
   return <View style={styles.range}><Text style={styles.label}>{label} · {unit}</Text><View style={styles.rangeRow}>
-    <View style={styles.rangeField}><Text style={styles.rangeCaption}>Desde</Text><TextInput accessibilityLabel={`${label} mínimo en ${unit}`} value={min} onChangeText={text => onMin(normalizeDecimalInput(text))} placeholder="Sin mínimo" placeholderTextColor={colors.muted} keyboardType="decimal-pad" inputMode="decimal" style={styles.input} /></View>
-    <View style={styles.rangeField}><Text style={styles.rangeCaption}>Hasta</Text><TextInput accessibilityLabel={`${label} máximo en ${unit}`} value={max} onChangeText={text => onMax(normalizeDecimalInput(text))} placeholder="Sin máximo" placeholderTextColor={colors.muted} keyboardType="decimal-pad" inputMode="decimal" style={styles.input} /></View>
+    <View style={styles.rangeField}><Text style={styles.rangeCaption}>Desde</Text><View style={styles.inputPill}><TextInput accessibilityLabel={`${label} mínimo en ${unit}`} value={min} onChangeText={text => onMin(normalizeDecimalInput(text))} placeholder="Sin mínimo" placeholderTextColor={colors.muted} keyboardType="decimal-pad" inputMode="decimal" style={styles.input} /></View></View>
+    <View style={styles.rangeField}><Text style={styles.rangeCaption}>Hasta</Text><View style={styles.inputPill}><TextInput accessibilityLabel={`${label} máximo en ${unit}`} value={max} onChangeText={text => onMax(normalizeDecimalInput(text))} placeholder="Sin máximo" placeholderTextColor={colors.muted} keyboardType="decimal-pad" inputMode="decimal" style={styles.input} /></View></View>
   </View></View>;
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 12, borderBottomWidth: 1, borderBottomColor: colors.border }, headerIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: colors.softBlue, alignItems: 'center', justifyContent: 'center' }, heading: { flex: 1, gap: 5 }, title: { fontSize: 20, fontWeight: '700', letterSpacing: -.5, color: colors.ink }, subtitle: { fontSize: 12, lineHeight: 17, color: colors.muted },
-  scroll: { flexShrink: 1 }, content: { padding: 20, gap: 24 }, section: { gap: 13, paddingBottom: 22, borderBottomWidth: 1, borderBottomColor: colors.border }, sectionTitle: { color: colors.ink, fontSize: 17, fontWeight: '600', letterSpacing: -.25 }, choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, backgroundColor: colors.paper, borderRadius: 18, padding: 6 }, label: { color: colors.ink, fontSize: 14, fontWeight: '600' }, help: { color: colors.muted, fontSize: 12, lineHeight: 18 },
-  group: { gap: 10 }, range: { gap: 10 }, rangeRow: { flexDirection: 'row', gap: 10 }, rangeField: { flex: 1, minWidth: 0, backgroundColor: colors.paper, borderRadius: 15, borderWidth: 1, borderColor: colors.border, paddingTop: 11, paddingHorizontal: 13 }, rangeCaption: { fontSize: 11, color: colors.muted }, input: { color: colors.ink, fontSize: 16, minHeight: 43, minWidth: 0, width: '100%' },
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 4 }, switchCopy: { flex: 1, gap: 5 }, switchTitle: { fontSize: 14, color: colors.ink, fontWeight: '500' },
-  footer: { borderTopWidth: 1, borderTopColor: colors.border, padding: 16, gap: 12 }, resultText: { fontSize: 12, color: colors.muted, textAlign: 'center' }, actions: { flexDirection: 'row', gap: 10 }, clear: { flexShrink: 1 }, apply: { flex: 1 },
-  query: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, backgroundColor: colors.softBlue, borderRadius: 13 }, queryText: { flex: 1, fontSize: 13, color: colors.primary, lineHeight: 19 },
+  header: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 20, paddingBottom: 8, gap: 12 }, heading: { flex: 1, gap: 6 },
+  title: { ...typography.sheetTitle, color: colors.ink }, subtitle: { fontSize: 13, lineHeight: 18, color: colors.muted },
+  scroll: { flexShrink: 1 }, content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, gap: 30 }, section: { gap: 12 },
+  sectionTitle: { ...typography.section, color: colors.ink }, choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  label: { color: colors.body, fontSize: 13, lineHeight: 18, fontWeight: '600' }, help: { color: colors.muted, fontSize: 13, lineHeight: 18 },
+  group: { gap: 10 }, range: { gap: 10 }, rangeRow: { flexDirection: 'row', gap: 10 }, rangeField: { flex: 1, minWidth: 0, gap: 6 }, rangeCaption: { fontSize: 12, lineHeight: 16, color: colors.muted },
+  inputPill: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, borderRadius: rounded.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  input: { flex: 1, color: colors.ink, fontSize: 16, minHeight: 50, minWidth: 0 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: rounded.card, backgroundColor: colors.surface }, switchCopy: { flex: 1, gap: 2 }, switchTitle: { fontSize: 15, lineHeight: 20, color: colors.ink, fontWeight: '600' },
+  footer: { borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.sheet, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16, gap: 12 }, resultText: { fontSize: 12, color: colors.muted, textAlign: 'center' }, actions: { flexDirection: 'row', gap: 10 }, clear: { flexShrink: 1 }, apply: { flex: 1 },
+  query: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: colors.softBlue, borderRadius: rounded.pill }, queryText: { flex: 1, fontSize: 13, color: colors.primary, lineHeight: 19 },
 }));

@@ -10,11 +10,14 @@ export const lightColors = {
   rose: '#C32935', softRose: '#C329351A',
   inkBlue: '#1A2B3B', mutedBlue: '#66717D', softNeutral: '#F2EADC', skeleton: '#F2EADC',
   accentBorder: '#A9C8EC', blueDecoration: '#DCE9F9', blueLine: '#BCD2EF',
-  onPrimary: '#FFFFFF', onPrimaryMuted: '#E0EEFF', inverseSurface: '#1A2B3B', inverseInk: '#FAF6EE',
+  onPrimary: '#FFFFFF', onPrimaryMuted: '#E0EEFF', inverseSurface: '#1A2B3B', inverseInk: '#FAF6EE', inversePrimary: '#8CC0F7',
+  // The border of a secondary button: stronger than a card's line.
+  outline: '#C9BBA3',
   // Text and icons on danger-fill, on the photo scrim and on the navy banner, in both modes.
   onDark: '#FFFFFF',
   banner: '#173B60', bannerIcon: '#305577', bannerText: '#CADBEB',
-  cream: '#FFFFFF', creamInk: '#1A2B3B', glow: '#E3B04B29', photoGround: '#F2EADC',
+  // By day the paper is arena, so a sign or paper card still shows on white cards and on the cal ground.
+  cream: '#F2EADC', creamInk: '#1A2B3B', glow: '#E3B04B29', photoGround: '#F2EADC',
   overlay: '#050D189E', subtleOverlay: '#142E461A', photoOverlay: '#0A16269E',
   navigation: '#FFFFFF', navigationGlass: '#FFFFFFF0', navigationBorder: '#E6DCCB', navigationActive: '#0153A814',
   switchTrack: '#D8CDB9', switchThumb: '#FFFFFF',
@@ -31,7 +34,8 @@ export const darkColors: ThemeColors = {
   rose: '#FF929D', softRose: '#FF929D24',
   inkBlue: '#F3EFE7', mutedBlue: '#8FA2B5', softNeutral: '#1B3654', skeleton: '#1B3654',
   accentBorder: '#8CC0F773', blueDecoration: '#1B3654', blueLine: '#8CC0F759',
-  onPrimary: '#0B1A29', onPrimaryMuted: '#0B1A29B8', inverseSurface: '#F3EFE7', inverseInk: '#0A1626',
+  onPrimary: '#0B1A29', onPrimaryMuted: '#0B1A29B8', inverseSurface: '#F3EFE7', inverseInk: '#0A1626', inversePrimary: '#0153A8',
+  outline: '#D7E2EC47',
   onDark: '#FFFFFF',
   banner: '#173B60', bannerIcon: '#305577', bannerText: '#CADBEB',
   cream: '#FAF6EE', creamInk: '#1A2B3B', glow: '#E3B04B33', photoGround: '#050D18',

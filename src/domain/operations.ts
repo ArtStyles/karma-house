@@ -16,6 +16,12 @@ export function operationBadge(listing: Pick<Listing, 'operation'>): string {
   return operation === 'sale' ? '' : OPERATIONS.find((item) => item.value === operation)!.badge;
 }
 
+/** The cal-paper sign on a listing's photo: it always names the operation, a sale included. */
+export function cartelLabel(listing: Pick<Listing, 'operation'>): 'Se vende' | 'Se alquila' | 'Se permuta' | 'Se busca' {
+  const operation = listingOperation(listing);
+  return operation === 'rent' ? 'Se alquila' : operation === 'swap' ? 'Se permuta' : operation === 'wanted' ? 'Se busca' : 'Se vende';
+}
+
 export function priceLabel(listing: Pick<Listing, 'operation'>): 'Precio' | 'Valor estimado' | 'Presupuesto máximo' | 'Alquiler' {
   const operation = listingOperation(listing);
   return operation === 'wanted' ? 'Presupuesto máximo' : operation === 'swap' ? 'Valor estimado' : operation === 'rent' ? 'Alquiler' : 'Precio';
