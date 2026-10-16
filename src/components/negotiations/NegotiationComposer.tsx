@@ -57,7 +57,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({form:{gap:16},
   input:{minHeight:52,borderRadius:rounded.pill,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surface,paddingHorizontal:18,paddingVertical:12,color:colors.ink,fontSize:16},
   note:{minHeight:96,borderRadius:rounded.card,fontSize:15,lineHeight:21},help:{color:colors.muted,fontSize:12,lineHeight:17},
   // The offer is the figure of the form: a large Calistoga amount in a framed box.
-  amountBox:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,paddingVertical:14,paddingHorizontal:18,borderRadius:30,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.accentBorder},
+  amountBox:{flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,paddingVertical:14,paddingHorizontal:18,borderRadius:rounded.cardLg,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.accentBorder},
   dollar:{...typography.numeralLg,color:colors.muted},amountInput:{...typography.numeralLg,minWidth:120,maxWidth:240,flexShrink:1,color:colors.ink,paddingVertical:4},
   amountValue:{...typography.numeralLg,color:colors.ink},value:{fontSize:17,lineHeight:22,fontWeight:'600',color:colors.ink},
   previous:{padding:14,borderRadius:rounded.inner,backgroundColor:colors.surface,gap:4},previousValue:{fontSize:16,lineHeight:22,fontWeight:'600',color:colors.ink},

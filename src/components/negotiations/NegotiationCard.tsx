@@ -35,7 +35,7 @@ export function NegotiationCard({ item, userId, busy = false, managementChanged=
   </View>;
 }
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  card:{backgroundColor:colors.surface,borderRadius:26,padding:16,gap:14},heading:{flexDirection:'row',alignItems:'center',gap:12,flexWrap:'wrap'},
+  card:{backgroundColor:colors.surface,borderRadius:rounded.cardLg,padding:16,gap:14},heading:{flexDirection:'row',alignItems:'center',gap:12,flexWrap:'wrap'},
   icon:{width:44,height:44,borderRadius:rounded.pill,alignItems:'center',justifyContent:'center',backgroundColor:colors.softBlue},offerIcon:{backgroundColor:colors.softAmber},
   headingCopy:{flexGrow:1,flexBasis:125,minWidth:0,gap:2},kind:{fontSize:15,lineHeight:20,fontWeight:'600',color:colors.ink},author:{fontSize:12,lineHeight:16,color:colors.muted},
   // An offer reads as a figure; a visit as a date.

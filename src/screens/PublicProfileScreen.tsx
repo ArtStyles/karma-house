@@ -109,7 +109,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   badge: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 34, paddingHorizontal: 12, borderRadius: rounded.pill, backgroundColor: colors.softBlue },
   badgeText: { color: colors.primary, fontSize: 13, fontWeight: '600' },
   disclaimer: { maxWidth: 420, fontSize: 12, lineHeight: 17, color: colors.muted, textAlign: 'center' },
-  stats: { flexDirection: 'row', paddingVertical: 16, paddingHorizontal: 8, borderRadius: 26, backgroundColor: colors.surface },
+  stats: { flexDirection: 'row', paddingVertical: 16, paddingHorizontal: 8, borderRadius: rounded.card, backgroundColor: colors.surface },
   stat: { flex: 1, minWidth: 0, alignItems: 'center', gap: 2 }, statValue: { ...typography.numeralLg, color: colors.ink }, statWord: { ...typography.section, color: colors.ink, lineHeight: 34 }, statLabel: { ...typography.caption, color: colors.muted, textAlign: 'center' },
   facts: { backgroundColor: colors.surface, borderRadius: rounded.card, paddingHorizontal: 16 },
   fact: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }, factText: { flex: 1, color: colors.ink, fontSize: 15, lineHeight: 21 },
