@@ -114,8 +114,12 @@ export default function MyListingsScreen() {
         {!!query && <Pressable accessibilityRole="button" accessibilityLabel="Borrar búsqueda" onPress={() => { setQuery(''); setPage(1); }} style={styles.clear}><Icon name="close-circle" size={20} color={colors.muted} /></Pressable>}
       </View>}
       {!!own.length && <View style={styles.filters}>
-        <Pill label="Todos" active={filter === 'all'} onPress={() => choose('all')} />
-        {(Object.keys(boardLabels) as ListingBoardState[]).filter(state => own.some(item => listingBoardState(item) === state)).map(state => <Pill key={state} label={boardLabels[state]} active={filter === state} onPress={() => choose(state)} />)}
+        {/* Each state says how many it holds among what the search left. */}
+        <Pill label={`Todos · ${found.length}`} accessibilityLabel={`Todos, ${found.length} ${found.length === 1 ? 'anuncio' : 'anuncios'}`} active={filter === 'all'} onPress={() => choose('all')} />
+        {(Object.keys(boardLabels) as ListingBoardState[]).filter(state => own.some(item => listingBoardState(item) === state)).map(state => {
+          const count = found.filter(item => listingBoardState(item) === state).length;
+          return <Pill key={state} label={`${boardLabels[state]} · ${count}`} accessibilityLabel={`${boardLabels[state]}, ${count} ${count === 1 ? 'anuncio' : 'anuncios'}`} active={filter === state} onPress={() => choose(state)} />;
+        })}
       </View>}
       {ready === false && !own.length ? <ActivityIndicator accessibilityLabel="Cargando tus anuncios" color={colors.primary} style={styles.loader} /> : own.length ? <View style={styles.list}>
         <Text accessibilityLiveRegion="polite" style={styles.sectionLabel}>{filtered.length ? `Mostrando ${first + 1}–${first + visibleOwn.length} de ${filtered.length} ${filtered.length === 1 ? 'anuncio' : 'anuncios'}` : `0 de ${own.length} ${own.length === 1 ? 'anuncio' : 'anuncios'}`}</Text>

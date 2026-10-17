@@ -1,4 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useTabBarSpace } from '../components/TabBarSpace';
 import * as Linking from 'expo-linking';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -31,6 +32,7 @@ const choices: { operation: ListingOperation; label: string; icon: IconName }[] 
 
 export default function PublishScreen() {
   const { colors, styles } = useStyles();
+  const tabSpace = useTabBarSpace();
   const { ready, saveListing, mode } = useMarketplace();
   const { ready: authReady, user, isOwner, suspended } = useAuth();
   const params = useLocalSearchParams<{ operation?: string; import?: string }>();
@@ -83,7 +85,7 @@ export default function PublishScreen() {
         : <View style={styles.helpHeader}>{back}<Text accessibilityRole="header" style={styles.display}>Publicar con ayuda</Text><Text style={styles.lead}>Envíanos una solicitud por correo y preparamos el anuncio contigo, con tu autorización.</Text></View>}
     </View>
     {suspended ? <View style={styles.suspension}><Notice error>Tu cuenta está suspendida. No puedes publicar anuncios hasta que se reactive.</Notice></View> : <>
-      {section === 'choose' && <ScrollView contentContainerStyle={styles.content}>
+      {section === 'choose' && <ScrollView contentContainerStyle={[styles.content, { paddingBottom: layout.tabContentBottom + tabSpace }]}>
         {ownStarted ? <View style={styles.resume}>
           <Text accessibilityRole="header" style={styles.title}>Tu anuncio está empezado</Text>
           <Text style={styles.text}>Conservamos los datos y las fotos al volver a estas opciones.</Text>
@@ -100,7 +102,7 @@ export default function PublishScreen() {
           <Icon name="chevron-forward" size={18} color={colors.muted} />
         </Pressable>
       </ScrollView>}
-      {section === 'help' && <ScrollView contentContainerStyle={styles.content}>
+      {section === 'help' && <ScrollView contentContainerStyle={[styles.content, { paddingBottom: layout.tabContentBottom + tabSpace }]}>
         {helpSteps.map(({ icon, text, sol }) => <View key={icon} style={styles.helpStep}>
           <View style={sol ? styles.solIcon : styles.blueIcon}><Icon name={icon} size={20} color={sol ? colors.amber : colors.primary} /></View>
           <Text style={styles.stepText}>{text}</Text>
@@ -135,11 +137,12 @@ const helpSteps: { icon: IconName; text: string; sol?: boolean }[] = [
 /** After sending: the finished mediopunto, the listing as a row and where to follow it. It promises no notification. */
 function SentNotice({ draft, mode, onListings, onExplore }: { draft: ListingDraft; mode: 'review' | 'published' | 'local'; onListings(): void; onExplore(): void }) {
   const { colors, styles } = useStyles();
+  const tabSpace = useTabBarSpace();
   const price = publishedNumber(draft.price);
   const copy = mode === 'review' ? { title: 'Tu anuncio está en revisión', text: 'Aparecerá en el catálogo cuando sea aprobado. Puedes seguir su estado en Mis anuncios.', tone: 'waiting' as const, chip: 'En revisión' }
     : mode === 'published' ? { title: 'Tu anuncio está publicado', text: 'Ya aparece en el catálogo. Puedes cambiarlo desde Mis anuncios.', tone: 'done' as const, chip: 'Publicado' }
     : { title: 'Anuncio guardado', text: 'Se guardó en este dispositivo, sin publicarse en internet.', tone: 'neutral' as const, chip: 'En este dispositivo' };
-  return <ScrollView contentContainerStyle={styles.sent}>
+  return <ScrollView contentContainerStyle={[styles.sent, { paddingBottom: layout.tabContentBottom + tabSpace }]}>
     <View accessibilityRole="alert" style={styles.sentBody}>
       <Mediopunto width={200} />
       <Text accessibilityRole="header" style={[styles.display, styles.center]}>{copy.title}</Text>

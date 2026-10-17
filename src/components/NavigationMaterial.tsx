@@ -30,8 +30,8 @@ export function NavigationMaterial({blurTarget}:{blurTarget?:RefObject<View|null
     const contrast=AccessibilityInfo.addEventListener('darkerSystemColorsChanged',setHighContrast);
     return () => { mounted = false; subscription.remove(); contrast.remove(); };
   }, []);
-  if ((Platform.OS === 'android'&&(Number(Platform.Version)<31||!blurTarget)) || reduceTransparency||highContrast) {
-    return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.navigation }]} />;
-  }
+  if (reduceTransparency||highContrast) return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.navigation }]} />;
+  // Without a blur target Android cannot blur; the tinted glass alone still lets the screen show through.
+  if (Platform.OS === 'android'&&(Number(Platform.Version)<31||!blurTarget)) return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.navigationGlass }]} />;
   return <BlurView pointerEvents="none" tint={scheme} intensity={55} blurTarget={blurTarget} blurMethod="dimezisBlurViewSdk31Plus" style={[StyleSheet.absoluteFill, { backgroundColor: colors.navigationGlass }]} />;
 }

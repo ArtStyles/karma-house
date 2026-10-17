@@ -1,4 +1,5 @@
 import {canonicalFavoriteCards} from '../catalog/favoritesController';
+import { useTabBarSpace } from '../components/TabBarSpace';
 import { router } from 'expo-router';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useRef, useState } from 'react';
@@ -17,6 +18,7 @@ import { listingPresentation, unavailableFavoriteCount } from '../catalog/presen
 
 export default function FavoritesScreen() {
   const { colors, styles } = useStyles();
+  const tabSpace = useTabBarSpace();
   const { favoriteIds, canonicalFavoriteId, toggleFavorite, mode, storageError, refresh } = useMarketplace();
   const auth = useAuth();
   const [refreshing, setRefreshing] = useState(false);
@@ -52,7 +54,7 @@ export default function FavoritesScreen() {
     <Icon name="notifications-outline" size={16} color={colors.sol} /><Text style={styles.alertsText}>Mis alertas</Text>
   </MotionPressable>;
   const saved = favorites.length;
-  return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}><ScrollView contentContainerStyle={[styles.content, removed.length > 0 && styles.underToast]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={colors.primary} />}><PageTitle title="Favoritos" subtitle={saved ? `${saved} ${saved === 1 ? 'vivienda guardada' : 'viviendas guardadas'}` : undefined} right={alerts} />
+  return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}><ScrollView contentContainerStyle={[styles.content, { paddingBottom: (removed.length > 0 ? 92 : layout.tabContentBottom) + tabSpace }]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={colors.primary} />}><PageTitle title="Favoritos" subtitle={saved ? `${saved} ${saved === 1 ? 'vivienda guardada' : 'viviendas guardadas'}` : undefined} right={alerts} />
     {mode === 'cloud' && !auth.ready ? <ActivityIndicator accessibilityLabel="Cargando tu cuenta" color={colors.primary} size="large" style={{ marginTop: 40 }} /> : mode === 'cloud' && !auth.user ? <AccountPrompt returnTo="/favorites" title="Entra para ver tus favoritos" description="Guarda viviendas y consúltalas desde cualquiera de tus dispositivos." /> : <>
       {storageError && <><Notice error>{storageError}</Notice><Button label="Volver a cargar" secondary loading={refreshing} onPress={reload} /></>}
       {error && <View style={{ gap: 8, marginBottom: 16 }}><Notice error>{`No pudimos actualizar tus favoritos. ${error}`}</Notice><Button label="Reintentar favoritos" secondary loading={loading} onPress={() => void retry()} /></View>}
@@ -67,14 +69,14 @@ export default function FavoritesScreen() {
     </>}
   </ScrollView>
     {/* A toast over the tab bar: removed cards stay in place, so the heart stays under the finger. */}
-    {removed.length > 0 && <View style={styles.toast}>
+    {removed.length > 0 && <View style={[styles.toast, { bottom: 12 + tabSpace }]}>
       <Text accessibilityLiveRegion="polite" style={styles.toastText}>{removed.length === 1 ? 'Quitado de favoritos' : `${removed.length} quitados de favoritos`}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel="Deshacer y devolver a favoritos" accessibilityState={{ disabled: undoing }} disabled={undoing} onPress={() => void undo()} style={({ pressed }) => [styles.undoButton, (pressed || undoing) && { opacity: .5 }]}><Text style={styles.undo}>Deshacer</Text></Pressable>
     </View>}
   </SafeAreaView>;
 }
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: 900, alignSelf: 'center', paddingHorizontal: 16, paddingBottom: layout.tabContentBottom }, underToast: { paddingBottom: 92 },
+  safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: 900, alignSelf: 'center', paddingHorizontal: 16, paddingBottom: layout.tabContentBottom },
   alerts: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, borderRadius: rounded.pill, backgroundColor: colors.surface }, alertsText: { fontSize: 14, fontWeight: '600', color: colors.ink },
   empty: { paddingTop: 48, paddingBottom: 32, gap: 14, maxWidth: 380, alignSelf: 'center', alignItems: 'center' },
   emptyTitle: { ...typography.sheetTitle, color: colors.ink, textAlign: 'center', marginTop: 14 }, emptyText: { color: colors.body, fontSize: 15, lineHeight: 22, textAlign: 'center' }, emptyAction: { marginTop: 10, minWidth: 200 },

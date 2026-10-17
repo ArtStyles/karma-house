@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTabBarSpace } from './TabBarSpace';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useReducedMotion } from '../settings/useReducedMotion';
 import {
@@ -110,6 +111,7 @@ export function ListingForm({
   draftStorageKey,
 }: ListingFormProps) {
   const { colors, styles } = useStyles();
+  const tabSpace = useTabBarSpace();
   const [draft, setDraft] = useState<ListingDraft>(() => ({ ...restorePublicationDraft(null, cloneDraft(initialDraft ?? emptyDraft), initialDraft ? undefined : initialOperation), clientRequestId: initialDraft?.clientRequestId ?? draftToken() }));
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<DraftErrors>({});
@@ -327,7 +329,7 @@ export function ListingForm({
     >
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: layout.tabContentBottom + tabSpace }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >

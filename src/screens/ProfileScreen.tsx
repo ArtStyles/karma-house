@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
+import { useTabBarSpace } from '../components/TabBarSpace';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Linking, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Switch, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { UserAvatar } from '../components/account/UserAvatar';
@@ -12,6 +13,7 @@ import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 import { useAuth } from '../auth/AuthProvider';
 import { useMarketplace } from '../state/MarketplaceProvider';
+import { listingBoardState, type Listing, type ListingBoardState } from '../domain/listings';
 import { createThemedStyles, internalLayout, layout, rounded, typography } from '../theme';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
@@ -27,6 +29,9 @@ import { useAppUpdate } from '../updates/useAppUpdate';
 
 export default function ProfileScreen() {
   const { colors, styles } = useStyles();
+  const tabSpace = useTabBarSpace();
+  // At 320 px a long name would break inside a word beside the avatar and the two buttons.
+  const narrow = useWindowDimensions().width < 360;
   const { favoriteIds, ownListings: own, mode, refresh: refreshListings } = useMarketplace();
   const { ready: authReady, user, session, displayName, avatarUrl, isAdmin, isOwner, suspended, suspensionReason, signOut, error: authError, refreshProfile } = useAuth();
   const { unreadCount, refresh: refreshMessages } = useMessaging();
@@ -95,13 +100,13 @@ export default function ProfileScreen() {
   }
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-    <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!busy && !!user && mode === 'cloud'} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}>
+    <ScrollView alwaysBounceVertical contentContainerStyle={[styles.content, { paddingBottom: layout.tabContentBottom + tabSpace }]} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!busy && !!user && mode === 'cloud'} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}>
       <View style={styles.header}>
         {/* Name and photo are edited in Ajustes de cuenta, so the identity opens it. */}
         {user || mode === 'demo' ? <Pressable disabled={!user} accessibilityRole={user ? 'button' : undefined} accessibilityLabel={user ? `${displayName || 'Mi cuenta'}${proDetail ? ', cuenta Pro' : ''}, ${user.email ?? ''}. Editar nombre y foto` : undefined} onPress={() => router.push('/account-settings')} style={({ pressed }) => [styles.identity, pressed && { opacity: .7 }]}>
-          <UserAvatar arch size={64} avatarUrl={user ? avatarUrl : null} name={user ? displayName : ''} />
+          <UserAvatar arch size={narrow ? 52 : 64} avatarUrl={user ? avatarUrl : null} name={user ? displayName : ''} />
           <View style={styles.identityText}>
-            <Text accessibilityRole="header" numberOfLines={2} style={styles.heading}>{user ? displayName || 'Mi cuenta' : 'Demostración local'}</Text>
+            <Text accessibilityRole="header" numberOfLines={2} style={[styles.heading, narrow && styles.narrowHeading]}>{user ? displayName || 'Mi cuenta' : 'Demostración local'}</Text>
             {user && proDetail && <ProBadge decorative />}
             <Text numberOfLines={1} style={styles.identityDescription}>{mode === 'demo' ? 'Guardado en este dispositivo' : user?.email}</Text>
           </View>
@@ -157,7 +162,7 @@ export default function ProfileScreen() {
         </View>
         <Text accessibilityRole="header" style={styles.sectionLabel}>Viviendas</Text>
         <View style={styles.group}>
-          <AccountRow icon="home-outline" title="Mis anuncios" count={own.length} onPress={() => router.push('/my-listings')} />
+          <AccountRow icon="home-outline" title="Mis anuncios" count={own.length ? undefined : 0} description={own.length ? listingSummary(own) : undefined} onPress={() => router.push('/my-listings')} />
           {mode === 'cloud' && <>
             <AccountRow icon="bookmark-outline" title="Mis alertas" count={savedSearches.items.length} onPress={() => router.push('/saved-searches')} />
             {user && <AccountRow icon="person-circle-outline" title="Ver mi perfil público" onPress={() => router.push(`/user/${user.id}`)} />}
@@ -194,6 +199,18 @@ export default function ProfileScreen() {
   </SafeAreaView>;
 }
 
+// «3 en el catálogo · 1 en revisión»: how many listings sit in each state, in the order they matter.
+const summaryOrder: [ListingBoardState, (count: number) => string][] = [
+  ['live', () => 'en el catálogo'], ['pending', () => 'en revisión'], ['rejected', n => n === 1 ? 'necesita cambios' : 'necesitan cambios'],
+  ['paused', () => 'en pausa'], ['draft', n => n === 1 ? 'borrador' : 'borradores'], ['sold', n => n === 1 ? 'cerrado' : 'cerrados'],
+];
+function listingSummary(listings: Listing[]) {
+  return summaryOrder.map(([state, words]) => {
+    const count = listings.filter(item => listingBoardState(item) === state).length;
+    return count ? `${count} ${words(count)}` : '';
+  }).filter(Boolean).join(' · ');
+}
+
 function AccountRow({ icon, title, description, extraLabel, count, unread = false, danger = false, disabled = false, loading = false, children, onPress }: {
   icon: IconName; title: string; description?: string; extraLabel?: string; count?: number | null; unread?: boolean; danger?: boolean;
   disabled?: boolean; loading?: boolean; children?: ReactNode; onPress(): void;
@@ -215,7 +232,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   content: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', paddingHorizontal: 16, paddingBottom: layout.tabContentBottom },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 18, paddingBottom: 20, paddingHorizontal: 4 },
   identity: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 14 },
-  identityText: { flex: 1, minWidth: 0, gap: 4 }, heading: { ...typography.displayLong, color: colors.ink },
+  identityText: { flex: 1, minWidth: 0, gap: 4 }, heading: { ...typography.sheetTitle, color: colors.ink }, narrowHeading: typography.section,
   identityDescription: { color: colors.muted, fontSize: 13, lineHeight: 19 },
   round: { backgroundColor: colors.surface },
   // The one sol button in Mi espacio: something new waits to be installed.

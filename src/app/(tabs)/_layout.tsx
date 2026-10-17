@@ -3,7 +3,8 @@ import { StyleSheet, View, useWindowDimensions, type ColorValue } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../auth/AuthProvider';
 import { UserAvatar } from '../../components/account/UserAvatar';
-import { Mediopunto } from '../../components/Mediopunto';
+import { NavigationMaterial } from '../../components/NavigationMaterial';
+import { TabBarSpace } from '../../components/TabBarSpace';
 import { Icon, type IconName } from '../../components/ui';
 import { layout, rounded, useTheme } from '../../theme';
 import { useMessaging } from '../../messaging/MessagingProvider';
@@ -22,31 +23,34 @@ export default function TabLayout() {
   const updatePending = useAppUpdate().pending;
   const updateDot = !unreadCount && updatePending;
   const { user, displayName, avatarUrl } = useAuth();
-  // The active section swaps its icon for the lit mediopunto; both copies stay mounted and cross-fade.
-  const active = <View style={styles.icon}><Mediopunto width={36} ground={colors.navigation} /></View>;
+  // The active section keeps its own icon, filled in the window's sol; its label takes the blue.
   const tabIcon = (name: IconName) =>
-    ({ color, focused }: { color: ColorValue; focused: boolean }) => focused ? active : <Icon name={name} color={color} size={24} />;
-  // A signed-in account shows its own face (or initials) instead of the generic person.
-  const accountIcon = (props: { color: ColorValue; focused: boolean }) => props.focused ? active : user
-    ? <UserAvatar size={26} avatarUrl={avatarUrl} name={displayName} accessibilityLabel="" />
+    ({ color, focused }: { color: ColorValue; focused: boolean }) => <Icon name={focused ? name.replace('-outline', '') as IconName : name} color={focused ? colors.sol : color} size={24} />;
+  // A signed-in account shows its own face (or initials) instead of the generic person; active, it wears a sol ring.
+  const accountIcon = (props: { color: ColorValue; focused: boolean }) => user
+    ? <View style={[styles.avatar, props.focused && { borderColor: colors.sol }]}><UserAvatar size={24} avatarUrl={avatarUrl} name={displayName} accessibilityLabel="" /></View>
     : tabIcon('person-circle-outline')(props);
+  // The bar floats over the screens, which end their content this far up (TabBarSpace).
+  const space = wide ? 0 : bar + 20 + insets.bottom;
   return (
-    // Wide screens get the root SideRail instead of a tab bar.
+    <TabBarSpace.Provider value={space}>
+    {/* Wide screens get the root SideRail instead of a tab bar. */}
     <Tabs tabBar={wide ? () => null : undefined} screenOptions={{
       headerShown: false,
-      tabBarActiveTintColor: colors.ink,
+      tabBarActiveTintColor: colors.primary,
       tabBarInactiveTintColor: colors.muted,
       tabBarActiveBackgroundColor: 'transparent',
       tabBarHideOnKeyboard: true,
-      // A floating pill 16 px from the sides and 20 above the safe area. The bar keeps its full height in the
-      // layout, so content ends above it and hiding it for the keyboard moves the whole pill out of view.
+      // A floating pill 16 px from the sides and 20 above the safe area, over the screen: what scrolls behind it
+      // shows through the glass. Hiding it for the keyboard moves the whole pill out of view.
       tabBarStyle: {
+        position: 'absolute', left: 0, right: 0, bottom: 0,
         height: bar + 20 + insets.bottom, paddingTop: 0, paddingBottom: 20 + insets.bottom, paddingHorizontal: 20,
         backgroundColor: 'transparent', borderTopWidth: 0, elevation: 0,
       },
-      // Opaque enough to read on Android, where it never blurs.
-      tabBarBackground: () => <View style={[styles.pill, { backgroundColor: colors.navigationGlass, borderColor: colors.navigationBorder,
-        boxShadow: scheme === 'dark' ? '0 12px 32px rgba(0,0,0,0.4)' : '0 10px 28px rgba(26,43,59,0.12)' }]} />,
+      // Glass tinted with the ground, not a blue slab: blurred on iOS and the web, translucent on Android.
+      tabBarBackground: () => <View style={[styles.pill, { borderColor: colors.navigationBorder,
+        boxShadow: scheme === 'dark' ? '0 12px 32px rgba(0,0,0,0.4)' : '0 10px 28px rgba(26,43,59,0.12)' }]}><NavigationMaterial /></View>,
       // No side padding on items: at 320 px «Mi espacio» needs the whole quarter.
       tabBarItemStyle: { height: bar, paddingHorizontal: 0 },
       tabBarLabelStyle: { fontSize: 12, lineHeight: 16, fontWeight: '600', marginTop: 2, flexShrink: 0 },
@@ -60,11 +64,12 @@ export default function TabLayout() {
         // Sol marks what asks for attention: unread items and a new version.
         tabBarBadgeStyle: updateDot ? { backgroundColor: colors.sol, minWidth: 10, width: 10, height: 10, borderRadius: 5, paddingHorizontal: 0, top: 0, end: 0 } : { backgroundColor: colors.sol, color: colors.onSol, fontSize: 11, fontWeight: '700' } }} />
     </Tabs>
+    </TabBarSpace.Provider>
   );
 }
 
 const bar = 68;
 const styles = StyleSheet.create({
-  pill: { position: 'absolute', left: 16, right: 16, top: 0, height: bar, borderRadius: rounded.pill, borderWidth: 1 },
-  icon: { width: 36, height: 24, justifyContent: 'flex-end', alignItems: 'center' },
+  pill: { position: 'absolute', left: 16, right: 16, top: 0, height: bar, borderRadius: rounded.pill, borderWidth: 1, overflow: 'hidden' },
+  avatar: { borderRadius: rounded.pill, borderWidth: 2, borderColor: 'transparent' },
 });

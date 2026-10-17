@@ -80,7 +80,7 @@ test('my listings state filter shows pending listings without mixing in live lis
     { id: 'live-home', title: 'LIVE_HOME', ownerId: 'admin-A', price: 1, status: 'active', moderationStatus: 'approved' },
   ];
   const screen = harness('MyListingsScreen', { useMarketplace: () => ({ mode: 'cloud', ownListings, refresh: async () => {} }) });
-  const filter = elements(screen.render()).find(node => node.type === 'Pill' && node.props.label === 'En revisión');
+  const filter = elements(screen.render()).find(node => node.type === 'Pill' && node.props.label.startsWith('En revisión'));
   assert.ok(filter, 'the list provides its state filter');
   filter.props.onPress();
   const tree = screen.render();

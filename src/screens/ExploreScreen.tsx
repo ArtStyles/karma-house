@@ -1,4 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useTabBarSpace } from '../components/TabBarSpace';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,6 +30,7 @@ import { useSavedSearches } from '../searches/useSavedSearches';
 
 export default function ExploreScreen() {
   const { colors, styles } = useStyles();
+  const tabSpace = useTabBarSpace();
   const { mode, storageError, refresh } = useMarketplace();
   const { unreadCount } = useMessaging();
   const { unreadCount: notificationUnreadCount } = useNotifications();
@@ -104,7 +106,7 @@ export default function ExploreScreen() {
         ItemSeparatorComponent={() => <View accessible={false} style={styles.rowGap} />}
         renderItem={({ item }) => result.length === 1 ? <View style={styles.single}><PropertyCard listing={item} offline={offline} horizontal /></View> : <PropertyCard listing={item} offline={offline} width={cellWidth} />}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: layout.tabContentBottom + tabSpace }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={colors.primary} />}
         ListEmptyComponent={!ready || updating ? <View style={styles.skeletons}>{Array.from({ length: columns }, (_, index) => <CardSkeleton key={index} width={cellWidth} />)}</View> : !pageError && !storageError ? <EmptyState title={hasFilters ? 'Sin coincidencias' : 'Aquí empieza tu próximo hogar'} description={hasFilters ? 'Prueba otra zona o amplía los filtros. También puedes guardar la búsqueda para volver cuando aparezca una coincidencia.' : 'Aún no hay viviendas publicadas. Si tienes una en venta, puedes preparar el primer anuncio.'} icon={hasFilters ? 'search-outline' : 'home-outline'} action={<View style={{ gap: 10 }}><Button label={hasFilters ? 'Ampliar búsqueda' : 'Publicar una vivienda'} onPress={() => hasFilters ? setFilters({ ...defaultFilters }) : router.push('/publish')} />{hasFilters && !offline && <Button label="Guardar esta búsqueda" secondary icon="bookmark-outline" onPress={saveSearch} />}</View>} /> : null}
         ListHeaderComponent={<View>
