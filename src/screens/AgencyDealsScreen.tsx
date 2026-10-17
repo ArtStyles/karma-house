@@ -1,6 +1,6 @@
 import {router,useLocalSearchParams} from 'expo-router';
 import {useCallback,useRef,useState} from 'react';
-import {ActivityIndicator,RefreshControl,ScrollView,Text,View} from 'react-native';
+import {ActivityIndicator,Pressable,RefreshControl,ScrollView,Text,View} from 'react-native';
 import {useConsultationRefresh} from '../lib/useConsultationRefresh';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useAuth} from '../auth/AuthProvider';
@@ -15,6 +15,7 @@ import {createMessageId,isUuid} from '../messaging/domain';
 import {supabase} from '../lib/supabase';
 import {ActionGroup,Button,EmptyState,Notice,PageTitle,Pill} from '../components/ui';
 import {AgencyTextField,useAgencyFormStyles} from '../components/agencies/AgencyRegistrationFields';
+import {agencyInitials} from '../components/agencies/agencyInitials';
 const repository=supabase?createAgencyDealRepository(supabase):null;
 export default function AgencyDealsScreen(){const a=useAuth(),w=useAgencyWorkspace(),{propertyId}=useLocalSearchParams<{propertyId?:string}>();return <Deals key={`${a.user?.id}:${a.session?.access_token}:${w.activeAgencyId}:${w.generation}:${propertyId}`} propertyId={propertyId}/>;}
 function Deals({propertyId}:{propertyId?:string}){
@@ -38,7 +39,8 @@ function Deals({propertyId}:{propertyId?:string}){
  {issue?<Notice error>{issue}</Notice>:null}
  {propertyId&&!isUuid(propertyId)?<Notice error>La vivienda seleccionada no es válida.</Notice>:propertyId?<Notice>Interesados privados de la vivienda seleccionada.</Notice>:w.enabled&&w.activeAgency?.state==='approved'?<Button secondary label="Elegir vivienda de cartera para registrar interesado" onPress={()=>router.push('/agency-portfolio')}/>:null}
  <View style={s.card}><Text accessibilityRole="header" style={s.title}>Filtrar por responsable</Text><View style={s.wrap}><Pill label="Todos mis casos" active={assignee===undefined} onPress={()=>filter(undefined)}/><Pill label="Asignados a mí" active={assignee===w.membership?.userId} onPress={()=>filter(w.membership!.userId)}/>{coordinate&&<Pill label="Cola sin responsable" active={assignee===null} onPress={()=>filter(null)}/>}</View>
- {coordinate&&<View style={s.wrap}>{members.map(m=><Pill key={m.userId} label={m.displayName??'Miembro del equipo'} active={assignee===m.userId} onPress={()=>filter(m.userId)}/>)}</View>}
+ {/* Each person on the team as a round avatar: initials, «Tú» for oneself, the chosen one in blue. */}
+ {coordinate&&members.length>0&&<View style={s.field}><Text style={s.caption}>Responsable</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.avatars}>{members.map(m=>{const self=m.userId===w.membership?.userId,name=m.displayName??'Miembro del equipo',active=assignee===m.userId;return <Pressable key={m.userId} accessibilityRole="button" accessibilityLabel={`Responsable: ${self?'tú':name}`} accessibilityState={{selected:active}} disabled={busy} onPress={()=>filter(m.userId)} style={[s.avatar,active&&s.avatarOn]}><Text style={[s.avatarText,active&&s.avatarTextOn]}>{self?'Tú':agencyInitials(name)}</Text></Pressable>;})}</ScrollView></View>}
  {moreMembers&&<Button secondary label="Más miembros para filtrar" disabled={busy} onPress={()=>void act(async c=>{const p=await w.repository!.listMembers(members.length,c);c.checkpoint();setMembers(old=>[...old,...p.items]);setMoreMembers(p.hasMore);},false)}/>}</View>
  {items.map(d=><View key={d.id} style={s.card}><Text style={s.title}>{d.buyerName}</Text><Text style={s.copy}>{d.propertyTitle}</Text><Text style={s.status}>{dealStageLabel[d.stage]}</Text><Text style={s.copy}> {d.assigneeId===w.membership?.userId?'Responsable: tú':d.assigneeId?'Responsable: '+(members.find(m=>m.userId===d.assigneeId)?.displayName??'Miembro del equipo'):'En cola de asignación'}</Text>{d.closedReason&&<Notice>Seguimiento terminado · {d.closedReason}</Notice>}<Button label="Abrir expediente privado" onPress={()=>router.push({pathname:'/agency-deal/[id]',params:{id:d.id}})}/></View>)}
  {loading&&!reload.refreshing&&!items.length&&<ActivityIndicator accessibilityLabel="Consultando interesados" color={colors.primary}/>}

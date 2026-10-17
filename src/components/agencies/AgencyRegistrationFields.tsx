@@ -60,4 +60,7 @@ export const useAgencyFormStyles=createThemedStyles(colors=>StyleSheet.create({
  modalBackdrop:{flex:1,backgroundColor:colors.overlay,justifyContent:'flex-end'},
  modalFrame:{width:'100%',maxWidth:560,alignSelf:'center',maxHeight:'92%',backgroundColor:colors.sheet,borderTopLeftRadius:rounded.sheet,borderTopRightRadius:rounded.sheet,borderWidth:1,borderBottomWidth:0,borderColor:colors.border,overflow:'hidden'},
  modalContent:{padding:20,paddingBottom:32,gap:18},
+ // A person chosen by their avatar (Seguimientos): 44 px circles, the chosen one in blue.
+ avatars:{flexDirection:'row',gap:8,paddingVertical:2},avatar:{width:44,height:44,borderRadius:rounded.pill,backgroundColor:colors.raised,alignItems:'center',justifyContent:'center'},avatarOn:{backgroundColor:colors.primaryFill},
+ avatarText:{...typography.cardTitle,fontSize:16,lineHeight:20,color:colors.primary},avatarTextOn:{color:colors.onPrimary},
 }));

@@ -25,6 +25,7 @@ import { agencyStateLabel } from '../agencies/registration';
 import { agencyRoleLabel } from './AgencyWorkspaceScreen';
 import { useIncomingTransferCount } from '../transfers/useIncomingTransferCount';
 import { UpdateSheet } from '../components/UpdateSheet';
+import { InvitationSheet } from '../components/agencies/InvitationSheet';
 import { useAppUpdate } from '../updates/useAppUpdate';
 
 export default function ProfileScreen() {
@@ -196,6 +197,7 @@ export default function ProfileScreen() {
       {error || authError ? <Notice error onRetry={user ? () => void reload.refresh() : undefined}>{error || authError}</Notice> : null}
     </ScrollView>
     <UpdateSheet visible={updateSheet} onClose={() => setUpdateSheet(false)} />
+    {user && pendingInvitations > 0 && <InvitationSheet pending={pendingInvitations} onDecided={() => void loadOverview()} />}
   </SafeAreaView>;
 }
 
