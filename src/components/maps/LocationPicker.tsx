@@ -3,8 +3,11 @@ import { Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDime
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { APPROXIMATE_RADIUS_METERS, normalizeMapLocation, type MapLocation } from '../../domain/geo';
-import { createThemedStyles } from '../../theme';
-import { ActionGroup, Button, Icon, IconButton, Pill } from '../ui';
+import { createThemedStyles, rounded, typography } from '../../theme';
+import { Segmented } from '../Segmented';
+import { SheetHandle } from '../Sheet';
+import { Button, Icon, IconButton } from '../ui';
+import { MapOnDemand } from '../ExploreMap';
 import { KarmaMap } from './KarmaMap';
 import { CUBA_CENTER, CUBA_ZOOM } from './mapConfig';
 import { beginLocationSelection, locationSelectionReducer, publishedSelection } from './locationSelection';
@@ -34,10 +37,11 @@ export function LocationPicker({ value, onChange, disabled = false, error, readO
       {!readOnly && <Text style={styles.optional}>Opcional</Text>}
     </View>
     {published ? <>
-      <View style={styles.preview}>
+      {/* Under «Ahorro de datos» the preview waits to be asked for, like every map in the app. */}
+      <View style={styles.preview}><MapOnDemand height={160}>
         <KarmaMap center={published} zoom={published.precision === 'approximate' ? 13 : 15} markers={markers}
           interactive={false} accessibilityLabel={`Vista previa de ubicación ${published.precision === 'approximate' ? 'aproximada' : 'exacta'}`} />
-      </View>
+      </MapOnDemand></View>
       <View style={styles.summary}>
         <Icon name={published.precision === 'approximate' ? 'shield-checkmark-outline' : 'location-outline'} size={19} color={colors.primary} />
         <View style={styles.summaryCopy}>
@@ -68,8 +72,9 @@ function LocationPickerModal({ value, onCancel, onConfirm }: { value?: MapLocati
   const insets = useSafeAreaInsets();
 
   return <Modal transparent animationType="slide" onRequestClose={onCancel}>
-    <View style={[styles.backdrop, { paddingTop: Math.max(insets.top, 12), paddingBottom: Math.max(insets.bottom, 12) }]}>
-      <View accessibilityViewIsModal style={[styles.sheet, { maxHeight: Math.min(840, height - Math.max(insets.top, 12) - Math.max(insets.bottom, 12)) }, width >= 700 && styles.wideSheet]}>
+    <View style={[styles.backdrop, { paddingTop: Math.max(insets.top, 12) }]}>
+      <View accessibilityViewIsModal style={[styles.sheet, { maxHeight: Math.min(840, height - Math.max(insets.top, 12)) }, width >= 700 && styles.wideSheet]}>
+        <SheetHandle />
         <View style={styles.header}>
           <View style={styles.headerCopy}>
             <Text accessibilityRole="header" style={styles.title}>Ubica tu vivienda</Text>
@@ -82,17 +87,15 @@ function LocationPickerModal({ value, onCancel, onConfirm }: { value?: MapLocati
             onMapPress={coordinate => dispatch({ type: 'point', coordinate })}
             accessibilityLabel="Mapa para elegir la ubicación de tu vivienda" />
         </View>
-        <ScrollView style={[styles.controls, { maxHeight: Math.min(304, height * 0.4) }]} contentContainerStyle={styles.controlsContent} keyboardShouldPersistTaps="handled">
+        <ScrollView style={[styles.controls, { maxHeight: Math.min(304, height * 0.4) }]} contentContainerStyle={[styles.controlsContent, { paddingBottom: insets.bottom + 16 }]} keyboardShouldPersistTaps="handled">
           <Text style={styles.controlTitle}>Cómo se verá en tu anuncio</Text>
-          <View style={styles.precision}>
-            <Pill label="Aproximada" icon="shield-checkmark-outline" active={selection.precision === 'approximate'} onPress={() => dispatch({ type: 'precision', precision: 'approximate' })} />
-            <Pill label="Exacta" icon="location-outline" active={selection.precision === 'exact'} onPress={() => dispatch({ type: 'precision', precision: 'exact' })} />
-          </View>
+          <Segmented<'approximate' | 'exact'> label="Precisión de la ubicación" value={selection.precision} onChange={precision => dispatch({ type: 'precision', precision })}
+            options={[{ value: 'approximate', label: 'Aproximada' }, { value: 'exact', label: 'Exacta' }]} />
           <Text accessibilityLiveRegion="polite" style={styles.description}>{!published ? 'Todavía no has elegido un punto. Toca el mapa para situarlo.' : selection.precision === 'approximate' ? `El círculo muestra la zona pública de ${APPROXIMATE_RADIUS_METERS} m de radio. El punto preciso que tocaste no se guarda.` : 'El marcador muestra el punto exacto que será visible para todos.'}</Text>
-          <ActionGroup style={styles.modalActions}>
+          <View style={styles.modalActions}>
             <Button label="Cancelar" secondary onPress={onCancel} style={styles.cancelAction} />
             <Button label={!published && value ? 'Confirmar sin ubicación' : 'Confirmar ubicación'} disabled={!published && !value} onPress={() => onConfirm(published)} style={styles.confirmAction} />
-          </ActionGroup>
+          </View>
           {published && <Pressable accessibilityRole="button" accessibilityLabel="Retirar punto del mapa" onPress={() => dispatch({ type: 'clear' })} style={({ pressed }) => [styles.clearPoint, pressed && styles.dimmed]}>
             <Icon name="trash-outline" color={colors.danger} size={16} />
             <Text style={styles.removeText}>Retirar punto</Text>
@@ -104,35 +107,36 @@ function LocationPickerModal({ value, onCancel, onConfirm }: { value?: MapLocati
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  field: { gap: 14 },
+  field: { gap: 10 },
   labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  fieldTitle: { fontSize: 17, fontWeight: '600', color: colors.ink },
+  fieldTitle: { color: colors.body, fontSize: 13, lineHeight: 18, fontWeight: '600' },
   optional: { fontSize: 12, color: colors.muted },
   description: { fontSize: 14, lineHeight: 20, color: colors.muted },
-  preview: { height: 180, overflow: 'hidden', borderRadius: 14, backgroundColor: colors.paper },
-  summary: { flexDirection: 'row', gap: 9, alignItems: 'flex-start' },
-  summaryCopy: { flex: 1, gap: 4 },
+  preview: { height: 160, overflow: 'hidden', borderRadius: rounded.cardLg, backgroundColor: colors.sheet },
+  summary: { flexDirection: 'row', gap: 9, alignItems: 'flex-start', paddingHorizontal: 4 },
+  summaryCopy: { flex: 1, gap: 2 },
   summaryTitle: { color: colors.ink, fontSize: 14, fontWeight: '600' },
   fieldActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
   mainAction: { flexGrow: 1 },
   remove: { minHeight: 44, minWidth: 62, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 },
-  removeText: { fontSize: 14, fontWeight: '500', color: colors.danger },
+  removeText: { fontSize: 14, fontWeight: '600', color: colors.danger },
   dimmed: { opacity: 0.5 },
   error: { color: colors.danger, fontSize: 13, lineHeight: 19 },
-  backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.overlay, paddingHorizontal: 12 },
-  sheet: { flex: 1, width: '100%', borderRadius: 24, overflow: 'hidden', backgroundColor: colors.surface },
+  // A tall bottom sheet: the map fills it and the choice of precision sits below (DESIGN.md §6).
+  backdrop: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', backgroundColor: colors.overlay },
+  sheet: { flex: 1, width: '100%', borderTopLeftRadius: rounded.sheet, borderTopRightRadius: rounded.sheet, borderWidth: 1, borderBottomWidth: 0, borderColor: colors.border, overflow: 'hidden', backgroundColor: colors.sheet },
   wideSheet: { width: 680 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16 },
-  headerCopy: { flex: 1, minWidth: 0, gap: 5 },
-  title: { fontSize: 21, fontWeight: '600', letterSpacing: -0.4, color: colors.ink },
-  close: { backgroundColor: colors.paper },
-  map: { flex: 1, minHeight: 150, backgroundColor: colors.paper },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingTop: 6, paddingBottom: 12 },
+  headerCopy: { flex: 1, minWidth: 0, gap: 4 },
+  title: { ...typography.sheetTitle, color: colors.ink },
+  close: { backgroundColor: colors.surface },
+  map: { flex: 1, minHeight: 150, marginHorizontal: 12, borderRadius: rounded.card, overflow: 'hidden', backgroundColor: colors.paper },
   controls: { flexGrow: 0, maxHeight: 304 },
-  controlsContent: { padding: 16, gap: 16 },
-  controlTitle: { color: colors.ink, fontSize: 14, fontWeight: '600' },
-  precision: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, backgroundColor: colors.paper, padding: 5, borderRadius: 24, alignSelf: 'flex-start' },
-  modalActions: { paddingTop: 4 },
-  cancelAction: { width: '100%' },
-  confirmAction: { width: '100%' },
+  controlsContent: { paddingHorizontal: 20, paddingTop: 16, gap: 14 },
+  controlTitle: { ...typography.cardTitle, color: colors.ink },
+  // The confirmation takes the wider share so its label stays on one line; at 320 px the two stack.
+  modalActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingTop: 2 },
+  cancelAction: { flexGrow: 1, flexBasis: 110 },
+  confirmAction: { flexGrow: 2, flexBasis: 190 },
   clearPoint: { flexDirection: 'row', gap: 6, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 }));

@@ -88,7 +88,7 @@ test('a retained publication form becomes inactive when its screen loses focus',
     useFocusEffect: (work: () => void) => hooks.useEffect(work, [work]), readPublicationEntry, publicationReturnTo,
     OPERATIONS: [], choices: [], ASSISTED_PUBLICATION_EMAIL: '',
   };
-  for (const name of ['SafeAreaView', 'View', 'PageTitle', 'Button', 'ListingForm']) bindings[name] = name;
+  for (const name of ['SafeAreaView', 'View', 'PageTitle', 'Button', 'IconButton', 'ListingForm']) bindings[name] = name;
   const component = executeComponent('src/screens/PublishScreen.tsx', 'PublishScreen', hooks, bindings);
   const render = () => hooks.render(() => component());
   render();

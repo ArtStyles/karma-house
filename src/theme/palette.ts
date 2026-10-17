@@ -18,7 +18,8 @@ export const lightColors = {
   onDark: '#FFFFFF',
   banner: '#173B60', bannerIcon: '#305577', bannerText: '#CADBEB',
   // By day the paper is arena, so a sign or paper card still shows on white cards and on the cal ground.
-  cream: '#F2EADC', creamInk: '#1A2B3B', glow: '#E3B04B29', photoGround: '#F2EADC',
+  // Cream is light in both modes, so its blue is the day blue in both.
+  cream: '#F2EADC', creamInk: '#1A2B3B', creamBlue: '#0153A8', glow: '#E3B04B29', photoGround: '#F2EADC',
   overlay: '#050D189E', subtleOverlay: '#142E461A', photoOverlay: '#0A16269E',
   navigation: '#FFFFFF', navigationGlass: '#FFFFFFF0', navigationBorder: '#E6DCCB', navigationActive: '#0153A814',
   switchTrack: '#D8CDB9', switchThumb: '#FFFFFF',
@@ -39,7 +40,7 @@ export const darkColors: ThemeColors = {
   outline: '#D7E2EC47',
   onDark: '#FFFFFF',
   banner: '#173B60', bannerIcon: '#305577', bannerText: '#CADBEB',
-  cream: '#FAF6EE', creamInk: '#1A2B3B', glow: '#E3B04B33', photoGround: '#050D18',
+  cream: '#FAF6EE', creamInk: '#1A2B3B', creamBlue: '#0153A8', glow: '#E3B04B33', photoGround: '#050D18',
   overlay: '#050D189E', subtleOverlay: '#050D1866', photoOverlay: '#0A16269E',
   navigation: '#13233A', navigationGlass: '#13233AF0', navigationBorder: '#D7E2EC1A', navigationActive: '#8CC0F71F',
   switchTrack: '#D7E2EC38', switchThumb: '#F3EFE7',

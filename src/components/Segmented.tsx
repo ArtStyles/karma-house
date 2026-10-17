@@ -20,7 +20,7 @@ export function Segmented<T extends string>({ options, value, onChange, label, d
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   track: { flexDirection: 'row', padding: 4, borderRadius: rounded.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  option: { flex: 1, minHeight: 40, paddingHorizontal: 12, borderRadius: rounded.pill, alignItems: 'center', justifyContent: 'center' },
+  option: { flex: 1, minHeight: 44, paddingHorizontal: 12, borderRadius: rounded.pill, alignItems: 'center', justifyContent: 'center' },
   selected: { backgroundColor: colors.primaryFill },
   text: { fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.body }, selectedText: { color: colors.onPrimary },
 }));
