@@ -146,7 +146,13 @@ export function renderListing(row: PublicListingRow, photoUrls: string[], siteUr
     `<meta property="og:title" content="${title}">`,
     `<meta property="og:description" content="${description}">`,
     `<meta property="og:url" content="${self}">`,
-    ...(photoUrls.length ? [`<meta property="og:image" content="${escapeHtml(photoUrls[0])}">`, `<meta name="twitter:card" content="summary_large_image">`] : []),
+    // The card from /og/p (api/og.ts): photo in the arch, sign, price and agency. Unlike a signed URL it never expires.
+    `<meta property="og:image" content="${escapeHtml(`${new URL(`og/p/${row.id}`, siteUrl).href}${destinationQuery}`)}">`,
+    `<meta property="og:image:type" content="image/png">`,
+    `<meta property="og:image:width" content="840">`,
+    `<meta property="og:image:height" content="441">`,
+    `<meta property="og:image:alt" content="${title}">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
   ].join('\n');
   const gallery = photoUrls.length
     ? `<div class="gallery">${photoUrls.map((url) => `<img loading="lazy" alt="" src="${escapeHtml(url)}">`).join('')}</div>`

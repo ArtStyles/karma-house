@@ -10,6 +10,14 @@
     {
       "source": "/agency/:id",
       "destination": "/api/agency?id=:id"
+    },
+    {
+      "source": "/og/p/:id",
+      "destination": "/api/og?kind=p&id=:id"
+    },
+    {
+      "source": "/og/agency/:id",
+      "destination": "/api/og?kind=agency&id=:id"
     }
   ],
   "headers": [

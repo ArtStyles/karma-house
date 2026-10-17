@@ -41,7 +41,9 @@ test('renderListing escapes user text and carries the open graph tags', () => {
   assert.ok(html.includes('<meta property="og:description" content="85,000 USD · Vedado, La Habana · 3 hab · 2 baños · 120.5 m²">'));
   assert.ok(html.includes(`<meta property="og:url" content="${self}">`));
   assert.ok(html.includes(`<link rel="canonical" href="${self}">`));
-  assert.ok(html.includes('<meta property="og:image" content="https://example.supabase.co/storage/v1/object/sign/a.jpg?token=x&amp;y=1">'));
+  assert.ok(html.includes(`<meta property="og:image" content="https://www.karmahouse.site/og/p/${row.id}">`));
+  assert.ok(html.includes('<meta property="og:image:width" content="840">') && html.includes('<meta property="og:image:height" content="441">'));
+  assert.ok(!html.includes('og:image" content="https://example.supabase.co'), 'the card never points at an expiring signed URL');
   assert.ok(html.includes('<meta name="twitter:card" content="summary_large_image">'));
   assert.ok(html.includes('<meta property="og:site_name" content="KarmaHouse">'));
 });
@@ -61,7 +63,7 @@ test('renderListing shows every photo, the details and the description with line
 });
 test('renderListing without photos or optional fields still renders', () => {
   const html = renderListing({ ...row, amenities: null, condition: null, floor: null, price_negotiable: null, description: '' }, [], site, self);
-  assert.ok(!html.includes('og:image'));
+  assert.ok(html.includes(`<meta property="og:image" content="https://www.karmahouse.site/og/p/${row.id}">`), 'the card has a frame for a home without photos');
   assert.ok(!html.includes('<img'));
   assert.ok(!html.includes('Negociable'));
   assert.ok(!html.includes('Planta'));
@@ -170,7 +172,7 @@ test('handle renders an approved listing with signed photos and the canonical pa
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('content-type'), 'text/html; charset=utf-8');
   assert.equal(response.headers.get('cache-control'), 'public, s-maxage=300, stale-while-revalidate=60');
-  assert.ok(html.includes('<meta property="og:image" content="https://example.supabase.co/storage/v1/object/sign/property-photos/u/a/one.jpg?token=1">'));
+  assert.ok(html.includes(`<meta property="og:image" content="https://www.karmahouse.site/og/p/${row.id}">`));
   assert.equal((html.match(/<img loading="lazy"/g) ?? []).length, 2);
   assert.ok(html.includes(`<link rel="canonical" href="https://www.karmahouse.site/p/${row.id}">`));
   assert.equal(calls.length, 4);
@@ -193,7 +195,7 @@ test('handle still renders when photo signing fails', async () => {
     const response = await expectedDiagnostics(sign instanceof Error?/^photo signing failed offline$/:/^photo signing failed storage 400$/,()=>handle(get(`/api/p?id=${row.id}`), env, fakeFetch({ status: 200, body: [dbRow] }, sign).fetch));
     const html = await response.text();
     assert.equal(response.status, 200);
-    assert.ok(!html.includes('og:image') && !html.includes('<img'));
+    assert.ok(html.includes(`og/p/${row.id}`) && !html.includes('<img'));
   }
 });
 test('handle names the seller from kh_public_profile without printing the owner id', async () => {
@@ -275,7 +277,7 @@ test('the public page labels swaps and wanted ads', () => {
   const wantedHtml = renderListing(wantedRow, [], site, self);
   assert.ok(wantedHtml.includes('<title>Busco: Casa en el Vedado &lt;script&gt;alert(1)&lt;/script&gt;</title>'));
   assert.ok(wantedHtml.includes('<meta property="og:description" content="Hasta 85,000 USD · Vedado, La Habana · desde 3 hab · Casa o apartamento">'));
-  assert.ok(!wantedHtml.includes('Superficie') && !wantedHtml.includes('Baños') && !wantedHtml.includes('og:image'));
+  assert.ok(!wantedHtml.includes('Superficie') && !wantedHtml.includes('Baños') && wantedHtml.includes(`og/p/${row.id}`));
   assert.ok(wantedHtml.includes('Tengo algo que encaja'));
   assert.ok(wantedHtml.includes('<dt>Habitaciones mínimas</dt><dd>3</dd>'));
 });
@@ -308,4 +310,10 @@ test('the public page leaves out a missing surface', () => {
   assert.ok(!html.includes('Superficie') && !html.includes('m²') && !html.includes('undefined') && !html.includes('NaN'));
   assert.ok(html.includes('<dt>Baños</dt><dd>2</dd>'));
   assert.ok(renderListing(row, photos, site, self).includes('<dt>Superficie</dt><dd>120.5 m²</dd>'));
+});
+
+test('an agency link asks for the card with that agency', () => {
+  const agencyId = '22222222-2222-4222-8222-222222222222', managerId = '33333333-3333-4333-8333-333333333333';
+  const html = renderListing(row, photos, site, self, undefined, undefined, { agencyId, managerId });
+  assert.ok(html.includes(`<meta property="og:image" content="https://www.karmahouse.site/og/p/${row.id}?agencyId=${agencyId}&amp;managerId=${managerId}">`));
 });
