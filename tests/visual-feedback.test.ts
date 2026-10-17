@@ -60,32 +60,42 @@ test('Android materials require a supported OS and a separate blur target',()=>{
   assert.equal(render({blurTarget:target}).type,'View');platform.Version=31;assert.equal(render().type,'View');
   const tree=render({blurTarget:target});assert.equal(tree.type,'BlurView');assert.equal(tree.props.blurTarget,target);assert.equal(tree.props.blurMethod,'dimezisBlurViewSdk31Plus');assert.equal(tree.props.pointerEvents,'none');
 });
-test('the arch carousel moves by neighbour, dot or swipe, and only the centre opens a home',()=>{
-  const hooks=new Hooks(),opened:string[]=[];let responder:any;
-  const listings=['A','B','C'].map(id=>({id,title:id,price:1,location:'Vedado',province:'La Habana'}));
+function carouselFixture(reduced:boolean){
+  const hooks=new Hooks();let responder:any;
+  const offset=executeComponent('src/components/ExploreDiscovery.tsx','offset',new Hooks(),{});
   const component=executeComponent('src/components/ExploreDiscovery.tsx','ExploreDiscovery',hooks,{
-    useStyles:()=>({colors:{},styles:{}}),useReducedMotion:()=>false,ease:{},
-    PanResponder:{create:(config:any)=>{responder=config;return{panHandlers:{}}}},Animated:{View:'AnimatedView'},FadeIn:{duration:()=>({easing:()=>({})})},
-    ArchImage:'ArchImage',Cartel:'Cartel',MotionPressable:'MotionPressable',PropertyImage:'PropertyImage',View:'View',Text:'Text',
-    formatMoney:()=>'$ 1',cartelLabel:()=>'Se vende',listingFacts:()=>'',priceSuffix:()=>'',
+    useStyles:()=>({colors:{},styles:{}}),useReducedMotion:()=>reduced,ease:{},SIDE:.79,offset,Slide:'Slide',
+    PanResponder:{create:(config:any)=>{responder=config;return{panHandlers:{}}}},
+    useSharedValue:(initial:number)=>hooks.useRef({value:initial}).current,cancelAnimation:()=>{},ReduceMotion:{Never:'never'},
+    withTiming:(value:number,_config:unknown,done?:(finished:boolean)=>void)=>{done?.(true);return value},scheduleOnRN:(work:(value:unknown)=>void,value:unknown)=>work(value),
+    MotionPressable:'MotionPressable',View:'View',
   });
-  const render=()=>hooks.render(()=>component({listings,onOpen:(listing:any)=>opened.push(listing.id)}));
-  const centre=(tree:any)=>elements(tree).find(x=>x.type==='MotionPressable'&&/^Ver [ABC],/.test(x.props.accessibilityLabel))!.props;
-  let tree=render();assert.match(centre(tree).accessibilityLabel,/^Ver A,/);
-  control(tree,'Siguiente: B').onPress();tree=render();assert.match(centre(tree).accessibilityLabel,/^Ver B,/);
-  control(tree,'Ver A').onPress();tree=render();assert.match(centre(tree).accessibilityLabel,/^Ver A,/);
-  responder.onPanResponderRelease({}, {dx:-60});tree=render();assert.match(centre(tree).accessibilityLabel,/^Ver B,/);
-  responder.onPanResponderRelease({}, {dx:20});tree=render();assert.match(centre(tree).accessibilityLabel,/^Ver B,/);
-  assert.deepEqual(opened,[]);centre(tree).onPress();assert.deepEqual(opened,['B']);
+  return {component,hooks,responder:()=>responder};
+}
+test('the arch carousel moves by neighbour, dot or swipe, and only the centre opens a home',()=>{
+  const f=carouselFixture(false),opened:string[]=[];
+  const listings=['A','B','C'].map(id=>({id,title:id,price:1,location:'Vedado',province:'La Habana'}));
+  const render=()=>f.hooks.render(()=>f.component({listings,onOpen:(listing:any)=>opened.push(listing.id)}));
+  const slides=(tree:any)=>elements(tree).filter(x=>x.type==='Slide').map(x=>x.props);
+  const centre=(tree:any)=>slides(tree).find(x=>x.place===0)!;
+  let tree=render();assert.equal(centre(tree).listing.id,'A');
+  assert.deepEqual(slides(tree).map(x=>[x.listing.id,x.place]),[['A',0],['B',1],['C',-1]]);
+  slides(tree).find(x=>x.place===1)!.onPress();tree=render();assert.equal(centre(tree).listing.id,'B');
+  control(tree,'Ver A').onPress();tree=render();assert.equal(centre(tree).listing.id,'A');
+  const pan=f.responder();
+  pan.onPanResponderGrant();pan.onPanResponderRelease({}, {dx:-60,vx:0});tree=render();assert.equal(centre(tree).listing.id,'B');
+  pan.onPanResponderGrant();pan.onPanResponderRelease({}, {dx:20,vx:0});tree=render();assert.equal(centre(tree).listing.id,'B');
+  pan.onPanResponderGrant();pan.onPanResponderRelease({}, {dx:15,vx:.8});tree=render();assert.equal(centre(tree).listing.id,'A');
+  assert.deepEqual(opened,[]);centre(tree).onPress();assert.deepEqual(opened,['A']);
 });
 test('a carousel with a single home shows no neighbours or dots',()=>{
-  const hooks=new Hooks();
-  const component=executeComponent('src/components/ExploreDiscovery.tsx','ExploreDiscovery',hooks,{
-    useStyles:()=>({colors:{},styles:{}}),useReducedMotion:()=>true,ease:{},
-    PanResponder:{create:()=>({panHandlers:{}})},Animated:{View:'AnimatedView'},FadeIn:{duration:()=>({easing:()=>({})})},
-    ArchImage:'ArchImage',Cartel:'Cartel',MotionPressable:'MotionPressable',PropertyImage:'PropertyImage',View:'View',Text:'Text',
-    formatMoney:()=>'$ 1',cartelLabel:()=>'Se vende',listingFacts:()=>'',priceSuffix:()=>'',
-  });
-  const tree=hooks.render(()=>component({listings:[{id:'A',title:'A',price:1,location:'Vedado',province:'La Habana'}],onOpen:()=>{}}));
-  assert.equal(elements(tree).filter(x=>x.type==='MotionPressable').length,1);
+  const f=carouselFixture(true);
+  const tree=f.hooks.render(()=>f.component({listings:[{id:'A',title:'A',price:1,location:'Vedado',province:'La Habana'}],onOpen:()=>{}}));
+  assert.deepEqual(elements(tree).filter(x=>x.type==='Slide').map(x=>x.props.place),[0]);
+  assert.equal(elements(tree).filter(x=>x.type==='MotionPressable').length,0);
+});
+test('carousel slides sit on a ring, so the strip never jumps when it wraps',()=>{
+  const offset=executeComponent('src/components/ExploreDiscovery.tsx','offset',new Hooks(),{});
+  assert.equal(offset(0,0,5),0);assert.equal(offset(1,0,5),1);assert.equal(offset(4,0,5),-1);
+  assert.equal(offset(0,4,5),1);assert.equal(offset(2,0.5,5),1.5);assert.equal(offset(0,7,5),-2);
 });

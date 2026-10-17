@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { PanResponder, StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, FadeIn } from 'react-native-reanimated';
+import Animated, { cancelAnimation, Easing, interpolate, ReduceMotion, useAnimatedStyle, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import type { Listing } from '../domain/listings';
 import { cartelLabel, listingFacts, priceSuffix } from '../domain/operations';
 import { useReducedMotion } from '../settings/useReducedMotion';
@@ -11,10 +12,19 @@ import { MotionPressable } from './MotionPressable';
 import { PropertyImage } from './PropertyImage';
 
 const ease = Easing.bezier(.22, 1, .36, 1);
+// A neighbour is the centre arch at this scale, lifted so it rests 30 px above the centre's foot.
+const SIDE = .79;
+
+/** Signed distance from `from` to slide `to` on a ring of `count`, in [-count/2, count/2). */
+function offset(to: number, from: number, count: number) {
+  'worklet';
+  return ((((to - from) % count) + count + count / 2) % count) - count / 2;
+}
 
 /**
  * The arch carousel that opens Explorar: the first homes of the search, the centre one large and lit,
- * its neighbours dimmed at the edges. A swipe, a tap on a neighbour or a dot moves it; only the centre opens a home.
+ * its neighbours dimmed at the edges. The strip follows the finger and settles on the nearest home;
+ * a tap on a neighbour or a dot slides it there. Only the centre opens a home.
  */
 export function ExploreDiscovery({ listings, onOpen }: { listings: readonly Listing[]; onOpen(listing: Listing): void }) {
   const { styles } = useStyles();
@@ -22,63 +32,99 @@ export function ExploreDiscovery({ listings, onOpen }: { listings: readonly List
   const [viewport, setViewport] = useState(358);
   const [index, setIndex] = useState(0);
   const count = listings.length;
-  const step = useRef((_delta: number) => {});
-  step.current = delta => setIndex(current => (current + delta + count) % count);
+  // Where the strip stands, in slides: whole at rest, fractional under the finger. It never wraps, so a slide never jumps.
+  const position = useSharedValue(0);
+  const start = useRef(0);
+  const archWidth = Math.min(240, Math.round(viewport * .62)), archHeight = Math.round(archWidth * 1.55);
+  const centreLeft = Math.round((viewport - archWidth) / 2);
+  const spacing = archWidth / 2 + 17 + Math.round(archWidth * SIDE) / 2;
+  const spacingRef = useRef(spacing);
+  spacingRef.current = spacing;
+  const settle = useRef((_target: number) => {});
+  // Reduced motion keeps the slide, which the person started, and only shortens it.
+  settle.current = target => {
+    position.value = withTiming(target, { duration: reduced ? 160 : 360, easing: ease, reduceMotion: ReduceMotion.Never }, finished => {
+      if (finished) scheduleOnRN(setIndex, ((target % count) + count) % count);
+    });
+  };
+  const goTo = (slide: number) => {
+    const here = Math.round(position.value);
+    settle.current(here + offset(slide, here, count));
+  };
   const pan = useRef(PanResponder.create({
     onMoveShouldSetPanResponder: (_event, gesture) => Math.abs(gesture.dx) > 12 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
-    onPanResponderRelease: (_event, gesture) => { if (Math.abs(gesture.dx) > 40) step.current(gesture.dx < 0 ? 1 : -1); },
+    onPanResponderGrant: () => { cancelAnimation(position); start.current = position.value; },
+    onPanResponderMove: (_event, gesture) => { position.value = start.current - gesture.dx / spacingRef.current; },
+    onPanResponderRelease: (_event, gesture) => {
+      const flick = Math.abs(gesture.vx) > .3 || Math.abs(gesture.dx) > spacingRef.current * .25;
+      settle.current(Math.round(start.current) + (flick ? (gesture.dx < 0 ? 1 : -1) : 0));
+    },
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderTerminate: () => settle.current(Math.round(start.current)),
   })).current;
   if (!count) return null;
-  const current = listings[Math.min(index, count - 1)];
-  const at = (delta: number) => listings[(index + delta + count) % count];
-  const archWidth = Math.min(240, Math.round(viewport * .62)), archHeight = Math.round(archWidth * 1.55);
-  const sideWidth = Math.round(archWidth * .79), sideHeight = Math.round(sideWidth * 1.53);
-  const centreLeft = Math.round((viewport - archWidth) / 2);
-  // How much of each neighbour shows beside the centre arch.
-  const peek = centreLeft - 17;
-  const side = (delta: -1 | 1) => {
-    const listing = at(delta);
-    return <MotionPressable key={delta} accessibilityRole="button" accessibilityLabel={`${delta < 0 ? 'Anterior' : 'Siguiente'}: ${listing.title}`} onPress={() => step.current(delta)}
-      style={[styles.side, { top: 8 + archHeight - sideHeight - 30, width: sideWidth }, delta < 0 ? { left: peek - sideWidth } : { left: viewport - peek }]}>
-      <ArchImage width={sideWidth} height={sideHeight} bottom={22}><PropertyImage listing={listing} variant="thumb" style={styles.fill} /></ArchImage>
-    </MotionPressable>;
-  };
   return <View>
     <View {...pan.panHandlers} onLayout={event => { const next = event.nativeEvent.layout.width; if (next > 0) setViewport(next); }} style={[styles.stage, { height: archHeight + 22 }]}>
-      {count > 1 && peek > 24 && [side(-1), side(1)]}
-      <View style={{ position: 'absolute', top: 8, left: centreLeft, width: archWidth }}>
-        <View pointerEvents="none" style={[styles.ring, { width: archWidth + 14, height: archHeight + 14, borderTopLeftRadius: (archWidth + 14) / 2, borderTopRightRadius: (archWidth + 14) / 2 }]} />
-        <Animated.View key={current.id} entering={FadeIn.duration(reduced ? 120 : 320).easing(ease)}>
-          <MotionPressable accessibilityRole="button" accessibilityLabel={`Ver ${current.title}, ${cartelLabel(current)}, ${formatMoney(current.price)} USD${priceSuffix(current)}, ${current.location}`} onPress={() => onOpen(current)}>
-            <ArchImage width={archWidth} height={archHeight} bottom={28} glow>
-              <PropertyImage listing={current} variant="thumb" style={styles.fill} />
-              <View pointerEvents="none" style={styles.info}>
-                <Text numberOfLines={2} style={styles.title}>{current.title}</Text>
-                <Text numberOfLines={1} style={styles.place}>{current.location}, {current.province}</Text>
-                <View style={styles.priceRow}>
-                  <Text numberOfLines={1} style={styles.price}>{formatMoney(current.price)}<Text style={styles.small}> USD{priceSuffix(current)}</Text></Text>
-                  <Text numberOfLines={1} style={styles.small}>{listingFacts(current)}</Text>
-                </View>
-              </View>
-            </ArchImage>
-          </MotionPressable>
-        </Animated.View>
-        <View pointerEvents="none" style={[styles.sign, { top: Math.round(archHeight * .38) }]}><Cartel label={cartelLabel(current)} tilt={-4} /></View>
-      </View>
+      <View pointerEvents="none" style={[styles.ring, { top: 1, left: centreLeft - 7, width: archWidth + 14, height: archHeight + 14, borderTopLeftRadius: (archWidth + 14) / 2, borderTopRightRadius: (archWidth + 14) / 2 }]} />
+      {listings.map((listing, slide) => {
+        const place = offset(slide, index, count);
+        return <Slide key={listing.id} listing={listing} slide={slide} count={count} position={position} place={place}
+          frame={{ left: centreLeft, width: archWidth, height: archHeight, spacing }}
+          onPress={() => place === 0 ? onOpen(listing) : goTo(slide)} />;
+      })}
     </View>
-    {count > 1 && <View style={styles.dots}>{listings.map((listing, position) => <MotionPressable key={listing.id} accessibilityRole="button" accessibilityLabel={`Ver ${listing.title}`}
-      accessibilityState={{ selected: position === index }} onPress={() => setIndex(position)} style={styles.dotTarget}>
-      <View style={[styles.dot, position === index && styles.currentDot]} />
+    {count > 1 && <View style={styles.dots}>{listings.map((listing, slide) => <MotionPressable key={listing.id} accessibilityRole="button" accessibilityLabel={`Ver ${listing.title}`}
+      accessibilityState={{ selected: slide === index }} onPress={() => goTo(slide)} style={styles.dotTarget}>
+      <View style={[styles.dot, slide === index && styles.currentDot]} />
     </MotionPressable>)}</View>}
   </View>;
+}
+
+function Slide({ listing, slide, count, position, place, frame, onPress }: {
+  listing: Listing; slide: number; count: number; position: SharedValue<number>; place: number;
+  frame: { left: number; width: number; height: number; spacing: number }; onPress(): void;
+}) {
+  const { styles } = useStyles();
+  const lift = frame.height / 2 * (1 - SIDE) - 30;
+  const moving = useAnimatedStyle(() => {
+    const r = offset(slide, position.value, count), a = Math.min(Math.abs(r), 1.5);
+    return {
+      opacity: interpolate(a, [0, 1, 1.5], [1, .42, 0], 'clamp'),
+      zIndex: Math.round(10 - a * 4),
+      transform: [{ translateX: r * frame.spacing }, { translateY: interpolate(a, [0, 1], [0, lift], 'clamp') }, { scale: interpolate(a, [0, 1], [1, SIDE], 'clamp') }],
+    };
+  });
+  // The caption and the sign belong to the centre: they fade as a home leaves it.
+  const centreOnly = useAnimatedStyle(() => ({ opacity: interpolate(Math.abs(offset(slide, position.value, count)), [0, .5], [1, 0], 'clamp') }));
+  const hidden = Math.abs(place) > 1;
+  const label = place === 0
+    ? `Ver ${listing.title}, ${cartelLabel(listing)}, ${formatMoney(listing.price)} USD${priceSuffix(listing)}, ${listing.location}`
+    : `${place < 0 ? 'Anterior' : 'Siguiente'}: ${listing.title}`;
+  return <Animated.View pointerEvents={hidden ? 'none' : 'box-none'} accessibilityElementsHidden={hidden} importantForAccessibility={hidden ? 'no-hide-descendants' : 'auto'}
+    style={[styles.slide, { left: frame.left, width: frame.width, height: frame.height }, moving]}>
+    <MotionPressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress}>
+      <ArchImage width={frame.width} height={frame.height} bottom={28} glow={place === 0}>
+        <PropertyImage listing={listing} variant="thumb" style={styles.fill} />
+        <Animated.View pointerEvents="none" style={[styles.info, centreOnly]}>
+          <Text numberOfLines={2} style={styles.title}>{listing.title}</Text>
+          <Text numberOfLines={1} style={styles.place}>{listing.location}, {listing.province}</Text>
+          <View style={styles.priceRow}>
+            <Text numberOfLines={1} style={styles.price}>{formatMoney(listing.price)}<Text style={styles.small}> USD{priceSuffix(listing)}</Text></Text>
+            <Text numberOfLines={1} style={styles.small}>{listingFacts(listing)}</Text>
+          </View>
+        </Animated.View>
+      </ArchImage>
+    </MotionPressable>
+    <Animated.View pointerEvents="none" style={[styles.sign, { top: Math.round(frame.height * .38) }, centreOnly]}><Cartel label={cartelLabel(listing)} tilt={-4} /></Animated.View>
+  </Animated.View>;
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   // Bleeds over the list's 16 px gutter so on a phone the neighbours reach the screen edges.
   stage: { marginHorizontal: -16, overflow: 'hidden' },
-  side: { position: 'absolute', opacity: .42 },
+  slide: { position: 'absolute', top: 8 },
   fill: { width: '100%', height: '100%' },
-  ring: { position: 'absolute', left: -7, top: -7, borderBottomLeftRadius: 34, borderBottomRightRadius: 34, borderWidth: 1, borderColor: colors.outline },
+  ring: { position: 'absolute', borderBottomLeftRadius: 34, borderBottomRightRadius: 34, borderWidth: 1, borderColor: colors.outline },
   info: { position: 'absolute', left: 10, right: 10, bottom: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: rounded.inner, backgroundColor: colors.photoOverlay },
   title: { ...typography.section, color: colors.onDark },
   place: { marginTop: 2, fontSize: 13, lineHeight: 18, color: colors.onDark, opacity: .82 },

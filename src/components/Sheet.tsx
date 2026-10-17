@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, FadeIn, SlideInDown } from 'react-native-reanimated';
+import { useEffect, type ComponentProps, type ReactNode } from 'react';
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReducedMotion } from '../settings/useReducedMotion';
 import { createThemedStyles, rounded, typography } from '../theme';
@@ -15,20 +15,33 @@ const ease = Easing.bezier(.22, 1, .36, 1);
 export function Sheet({ visible, onClose, title, children }: { visible: boolean; onClose(): void; title?: string; children: ReactNode }) {
   const { styles } = useStyles();
   const insets = useSafeAreaInsets();
-  const reduced = useReducedMotion();
   return <Modal visible={visible} transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
     <KeyboardAvoidingView behavior="padding" style={styles.veil}>
       <Pressable accessibilityRole="button" accessibilityLabel="Cerrar" onPress={onClose} style={StyleSheet.absoluteFill} />
-      <Animated.View accessibilityViewIsModal entering={reduced ? FadeIn.duration(200) : SlideInDown.duration(320).easing(ease)}
-        style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]}>
+      <SheetRise accessibilityViewIsModal style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]}>
         <SheetHandle />
         <ScrollView bounces={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
           {title ? <Text accessibilityRole="header" style={styles.title}>{title}</Text> : null}
           {children}
         </ScrollView>
-      </Animated.View>
+      </SheetRise>
     </KeyboardAvoidingView>
   </Modal>;
+}
+
+/**
+ * A sheet's body rising from below; with reduced motion it only fades. It moves by transform, never by a layout
+ * animation: an Android Modal first lays out shorter than the screen (without the system bars), and SlideInDown kept
+ * that first position, so the sheet stopped 215 px above the bottom edge on a Pixel and the screen showed beneath it.
+ * Mount it inside the Modal, so it rises each time the sheet opens.
+ */
+export function SheetRise({ style, children, ...props }: ComponentProps<typeof Animated.View>) {
+  const reduced = useReducedMotion();
+  const { height } = useWindowDimensions();
+  const shown = useSharedValue(0);
+  useEffect(() => { shown.value = withTiming(1, { duration: reduced ? 200 : 320, easing: ease }); }, [shown, reduced]);
+  const rise = useAnimatedStyle(() => reduced ? { opacity: shown.value } : { transform: [{ translateY: (1 - shown.value) * height }] });
+  return <Animated.View {...props} style={[style, rise]}>{children}</Animated.View>;
 }
 
 /** The mediopunto outline every sheet carries as its handle. */
