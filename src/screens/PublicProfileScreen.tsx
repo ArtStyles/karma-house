@@ -57,7 +57,7 @@ export function PublicProfileView({ data, isAdmin, viewerId }: { data: ReturnTyp
             {profile.visitsAgreed > 0 && <Fact icon="walk-outline" text={profile.visitsAgreed === 1 ? '1 visita concertada' : `${profile.visitsAgreed} visitas concertadas`} />}
             <Fact icon="home-outline" text={profile.approvedListingCount === 1 ? '1 anuncio propio publicado y aprobado' : `${profile.approvedListingCount} anuncios propios publicados y aprobados`} />
           </View>}
-          {!profile.identityOnly && isAdmin && viewerId !== profile.id && <Button label={profile.verified ? 'Quitar verificación' : 'Verificar'} secondary icon="shield-checkmark-outline" onPress={() => setVerifySheet(true)} />}
+          {!profile.identityOnly && isAdmin && viewerId !== profile.id && <Button label={profile.verified ? 'Quitar perfil revisado' : 'Marcar como revisado'} secondary icon="shield-checkmark-outline" onPress={() => setVerifySheet(true)} />}
           {!profile.identityOnly && <><Text accessibilityRole="header" style={styles.section}>Sus anuncios{profile.activeListingCount ? ` · ${profile.activeListingCount}` : ''}</Text>
           {loading ? <ActivityIndicator color={colors.primary} style={styles.loading} />
             : listings.length ? <View style={styles.grid}>{listings.map(listing => <PropertyCard key={listing.id} listing={listing} width={cellWidth} />)}</View>
@@ -79,11 +79,11 @@ export function PublicProfileView({ data, isAdmin, viewerId }: { data: ReturnTyp
         </ScrollView></View>
       </View>
     </Modal>}
-    {profile && <Sheet visible={verifySheet} onClose={() => { if (!saving) setVerifySheet(false); }} title={profile.verified ? 'Quitar verificación' : 'Verificar perfil'}>
+    {profile && <Sheet visible={verifySheet} onClose={() => { if (!saving) setVerifySheet(false); }} title={profile.verified ? 'Quitar perfil revisado' : 'Marcar perfil como revisado'}>
       <Text style={styles.dialogText}>{profile.verified ? `${profile.displayName} dejará de mostrar la insignia «Perfil revisado por KarmaHouse».` : `${profile.displayName} mostrará la insignia «Perfil revisado por KarmaHouse».`}</Text>
       <View style={styles.gap}><Text style={styles.label}>Nota interna (opcional)</Text><TextInput accessibilityLabel="Nota interna (opcional)" value={note} onChangeText={setNote} multiline maxLength={500} editable={!saving} placeholder="Indica cómo se comprobó el perfil." placeholderTextColor={colors.muted} style={styles.input} /><Text style={styles.muted}>{note.length}/500 caracteres</Text></View>
       {saveError ? <Notice error>{saveError}</Notice> : null}
-      <ActionGroup><Button label={profile.verified ? 'Quitar verificación' : 'Verificar'} loading={saving} onPress={() => void confirmVerification()} />
+      <ActionGroup><Button label={profile.verified ? 'Quitar perfil revisado' : 'Marcar como revisado'} loading={saving} onPress={() => void confirmVerification()} />
       <Button label="Cancelar" secondary disabled={saving} onPress={() => setVerifySheet(false)} /></ActionGroup>
     </Sheet>}
   </SafeAreaView>;

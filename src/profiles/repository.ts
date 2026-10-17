@@ -18,7 +18,7 @@ export function createSupabaseProfileRepository(client: SupabaseClient, origin =
       return decode(data, error);
     },
     async setVerified(userId, verified, note, context) {
-      if (!context.userId || !context.accessToken) throw new ProfileError('Inicia sesión como administrador para verificar perfiles.');
+      if (!context.userId || !context.accessToken) throw new ProfileError('Inicia sesión como administrador para revisar perfiles.');
       if (!isUuid(userId)) throw new ProfileError(PROFILE_NOT_FOUND, true);
       context.checkpoint();
       const { data, error } = await client.rpc('kh_set_user_verified', { p_actor_id: context.userId, p_user_id: userId, p_verified: verified, p_note: note.trim() || null })

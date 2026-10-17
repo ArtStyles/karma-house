@@ -62,5 +62,5 @@ export function eventLabel(action: string): string {
   if(action.startsWith('property_rejected_')) return 'Anuncio retirado o devuelto';
   if(action.startsWith('property_pending_')) return 'Anuncio enviado a revisión';
   if(action.startsWith('property_draft_')) return 'Borrador guardado';
-  return action==='report_reviewed'?'Reporte revisado':action==='verify'?'Perfil verificado':action==='unverify'?'Verificación retirada':'Gestión administrativa';
+  return action==='report_reviewed'?'Reporte revisado':action==='verify'?'Perfil revisado':action==='unverify'?'Revisión de perfil retirada':'Gestión administrativa';
 }
