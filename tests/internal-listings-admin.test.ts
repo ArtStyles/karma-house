@@ -31,7 +31,7 @@ function harness(screen, overrides = {}) {
     useAgencyWorkspace: () => ({ agencies: [] }),
     bumpErrorMessage, canBumpNow, formatProDate, isProActive, nextBumpAt,
     useConsultationRefresh: () => ({ refreshing: false, refresh: async () => {}, isRefreshing: () => false }),
-    remoteErrorMessage: e => e.message, adminError: e => e.message,
+    remoteErrorMessage: e => e.message, adminError: e => e.message, useWindowDimensions: () => ({ width: 390 }), layout: { wideMinWidth: 1024 },
     accountActions: () => ['suspend'], actionLabel: { suspend: 'Suspender cuenta' }, roleLabel: { member: 'Miembro' },
     ...overrides,
   };

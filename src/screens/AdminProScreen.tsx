@@ -7,7 +7,7 @@ import { useAdminApi } from '../admin/useAdminApi';
 import { ActionGroup, Button, EmptyState, Notice, PageTitle, Pill } from '../components/ui';
 import { isUuid } from '../messaging/domain';
 import { decodeCreatedCode, decodeGrant, decodeProAccounts, decodeProCodes, decodeProSubject, formatProDate, proErrorMessage, proWriteErrorMessage, type ProAccountRow, type ProCodeRow, type ProCreatedCode, type ProPage, type ProSubject } from '../pro/domain';
-import { createThemedStyles, internalLayout } from '../theme';
+import {createThemedStyles,internalLayout,rounded,typography} from '../theme';
 
 type Target = { kind: 'user' | 'agency'; id: string };
 type Pending = { kind: 'cancel'; row: ProCodeRow } | { kind: 'revoke'; row: ProAccountRow };
@@ -218,16 +218,16 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper },
   content: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', paddingHorizontal: internalLayout.gutter, paddingBottom: 32, gap: 16 },
   loading: { padding: 28 },
-  card: { padding: 16, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, gap: 12 },
+  card:{padding:16,borderRadius:rounded.card,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,gap:12},
   confirm: { borderColor: colors.primary },
-  title: { fontSize: 18, lineHeight: 25, fontWeight: '600', color: colors.ink },
-  section: { fontSize: 13, lineHeight: 20, fontWeight: '600', color: colors.muted },
+  title:{...typography.cardTitle,color:colors.ink},
+  section: { ...typography.section, color: colors.ink, marginTop: 8 },
   body: { fontSize: 15, lineHeight: 23, color: colors.ink },
   muted: { fontSize: 14, lineHeight: 21, color: colors.muted },
-  code: { fontSize: 24, lineHeight: 32, fontWeight: '600', letterSpacing: 2, color: colors.ink },
+  code:{...typography.numeral,letterSpacing:2,color:colors.ink},
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   field: { gap: 8 },
   label: { fontSize: 14, lineHeight: 21, fontWeight: '600', color: colors.ink },
-  input: { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: 12, minHeight: 48, padding: 14, fontSize: 16, color: colors.ink },
-  note: { minHeight: 96, textAlignVertical: 'top' },
+  input:{backgroundColor:colors.paper,borderWidth:1,borderColor:colors.border,borderRadius:rounded.pill,minHeight:52,paddingHorizontal:18,paddingVertical:13,fontSize:16,color:colors.ink},
+  note:{minHeight:96,textAlignVertical:'top',borderRadius:rounded.card,paddingTop:14},
 }));

@@ -10,7 +10,7 @@ import { ActionGroup, Button, EmptyState, Icon, Notice, PageTitle, Pill } from '
 import { supabase } from '../lib/supabase';
 import { createReportModerationRepository,type ModerationReport as ChatReport } from '../messaging/reportModeration';
 import type { ReportReason } from '../messaging/types';
-import { createThemedStyles, internalLayout } from '../theme';
+import {createThemedStyles,internalLayout,rounded,typography} from '../theme';
 
 const reasonLabels: Record<ReportReason, string> = { spam: 'Spam', fraud: 'Posible fraude', harassment: 'Acoso', other: 'Otro motivo' };
 const dateLabel = (value: string) => new Date(value).toLocaleString('es', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -119,12 +119,12 @@ export default function MessageReportsScreen() {
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', paddingHorizontal: internalLayout.gutter, paddingBottom: 32, gap: 16 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, meta: { color: colors.muted, fontSize: 13, lineHeight: 20 },
-  reportList: { backgroundColor: colors.surface, borderRadius: 16, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  reportList:{backgroundColor:colors.surface,borderRadius:rounded.card,borderWidth:1,borderColor:colors.border,overflow:'hidden'},
   card: { padding: 16, gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
-  title: { fontSize: 18, fontWeight: '600', color: colors.ink }, property: { fontSize: 16, fontWeight: '600', lineHeight: 23, color: colors.ink },
+  title:{...typography.cardTitle,color:colors.ink}, property:{...typography.cardTitle,color:colors.ink},
   body: { fontSize: 15, lineHeight: 23, color: colors.ink }, label: { fontSize: 14, lineHeight: 20, color: colors.ink, fontWeight: '600' },
-  backdrop: { flex: 1, backgroundColor: colors.photoOverlay }, modalSafe: { flex: 1, paddingHorizontal: 20, justifyContent: 'center' }, modal: { width: '100%', maxWidth: 580, maxHeight: '94%', alignSelf: 'center', backgroundColor: colors.surface, borderRadius: 16, overflow: 'hidden' },
-  modalContent: { padding: 20, gap: 16 }, modalTitle: { fontSize: 24, lineHeight: 30, fontWeight: '600', letterSpacing: -.5, color: colors.ink },
-  message: { backgroundColor: colors.paper, borderRadius: 16, padding: 14, gap: 8 }, time: { fontSize: 11, color: colors.muted },
-  input: { minHeight: 112, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14, backgroundColor: colors.paper, color: colors.ink, fontSize: 16, lineHeight: 23, textAlignVertical: 'top' },
+  backdrop: { flex: 1, backgroundColor: colors.photoOverlay }, modalSafe:{flex:1,justifyContent:'flex-end'}, modal:{width:'100%',maxWidth:580,maxHeight:'94%',alignSelf:'center',backgroundColor:colors.sheet,borderTopLeftRadius:rounded.sheet,borderTopRightRadius:rounded.sheet,borderWidth:1,borderBottomWidth:0,borderColor:colors.border,overflow:'hidden'},
+  modalContent: { padding: 20, gap: 16 }, modalTitle:{...typography.sheetTitle,color:colors.ink},
+  message:{backgroundColor:colors.paper,borderRadius:rounded.inner,padding:14,gap:8}, time: { fontSize: 11, color: colors.muted },
+  input:{minHeight:112,borderRadius:rounded.card,borderWidth:1,borderColor:colors.border,paddingVertical:14,paddingHorizontal:18,backgroundColor:colors.surface,color:colors.ink,fontSize:16,lineHeight:23,textAlignVertical:'top'},
 }));

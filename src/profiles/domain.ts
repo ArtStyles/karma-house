@@ -71,8 +71,8 @@ export function decodePublicProfile(value: unknown): PublicProfile {
 export function profileErrorMessage(error: unknown): string {
   if (error instanceof ProfileError) return error.message;
   const message = error instanceof Error ? error.message : error && typeof error === 'object' && 'message' in error ? String(error.message) : '';
-  if (/KH_CANNOT_VERIFY_SELF/.test(message)) return 'No puedes verificar tu propia cuenta.';
-  if (/KH_ADMIN_REQUIRED/.test(message)) return 'Necesitas una cuenta administradora para verificar perfiles.';
+  if (/KH_CANNOT_VERIFY_SELF/.test(message)) return 'No puedes revisar tu propia cuenta.';
+  if (/KH_ADMIN_REQUIRED/.test(message)) return 'Necesitas una cuenta administradora para revisar perfiles.';
   if (/JWT|token.*expired|PGRST301/i.test(message)) return 'Inicia sesión de nuevo e inténtalo otra vez.';
   if (/network|fetch|timeout|abort/i.test(message)) return 'No se pudo conectar. Vuelve a intentar cuando tengas conexión.';
   return 'No se pudo cargar este perfil. Inténtalo de nuevo.';
