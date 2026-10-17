@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import React from 'react';
-import { listingBoardLabels, listingBoardState } from '../src/domain/listings.ts';
+import { listingBoardLabels, listingBoardState, normalizeSearch } from '../src/domain/listings.ts';
 import { bumpErrorMessage, canBumpNow, formatProDate, isProActive, nextBumpAt } from '../src/pro/domain.ts';
 
 function harness(screen, overrides = {}) {
@@ -25,7 +25,7 @@ function harness(screen, overrides = {}) {
     StyleSheet: { create: value => value }, router: { push() {} }, supabase: null,
     options: values => Object.entries(values).map(([value, label]) => ({ value, label })),
     listingFacts: () => '', operationBadge: () => '', typeLabel: () => '', formatMoney: () => '$ 1',
-    listingBoardState, listingBoardLabels, listingOperation: () => 'sale', priceSuffix: () => '',
+    listingBoardState, listingBoardLabels, normalizeSearch, listingOperation: () => 'sale', priceSuffix: () => '',
     useIncomingTransferCount: () => ({ count: 0, refresh: async () => {} }),
     usePro: () => ({ repository: null, status: null, error: '', loading: false, reload: async () => {} }),
     useAgencyWorkspace: () => ({ agencies: [] }),
@@ -35,7 +35,7 @@ function harness(screen, overrides = {}) {
     accountActions: () => ['suspend'], actionLabel: { suspend: 'Suspender cuenta' }, roleLabel: { member: 'Miembro' },
     ...overrides,
   };
-  for (const name of ['SafeAreaView', 'ScrollView', 'RefreshControl', 'PageTitle', 'EmptyState', 'View', 'Notice', 'Text', 'TextInput', 'Modal', 'KeyboardAvoidingView', 'ActivityIndicator', 'Button', 'PropertyImage', 'AdminToolbar', 'AdminPagination', 'AdminStatus', 'AccountPrompt', 'ActionGroup', 'Pill', 'Pressable', 'Icon', 'ListingStateChip']) context[name] = name;
+  for (const name of ['SafeAreaView', 'ScrollView', 'RefreshControl', 'PageTitle', 'EmptyState', 'View', 'Notice', 'Text', 'TextInput', 'Modal', 'KeyboardAvoidingView', 'ActivityIndicator', 'Button', 'PropertyImage', 'AdminToolbar', 'AdminPagination', 'AdminStatus', 'AccountPrompt', 'ActionGroup', 'Pill', 'Pressable', 'Icon', 'ListingStateChip', 'Pagination', 'Sheet', 'IconButton']) context[name] = name;
   const source = readFileSync(`src/screens/${screen}.tsx`, 'utf8').replace(/^import .*;\r?\n/gm, '').replace('export default function', 'function');
   vm.createContext(context);
   vm.runInContext(ts.transpileModule(source, { compilerOptions: { jsx: ts.JsxEmit.React, module: ts.ModuleKind.None, target: ts.ScriptTarget.ES2022 } }).outputText + `\nglobalThis.renderScreen = ${screen};`, context);

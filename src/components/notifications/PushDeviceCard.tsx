@@ -1,6 +1,6 @@
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { usePushNotifications } from '../../push/PushProvider';
-import { createThemedStyles, internalLayout } from '../../theme';
+import { createThemedStyles, rounded, typography } from '../../theme';
 import { ActionGroup, Button, Icon, Notice } from '../ui';
 
 export function PushDeviceCard() {
@@ -37,13 +37,13 @@ export function PushDeviceCard() {
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  card: { borderWidth: 1, borderColor: colors.border, borderRadius: internalLayout.radius, backgroundColor: colors.surface, padding: 16, gap: 16 },
+  card: { borderWidth: 1, borderColor: colors.border, borderRadius: rounded.card, backgroundColor: colors.surface, padding: 16, gap: 14 },
   heading: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  icon: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  enabledIcon: { backgroundColor: 'transparent' }, copy: { flex: 1, minWidth: 0, gap: 6 },
-  title: { fontSize: 18, lineHeight: 24, fontWeight: '600', letterSpacing: -0.3, color: colors.ink },
-  description: { fontSize: 13, lineHeight: 20, color: colors.muted },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }, dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.muted }, enabledDot: { backgroundColor: colors.green },
-  statusText: { flex: 1, color: colors.ink, fontSize: 13, lineHeight: 19, fontWeight: '500' },
+  icon: { width: 40, height: 40, borderRadius: rounded.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.softBlue },
+  enabledIcon: { backgroundColor: colors.softGreen }, copy: { flex: 1, minWidth: 0, gap: 4 },
+  title: { ...typography.cardTitle, color: colors.ink },
+  description: { fontSize: 13, lineHeight: 19, color: colors.muted },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 9 }, dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.muted }, enabledDot: { backgroundColor: colors.green },
+  statusText: { flex: 1, color: colors.ink, fontSize: 15, lineHeight: 21, fontWeight: '600' },
   footnote: { color: colors.muted, fontSize: 12, lineHeight: 18 },
 }));

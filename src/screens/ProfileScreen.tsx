@@ -2,7 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Icon, IconButton, Notice, PageTitle, type IconName } from '../components/ui';
+import { Button, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { UserAvatar } from '../components/account/UserAvatar';
 import { ProBadge } from '../components/ProBadge';
 import { usePro } from '../pro/usePro';
@@ -12,7 +12,7 @@ import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 import { useAuth } from '../auth/AuthProvider';
 import { useMarketplace } from '../state/MarketplaceProvider';
-import { createThemedStyles, internalLayout, layout } from '../theme';
+import { createThemedStyles, internalLayout, layout, rounded, typography } from '../theme';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import { useSavedSearches } from '../searches/useSavedSearches';
@@ -23,7 +23,6 @@ import { agencyStateLabel } from '../agencies/registration';
 import { agencyRoleLabel } from './AgencyWorkspaceScreen';
 import { useIncomingTransferCount } from '../transfers/useIncomingTransferCount';
 import { UpdateSheet } from '../components/UpdateSheet';
-import { formatSize } from '../updates/release';
 import { useAppUpdate } from '../updates/useAppUpdate';
 
 export default function ProfileScreen() {
@@ -89,27 +88,31 @@ export default function ProfileScreen() {
   const pendingInvitations = mine?.pendingInvitations ?? 0;
   // An applicant joins the agency only once it is approved; until then the application is the way in.
   const application = mine?.application && !agencies.agencies.some(agency => agency.id === mine.application!.agency.id) ? mine.application.agency : null;
+  const updateLabel = update.release ? `Nueva versión ${update.release.version} disponible${update.phase === 'downloading' ? `, descargando ${update.percent} %` : update.downloaded ? ', lista para instalar' : ''}` : '';
+  async function leave() {
+    setBusy(true); setError('');
+    try { await signOut(); } catch (cause) { setError(cause instanceof Error ? cause.message : 'No pudimos cerrar la sesión. Inténtalo de nuevo.'); } finally { setBusy(false); }
+  }
 
   return <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
     <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!busy && !!user && mode === 'cloud'} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}>
-      <PageTitle title="Mi espacio" right={<IconButton name="settings-outline" label="Ajustes de cuenta" onPress={() => router.push('/account-settings')} />} />
-
-      {/* Name and photo are edited in Ajustes de cuenta, so the identity opens it. */}
-      {(user || mode === 'demo') && <Pressable disabled={!user} accessibilityRole={user ? 'button' : undefined} accessibilityLabel={user ? `${displayName || 'Mi cuenta'}${proDetail ? ', cuenta Pro' : ''}, ${user.email ?? ''}. Editar nombre y foto` : undefined} onPress={() => router.push('/account-settings')} style={({ pressed }) => [styles.identity, pressed && { opacity: .7 }]}>
-        <UserAvatar size={48} avatarUrl={user ? avatarUrl : null} name={user ? displayName : ''} />
-        <View style={styles.identityText}>
-          <Text style={styles.heading}>{user ? displayName || 'Mi cuenta' : 'Demostración local'}</Text>
-          {user && proDetail && <ProBadge decorative />}
-          <Text style={styles.identityDescription}>{mode === 'demo' ? 'Guardado en este dispositivo' : user?.email}</Text>
-        </View>
-        {user && <Icon name="chevron-forward" size={16} color={colors.muted} />}
-      </Pressable>}
-
-      {/* Android only: a newer APK on karmahouse.site, for guests too. Nothing downloads until the sheet asks. */}
-      {update.release && <View style={[styles.group, styles.updateGroup]}>
-        <AccountRow icon="cloud-download-outline" title={`Nueva versión ${update.release.version}`} dot={update.pending} onPress={() => setUpdateSheet(true)}
-          description={update.phase === 'downloading' ? `Descargando… ${update.percent} %` : update.downloaded ? 'Lista para instalar' : `${formatSize(update.release.size)} · Mira qué cambia`} />
-      </View>}
+      <View style={styles.header}>
+        {/* Name and photo are edited in Ajustes de cuenta, so the identity opens it. */}
+        {user || mode === 'demo' ? <Pressable disabled={!user} accessibilityRole={user ? 'button' : undefined} accessibilityLabel={user ? `${displayName || 'Mi cuenta'}${proDetail ? ', cuenta Pro' : ''}, ${user.email ?? ''}. Editar nombre y foto` : undefined} onPress={() => router.push('/account-settings')} style={({ pressed }) => [styles.identity, pressed && { opacity: .7 }]}>
+          <UserAvatar arch size={64} avatarUrl={user ? avatarUrl : null} name={user ? displayName : ''} />
+          <View style={styles.identityText}>
+            <Text accessibilityRole="header" numberOfLines={2} style={styles.heading}>{user ? displayName || 'Mi cuenta' : 'Demostración local'}</Text>
+            {user && proDetail && <ProBadge decorative />}
+            <Text numberOfLines={1} style={styles.identityDescription}>{mode === 'demo' ? 'Guardado en este dispositivo' : user?.email}</Text>
+          </View>
+        </Pressable> : <Text accessibilityRole="header" style={[styles.heading, styles.flex]}>Mi espacio</Text>}
+        {/* Android only: a newer APK on karmahouse.site, for guests too. Nothing downloads until the sheet asks. */}
+        {update.release && <Pressable accessibilityRole="button" accessibilityLabel={updateLabel} onPress={() => setUpdateSheet(true)} style={({ pressed }) => [styles.update, pressed && { opacity: .7 }]}>
+          <Icon name="cloud-download-outline" size={22} color={colors.amber} />
+          {update.pending && <View style={styles.updateDot} />}
+        </Pressable>}
+        <IconButton name="settings-outline" label="Ajustes de cuenta" onPress={() => router.push('/account-settings')} style={styles.round} />
+      </View>
 
       {/* A device preference stays reachable before any private activity, including for guests. */}
       <View style={styles.group}>
@@ -150,11 +153,11 @@ export default function ProfileScreen() {
           <AccountRow icon="chatbubbles-outline" title="Mensajes" count={unreadCount} unread description={mode === 'demo' ? 'Disponible con una cuenta conectada' : undefined} onPress={() => router.push('/messages')} />
           <AccountRow icon="notifications-outline" title="Notificaciones" count={notificationUnreadCount} unread onPress={() => router.push('/notifications')} />
           <AccountRow icon="calendar-outline" title="Visitas y ofertas" onPress={() => router.push('/requests')} />
+          <AccountRow icon="heart-outline" title="Favoritos" count={favoriteIds.length} onPress={() => router.push('/favorites')} />
         </View>
         <Text accessibilityRole="header" style={styles.sectionLabel}>Viviendas</Text>
         <View style={styles.group}>
           <AccountRow icon="home-outline" title="Mis anuncios" count={own.length} onPress={() => router.push('/my-listings')} />
-          <AccountRow icon="heart-outline" title="Favoritos" count={favoriteIds.length} onPress={() => router.push('/favorites')} />
           {mode === 'cloud' && <>
             <AccountRow icon="bookmark-outline" title="Mis alertas" count={savedSearches.items.length} onPress={() => router.push('/saved-searches')} />
             {user && <AccountRow icon="person-circle-outline" title="Ver mi perfil público" onPress={() => router.push(`/user/${user.id}`)} />}
@@ -167,14 +170,11 @@ export default function ProfileScreen() {
       {user && <>
         <Text accessibilityRole="header" style={styles.sectionLabel}>Cuenta</Text>
         <View style={styles.group}>
+          <AccountRow icon="settings-outline" title="Ajustes de cuenta" onPress={() => router.push('/account-settings')} />
           <AccountRow icon="id-card-outline" title="Mi código de cuenta" description="Compártelo con una inmobiliaria para que te invite a su equipo." extraLabel={accountCode?.id === user.id ? user.id : undefined} onPress={() => void shareAccountCode(user.id)}>
             {accountCode?.id === user.id && <Text selectable style={styles.code}>{user.id}</Text>}
           </AccountRow>
           <AccountRow icon="star-outline" title="KarmaHouse Pro" description={proDetail} onPress={() => router.push('/pro')} />
-          <AccountRow icon="log-out-outline" title="Cerrar sesión" danger disabled={busy} loading={busy} onPress={async () => {
-            setBusy(true); setError('');
-            try { await signOut(); } catch (cause) { setError(cause instanceof Error ? cause.message : 'No pudimos cerrar la sesión. Inténtalo de nuevo.'); } finally { setBusy(false); }
-          }} />
         </View>
         {/* A live region, so screen readers hear the copy on the web too. */}
         {accountCode?.id === user.id && accountCode.copied && <Text accessibilityLiveRegion="polite" style={styles.copied}>Código copiado. Pégalo en un mensaje a la inmobiliaria.</Text>}
@@ -182,17 +182,20 @@ export default function ProfileScreen() {
       {mode === 'demo' && <Text style={styles.demoNote}>Esta demo no incluye cuentas, mensajes ni publicaciones públicas.</Text>}
       <View style={styles.legal}>
         <Pressable accessibilityRole="link" style={styles.legalLink} onPress={() => void Linking.openURL(PRIVACY_URL)}><Text style={styles.legalText}>Política de privacidad</Text></Pressable>
-        <Text style={styles.legalText}>·</Text>
+        <Text style={styles.legalDot}>·</Text>
         <Pressable accessibilityRole="link" style={styles.legalLink} onPress={() => void Linking.openURL(TERMS_URL)}><Text style={styles.legalText}>Términos de uso</Text></Pressable>
       </View>
+      {user && <Pressable accessibilityRole="button" accessibilityLabel="Cerrar sesión" accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={() => void leave()} style={({ pressed }) => [styles.signOut, (pressed || busy) && { opacity: .7 }]}>
+        {busy ? <ActivityIndicator size="small" color={colors.danger} /> : <Icon name="log-out-outline" size={19} color={colors.danger} />}<Text style={styles.signOutText}>Cerrar sesión</Text>
+      </Pressable>}
       {error || authError ? <Notice error onRetry={user ? () => void reload.refresh() : undefined}>{error || authError}</Notice> : null}
     </ScrollView>
     <UpdateSheet visible={updateSheet} onClose={() => setUpdateSheet(false)} />
   </SafeAreaView>;
 }
 
-function AccountRow({ icon, title, description, extraLabel, count, unread = false, dot = false, danger = false, disabled = false, loading = false, children, onPress }: {
-  icon: IconName; title: string; description?: string; extraLabel?: string; count?: number | null; unread?: boolean; dot?: boolean; danger?: boolean;
+function AccountRow({ icon, title, description, extraLabel, count, unread = false, danger = false, disabled = false, loading = false, children, onPress }: {
+  icon: IconName; title: string; description?: string; extraLabel?: string; count?: number | null; unread?: boolean; danger?: boolean;
   disabled?: boolean; loading?: boolean; children?: ReactNode; onPress(): void;
 }) {
   const { colors, styles } = useStyles();
@@ -203,31 +206,36 @@ function AccountRow({ icon, title, description, extraLabel, count, unread = fals
     {loading ? <ActivityIndicator size="small" color={danger ? colors.danger : colors.primary} /> : <Icon name={icon} color={danger ? colors.danger : colors.primary} size={21} />}
     <View style={styles.rowCopy}><Text style={[styles.rowTitle, danger && { color: colors.danger }]}>{title}</Text>{children}{description && <Text style={styles.rowDescription}>{description}</Text>}</View>
     {hasCount && <Text style={[styles.count, unread && styles.unread]}>{unread && count! > 99 ? '99+' : count}</Text>}
-    {dot && <View style={styles.dot} />}
     {!danger && <Icon name="chevron-forward" size={16} color={colors.muted} />}
   </Pressable>;
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper },
-  content: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', paddingHorizontal: internalLayout.gutter, paddingBottom: layout.tabContentBottom },
-  identity: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 2, paddingBottom: 20 },
-  identityText: { flex: 1, minWidth: 0, gap: 4 }, heading: { color: colors.ink, fontSize: 17, lineHeight: 23, fontWeight: '600' },
+  safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 },
+  content: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', paddingHorizontal: 16, paddingBottom: layout.tabContentBottom },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 18, paddingBottom: 20, paddingHorizontal: 4 },
+  identity: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  identityText: { flex: 1, minWidth: 0, gap: 4 }, heading: { ...typography.displayLong, color: colors.ink },
   identityDescription: { color: colors.muted, fontSize: 13, lineHeight: 19 },
-  sectionLabel: { color: colors.muted, fontSize: 13, fontWeight: '500', marginTop: 22, marginBottom: 8, marginLeft: 4 },
-  group: { backgroundColor: colors.surface, borderRadius: internalLayout.radius, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-  row: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 14, paddingVertical: 13 },
+  round: { backgroundColor: colors.surface },
+  // The one sol button in Mi espacio: something new waits to be installed.
+  update: { width: 44, height: 44, borderRadius: rounded.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.softAmber, borderWidth: 1.5, borderColor: colors.sol },
+  updateDot: { position: 'absolute', top: 6, right: 6, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.sol, borderWidth: 2, borderColor: colors.paper },
+  sectionLabel: { ...typography.section, color: colors.ink, marginTop: 24, marginBottom: 10, marginLeft: 4 },
+  group: { backgroundColor: colors.surface, borderRadius: rounded.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  row: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 12 },
   accountRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  dataRow: { minHeight: 68 }, pressed: { backgroundColor: colors.softBlue }, rowCopy: { flex: 1, minWidth: 0, gap: 3 },
-  rowTitle: { fontSize: 15, lineHeight: 21, fontWeight: '500', color: colors.ink }, rowDescription: { color: colors.muted, fontSize: 12, lineHeight: 18 },
-  count: { color: colors.muted, fontSize: 13, lineHeight: 18, fontVariant: ['tabular-nums'], minWidth: 22, textAlign: 'center', paddingHorizontal: 5, paddingVertical: 3 },
-  unread: { color: colors.primary, backgroundColor: colors.softBlue, borderRadius: 12, fontWeight: '600' },
-  dot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.primaryFill }, updateGroup: { marginBottom: 12 },
+  dataRow: { minHeight: 68 }, pressed: { backgroundColor: colors.softBlue }, rowCopy: { flex: 1, minWidth: 0, gap: 2 },
+  rowTitle: { fontSize: 16, lineHeight: 22, color: colors.ink }, rowDescription: { color: colors.muted, fontSize: 13, lineHeight: 18 },
+  count: { color: colors.muted, fontSize: 13, lineHeight: 18, fontVariant: ['tabular-nums'], minWidth: 22, textAlign: 'center', paddingHorizontal: 5, paddingVertical: 2 },
+  unread: { color: colors.onSol, backgroundColor: colors.sol, borderRadius: rounded.pill, overflow: 'hidden', fontWeight: '700', paddingHorizontal: 7 },
   loading: { flexDirection: 'row', gap: 10, alignItems: 'center', paddingVertical: 24 },
-  guest: { gap: 14, paddingVertical: 32 }, guestTitle: { fontSize: 23, lineHeight: 29, fontWeight: '600', letterSpacing: -.4, color: colors.ink },
+  guest: { gap: 14, paddingVertical: 32 }, guestTitle: { ...typography.sheetTitle, color: colors.ink },
   guestText: { fontSize: 16, lineHeight: 25, color: colors.muted, maxWidth: 350 }, guestAction: { alignSelf: 'flex-start' },
-  legal: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 14 },
-  legalText: { color: colors.muted, fontSize: 12, lineHeight: 18 }, legalLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 5 },
+  legal: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 16 },
+  legalText: { color: colors.primary, fontSize: 13, lineHeight: 18 }, legalDot: { color: colors.muted, fontSize: 13 }, legalLink: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 5 },
+  signOut: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 48, marginTop: 8, borderRadius: rounded.pill, borderWidth: 1, borderColor: colors.danger },
+  signOutText: { color: colors.danger, fontSize: 15, fontWeight: '600' },
   code: { color: colors.ink, fontSize: 13, lineHeight: 19, fontVariant: ['tabular-nums'] },
   copied: { color: colors.muted, fontSize: 13, lineHeight: 19, paddingHorizontal: 4, marginTop: 8 },
   demoNote: { color: colors.muted, fontSize: 13, lineHeight: 20, paddingHorizontal: 4, marginTop: 20 },

@@ -10,7 +10,10 @@ import { pendingIntentStore } from '../auth/pendingIntentStorage';
 import { createAuthFocusScope } from '../auth/intentLifecycle';
 import { Brand, Button, goBack, Icon, IconButton, Notice, type IconName } from '../components/ui';
 import { isSupabaseConfigured } from '../lib/supabase';
-import { createThemedStyles, typography } from '../theme';
+import { createThemedStyles, rounded, typography } from '../theme';
+import { ArchImage } from '../components/ArchImage';
+import { Mediopunto } from '../components/Mediopunto';
+import { Segmented } from '../components/Segmented';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 
 import {AgencyRegistrationFields} from '../components/agencies/AgencyRegistrationFields';
@@ -120,7 +123,7 @@ export default function AuthScreen() {
   const subtitle = mode === 'signup' ? 'Completa tus datos para guardar viviendas y publicar anuncios.' : mode === 'forgot' ? 'Escribe tu correo para solicitar un enlace de recuperación.' : mode === 'recovery' ? 'Elige una contraseña para volver a tu espacio.' : 'Consulta tus favoritos, anuncios y conversaciones.';
   const submitLabel = mode === 'signup' ? 'Crear cuenta' : mode === 'forgot' ? 'Solicitar enlace' : mode === 'recovery' ? 'Guardar contraseña' : 'Entrar';
   const hasRecoverySession = mode !== 'recovery' || Boolean(auth.user);
-  const resendButton = <Button secondary label={resend.waiting ? 'Reenviar correo en un minuto' : 'Reenviar correo'} loading={resend.busy} disabled={resend.waiting} onPress={() => {
+  const resendButton = <Button secondary style={notice ? styles.wide : undefined} label={resend.waiting ? 'Reenviar correo en un minuto' : 'Reenviar correo'} loading={resend.busy} disabled={resend.waiting} onPress={() => {
     setResend({ busy: true, message: null, waiting: false });
     auth.resendConfirmation(email).then(() => setResend({ busy: false, message: 'Si la cuenta espera confirmación, te enviamos otro enlace. Usa el más reciente.', waiting: true }), (cause: unknown) => setResend({ busy: false, message: cause instanceof Error ? cause.message : 'No pudimos reenviar el correo.', waiting: true }));
   }} />;
@@ -129,21 +132,24 @@ export default function AuthScreen() {
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         <View style={styles.topBar}>
-          <IconButton name="chevron-back" label="Volver" onPress={() => mode === 'forgot' ? changeMode('signin') : void cancel()} />
-          <Brand height={22} />
-          <View style={styles.backSpace} />
+          <IconButton name="chevron-back" label="Volver" onPress={() => mode === 'forgot' ? changeMode('signin') : void cancel()} style={styles.round} />
         </View>
         <View style={styles.content}>
-          <Text accessibilityRole="header" style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
+          {!notice && <View style={styles.hero}>
+            <Mediopunto width={120} />
+            <Brand height={24} />
+            <Text style={styles.tagline}>Un espacio para encontrar tu lugar.</Text>
+          </View>}
+          <Text accessibilityRole="header" style={[styles.title, notice && styles.hidden]}>{title}</Text>
+          <Text style={[styles.subtitle, notice && styles.hidden]}>{subtitle}</Text>
           {intent && (mode === 'signin' || mode === 'signup') && <View style={{ marginTop: 18 }}><Notice>{pendingIntentReason(intent)}</Notice></View>}
 
           {!isSupabaseConfigured ? <View style={styles.form}>
             <Notice>Estás en la demostración local. Las cuentas estarán disponibles cuando se conecte el servicio.</Notice>
             <Button label="Seguir explorando" onPress={() => void cancel(true)} />
-          </View> : !auth.ready ? <ActivityIndicator style={{ marginTop: 36 }} size="large" color={colors.primary} /> : notice ? <View style={styles.successCard}>
-            <View style={styles.successIcon}><Icon name={notice === 'updated' ? 'checkmark' : 'mail-outline'} color={colors.green} size={26} /></View>
-            <Text style={styles.cardTitle}>{notice === 'updated' ? 'Contraseña actualizada' : 'Revisa tu correo'}</Text>
+          </View> : !auth.ready ? <ActivityIndicator style={{ marginTop: 36 }} size="large" color={colors.primary} /> : notice ? <View accessibilityRole="alert" style={styles.successCard}>
+            <ArchImage width={150} height={150} bottom={rounded.card} glow style={styles.successIcon}><Icon name={notice === 'updated' ? 'checkmark' : 'mail-outline'} color={notice === 'updated' ? colors.green : colors.amber} size={60} /></ArchImage>
+            <Text accessibilityRole="header" style={styles.cardTitle}>{notice === 'updated' ? 'Contraseña actualizada' : 'Revisa tu correo'}</Text>
             <Text style={styles.cardCopy}>{notice === 'confirmation'
               ? registrationIntent==='agency'?'Si el registro puede completarse con esta dirección, encontrarás un enlace para confirmar tu cuenta. Revisa también spam. La solicitud de inmobiliaria estará disponible al confirmar, incluso en otro dispositivo. Cada correo nuevo anula el anterior: abre siempre el último.':'Si el registro puede completarse con esta dirección, encontrarás un enlace para confirmar tu cuenta. Revisa también spam y ábrelo en este dispositivo. Cada correo nuevo anula el anterior: abre siempre el último.'
               : notice === 'reset' ? 'Si existe una cuenta con ese correo, busca el enlace de recuperación. Revisa también spam y ábrelo en este dispositivo.'
@@ -152,17 +158,15 @@ export default function AuthScreen() {
               {resend.message ? <Text accessibilityLiveRegion="polite" style={styles.cardCopy}>{resend.message}</Text> : null}
               {resendButton}
             </>}
-            <Button label={notice === 'updated' ? 'Continuar' : 'Volver a entrar'} onPress={() => notice === 'updated' ? router.replace(returnTo) : changeMode('signin')} />
+            <Button label={notice === 'updated' ? 'Continuar' : 'Volver a entrar'} style={styles.wide} onPress={() => notice === 'updated' ? router.replace(returnTo) : changeMode('signin')} />
           </View> : !hasRecoverySession ? <View style={styles.form}>
             <Notice error>Abre el enlace de recuperación que solicitaste para elegir tu nueva contraseña.</Notice>
             <Button label="Solicitar otro enlace" onPress={() => changeMode('forgot')} />
           </View> : <View style={styles.form}>
-            {(mode === 'signin' || mode === 'signup') && <View style={styles.segment}>
-              {(['signin', 'signup'] as const).map(item => <Pressable key={item} accessibilityRole="button" accessibilityState={{ selected: mode === item, disabled: submitting }} disabled={submitting} onPress={() => changeMode(item)} style={[styles.segmentItem, mode === item && styles.segmentSelected]}>
-                <Text style={[styles.segmentText, mode === item && styles.segmentTextSelected]}>{item === 'signin' ? 'Entrar' : 'Crear cuenta'}</Text>
-              </Pressable>)}
-            </View>}
-            {mode==='signup'&&agencyAvailable&&<View style={styles.segment}>{(['personal','agency'] as const).map(value=><Pressable key={value} accessibilityRole="button" accessibilityState={{selected:registrationIntent===value,disabled:submitting}} disabled={submitting} onPress={()=>{setRegistrationIntent(value);setIssue(null);setAgencyErrors({});}} style={[styles.segmentItem,registrationIntent===value&&styles.segmentSelected]}><Text style={[styles.segmentText,registrationIntent===value&&styles.segmentTextSelected]}>{value==='personal'?'Cuenta personal':'Inmobiliaria'}</Text></Pressable>)}</View>}
+            {(mode === 'signin' || mode === 'signup') && <Segmented<'signin' | 'signup'> label="Acceso" value={mode} disabled={submitting} onChange={changeMode}
+              options={[{ value: 'signin', label: 'Entrar' }, { value: 'signup', label: 'Crear cuenta' }]} />}
+            {mode==='signup'&&agencyAvailable&&<Segmented<RegistrationIntent> label="Tipo de cuenta" value={registrationIntent} disabled={submitting} onChange={value=>{setRegistrationIntent(value);setIssue(null);setAgencyErrors({});}}
+              options={[{ value: 'personal', label: 'Cuenta personal' }, { value: 'agency', label: 'Inmobiliaria' }]} />}
             {mode==='signup'&&registrationIntent==='agency'&&<Notice>Confirma tu correo y espera la aprobación de KarmaHouse para operar. Aprobar la inmobiliaria no concede su verificación.</Notice>}
             {mode === 'signup' && <Field label="Nombre público" icon="person-outline" value={name} onChangeText={setName} editable={!submitting} autoComplete="name" textContentType="name" autoCapitalize="words" maxLength={80} placeholder="Cómo quieres que te llamemos" returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => emailRef.current?.focus()} />}
             {mode !== 'recovery' && <Field label="Correo electrónico" icon="mail-outline" value={email} onChangeText={setEmail} editable={!submitting} autoComplete="email" textContentType="emailAddress" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" maxLength={254} placeholder="tu@correo.com" inputRef={emailRef} returnKeyType={mode === 'forgot' ? 'go' : 'next'} submitBehavior={mode === 'forgot' ? 'blurAndSubmit' : 'submit'} onSubmitEditing={mode === 'forgot' ? submit : () => passwordRef.current?.focus()} />}
@@ -205,28 +209,26 @@ function Field({ label, icon, accessory, inputRef, ...input }: TextInputProps & 
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 },
-  scroll: { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: 22, paddingBottom: 40, flexGrow: 1 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, paddingBottom: 20 },
-  backSpace: { width: 44 },
-  content: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingTop: 4 },
-  title: { ...typography.display, color: colors.ink },
-  subtitle: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: 8, maxWidth: 420 },
-  form: { marginTop: 24, gap: 18 },
-  segment: { flexDirection: 'row', backgroundColor: colors.softNeutral, padding: 4, borderRadius: 999, marginBottom: 7 },
-  segmentItem: { flex: 1, minWidth: 0, minHeight: 44, padding: 8, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  segmentSelected: { backgroundColor: colors.surface, boxShadow: '0 1px 5px rgba(0, 0, 0, 0.06)' },
-  segmentText: { fontSize: 15, fontWeight: '500', textAlign: 'center', color: colors.muted }, segmentTextSelected: { color: colors.ink, fontWeight: '600' },
-  field: { gap: 9 }, label: { fontSize: 14, fontWeight: '500', color: colors.ink, marginLeft: 4 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: colors.surface, borderRadius: 15, paddingLeft: 16, paddingRight: 8, borderWidth: 1, borderColor: colors.border },
+  scroll: { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: 40, flexGrow: 1 },
+  topBar: { flexDirection: 'row', alignItems: 'center', paddingTop: 8, paddingBottom: 4 }, round: { backgroundColor: colors.surface },
+  content: { width: '100%', maxWidth: 480, alignSelf: 'center' },
+  hero: { alignItems: 'center', gap: 10, paddingBottom: 22 },
+  tagline: { ...typography.cardTitle, color: colors.body, textAlign: 'center' },
+  title: { ...typography.displayLong, color: colors.ink }, hidden: { display: 'none' },
+  subtitle: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: 6, maxWidth: 420 },
+  form: { marginTop: 20, gap: 16 },
+  field: { gap: 8 }, label: { fontSize: 13, lineHeight: 18, fontWeight: '600', color: colors.body, marginLeft: 4 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: colors.surface, borderRadius: rounded.pill, paddingLeft: 18, paddingRight: 4, borderWidth: 1, borderColor: colors.border },
   inputFocused: { borderColor: colors.primary },
   input: { flex: 1, minWidth: 0, minHeight: 52, fontSize: 16, color: colors.ink, paddingVertical: 13, outlineWidth: 0 },
   eye: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  forgot: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center', marginTop: -10 }, linkText: { color: colors.primary, fontSize: 14, fontWeight: '500' },
-  helper: { color: colors.muted, fontSize: 13, lineHeight: 20 },
-  explore: { flexDirection: 'row', alignSelf: 'center', alignItems: 'center', gap: 8, minHeight: 48, marginTop: 28 },
-  exploreText: { fontSize: 14, fontWeight: '500', color: colors.muted },
-  successCard: { marginTop: 24, padding: 20, borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, gap: 16 },
-  successIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.softGreen, alignItems: 'center', justifyContent: 'center' },
-  cardTitle: { fontSize: 23, fontWeight: '600', letterSpacing: -.5, color: colors.ink },
-  cardCopy: { color: colors.muted, fontSize: 15, lineHeight: 23, marginBottom: 7 },
+  forgot: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', marginTop: -8, paddingHorizontal: 4 }, linkText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  helper: { color: colors.muted, fontSize: 13, lineHeight: 20, textAlign: 'center' },
+  explore: { flexDirection: 'row', alignSelf: 'center', alignItems: 'center', gap: 8, minHeight: 48, marginTop: 20 },
+  exploreText: { fontSize: 15, fontWeight: '600', color: colors.body },
+  // «Revisa tu correo»: the envelope in a glowing arch, then the steps.
+  successCard: { marginTop: 8, alignItems: 'center', gap: 14 }, wide: { alignSelf: 'stretch' },
+  successIcon: { backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  cardTitle: { ...typography.display, color: colors.ink, textAlign: 'center' },
+  cardCopy: { color: colors.body, fontSize: 15, lineHeight: 22, textAlign: 'center', marginBottom: 4 },
 }));

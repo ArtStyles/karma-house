@@ -5,7 +5,8 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Tex
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { AccountPrompt } from '../components/AccountPrompt';
-import { Button, EmptyState, Icon, Notice, PageTitle, Pill } from '../components/ui';
+import { Button, EmptyState, Icon, Notice, PageTitle } from '../components/ui';
+import { Segmented } from '../components/Segmented';
 import { NegotiationCard } from '../components/negotiations/NegotiationCard';
 import { NegotiationComposer } from '../components/negotiations/NegotiationComposer';
 import { NegotiationSheet } from '../components/negotiations/NegotiationSheet';
@@ -15,7 +16,7 @@ import { isSupabaseConfigured } from '../lib/supabase';
 import { useMessaging } from '../messaging/MessagingProvider';
 import type { Negotiation } from '../negotiations/types';
 import { useNegotiations } from '../negotiations/useNegotiations';
-import { createThemedStyles, internalLayout } from '../theme';
+import { createThemedStyles, internalLayout, rounded, typography } from '../theme';
 
 export default function RequestsScreen(){
   const { colors, styles } = useStyles();
@@ -36,9 +37,10 @@ function RequestsBody({userId}:{userId:string}){
   const selected=counter?store.items.find(item=>item.id===counter.id):null;
   const target=counter?{conversationId:counter.conversationId,kind:counter.kind,previous:counter}:null;
   return <>
-    <View style={styles.tabs}><Pill label="Pendientes" active={pendingOnly} onPress={()=>{if(!store.mutating){setPendingOnly(true);mutations.clearFeedback()}}}/><Pill label="Todas" active={!pendingOnly} onPress={()=>{if(!store.mutating){setPendingOnly(false);mutations.clearFeedback()}}}/></View>
+    <View style={styles.tabs}><Segmented<'pending' | 'all'> label="Filtro de solicitudes" value={pendingOnly ? 'pending' : 'all'} disabled={store.mutating} onChange={value=>{setPendingOnly(value==='pending');mutations.clearFeedback()}}
+      options={[{ value: 'pending', label: 'Pendientes' }, { value: 'all', label: 'Todas' }]}/></View>
     <FlatList data={store.items} keyExtractor={item=>item.id} alwaysBounceVertical contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!store.mutating&&!counterOpen} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}
-      ListHeaderComponent={<View style={styles.listHeader}><RequestsNavigation />{(store.error||mutations.issue)&&<View style={styles.message}><Notice error onRetry={()=>void reload.refresh()}>{mutations.issue||store.error}</Notice></View>}{!!mutations.feedback&&<Text accessibilityLiveRegion="polite" style={styles.feedback}>{mutations.feedback}</Text>}<Text accessibilityRole="header" style={styles.sectionTitle}>{pendingOnly ? 'Propuestas pendientes' : 'Historial de solicitudes'}</Text></View>}
+      ListHeaderComponent={<View style={styles.listHeader}><RequestsNavigation />{!!(store.error||mutations.issue)&&<View style={styles.message}><Notice error onRetry={()=>void reload.refresh()}>{mutations.issue||store.error}</Notice></View>}{!!mutations.feedback&&<Text accessibilityLiveRegion="polite" style={styles.feedback}>{mutations.feedback}</Text>}<Text accessibilityRole="header" style={styles.sectionTitle}>{pendingOnly ? 'Propuestas pendientes' : 'Historial de solicitudes'}</Text></View>}
       renderItem={({item})=><NegotiationCard item={item} userId={userId} busy={store.mutating||reload.refreshing} managementChanged={messaging.conversations.find(c=>c.id===item.conversationId)?.managementChanged} onRespond={(value,action)=>{if(!reload.isRefreshing())void mutations.respond(value,action);}} onCounter={item=>{setCounter(item);setCounterOpen(true)}} onOpenConversation={()=>router.push(`/messages/${item.conversationId}`)}/>}
       ListEmptyComponent={!store.ready?<ActivityIndicator color={colors.primary} style={styles.loading}/>:!store.error?<EmptyState plain title={pendingOnly?'Sin propuestas pendientes':'Sin solicitudes'} description={pendingOnly?'En Todas puedes consultar visitas confirmadas y el historial.':'Abre una conversación para proponer una visita o hacer una oferta por una vivienda.'} action={<Button label={pendingOnly?'Ver todas las solicitudes':'Ir a mensajes'} secondary onPress={()=>pendingOnly?setPendingOnly(false):router.push('/messages')}/>}/>:null}
       ListFooterComponent={<View style={styles.footer}>{store.hasMore&&<Button label="Cargar más solicitudes" secondary loading={store.loadingMore} disabled={store.mutating} onPress={()=>void store.loadMore()}/>}<Text style={styles.hint}>Las visitas se muestran en hora de Cuba. Aceptar una oferta registra la negociación, sin pago ni reserva.</Text></View>}
@@ -57,4 +59,4 @@ function RequestsNavigation() {
   ];
   return <View style={styles.navigation}><Text accessibilityRole="header" style={styles.sectionTitle}>Gestión de mis viviendas</Text><View style={styles.navigationRows}>{links.map(link => <Pressable key={link.label} accessibilityRole="button" onPress={link.open} style={({ pressed }) => [styles.navigationRow, pressed && { opacity: .7 }]}><Text style={styles.navigationLabel}>{link.label}</Text><Icon name="chevron-forward" size={18} color={colors.muted} /></Pressable>)}</View></View>;
 }
-const useStyles = createThemedStyles(colors => StyleSheet.create({safe:{flex:1,backgroundColor:colors.paper},shell:{flex:1,width:'100%',maxWidth:internalLayout.maxWidth,alignSelf:'center'},header:{paddingHorizontal:internalLayout.gutter},loading:{padding:40},tabs:{flexDirection:'row',flexWrap:'wrap',gap:8,paddingHorizontal:20,paddingBottom:16},list:{paddingHorizontal:20,paddingBottom:28,gap:16,flexGrow:1},listHeader:{gap:20},sectionTitle:{fontSize:17,lineHeight:23,fontWeight:'600',color:colors.ink},navigation:{gap:12},navigationRows:{borderWidth:1,borderColor:colors.border,borderRadius:internalLayout.radius,paddingHorizontal:16,backgroundColor:colors.surface},navigationRow:{minHeight:52,paddingVertical:14,flexDirection:'row',alignItems:'center',gap:12,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:colors.border},navigationLabel:{flex:1,minWidth:0,fontSize:15,lineHeight:22,color:colors.primary,fontWeight:'500'},message:{gap:12},feedback:{fontSize:14,lineHeight:21,color:colors.green},footer:{gap:16,paddingTop:8},hint:{fontSize:12,lineHeight:19,color:colors.muted}}));
+const useStyles = createThemedStyles(colors => StyleSheet.create({safe:{flex:1,backgroundColor:colors.paper},shell:{flex:1,width:'100%',maxWidth:internalLayout.maxWidth,alignSelf:'center'},header:{paddingHorizontal:16},loading:{padding:40},tabs:{paddingHorizontal:16,paddingBottom:14,maxWidth:420},list:{paddingHorizontal:16,paddingBottom:28,gap:12,flexGrow:1},listHeader:{gap:16},sectionTitle:{...typography.section,color:colors.ink,paddingHorizontal:4},navigation:{gap:10},navigationRows:{borderWidth:1,borderColor:colors.border,borderRadius:rounded.card,paddingHorizontal:16,backgroundColor:colors.surface},navigationRow:{minHeight:52,paddingVertical:14,flexDirection:'row',alignItems:'center',gap:12,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:colors.border},navigationLabel:{flex:1,minWidth:0,fontSize:15,lineHeight:22,color:colors.ink},message:{gap:12},feedback:{fontSize:14,lineHeight:21,color:colors.green},footer:{gap:16,paddingTop:8},hint:{fontSize:12,lineHeight:18,color:colors.muted,paddingHorizontal:4}}));
