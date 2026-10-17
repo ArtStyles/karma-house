@@ -21,7 +21,9 @@ export function OperationTabs({ value, onChange, disabled = false }: { value: Li
       const selected = (value ?? 'offers') === operation.value;
       return <MotionPressable key={operation.value} accessibilityRole="tab" accessibilityLabel={operation.label} accessibilityState={{ selected, disabled }} aria-selected={selected}
         disabled={disabled} onPress={() => { if (!selected) onChange(operation.value); }} style={({ pressed }) => [styles.tab, pressed && { opacity: .7 }]}>
-        <Text style={[styles.tabText, selected && styles.selected]}>{operation.label}</Text>
+        {/* One line, always: Android can lay the text out a fraction narrower than it measured it (seen after the app
+            resumes), and «Venta y permuta» then drops «permuta» to a hidden second line. Clipping that fraction is invisible. */}
+        <Text numberOfLines={1} ellipsizeMode="clip" style={[styles.tabText, selected && styles.selected]}>{operation.label}</Text>
         <View style={[styles.mark, selected && styles.markOn]} />
       </MotionPressable>;
     })}

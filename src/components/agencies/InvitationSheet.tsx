@@ -9,10 +9,9 @@ import type { AgencyInvitation } from '../../agencies/types';
 import { useAuth } from '../../auth/AuthProvider';
 import { agencyRoleLabel } from '../../screens/AgencyWorkspaceScreen';
 import { createThemedStyles, rounded, typography } from '../../theme';
-import { ArchImage } from '../ArchImage';
 import { Sheet } from '../Sheet';
 import { Button, Notice } from '../ui';
-import { agencyInitials } from './agencyInitials';
+import { AgencyMark } from './AgencyMark';
 
 // Invitations put off with «Ahora no» while the app is open; Mi espacio does not offer them again until next time.
 const later = new Set<string>();
@@ -63,7 +62,7 @@ export function InvitationSheet({ pending, onDecided }: { pending: number; onDec
   const name = invitation?.agencyName ?? 'Una inmobiliaria';
   return <Sheet visible={!!invitation} onClose={close}>
     {invitation && <View style={styles.body}>
-      <ArchImage width={76} height={88} bottom={18} glow style={styles.logo}><Text style={styles.initials}>{agencyInitials(name)}</Text></ArchImage>
+      <AgencyMark agencyId={invitation.agencyId} name={name} width={76} height={88} bottom={18} glow textStyle={styles.initials} />
       <Text accessibilityRole="header" style={styles.title}>{name} te invita a su equipo</Text>
       <View style={styles.chip}><Text style={styles.chipText}>Rol: {agencyRoleLabel[invitation.role]}</Text></View>
       <Text style={styles.text}>Entras en un equipo cuando aceptas la invitación de una inmobiliaria aprobada. Puedes salir del equipo cuando quieras.</Text>
@@ -80,7 +79,7 @@ export function InvitationSheet({ pending, onDecided }: { pending: number; onDec
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   body: { alignItems: 'center', gap: 12, paddingTop: 4 },
-  logo: { backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' }, initials: { ...typography.sheetTitle, color: colors.creamInk },
+  initials: { ...typography.sheetTitle, color: colors.creamInk },
   title: { ...typography.sheetTitle, color: colors.ink, textAlign: 'center', marginTop: 4 },
   chip: { minHeight: 26, paddingHorizontal: 10, borderRadius: rounded.pill, backgroundColor: colors.softNeutral, justifyContent: 'center' }, chipText: { color: colors.body, fontSize: 12, fontWeight: '700' },
   text: { color: colors.body, fontSize: 14, lineHeight: 20, textAlign: 'center' }, expiry: { color: colors.muted, fontSize: 13, lineHeight: 18 },

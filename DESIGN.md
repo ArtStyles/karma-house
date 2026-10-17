@@ -242,7 +242,8 @@ Las piezas viven en `src/components/ui.tsx` y vecinos. Reutiliza antes de crear.
   la acción («Deshacer») en el azul de día.
 - **Interruptores** de 52 × 32 en cápsula; **contadores** con − y + de 40 px y la cifra en Calistoga.
 - **Carrusel en arco** solo en el inicio de Explorar: la tarjeta central grande y las laterales
-  atenuadas.
+  atenuadas. La tira sigue el dedo y se asienta en la vivienda más cercana; el marco del arco central
+  se queda quieto.
 
 ## 7. Movimiento
 
@@ -252,8 +253,11 @@ Sigue `BRAND.md`: todo entra con `cubic-bezier(.22,1,.36,1)`, nada rebota ni gir
 - Listas y secciones: suben 16–24 px con opacidad, escalonadas 80 ms.
 - Firma: los vidrios del mediopunto se encienden uno a uno (pasos y estados finales).
 - Ficha: la foto se abre hacia arriba como una puerta.
-- Hojas: suben desde abajo; el velo aparece a la vez.
-- Con «Reducir movimiento» no hay desplazamientos, solo cambios de opacidad (`useReducedMotion`).
+- Hojas: suben desde abajo con `translateY` (`SheetRise`), nunca con una animación de diseño como
+  `SlideInDown`: en Android el `Modal` se mide primero sin las barras del sistema y la hoja se quedaba
+  por encima del borde. El velo aparece a la vez.
+- Con «Reducir movimiento» no hay desplazamientos, solo cambios de opacidad (`useReducedMotion`). Lo
+  que mueve la persona sigue a su dedo igual: el carrusel se desliza y solo se acorta su asentamiento.
 
 ## 8. Texto y voz
 

@@ -8,6 +8,7 @@ import { UserAvatar } from '../components/account/UserAvatar';
 import { ProBadge } from '../components/ProBadge';
 import { usePro } from '../pro/usePro';
 import { formatProDate, isProActive } from '../pro/domain';
+import { AgencyMark } from '../components/agencies/AgencyMark';
 import { AgencyVerifiedBadge } from '../components/agencies/AgencyVerifiedBadge';
 import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
@@ -143,7 +144,8 @@ export default function ProfileScreen() {
           {myAgencies.map(agency => {
             const role = mine?.roles[agency.id];
             const detail = [role && agencyRoleLabel[role], agency.state !== 'approved' && agencyStateLabel[agency.state]].filter(Boolean).join(' · ');
-            return <AccountRow key={agency.id} icon="business-outline" title={agency.tradeName} description={detail || undefined} extraLabel={agency.verified ? (agency.isPrincipal ? 'Inmobiliaria principal' : 'Sello empresarial de KarmaHouse') : undefined} onPress={() => router.push({ pathname: '/agency-workspace', params: { agencyId: agency.id } })}>
+            // The agency shows its own logo here (initials while it loads, or without one), not a generic building.
+            return <AccountRow key={agency.id} icon="business-outline" leading={<AgencyMark agencyId={agency.id} name={agency.tradeName} logoPath={agency.logoPath} width={40} height={46} bottom={12} textStyle={styles.markInitials} />} title={agency.tradeName} description={detail || undefined} extraLabel={agency.verified ? (agency.isPrincipal ? 'Inmobiliaria principal' : 'Sello empresarial de KarmaHouse') : undefined} onPress={() => router.push({ pathname: '/agency-workspace', params: { agencyId: agency.id } })}>
               <AgencyVerifiedBadge agencyName={agency.tradeName} verified={agency.verified} principal={agency.isPrincipal} labelled />
             </AccountRow>;
           })}
@@ -213,8 +215,8 @@ function listingSummary(listings: Listing[]) {
   }).filter(Boolean).join(' · ');
 }
 
-function AccountRow({ icon, title, description, extraLabel, count, unread = false, danger = false, disabled = false, loading = false, children, onPress }: {
-  icon: IconName; title: string; description?: string; extraLabel?: string; count?: number | null; unread?: boolean; danger?: boolean;
+function AccountRow({ icon, leading, title, description, extraLabel, count, unread = false, danger = false, disabled = false, loading = false, children, onPress }: {
+  icon: IconName; leading?: ReactNode; title: string; description?: string; extraLabel?: string; count?: number | null; unread?: boolean; danger?: boolean;
   disabled?: boolean; loading?: boolean; children?: ReactNode; onPress(): void;
 }) {
   const { colors, styles } = useStyles();
@@ -222,7 +224,7 @@ function AccountRow({ icon, title, description, extraLabel, count, unread = fals
   // The label replaces what the row shows, so it carries the badge or code (extraLabel) and the description too.
   const label = [title, count != null ? `${count}${unread ? ' sin leer' : ''}` : '', extraLabel, description].filter(Boolean).join(', ');
   return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled, busy: loading }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.row, styles.accountRow, pressed && styles.pressed]}>
-    {loading ? <ActivityIndicator size="small" color={danger ? colors.danger : colors.primary} /> : <Icon name={icon} color={danger ? colors.danger : colors.primary} size={21} />}
+    {loading ? <ActivityIndicator size="small" color={danger ? colors.danger : colors.primary} /> : leading ?? <Icon name={icon} color={danger ? colors.danger : colors.primary} size={21} />}
     <View style={styles.rowCopy}><Text style={[styles.rowTitle, danger && { color: colors.danger }]}>{title}</Text>{children}{description && <Text style={styles.rowDescription}>{description}</Text>}</View>
     {hasCount && <Text style={[styles.count, unread && styles.unread]}>{unread && count! > 99 ? '99+' : count}</Text>}
     {!danger && <Icon name="chevron-forward" size={16} color={colors.muted} />}
@@ -245,6 +247,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   row: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 12 },
   accountRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   dataRow: { minHeight: 68 }, pressed: { backgroundColor: colors.softBlue }, rowCopy: { flex: 1, minWidth: 0, gap: 2 },
+  markInitials: { fontSize: 15, lineHeight: 18 },
   rowTitle: { fontSize: 16, lineHeight: 22, color: colors.ink }, rowDescription: { color: colors.muted, fontSize: 13, lineHeight: 18 },
   count: { color: colors.muted, fontSize: 13, lineHeight: 18, fontVariant: ['tabular-nums'], minWidth: 22, textAlign: 'center', paddingHorizontal: 5, paddingVertical: 2 },
   unread: { color: colors.onSol, backgroundColor: colors.sol, borderRadius: rounded.pill, overflow: 'hidden', fontWeight: '700', paddingHorizontal: 7 },

@@ -1,9 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { Easing, FadeIn, SlideInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useReducedMotion } from '../settings/useReducedMotion';
-import { SheetHandle } from './Sheet';
+import { SheetHandle, SheetRise } from './Sheet';
 import { createThemedStyles, rounded, typography } from '../theme';
 import { Icon, IconButton } from './ui';
 
@@ -19,7 +17,6 @@ export function SelectionField({ label, value, options, onChange, placeholder = 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const insets = useSafeAreaInsets();
-  const reduced = useReducedMotion();
   const selected = options.find(option => option.value === value);
   const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es');
   const visible = options.filter(option => normalize(option.label).includes(normalize(query.trim())));
@@ -46,11 +43,11 @@ export function SelectionField({ label, value, options, onChange, placeholder = 
       {/* A bottom sheet like every other chooser (DESIGN.md §6); with reduced motion it only fades. */}
       <View style={[styles.overlay, { paddingTop: Math.max(insets.top, 20) }]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cancelar selección" onPress={close} style={StyleSheet.absoluteFill} />
-        <Animated.View accessibilityViewIsModal entering={reduced ? FadeIn.duration(200) : SlideInDown.duration(320).easing(Easing.bezier(.22, 1, .36, 1))} style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
+        <SheetRise accessibilityViewIsModal style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
           <SheetHandle />
           <View style={styles.header}><View style={styles.headerText}><Text accessibilityRole="header" style={styles.title}>{label}</Text></View><IconButton name="close" label="Cerrar selector" onPress={close} style={styles.close} /></View>
           {choices}
-        </Animated.View>
+        </SheetRise>
       </View>
     </KeyboardAvoidingView>
   </Modal>;
