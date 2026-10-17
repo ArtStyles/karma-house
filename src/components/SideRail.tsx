@@ -44,14 +44,14 @@ export function SideRail() {
       {badge > 0 && <View pointerEvents="none" style={styles.badge}><Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text></View>}
     </MotionPressable>;
   };
-  // The active section keeps its icon, filled in sol, with its label in blue; no pill behind it.
-  const glyph = (name: IconName, size = 22) => (focused: boolean) => <Icon name={focused ? name.replace('-outline', '') as IconName : name} size={size} color={focused ? colors.sol : colors.body} />;
+  // The active section keeps its icon, filled in sol by night and ocre by day, with its label in blue; no pill behind it.
+  const glyph = (name: IconName, size = 22) => (focused: boolean) => <Icon name={focused ? name.replace('-outline', '') as IconName : name} size={size} color={focused ? colors.navActive : colors.body} />;
   return <View accessibilityRole="tablist" style={[styles.rail, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 16, paddingLeft: insets.left + 16 }]}>
     <Brand height={26} style={styles.brand} />
     {items.map(i => item(i.href, i.title, i.inbox ? unread[i.inbox] : 0, glyph(i.icon)))}
     <View style={styles.spacer} />
     {item('/profile', 'Mi espacio', 0, focused => user
-      ? <View style={[styles.avatar, focused && { borderColor: colors.sol }]}><UserAvatar size={30} avatarUrl={avatarUrl} name={displayName} accessibilityLabel="" /></View>
+      ? <View style={[styles.avatar, focused && { borderColor: colors.navActive }]}><UserAvatar size={30} avatarUrl={avatarUrl} name={displayName} accessibilityLabel="" /></View>
       : glyph('person-circle-outline', 24)(focused), updateDot)}
   </View>;
 }

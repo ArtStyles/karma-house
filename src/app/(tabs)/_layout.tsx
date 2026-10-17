@@ -23,12 +23,12 @@ export default function TabLayout() {
   const updatePending = useAppUpdate().pending;
   const updateDot = !unreadCount && updatePending;
   const { user, displayName, avatarUrl } = useAuth();
-  // The active section keeps its own icon, filled in the window's sol; its label takes the blue.
+  // The active section keeps its own icon, filled in sol by night and ocre by day; its label takes the blue.
   const tabIcon = (name: IconName) =>
-    ({ color, focused }: { color: ColorValue; focused: boolean }) => <Icon name={focused ? name.replace('-outline', '') as IconName : name} color={focused ? colors.sol : color} size={24} />;
-  // A signed-in account shows its own face (or initials) instead of the generic person; active, it wears a sol ring.
+    ({ color, focused }: { color: ColorValue; focused: boolean }) => <Icon name={focused ? name.replace('-outline', '') as IconName : name} color={focused ? colors.navActive : color} size={24} />;
+  // A signed-in account shows its own face (or initials) instead of the generic person; active, it wears a ring in the same colour.
   const accountIcon = (props: { color: ColorValue; focused: boolean }) => user
-    ? <View style={[styles.avatar, props.focused && { borderColor: colors.sol }]}><UserAvatar size={24} avatarUrl={avatarUrl} name={displayName} accessibilityLabel="" /></View>
+    ? <View style={[styles.avatar, props.focused && { borderColor: colors.navActive }]}><UserAvatar size={24} avatarUrl={avatarUrl} name={displayName} accessibilityLabel="" /></View>
     : tabIcon('person-circle-outline')(props);
   // The bar floats over the screens, which end their content this far up (TabBarSpace).
   const space = wide ? 0 : bar + 20 + insets.bottom;

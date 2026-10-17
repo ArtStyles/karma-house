@@ -96,7 +96,7 @@ components:
   button-icon: { size: 44, radius: pill, bg: surface }
   chip: { height: 36, radius: pill, bg: surface, selected: { bg: blue, fg: on-blue } }
   field: { height: 52, radius: pill, bg: surface, border: line, focus: blue }
-  nav-bar: { height: 68, radius: pill, inset: 16, bottom: 20, bg: "ground al 85 % (cristal: desenfoque en iOS y web, translúcido en Android)", active: "icono propio relleno en sol, etiqueta en blue" }
+  nav-bar: { height: 68, radius: pill, inset: 16, bottom: 20, bg: "ground al 85 % (cristal: desenfoque en iOS y web, translúcido en Android)", active: "icono propio relleno en sol de noche y en ocre de día, etiqueta en blue" }
   sheet: { radius-top: sheet, bg: sheet, handle: mediopunto-outline, backdrop: dim }
   card: { radius: card-lg, bg: surface, padding: 10 }
 ---
@@ -144,7 +144,7 @@ Lo acompañan dos piezas de la calle cubana:
 - El **azul** (`blue`) es el único acento fuerte: acción principal, enlaces, precios, selección y
   la etiqueta de la ruta activa. Nunca otro color saturado (`BRAND.md`).
 - **Sol** marca lo que pide atención: no leídos, pendientes, Pro, el paso actual, la luz de lámpara y
-  el icono de la ruta activa (relleno, como un vidrio del mediopunto).
+  el icono de la ruta activa de noche (relleno, como un vidrio del mediopunto; de día va en `ocre`).
   Nunca como fondo de pantalla ni en bloques grandes; como mucho, tintes del 10–18 %.
 - **Persiana, ocre y danger** solo en estados: chips con un punto, avisos y acciones destructivas.
 - **Cream** solo en el cartel, en tarjetas de papel (una por pantalla: «Pega tu anuncio»,
@@ -215,10 +215,12 @@ Las piezas viven en `src/components/ui.tsx` y vecinos. Reutiliza antes de crear.
   teñido con el fondo (`ground` al 85 %): con desenfoque en iOS y la web, translúcido sin desenfoque
   en Android, y opaco con «Reducir transparencia» o alto contraste. Flota sobre las pantallas, que
   terminan su contenido por encima (`TabBarSpace`). Cuatro destinos con icono y etiqueta: Explorar,
-  Favoritos, Publicar, Mi espacio. El activo conserva su icono, relleno en `sol`, y pone la etiqueta
-  en `blue`; sin fondo detrás. Una cuenta con sesión muestra su avatar, con un aro sol si está activa.
+  Favoritos, Publicar, Mi espacio. El activo conserva su icono, relleno en `sol` de noche y en `ocre`
+  de día, y pone la etiqueta en `blue`; sin fondo detrás. Una cuenta con sesión muestra su avatar, con
+  un aro del mismo color si está activa.
 - **Barra lateral** desde 1024 px de ancho: 248 px, fondo `sheet`, logo arriba y la cuenta abajo. El
-  activo, igual que en la barra inferior: icono relleno en sol y etiqueta en blue, sin cápsula.
+  activo, igual que en la barra inferior: icono relleno (sol de noche, ocre de día) y etiqueta en blue,
+  sin cápsula.
 - **Botones**: principal en `blue` con texto `on-blue`; secundario con borde; destructivo en
   `danger-fill`; de Pro con borde y texto sol. Uno principal por pantalla.
 - **Botones redondos** de 44 px para volver, cerrar, compartir y favoritos; sobre foto, con `scrim`.
@@ -293,8 +295,8 @@ Las reglas de *Web Interface Guidelines* de Vercel, en React Native:
 Ajustes ofrece Claro, Oscuro y Sistema; **la app abre en Oscuro (noche)**. El modo día usa
 `colorsDay` con la misma geometría: fondo cal, tarjetas blancas con línea arena, azul del logo y
 la barra inferior de cristal cal (cal al 85 %) con sombra suave. El sol nunca se usa como texto en
-día (usa `ocre`). El icono sol de la ruta activa queda en 1,8:1 sobre el cristal de día: el estado lo
-marca la etiqueta en azul (6,9:1), no solo el color del icono.
+día (usa `ocre`). El icono de la ruta activa va relleno en `ocre` de día (5,4:1 sobre el cristal cal;
+en sol quedaba en 1,8:1) y en sol de noche (9,2:1); la etiqueta en azul repite el estado (6,9:1).
 
 ## 12. Prohibido
 
