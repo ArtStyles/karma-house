@@ -36,10 +36,10 @@ test('emitted WEB-only JavaScript package serves agency and listing GET without 
    assert.equal(response.status,200);
    const html=await response.text();
    assert.ok(html.includes('Casas &lt;seguras&gt; &amp; &quot;Tom&#39;s&quot;'));
-   assert.ok(html.includes('✓ Inmobiliaria verificada por KarmaHouse'));console.log(html);
+   assert.ok(html.includes('✓ Sello empresarial'));assert.ok(html.includes('El sello no acredita la propiedad de las viviendas.'));assert.doesNotMatch(html,/verificad/i);console.log(html);
    globalThis.fetch=async()=>Response.json({...profile,verified:false});
    const unverified=await GET(request);
-   assert.equal(unverified.status,200);assert.doesNotMatch(await unverified.text(),/✓ Inmobiliaria verificada/);
+   assert.equal(unverified.status,200);assert.doesNotMatch(await unverified.text(),/Sello empresarial|no acredita/);
    globalThis.fetch=async()=>Response.json(null);
    assert.equal((await GET(request)).status,404);
    globalThis.fetch=async()=>Response.json({...profile,responsibleFullName:'PRIVATE'});
