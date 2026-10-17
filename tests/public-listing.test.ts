@@ -83,12 +83,12 @@ test('listingShareUrl points at the public page of the listing', () => {
 test('renderListing names the seller, their level and the verification, escaped', () => {
   const html = renderListing(row, photos, site, self, { name: 'Ana <b>López</b>', level: 'trusted', verified: true });
   assert.ok(html.includes('<p class="muted">Publicado por Ana &lt;b&gt;López&lt;/b&gt; · Confiable</p>'));
-  assert.ok(html.includes('<p class="muted">Verificado por KarmaHouse</p>'));
+  assert.ok(html.includes('<p class="muted">Perfil revisado por KarmaHouse</p>'));
   assert.ok(!html.includes('<b>López</b>'));
   const unverified = renderListing(row, photos, site, self, { name: 'Ana', level: 'featured', verified: false });
-  assert.ok(unverified.includes('Publicado por Ana · Destacado') && !unverified.includes('Verificado por KarmaHouse'));
+  assert.ok(unverified.includes('Publicado por Ana · Destacado') && !unverified.includes('Perfil revisado por KarmaHouse'));
   const without = renderListing(row, photos, site, self);
-  assert.ok(!without.includes('Publicado por') && !without.includes('Verificado por KarmaHouse'));
+  assert.ok(!without.includes('Publicado por') && !without.includes('Perfil revisado por KarmaHouse'));
 });
 
 const env: Env = { supabaseUrl: 'https://example.supabase.co/', anonKey: 'anon-key', publicOrigin: 'https://www.karmahouse.site' };
@@ -202,7 +202,7 @@ test('handle names the seller from kh_public_profile without printing the owner 
   const html = await response.text();
   assert.equal(response.status, 200);
   assert.ok(html.includes('<p class="muted">Publicado por Ana &lt;b&gt;López&lt;/b&gt; · Confiable</p>'));
-  assert.ok(html.includes('<p class="muted">Verificado por KarmaHouse</p>'));
+  assert.ok(html.includes('<p class="muted">Perfil revisado por KarmaHouse</p>'));
   assert.ok(!html.includes(ownerId));
   assert.ok(calls[0].url.includes(',owner_id'));
   const rpc = calls.find((call) => call.url === PROFILE_URL);
@@ -214,7 +214,7 @@ test('handle names the seller from kh_public_profile without printing the owner 
 test('handle loads the seller for a listing without photos', async () => {
   const { fetch, calls } = fakeFetch({ status: 200, body: [{ ...dbRow, photo_paths: null }] }, undefined, { status: 200, body: { ...profile, verified: false, level: 'new' } });
   const html = await (await handle(get(`/api/p?id=${row.id}`), env, fetch)).text();
-  assert.ok(html.includes('Publicado por Ana &lt;b&gt;López&lt;/b&gt; · Nuevo') && !html.includes('Verificado por KarmaHouse'));
+  assert.ok(html.includes('Publicado por Ana &lt;b&gt;López&lt;/b&gt; · Nuevo') && !html.includes('Perfil revisado por KarmaHouse'));
   assert.deepEqual(calls.map((call) => call.url.split('?')[0]), ['https://example.supabase.co/rest/v1/properties','https://example.supabase.co/rest/v1/rpc/kh_public_property_contact', PROFILE_URL]);
 });
 test('handle renders without the seller line when the profile is missing or malformed', async () => {
@@ -238,7 +238,7 @@ test('handle renders without the seller line when the profile is missing or malf
     const html = await response.text();
     assert.equal(response.status, 200);
     assert.ok(html.includes('<h1>Casa en el Vedado'));
-    assert.ok(!html.includes('Publicado por') && !html.includes('Verificado por KarmaHouse') && !html.includes(ownerId));
+    assert.ok(!html.includes('Publicado por') && !html.includes('Perfil revisado por KarmaHouse') && !html.includes(ownerId));
   }
 });
 test('handle answers 404 for unknown, hidden or malformed ids without touching Supabase', async () => {

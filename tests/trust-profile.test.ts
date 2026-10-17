@@ -7,7 +7,7 @@ import { createSupabaseProfileRepository } from '../src/profiles/repository.ts';
 const id = '11111111-1111-4111-8111-111111111111';
 const listing = '22222222-2222-4222-8222-222222222222';
 const profile = { id, displayName: 'Ana', memberSince: '2026-03-10T12:00:00Z', verified: true, level: 'trusted',
-  levelReasons: ['Verificado por KarmaHouse', '3 anuncios aprobados'], activeListings: [listing], activeListingCount: 1,
+  levelReasons: ['Perfil revisado por KarmaHouse', '3 anuncios aprobados'], activeListings: [listing], activeListingCount: 1,
   approvedListingCount: 3, responseMinutes: 45, responseRate: 90, visitsAgreed: 5, avatarUrlPath: `${id}/33333333-3333-4333-8333-333333333333.jpg` };
 
 test('levels read in Spanish with a description', () => {

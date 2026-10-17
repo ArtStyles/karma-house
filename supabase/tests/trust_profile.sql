@@ -174,7 +174,7 @@ reset role;
 update public.profiles set created_at=now()-interval '8 months' where id='31000000-0000-4000-8000-000000000001';
 set local role authenticated;
 select pg_temp.ops_as('31000000-0000-4000-8000-000000000003');
-select pg_temp.ops_assert((select r->'verified'='true' and r->>'level'='trusted' and r->'levelReasons'='["Verificado por KarmaHouse","1 anuncio propio publicado y aprobado",
+select pg_temp.ops_assert((select r->'verified'='true' and r->>'level'='trusted' and r->'levelReasons'='["Perfil revisado por KarmaHouse","1 anuncio propio publicado y aprobado",
   "Responde a 8 de cada 10 mensajes","2 visitas concertadas","En KarmaHouse desde hace 8 meses"]'
   from (select public.kh_set_user_verified('31000000-0000-4000-8000-000000000003','31000000-0000-4000-8000-000000000001',true,'  Documento revisado  ') r) x),
   'verification returns the profile: 8+3+3+4+10 points is trusted');

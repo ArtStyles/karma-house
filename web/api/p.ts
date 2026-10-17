@@ -80,7 +80,7 @@ function sellerLines(seller: Seller | undefined): string {
   const label = seller && levelLabel(seller.level);
   if (!seller || !label) return '';
   return `<p class="muted">Publicado por ${escapeHtml(seller.name)} · ${label}</p>
-${seller.verified ? `<p class="muted">Verificado por KarmaHouse</p>
+${seller.verified ? `<p class="muted">Perfil revisado por KarmaHouse</p>
 ` : ''}`;
 }
 
