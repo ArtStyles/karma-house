@@ -6,9 +6,9 @@ type State = 'lit' | 'off' | 'progress';
 const ease = Easing.bezier(.22, 1, .36, 1);
 
 /**
- * The Havana fan window, drawn with Views (no SVG dependency). DESIGN.md gives it four roles only:
- * the active tab (5 panes, `lit`), progress (3–4 panes, `progress`: done in blue, `step` in sol, the rest off),
- * empty states (`off`: one pane on) and finished states (`lit`). Panes light one after another on mount.
+ * The Havana fan window, drawn with Views (no SVG dependency). DESIGN.md gives the drawn window three roles
+ * (the arch frame is the third, on photos): progress (3–4 panes, `progress`: done in blue, `step` in sol, the rest
+ * off), empty states (`off`: one pane on) and finished states (`lit`). Panes light one after another on mount.
  * `ground` is the surface it sits on: the leading between panes and the hub take its colour.
  */
 export function Mediopunto({ panes = 5, state = 'lit', step = 0, width = 36, ground, label }: {

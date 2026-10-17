@@ -4,7 +4,7 @@ name: KarmaHouse app · Mediopunto
 description: >-
   La app de KarmaHouse (Android y app.karmahouse.site) de noche: fondo mar profundo, fotos de
   vivienda a pantalla completa y una sola forma propia, el mediopunto habanero, que enmarca las
-  fotos en arco, marca la pestaña activa y enciende sus vidrios para mostrar progreso. Un azul de
+  fotos en arco y enciende sus vidrios para mostrar progreso. Un azul de
   marca como único acento fuerte, sol para lo que pide atención y un cartel de papel cal
   («Se vende») para la operación. Calistoga en títulos y cifras; la fuente del sistema para todo
   lo demás. Cápsulas en botones y chips, tarjetas muy redondeadas, sin sombras en reposo.
@@ -96,7 +96,7 @@ components:
   button-icon: { size: 44, radius: pill, bg: surface }
   chip: { height: 36, radius: pill, bg: surface, selected: { bg: blue, fg: on-blue } }
   field: { height: 52, radius: pill, bg: surface, border: line, focus: blue }
-  nav-bar: { height: 68, radius: pill, inset: 16, bottom: 20, bg: "rgba(19,35,58,0.94)", active: mediopunto }
+  nav-bar: { height: 68, radius: pill, inset: 16, bottom: 20, bg: "ground al 85 % (cristal: desenfoque en iOS y web, translúcido en Android)", active: "icono propio relleno en sol, etiqueta en blue" }
   sheet: { radius-top: sheet, bg: sheet, handle: mediopunto-outline, backdrop: dim }
   card: { radius: card-lg, bg: surface, padding: 10 }
 ---
@@ -122,14 +122,12 @@ de git; solo inspiración, nunca se copian sus fotos ni marcas).
 el mismo azul, Calistoga, la cal y el mar de `BRAND.md`.
 
 **Cada casa, una ventana encendida.** La forma propia es el *mediopunto*, el abanico de vidrios de
-colores sobre las puertas habaneras. Aparece en cuatro papeles y en ninguno más:
+colores sobre las puertas habaneras. Aparece en tres papeles y en ninguno más:
 
 1. **Marco en arco** de las fotos en listas, miniaturas, avatares y logos de inmobiliaria.
-2. **Pestaña activa**: en la barra inferior y en la lateral, el icono de la sección activa se
-   sustituye por un mediopunto de 5 vidrios en sol y azul.
-3. **Progreso**: un mediopunto de 3 o 4 vidrios cuyas piezas se encienden (sol la actual, azul las
+2. **Progreso**: un mediopunto de 3 o 4 vidrios cuyas piezas se encienden (sol la actual, azul las
    terminadas, apagadas las que faltan): pasos de Publicar, verificación, etapa del interesado.
-4. **Estados vacíos y finales**: apagado con un solo vidrio encendido cuando falta algo; entero
+3. **Estados vacíos y finales**: apagado con un solo vidrio encendido cuando falta algo; entero
    encendido cuando algo terminó bien («Tu anuncio está en revisión»). El asa de las hojas es un
    mediopunto en contorno.
 
@@ -144,8 +142,9 @@ Lo acompañan dos piezas de la calle cubana:
 ## 2. Color
 
 - El **azul** (`blue`) es el único acento fuerte: acción principal, enlaces, precios, selección y
-  pestaña elegida. Nunca otro color saturado (`BRAND.md`).
-- **Sol** marca lo que pide atención: no leídos, pendientes, Pro, el paso actual y la luz de lámpara.
+  la etiqueta de la ruta activa. Nunca otro color saturado (`BRAND.md`).
+- **Sol** marca lo que pide atención: no leídos, pendientes, Pro, el paso actual, la luz de lámpara y
+  el icono de la ruta activa (relleno, como un vidrio del mediopunto).
   Nunca como fondo de pantalla ni en bloques grandes; como mucho, tintes del 10–18 %.
 - **Persiana, ocre y danger** solo en estados: chips con un punto, avisos y acciones destructivas.
 - **Cream** solo en el cartel, en tarjetas de papel (una por pantalla: «Pega tu anuncio»,
@@ -212,11 +211,14 @@ menores de 13.
 
 Las piezas viven en `src/components/ui.tsx` y vecinos. Reutiliza antes de crear.
 
-- **Barra inferior flotante**: cápsula de 68 px, a 16 px de los lados y 20 del borde, fondo
-  `surface` al 94 % (con desenfoque solo en iOS y web; en Android, opaca). Cuatro destinos con
-  icono y etiqueta: Explorar, Favoritos, Publicar, Mi espacio. El activo muestra el mediopunto.
-- **Barra lateral** desde 1024 px de ancho: 248 px, fondo `sheet`, logo arriba, la cuenta abajo y el
-  activo en cápsula con mediopunto.
+- **Barra inferior flotante**: cápsula de 68 px, a 16 px de los lados y 20 del borde. Es un cristal
+  teñido con el fondo (`ground` al 85 %): con desenfoque en iOS y la web, translúcido sin desenfoque
+  en Android, y opaco con «Reducir transparencia» o alto contraste. Flota sobre las pantallas, que
+  terminan su contenido por encima (`TabBarSpace`). Cuatro destinos con icono y etiqueta: Explorar,
+  Favoritos, Publicar, Mi espacio. El activo conserva su icono, relleno en `sol`, y pone la etiqueta
+  en `blue`; sin fondo detrás. Una cuenta con sesión muestra su avatar, con un aro sol si está activa.
+- **Barra lateral** desde 1024 px de ancho: 248 px, fondo `sheet`, logo arriba y la cuenta abajo. El
+  activo, igual que en la barra inferior: icono relleno en sol y etiqueta en blue, sin cápsula.
 - **Botones**: principal en `blue` con texto `on-blue`; secundario con borde; destructivo en
   `danger-fill`; de Pro con borde y texto sol. Uno principal por pantalla.
 - **Botones redondos** de 44 px para volver, cerrar, compartir y favoritos; sobre foto, con `scrim`.
@@ -246,8 +248,7 @@ Sigue `BRAND.md`: todo entra con `cubic-bezier(.22,1,.36,1)`, nada rebota ni gir
 
 - Pulsar: escala 0,98 (`MotionPressable`).
 - Listas y secciones: suben 16–24 px con opacidad, escalonadas 80 ms.
-- Firma: los vidrios del mediopunto se encienden uno a uno (pasos, estados finales, pestaña
-  activa al cambiar).
+- Firma: los vidrios del mediopunto se encienden uno a uno (pasos y estados finales).
 - Ficha: la foto se abre hacia arriba como una puerta.
 - Hojas: suben desde abajo; el velo aparece a la vez.
 - Con «Reducir movimiento» no hay desplazamientos, solo cambios de opacidad (`useReducedMotion`).
@@ -291,7 +292,9 @@ Las reglas de *Web Interface Guidelines* de Vercel, en React Native:
 
 Ajustes ofrece Claro, Oscuro y Sistema; **la app abre en Oscuro (noche)**. El modo día usa
 `colorsDay` con la misma geometría: fondo cal, tarjetas blancas con línea arena, azul del logo y
-la barra inferior blanca con sombra suave. El sol nunca se usa como texto en día (usa `ocre`).
+la barra inferior de cristal cal (cal al 85 %) con sombra suave. El sol nunca se usa como texto en
+día (usa `ocre`). El icono sol de la ruta activa queda en 1,8:1 sobre el cristal de día: el estado lo
+marca la etiqueta en azul (6,9:1), no solo el color del icono.
 
 ## 12. Prohibido
 
@@ -301,7 +304,8 @@ la barra inferior blanca con sombra suave. El sol nunca se usa como texto en dí
 - Tarjetas de icono repetidas como único contenido; sombras bajo cada tarjeta.
 - Cifras, reseñas, socios o premios inventados (`BRAND.md`).
 - Calistoga en texto de párrafo, en negrita falsa o por debajo de 16 px.
-- El mediopunto fuera de sus cuatro papeles, o el cartel para algo que no sea la operación.
+- El mediopunto fuera de sus tres papeles (también en la barra: la ruta activa lleva su propio
+  icono), o el cartel para algo que no sea la operación.
 - Texto sobre foto sin `scrim`.
 
 ## 13. De la maqueta al código

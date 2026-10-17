@@ -39,7 +39,8 @@ Escribe los hallazgos como `ruta:línea — problema → arreglo`, agrupados por
 
 **Dirección.**
 - Una sola cosa domina la pantalla. Una sola acción principal en `blue`.
-- El mediopunto aparece solo en sus cuatro papeles y el cartel solo para la operación.
+- El mediopunto aparece solo en sus tres papeles (arco, progreso, estados vacíos y finales) y el
+  cartel solo para la operación.
 - La luz de lámpara aparece una vez como mucho.
 - Cápsulas en todo lo que se toca, tarjetas redondeadas y sin sombras en reposo.
 - Las fotos de la ficha se ven completas; en listas, en arco. Sin texto sobre foto sin `scrim`.
