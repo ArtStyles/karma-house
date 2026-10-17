@@ -142,7 +142,7 @@ export default function ProfileScreen() {
           {myAgencies.map(agency => {
             const role = mine?.roles[agency.id];
             const detail = [role && agencyRoleLabel[role], agency.state !== 'approved' && agencyStateLabel[agency.state]].filter(Boolean).join(' · ');
-            return <AccountRow key={agency.id} icon="business-outline" title={agency.tradeName} description={detail || undefined} extraLabel={agency.verified ? (agency.isPrincipal ? 'Inmobiliaria principal' : 'Inmobiliaria verificada por KarmaHouse') : undefined} onPress={() => router.push({ pathname: '/agency-workspace', params: { agencyId: agency.id } })}>
+            return <AccountRow key={agency.id} icon="business-outline" title={agency.tradeName} description={detail || undefined} extraLabel={agency.verified ? (agency.isPrincipal ? 'Inmobiliaria principal' : 'Sello empresarial de KarmaHouse') : undefined} onPress={() => router.push({ pathname: '/agency-workspace', params: { agencyId: agency.id } })}>
               <AgencyVerifiedBadge agencyName={agency.tradeName} verified={agency.verified} principal={agency.isPrincipal} labelled />
             </AccountRow>;
           })}

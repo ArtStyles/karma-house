@@ -15,6 +15,9 @@ import {AgencyTextField,useAgencyFormStyles} from '../components/agencies/Agency
 import {AccountPrompt} from '../components/AccountPrompt';
 import {ActionGroup,Button,EmptyState,Notice,PageTitle,Pill} from '../components/ui';
 import {agencyRoleLabel} from './AgencyWorkspaceScreen';
+import {agencyInitials} from '../components/agencies/agencyInitials';
+import {ArchImage} from '../components/ArchImage';
+import {typography} from '../theme';
 const roles:AgencyRole[]=['manager','coordinator','admin'];
 export default function AgencyTeamScreen(){
  const auth=useAuth(),{user}=auth,w=useAgencyWorkspace(),{styles:s,colors}=useAgencyFormStyles();
@@ -81,7 +84,7 @@ export default function AgencyTeamScreen(){
  {busy&&!data&&<ActivityIndicator accessibilityLabel="Consultando equipo e invitaciones" color={colors.primary}/>}
  <Text accessibilityRole="header" style={s.title}>Invitaciones recibidas</Text>
  {data?.invitations.length===0&&!busy&&!issue&&<EmptyState plain title="Sin invitaciones" description="No tienes invitaciones a inmobiliarias en esta cuenta."/>}
- {data?.invitations.map(invitation=><View key={invitation.id} style={s.card}><Text style={s.title}>{invitation.agencyName??`Inmobiliaria ${invitation.agencyId.slice(0,8)}`}</Text><Text style={s.copy}>{agencyRoleLabel[invitation.role]} · {invitation.state==='pending'?'Pendiente':invitation.state==='accepted'?'Aceptada':invitation.state==='declined'?'Rechazada':invitation.state==='expired'?'Caducada':'Cancelada'}</Text>{invitation.state==='pending'&&w.enabled&&<><Text style={s.copy}>Caduca el {new Date(invitation.expiresAt).toLocaleDateString('es-CU')}.</Text><ActionGroup><Button label="Aceptar invitación" disabled={busy} onPress={()=>void decide(invitation,true)}/><Button secondary label="Rechazar invitación" disabled={busy} onPress={()=>void decide(invitation,false)}/></ActionGroup></>}</View>)}
+ {data?.invitations.map(invitation=><View key={invitation.id} style={s.card}><View style={s.row}><ArchImage width={52} height={60} bottom={14} style={{backgroundColor:colors.cream,alignItems:'center',justifyContent:'center'}}><Text style={{...typography.cardTitle,color:colors.creamInk}}>{agencyInitials(invitation.agencyName??'')}</Text></ArchImage><View style={s.flex}><Text style={s.title}>{invitation.agencyName??`Inmobiliaria ${invitation.agencyId.slice(0,8)}`}</Text><Text style={s.copy}>{agencyRoleLabel[invitation.role]} · {invitation.state==='pending'?'Pendiente':invitation.state==='accepted'?'Aceptada':invitation.state==='declined'?'Rechazada':invitation.state==='expired'?'Caducada':'Cancelada'}</Text></View></View>{invitation.state==='pending'&&w.enabled&&<><Text style={s.copy}>Caduca el {new Date(invitation.expiresAt).toLocaleDateString('es-CU')}.</Text><ActionGroup direction="vertical"><Button label="Aceptar invitación" disabled={busy} onPress={()=>void decide(invitation,true)}/><Button secondary label="Rechazar invitación" disabled={busy} onPress={()=>void decide(invitation,false)}/></ActionGroup></>}</View>)}
  {!w.enabled&&<Notice>La gestión de inmobiliarias aún no está habilitada.</Notice>}
  {w.activeAgency&&w.membership?<>
  <Text accessibilityRole="header" style={s.title}>Equipo de {w.activeAgency.tradeName}</Text>

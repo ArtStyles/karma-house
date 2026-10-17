@@ -35,6 +35,7 @@ function Profile(){
  }
  return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView keyboardDismissMode="on-drag" alwaysBounceVertical contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!busy&&!dirty.current&&w.membership?.role==='admin'} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}><PageTitle compact title="Perfil comercial" subtitle={w.activeAgency?.tradeName} back fallback="/agency-workspace"/>
  {w.activeAgency&&<AgencyVerifiedBadge verified={w.activeAgency.verified} agencyName={w.activeAgency.tradeName} principal={w.activeAgency.isPrincipal} labelled/>}
+ {w.activeAgency?.verified&&!w.activeAgency.isPrincipal&&<Text style={s.hint}>El sello empresarial no acredita la propiedad de las viviendas.</Text>}
  {Boolean(issue)&&<Notice error>{issue}</Notice>}<Notice>El teléfono, las zonas, la descripción y el logo son públicos. Publica la oficina solo si lo deseas.</Notice>
  {!editable&&<Notice>La edición requiere una inmobiliaria aprobada y un administrador actual.</Notice>}
  {!record&&repo&&!issue&&w.membership?.role==='admin'&&<ActivityIndicator accessibilityLabel="Consultando perfil comercial" color={colors.primary}/>}

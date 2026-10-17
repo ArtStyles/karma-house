@@ -19,7 +19,7 @@ export async function recoverAgencyRegistration(repository:Pick<AgencyRepository
 export function canReviewAgency(access:{isOwner:boolean;isAdmin:boolean}){return access.isOwner;}
 export function canRequestAgencyVerification(state:AgencyState|null,role:AgencyRole|null,enabled:boolean){return enabled&&state==='approved'&&role==='admin';}
 export function agencyVerificationPresentation(verified:boolean,state:AgencyVerificationRequestState|null){
- return {badge:verified,label:verified?'Verificada':state==='pending'?'Solicitud pendiente':state==='needs_changes'?'Necesita correcciones':state==='rejected'?'Solicitud rechazada':'Aún no verificada',publication:verified?'Los anuncios de esta inmobiliaria pueden publicarse directamente.':'Los anuncios requieren aprobación individual de KarmaHouse.'};
+ return {badge:verified,label:verified?'Con sello empresarial':state==='pending'?'Solicitud pendiente':state==='needs_changes'?'Necesita correcciones':state==='rejected'?'Solicitud rechazada':'Sin sello empresarial',publication:verified?'Los anuncios de esta inmobiliaria pueden publicarse directamente.':'Los anuncios requieren aprobación individual de KarmaHouse.'};
 }
 export function emptyAgencyApplication():AgencyApplicationInput{return {tradeName:'',responsibleFullName:'',businessPhone:'+53',province:'La Habana',municipality:'',serviceAreas:[],description:'',officeAddress:null,publishOfficeAddress:false,evidenceReferences:[]};}
 export const agencyStateLabel:Record<AgencyState,string>={pending:'Pendiente de aprobación',needs_changes:'Necesita correcciones',approved:'Aprobada',rejected:'Rechazada',suspended:'Suspendida'};
