@@ -14,6 +14,9 @@ import {agencyVerificationPresentation,canRequestAgencyVerification} from '../ag
 import {AgencyVerifiedBadge} from '../components/agencies/AgencyVerifiedBadge';
 import {AgencyTextField,useAgencyFormStyles} from '../components/agencies/AgencyRegistrationFields';
 import {Button,EmptyState,Notice,PageTitle} from '../components/ui';
+import {Mediopunto} from '../components/Mediopunto';
+// The seal in three panes: asked for, under review (or corrections), granted.
+const sealSteps=['Solicitud','Revisión','Sello'];
 export default function AgencyVerificationScreen(){
  const auth=useAuth(),workspace=useAgencyWorkspace(),{colors,styles:s}=useAgencyFormStyles(),agency=workspace.activeAgency;
  const key=agencyPrivateScreenKey(auth.user?.id,agency?.id,workspace.generation),scope=useRef(createAgencyScreenRequestScope()).current;
@@ -23,6 +26,7 @@ export default function AgencyVerificationScreen(){
  const canRequest=!agency?.isPrincipal&&!auth.suspended&&Boolean(auth.session)&&canRequestAgencyVerification(agency?.state??null,workspace.membership?.state==='active'?workspace.membership.role:null,workspace.enabled);
  const canRead=!auth.suspended&&Boolean(auth.session)&&workspace.membership?.state==='active'&&workspace.membership.role==='admin';
  const presentation=agencyVerificationPresentation(agency?.verified??false,request?.state??null);
+ const sealStep=agency?.verified?3:request?.state==='pending'||request?.state==='needs_changes'?1:0;
  const locked=useRef(false),dirty=useRef(false);
  dirty.current=!!record&&record.key===key&&(message!==(request?.input.message??'')||references!==(request?.input.evidenceReferences.join('\n')??''));
  const load=useCallback(async()=>{
@@ -44,7 +48,8 @@ export default function AgencyVerificationScreen(){
  }
  return <SafeAreaView style={s.safe} edges={['top','bottom','left','right']}><ScrollView keyboardDismissMode="on-drag" alwaysBounceVertical keyboardShouldPersistTaps="handled" contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={canRead&&!busy&&!dirty.current} onRefresh={()=>void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]}/>}><PageTitle compact title="Verificación de inmobiliaria" subtitle="KarmaHouse revisa y concede el sello empresarial." back fallback="/agency-workspace"/>
  {!agency?<EmptyState plain title="Selecciona una inmobiliaria" description="Abre Mi inmobiliaria y elige una inmobiliaria aprobada para consultar su verificación."/>:<>
- <View style={s.card}><Text style={s.caption}>Identidad empresarial</Text><Text style={s.title}>{agency.tradeName}</Text><AgencyVerifiedBadge verified={agency.verified} agencyName={agency.tradeName} principal={agency.isPrincipal} labelled/><View style={s.divider}/><Text style={s.status}>{presentation.label}</Text><Notice>{presentation.publication}</Notice>{request?.reviewNote&&<Notice>{request.reviewNote}</Notice>}</View>
+ {!agency.isPrincipal&&<View style={[s.card,{alignItems:'center'}]}><Mediopunto panes={3} state="progress" step={sealStep} width={112} ground={colors.surface} label={`${sealSteps[Math.min(sealStep,2)]}, paso ${Math.min(sealStep,2)+1} de 3`}/><View style={s.row}>{sealSteps.map((step,index)=><Text key={step} style={[s.caption,index<sealStep&&{color:colors.primary},index===sealStep&&{color:colors.ocre}]}>{step}</Text>)}</View></View>}
+ <View style={s.card}><Text style={s.caption}>Identidad empresarial</Text><Text style={s.title}>{agency.tradeName}</Text><AgencyVerifiedBadge verified={agency.verified} agencyName={agency.tradeName} principal={agency.isPrincipal} labelled/><View style={s.divider}/><Text style={s.status}>{presentation.label}</Text><Notice>{presentation.publication}</Notice>{request?.reviewNote&&<Notice>{request.reviewNote}</Notice>}<Text style={s.hint}>El sello corresponde a la empresa revisada por KarmaHouse. No acredita la titularidad ni la situación legal de las viviendas.</Text></View>
  {agency.isPrincipal&&<Notice>La identidad y la verificación de la inmobiliaria principal están protegidas por KarmaHouse.</Notice>}
  {!canRead?<Notice>Solo el administrador activo de una inmobiliaria aprobada puede solicitar o corregir su verificación. El sello personal no concede verificación empresarial.</Notice>:<>{viewCurrent&&loading&&!reload.refreshing&&<ActivityIndicator color={colors.primary}/>}</>}
  {viewCurrent&&issue&&<Notice error>{issue}</Notice>}

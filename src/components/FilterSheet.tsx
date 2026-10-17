@@ -5,7 +5,8 @@ import Animated, { cancelAnimation, ReduceMotion, useAnimatedStyle, useSharedVal
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 import { useReducedMotion } from '../settings/useReducedMotion';
-import { createThemedStyles } from '../theme';
+import { createThemedStyles, rounded } from '../theme';
+import { SheetHandle } from './Sheet';
 import { createFilterDismissalGate, filterSheetPosition, shouldDismissFilterSheet } from './filterSheetMotion';
 
 const SHEET_SPRING = { duration: 300, dampingRatio: 1, overshootClamping: true, reduceMotion: ReduceMotion.System };
@@ -157,13 +158,13 @@ export function FilterSheet({ onClose, children }: { onClose: () => void; childr
   }}>
     <GestureHandlerRootView style={styles.flex}>
       <KeyboardAvoidingView style={styles.flex} behavior="padding">
-        <View style={[styles.overlay, desktop && styles.desktop, { paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View style={[styles.overlay, desktop && styles.desktop, { paddingTop: Math.max(insets.top, 16), paddingBottom: desktop ? Math.max(insets.bottom, 12) : 0 }]}>
           <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.scrim, scrimStyle]} />
           <Pressable accessibilityRole="button" accessibilityLabel="Cancelar filtros" onPress={() => close()} style={StyleSheet.absoluteFill} />
-          <Animated.View testID="filter-sheet" accessibilityViewIsModal onLayout={onLayout} style={[styles.sheet, sheetStyle]}>
+          <Animated.View testID="filter-sheet" accessibilityViewIsModal onLayout={onLayout} style={[styles.sheet, !desktop && [styles.docked, { paddingBottom: insets.bottom }], sheetStyle]}>
             {!desktop && <GestureDetector gesture={gesture}>
               <View testID="filter-sheet-handle" collapsable={false} aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.gripZone}>
-                <View style={styles.grip} />
+                <SheetHandle />
               </View>
             </GestureDetector>}
             {children(close)}
@@ -176,10 +177,11 @@ export function FilterSheet({ onClose, children }: { onClose: () => void; childr
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   flex: { flex: 1 },
-  overlay: { flex: 1, paddingHorizontal: 12, justifyContent: 'flex-end' },
-  desktop: { justifyContent: 'center' },
+  overlay: { flex: 1, justifyContent: 'flex-end' },
+  desktop: { justifyContent: 'center', paddingHorizontal: 24 },
   scrim: { backgroundColor: colors.overlay },
-  sheet: { width: '100%', maxWidth: 640, maxHeight: '100%', flexShrink: 1, alignSelf: 'center', borderRadius: 28, backgroundColor: colors.surface, overflow: 'hidden' },
-  gripZone: { height: 32, alignItems: 'center', justifyContent: 'center' },
-  grip: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border },
+  sheet: { width: '100%', maxWidth: 640, maxHeight: '100%', flexShrink: 1, alignSelf: 'center', borderRadius: rounded.sheet, backgroundColor: colors.sheet, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  // On a phone the sheet rests on the bottom edge.
+  docked: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottomWidth: 0 },
+  gripZone: { height: 30, alignItems: 'center', justifyContent: 'flex-start' },
 }));

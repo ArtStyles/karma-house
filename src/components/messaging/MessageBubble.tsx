@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ChatMessage, PendingMessage } from '../../messaging/types';
-import { createThemedStyles } from '../../theme';
+import { createThemedStyles, rounded } from '../../theme';
 import { ActionGroup, Icon } from '../ui';
 
 export type MessageRow = { key: string; message: ChatMessage; pending?: never } | { key: string; pending: PendingMessage; message?: never };
@@ -34,8 +34,8 @@ export function MessageBubble({ row, own, showStatus = false, canRetry, busy, on
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   row: { alignItems: 'flex-start', paddingVertical: 5 }, ownRow: { alignItems: 'flex-end' },
-  bubble: { maxWidth: '92%', paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, borderRadius: 16, borderBottomLeftRadius: 5, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
-  ownBubble: { backgroundColor: colors.primaryFill, borderColor: colors.primaryFill, borderBottomLeftRadius: 16, borderBottomRightRadius: 5 },
+  bubble: { maxWidth: '84%', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, borderRadius: rounded.inner, borderBottomLeftRadius: 8, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  ownBubble: { backgroundColor: colors.primaryFill, borderColor: colors.primaryFill, borderBottomLeftRadius: rounded.inner, borderBottomRightRadius: 8 },
   failedBubble: { backgroundColor: colors.primaryFill }, body: { color: colors.ink, fontSize: 16, lineHeight: 23 }, ownBody: { color: colors.onPrimary },
   metadata: { flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 7, marginTop: 5 },
   time: { fontSize: 12, lineHeight: 16, color: colors.muted }, ownTime: { color: colors.onPrimaryMuted },

@@ -1,8 +1,12 @@
 import {Text,View} from 'react-native';
 import {Icon} from '../ui';
-import {useTheme} from '../../theme';
+import {rounded,useTheme} from '../../theme';
+/**
+ * KarmaHouse's company seal (DESIGN.md §8): it never says «verificada», and it explains that it does not
+ * vouch for who owns the homes. The principal agency keeps its own label.
+ */
 export function AgencyVerifiedBadge({verified,agencyName,principal=false,labelled=false}:{verified:boolean;agencyName:string;principal?:boolean;labelled?:boolean}){
  const {colors}=useTheme();if(!verified)return null;
- const label=principal?'Inmobiliaria principal':'Inmobiliaria verificada por KarmaHouse',color=principal?colors.amber:colors.green;
- return <View accessible accessibilityLabel={`${label}: ${agencyName}`} style={{flexDirection:'row',alignItems:'center',gap:6,...(labelled?{paddingHorizontal:9,paddingVertical:5,borderRadius:999,backgroundColor:principal?colors.softAmber:colors.softGreen}:{})}}><Icon name="checkmark-circle" color={color} size={22}/>{labelled&&<Text style={{color,fontSize:12,fontWeight:'700'}}>{label}</Text>}</View>;
+ const label=principal?'Inmobiliaria principal':'Sello empresarial',spoken=principal?label:'Sello empresarial de KarmaHouse';
+ return <View accessible accessibilityLabel={`${spoken}: ${agencyName}`} accessibilityHint={principal?undefined:'No acredita la propiedad de las viviendas.'} style={{flexDirection:'row',alignItems:'center',gap:5,alignSelf:'flex-start',...(labelled?{paddingHorizontal:9,minHeight:24,borderRadius:rounded.pill,backgroundColor:colors.softAmber}:{})}}><Icon name={principal?'star':'shield-checkmark'} color={colors.amber} size={labelled?14:20}/>{labelled&&<Text style={{color:colors.amber,fontSize:12,lineHeight:16,fontWeight:'700'}}>{label}</Text>}</View>;
 }

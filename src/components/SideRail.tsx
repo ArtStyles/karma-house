@@ -5,24 +5,24 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { useMessaging } from '../messaging/MessagingProvider';
 import { useNotifications } from '../notifications/NotificationsProvider';
-import { createThemedStyles } from '../theme';
+import { createThemedStyles, layout, rounded, typography } from '../theme';
 import { useAppUpdate } from '../updates/useAppUpdate';
 import { UserAvatar } from './account/UserAvatar';
 import { MotionPressable } from './MotionPressable';
-import { Icon, type IconName } from './ui';
+import { Brand, Icon, type IconName } from './ui';
 
 // The sections the rail stays beside; any other screen keeps the whole width.
 export const railPath = (path: string) => /^\/(favorites|publish|profile|notifications|messages(\/.*)?)?$/.test(path);
 
-const items: { href: Href; title: string; icon: IconName; active: IconName; inbox?: 'notices' | 'messages' }[] = [
-  { href: '/', title: 'Explorar', icon: 'compass-outline', active: 'compass' },
-  { href: '/favorites', title: 'Favoritos', icon: 'heart-outline', active: 'heart' },
-  { href: '/publish', title: 'Publicar', icon: 'add-circle-outline', active: 'add-circle' },
-  { href: '/notifications', title: 'Notificaciones', icon: 'notifications-outline', active: 'notifications', inbox: 'notices' },
-  { href: '/messages', title: 'Mensajes', icon: 'chatbubble-outline', active: 'chatbubble', inbox: 'messages' },
+const items: { href: Href; title: string; icon: IconName; inbox?: 'notices' | 'messages' }[] = [
+  { href: '/', title: 'Explorar', icon: 'compass-outline' },
+  { href: '/favorites', title: 'Favoritos', icon: 'heart-outline' },
+  { href: '/publish', title: 'Publicar', icon: 'add-circle-outline' },
+  { href: '/notifications', title: 'Notificaciones', icon: 'notifications-outline', inbox: 'notices' },
+  { href: '/messages', title: 'Mensajes', icon: 'chatbubble-outline', inbox: 'messages' },
 ];
 
-/** Wide-screen navigation: sections on top, the signed-in account at the foot. */
+/** Wide-screen navigation: the logo, the sections (the active one with its icon filled in sol), the account at the foot. */
 export function SideRail() {
   const { colors, styles } = useStyles();
   const insets = useSafeAreaInsets();
@@ -39,29 +39,32 @@ export function SideRail() {
     return <MotionPressable key={title} accessibilityRole="tab" aria-selected={focused}
       accessibilityLabel={badge ? `${title}, ${badge} sin leer` : dot ? `${title}, nueva versión disponible` : title} onPress={() => go(href)}
       style={({ pressed }) => [styles.item, focused && styles.focused, pressed && { opacity: .7 }]}>
-      <View>{icon(focused)}{badge > 0 ? <View pointerEvents="none" style={styles.badge}><Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text></View> : dot && <View pointerEvents="none" style={styles.dot} />}</View>
-      <Text numberOfLines={1} style={[styles.label, focused && { color: colors.primary }]}>{title}</Text>
+      <View style={styles.icon}>{icon(focused)}{!badge && dot && <View pointerEvents="none" style={styles.dot} />}</View>
+      <Text numberOfLines={1} style={[styles.label, focused && styles.focusedLabel]}>{title}</Text>
+      {badge > 0 && <View pointerEvents="none" style={styles.badge}><Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text></View>}
     </MotionPressable>;
   };
-  return <View accessibilityRole="tablist" style={[styles.rail, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 12, paddingLeft: insets.left + 8 }]}>
-    {items.map(i => item(i.href, i.title, i.inbox ? unread[i.inbox] : 0, focused => <Icon name={focused ? i.active : i.icon} size={24} color={focused ? colors.primary : colors.muted} />))}
+  // The active section keeps its icon, filled in sol by night and ocre by day, with its label in blue; no pill behind it.
+  const glyph = (name: IconName, size = 22) => (focused: boolean) => <Icon name={focused ? name.replace('-outline', '') as IconName : name} size={size} color={focused ? colors.navActive : colors.body} />;
+  return <View accessibilityRole="tablist" style={[styles.rail, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 16, paddingLeft: insets.left + 16 }]}>
+    <Brand height={26} style={styles.brand} />
+    {items.map(i => item(i.href, i.title, i.inbox ? unread[i.inbox] : 0, glyph(i.icon)))}
     <View style={styles.spacer} />
-    <View style={styles.divider} />
     {item('/profile', 'Mi espacio', 0, focused => user
-      ? <View style={[styles.ring, focused && { borderColor: colors.primary }]}><UserAvatar size={36} avatarUrl={avatarUrl} name={displayName} accessibilityLabel="" /></View>
-      : <Icon name={focused ? 'person-circle' : 'person-circle-outline'} size={28} color={focused ? colors.primary : colors.muted} />, updateDot)}
+      ? <View style={[styles.avatar, focused && { borderColor: colors.navActive }]}><UserAvatar size={30} avatarUrl={avatarUrl} name={displayName} accessibilityLabel="" /></View>
+      : glyph('person-circle-outline', 24)(focused), updateDot)}
   </View>;
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  rail: { width: 104, paddingRight: 8, gap: 4, backgroundColor: colors.surface, borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: colors.border },
-  item: { minHeight: 68, borderRadius: 16, alignItems: 'center', justifyContent: 'center', gap: 4, paddingHorizontal: 2 },
-  focused: { backgroundColor: colors.softBlue },
-  label: { fontSize: 12, fontWeight: '500', color: colors.muted },
-  badge: { position: 'absolute', right: -10, top: -6, minWidth: 19, height: 19, paddingHorizontal: 5, borderRadius: 10, backgroundColor: colors.primaryFill, justifyContent: 'center', alignItems: 'center' },
-  badgeText: { color: colors.onPrimary, fontSize: 11, fontWeight: '700' },
-  dot: { position: 'absolute', right: -2, top: -2, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.primaryFill, borderWidth: 2, borderColor: colors.surface },
+  rail: { width: layout.railWidth, paddingRight: 16, gap: 4, backgroundColor: colors.sheet, borderRightWidth: 1, borderRightColor: colors.border },
+  brand: { paddingHorizontal: 8, paddingBottom: 18 },
+  item: { minHeight: 46, borderRadius: rounded.pill, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 6 },
+  focused: {}, avatar: { borderRadius: rounded.pill, borderWidth: 2, borderColor: 'transparent' },
+  icon: { width: 28, alignItems: 'center' },
+  label: { ...typography.control, flex: 1, color: colors.body }, focusedLabel: { color: colors.primary, fontWeight: '700' },
+  badge: { minWidth: 22, height: 22, paddingHorizontal: 7, borderRadius: rounded.pill, backgroundColor: colors.sol, justifyContent: 'center', alignItems: 'center' },
+  badgeText: { color: colors.onSol, fontSize: 12, fontWeight: '700' },
+  dot: { position: 'absolute', right: -2, top: -2, width: 10, height: 10, borderRadius: 5, backgroundColor: colors.sol, borderWidth: 2, borderColor: colors.sheet },
   spacer: { flex: 1 },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginHorizontal: 10, marginBottom: 8 },
-  ring: { borderRadius: 22, borderWidth: 2, borderColor: 'transparent' },
 }));

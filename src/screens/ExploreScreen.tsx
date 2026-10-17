@@ -1,4 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useTabBarSpace } from '../components/TabBarSpace';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,12 +9,13 @@ import { catalogRetryAction } from '../catalog/presentation';
 import { snapshotAgeText } from '../catalog/offlineSnapshot';
 import { catalogFilterTags, removeCatalogFilter } from '../catalog/activeFilters';
 import { useMarketplace } from '../state/MarketplaceProvider';
-import { createThemedStyles, layout } from '../theme';
+import { createThemedStyles, layout, rounded, typography } from '../theme';
 import { PropertyCard } from '../components/PropertyCard';
 import { ExploreDiscovery } from '../components/ExploreDiscovery';
-import { CatalogRefinements } from '../components/CatalogRefinements';
+import { OperationTabs, ProvincePicker } from '../components/CatalogRefinements';
+import { ArchImage } from '../components/ArchImage';
 import { MotionPressable } from '../components/MotionPressable';
-import { Brand, BrandMark, Button, EmptyState, Icon, IconButton, Notice } from '../components/ui';
+import { Button, EmptyState, Icon, IconButton, Notice } from '../components/ui';
 import { CatalogFilters } from '../components/CatalogFilters';
 import { CatalogSortMenu } from '../components/CatalogSortMenu';
 import { InstallHint } from '../components/InstallHint';
@@ -28,6 +30,7 @@ import { useSavedSearches } from '../searches/useSavedSearches';
 
 export default function ExploreScreen() {
   const { colors, styles } = useStyles();
+  const tabSpace = useTabBarSpace();
   const { mode, storageError, refresh } = useMarketplace();
   const { unreadCount } = useMessaging();
   const { unreadCount: notificationUnreadCount } = useNotifications();
@@ -67,8 +70,11 @@ export default function ExploreScreen() {
   }
   const { width, fontScale } = useWindowDimensions();
   const compactMeta = width < 360 || fontScale > 1.2;
-  const columns = width >= 1060 ? 3 : width >= 700 ? 2 : 1;
   const wide = width >= layout.wideMinWidth;
+  // A grid of arches: two on a phone, more as the screen widens. Cells get a pixel width so each arch is a true half circle.
+  const columns = width >= 1060 ? 4 : width >= 700 ? 3 : 2;
+  const contentWidth = Math.min(width - (wide ? layout.railWidth : 0), 1180) - 32;
+  const cellWidth = Math.floor((contentWidth - GRID_GAP * (columns - 1)) / columns);
   const { rows: result, total, hasMore, ready, loading, updating, current, pageError, offlineSince, loadMore, refresh: refreshCatalog } = useCatalogPage(filters);
   // On the saved snapshot nothing can ask the server, so every control that would is held still.
   const offline = offlineSince !== null;
@@ -82,6 +88,8 @@ export default function ExploreScreen() {
   const homes = filters.operation === 'wanted' ? `${total} ${total === 1 ? 'búsqueda' : 'búsquedas'}` : `${total} ${total === 1 ? 'vivienda' : 'viviendas'}`;
   const count = offline ? 'Últimos resultados guardados' : updating ? 'Actualizando…' : !current ? 'Resultados sin actualizar' : mode === 'demo' ? `${homes} de prueba` : homes;
   const filterTags = catalogFilterTags(filters);
+  // The arch carousel opens a search that has not been narrowed yet; once it is, the grid answers alone.
+  const carousel = ready && current && !filters.query && !filterTags.length && result.length >= 3 ? result.slice(0, 5) : [];
   const removeFilter = (key: string) => { if (!offline) setFilters(old => removeCatalogFilter(old, key)); };
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
@@ -94,54 +102,45 @@ export default function ExploreScreen() {
         initialNumToRender={6}
         onEndReached={loadMore}
         onEndReachedThreshold={0.6}
-        columnWrapperStyle={columns > 1 ? styles.row : undefined}
-        ItemSeparatorComponent={() => <View accessible={false} style={styles.listDivider} />}
-        renderItem={({ item }) => <View style={[styles.cell, { width: result.length === 1 ? '100%' : columns === 3 ? '31.9%' : columns === 2 ? '48.8%' : '100%' }]}><PropertyCard listing={item} offline={offline} horizontal={columns > 1 && result.length === 1} /></View>}
+        columnWrapperStyle={styles.row}
+        ItemSeparatorComponent={() => <View accessible={false} style={styles.rowGap} />}
+        renderItem={({ item }) => result.length === 1 ? <View style={styles.single}><PropertyCard listing={item} offline={offline} horizontal /></View> : <PropertyCard listing={item} offline={offline} width={cellWidth} />}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: layout.tabContentBottom + tabSpace }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={colors.primary} />}
-        ListEmptyComponent={!ready || updating ? <View style={styles.skeletons}>{Array.from({ length: columns === 1 ? 2 : columns }, (_, index) => <CardSkeleton key={index} />)}</View> : !pageError && !storageError ? <EmptyState title={hasFilters ? 'Sin coincidencias' : 'Aquí empieza tu próximo hogar'} description={hasFilters ? 'Prueba otra zona o amplía los filtros. También puedes guardar la búsqueda para volver cuando aparezca una coincidencia.' : 'Aún no hay viviendas publicadas. Si tienes una en venta, puedes preparar el primer anuncio.'} icon={hasFilters ? 'search-outline' : 'home-outline'} action={<View style={{ gap: 10 }}><Button label={hasFilters ? 'Ampliar búsqueda' : 'Publicar una vivienda'} onPress={() => hasFilters ? setFilters({ ...defaultFilters }) : router.push('/publish')} />{hasFilters && !offline && <Button label="Guardar esta búsqueda" secondary icon="bookmark-outline" onPress={saveSearch} />}</View>} /> : null}
+        ListEmptyComponent={!ready || updating ? <View style={styles.skeletons}>{Array.from({ length: columns }, (_, index) => <CardSkeleton key={index} width={cellWidth} />)}</View> : !pageError && !storageError ? <EmptyState title={hasFilters ? 'Sin coincidencias' : 'Aquí empieza tu próximo hogar'} description={hasFilters ? 'Prueba otra zona o amplía los filtros. También puedes guardar la búsqueda para volver cuando aparezca una coincidencia.' : 'Aún no hay viviendas publicadas. Si tienes una en venta, puedes preparar el primer anuncio.'} icon={hasFilters ? 'search-outline' : 'home-outline'} action={<View style={{ gap: 10 }}><Button label={hasFilters ? 'Ampliar búsqueda' : 'Publicar una vivienda'} onPress={() => hasFilters ? setFilters({ ...defaultFilters }) : router.push('/publish')} />{hasFilters && !offline && <Button label="Guardar esta búsqueda" secondary icon="bookmark-outline" onPress={saveSearch} />}</View>} /> : null}
         ListHeaderComponent={<View>
-          {/* Wide screens carry the inboxes in the SideRail and the mark beside the search. */}
-          {!wide && <View style={styles.topbar}>
-            <View style={styles.brand}><Brand height={width < 360 ? 22 : 26} />{mode === 'demo' && <Text style={styles.demo}>Demo</Text>}</View>
-            <View style={styles.actions}>
+          {/* Wide screens carry the logo and the inboxes in the SideRail. */}
+          <View style={styles.topbar}>
+            <View style={styles.where}><ProvincePicker value={filters.province} onChange={province => change({ province })} disabled={offline} />{mode === 'demo' && <Text style={styles.demo}>Demo</Text>}</View>
+            {!wide && <View style={styles.actions}>
               <NotificationBell unreadCount={notificationUnreadCount} />
               <View><IconButton name="chatbubbles-outline" label={unreadCount ? `Mensajes, ${unreadCount} sin leer` : 'Abrir mensajes'} onPress={() => router.push('/messages')} />
                 {unreadCount > 0 && <View pointerEvents="none" style={styles.messageBadge}><Text style={styles.messageBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text></View>}
               </View>
-            </View>
-          </View>}
-          <InstallHint />
-          <View style={[styles.discovery, wide && styles.wideDiscovery]}>
-            <ExploreDiscovery offline={offline} onOperation={operation => change({ operation })} onPublish={() => router.push('/publish')} />
-            {/* On wide screens search and refinements share one row as wide as the results. */}
-            <View style={wide && styles.controls}>
-            {wide && <View accessibilityLabel="KarmaHouse" accessibilityRole="image" style={styles.wideMark}><BrandMark height={34} /></View>}
-            <View style={[styles.search, locked, wide && styles.wideSearch]}>
-              <Icon name="search" size={20} color={colors.muted} />
-              <TextInput accessibilityLabel="Buscar por barrio, municipio o calle" placeholder="Barrio, municipio o calle" placeholderTextColor={colors.muted} style={styles.searchInput} editable={!offline} value={filters.query} onChangeText={query => change({ query })} returnKeyType="search" />
-              {filters.query ? <IconButton name="close-circle" label="Borrar búsqueda" onPress={() => change({ query: '' })} style={styles.clearSearch} /> : null}
-              <MotionPressable accessibilityRole="button" accessibilityLabel={filterCount ? `Filtros, ${filterCount} ${filterCount === 1 ? 'activo' : 'activos'}` : 'Abrir filtros'} onPress={openFilters} style={({ pressed }) => [styles.filterButton, filterCount > 0 && styles.filterActive, pressed && { opacity: .7 }]}>
-                <Icon name="options-outline" size={21} color={filterCount > 0 ? colors.onPrimary : colors.primary} />
-                {filterCount > 0 && <View style={styles.filterCount}><Text style={styles.filterCountText}>{filterCount}</Text></View>}
-              </MotionPressable>
-            </View>
-            {wide && <View style={styles.wideRefinements}><CatalogRefinements filters={filters} onChange={change} disabled={offline} /></View>}
-            </View>
+            </View>}
           </View>
-          {!wide && <View style={styles.refinements}>
-            <CatalogRefinements filters={filters} onChange={change} disabled={offline} />
-          </View>}
-          {filterTags.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={locked} contentContainerStyle={styles.activeFilters}>
+          <OperationTabs value={filters.operation} onChange={operation => change({ operation })} disabled={offline} />
+          <InstallHint />
+          <View style={[styles.search, locked]}>
+            <Icon name="search" size={20} color={colors.muted} />
+            <TextInput accessibilityLabel="Buscar por barrio, municipio o calle" placeholder="Barrio, municipio o calle" placeholderTextColor={colors.muted} style={styles.searchInput} editable={!offline} value={filters.query} onChangeText={query => change({ query })} returnKeyType="search" />
+            {filters.query ? <IconButton name="close-circle" label="Borrar búsqueda" onPress={() => change({ query: '' })} style={styles.clearSearch} /> : null}
+            <MotionPressable accessibilityRole="button" accessibilityLabel={filterCount ? `Filtros, ${filterCount} ${filterCount === 1 ? 'activo' : 'activos'}` : 'Abrir filtros'} onPress={openFilters} style={({ pressed }) => [styles.filterButton, filterCount > 0 && styles.filterActive, pressed && { opacity: .7 }]}>
+              <Icon name="options-outline" size={21} color={filterCount > 0 ? colors.onPrimary : colors.primary} />
+              {filterCount > 0 && <View style={styles.filterCount}><Text style={styles.filterCountText}>{filterCount}</Text></View>}
+            </MotionPressable>
+          </View>
+          {filterTags.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={[styles.tagsRow, locked]} contentContainerStyle={styles.activeFilters}>
             {filterTags.map(tag => <FilterTag key={tag.key} label={tag.label} onRemove={() => removeFilter(tag.key)} />)}
             <MotionPressable accessibilityRole="button" accessibilityLabel="Limpiar búsqueda y filtros" disabled={offline} onPress={clearFilters} style={styles.clear}><Text style={styles.clearText}>Limpiar</Text></MotionPressable>
           </ScrollView>}
+          {carousel.length > 0 && <View style={styles.carousel}><ExploreDiscovery listings={carousel} onOpen={listing => router.push(`/property/${listing.id}`)} /></View>}
           <View style={[styles.resultMeta, compactMeta && styles.compactMeta]}>
             <Text accessibilityLiveRegion="polite" style={styles.resultCount}>{count}</Text>
-            <View style={[styles.metaControls, compactMeta && styles.compactMetaControls, locked]}>
+            <View style={[styles.metaControls, locked]}>
               <CatalogSortMenu value={filters.sort} onChange={sort => change({ sort })} disabled={offline} />
-              <IconButton name="bookmark-outline" label="Guardar búsqueda" onPress={saveSearch} style={styles.saveSearch} />
+              <IconButton name="notifications-outline" label="Guardar búsqueda" onPress={saveSearch} />
             </View>
           </View>
           {offlineSince !== null && <View style={styles.saveNotice}>
@@ -154,11 +153,11 @@ export default function ExploreScreen() {
         </View>}
         ListFooterComponent={<View style={result.length > 0 ? styles.listFooter : undefined}>
           {pageError && ready ? <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{pageError}</Notice><Button label="Reintentar" secondary loading={loading} onPress={() => { if (catalogRetryAction({ current, hasMore }) === 'page') loadMore(); else void refreshCatalog().catch(() => {}); }} /></View>
-            : loading && ready ? <View style={styles.skeletons}><CardSkeleton /></View>
+            : loading && ready ? <View style={styles.skeletons}><CardSkeleton width={cellWidth} /></View>
             : current && !updating && !hasMore && result.length > 0 && !offline ? <Text style={styles.listEnd}>{total === 1 ? 'Has visto la única vivienda que coincide.' : `Has visto las ${total} viviendas que coinciden.`}</Text> : null}
           {/* The seller invitation closes a real list; under an empty or failed one it reads as the answer. */}
-          {result.length > 0 && !storageError && <MotionPressable accessibilityRole="button" accessibilityLabel="Publicar una vivienda" onPress={() => router.push('/publish')} style={({ pressed }) => [styles.sellerBanner, pressed && { opacity: .85 }]}>
-            <View style={styles.sellerIcon}><Icon name="key-outline" size={25} color={colors.onPrimary} /></View><View style={{ flex: 1 }}><Text style={styles.sellerTitle}>Tu vivienda, aquí.</Text><Text style={styles.sellerText}>Dale su próximo capítulo.</Text></View><Icon name="arrow-forward" size={21} color={colors.onPrimary} />
+          {result.length > 0 && !storageError && <MotionPressable accessibilityRole="button" accessibilityLabel="Publicar una vivienda" onPress={() => router.push('/publish')} style={({ pressed }) => [styles.paper, pressed && { opacity: .85 }]}>
+            <View style={{ flex: 1 }}><Text style={styles.paperTitle}>Tu vivienda, aquí.</Text><Text style={styles.paperText}>Dale su próximo capítulo.</Text></View><Icon name="arrow-forward" size={21} color={colors.creamInk} />
           </MotionPressable>}
           {mode === 'demo' && <Notice>Viviendas e imágenes de demostración. Tus anuncios y favoritos se guardan solo en este dispositivo.</Notice>}
         </View>}
@@ -185,10 +184,12 @@ function SavedSearchParam({ id, onApply }: { id: string; onApply(filters: Listin
   return null;
 }
 
-function CardSkeleton() {
+const GRID_GAP = 14;
+
+function CardSkeleton({ width }: { width: number }) {
   const { styles } = useStyles();
-  return <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.skeleton}>
-    <View style={styles.skeletonImage} />
+  return <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.skeleton, { width }]}>
+    <ArchImage width={width} height={Math.round(width * 1.16)} style={styles.skeletonImage}><View /></ArchImage>
     <View style={[styles.skeletonLine, { width: '38%', height: 20 }]} />
     <View style={[styles.skeletonLine, { width: '72%' }]} />
     <View style={[styles.skeletonLine, { width: '52%' }]} />
@@ -197,38 +198,34 @@ function CardSkeleton() {
 
 function FilterTag({ label, onRemove }: { label: string; onRemove(): void }) {
   const { colors, styles } = useStyles();
-  return <MotionPressable accessibilityRole="button" accessibilityLabel={`Quitar filtro: ${label}`} onPress={onRemove} hitSlop={{ top: 4, bottom: 4 }} style={styles.filterTag}><Text style={styles.filterTagText}>{label}</Text><Icon name="close-circle" size={16} color={colors.primary} /></MotionPressable>;
+  return <MotionPressable accessibilityRole="button" accessibilityLabel={`Quitar filtro: ${label}`} onPress={onRemove} hitSlop={{ top: 4, bottom: 4 }} style={styles.filterTag}><Text style={styles.filterTagText}>{label}</Text><Icon name="close" size={16} color={colors.muted} /></MotionPressable>;
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper },
-  content: { width: '100%', maxWidth: 1180, alignSelf: 'center', paddingHorizontal: 20, paddingBottom: layout.tabContentBottom },
-  topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 12 },
-  brand: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 8 }, actions: { flexDirection: 'row', gap: 6 },
-  demo: { color: colors.muted, fontSize: 11, backgroundColor: colors.softNeutral, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
-  messageBadge: { position: 'absolute', right: -2, top: -2, borderRadius: 11, minWidth: 19, paddingHorizontal: 5, height: 19, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primaryFill }, messageBadgeText: { color: colors.onPrimary, fontSize: 11, fontWeight: '700' },
-  discovery: { maxWidth: 640, gap: 12 }, wideDiscovery: { maxWidth: '100%' },
-  controls: { flexDirection: 'row', alignItems: 'center', gap: 12 }, wideSearch: { flex: 1.2 }, wideRefinements: { flex: 1 }, wideMark: { paddingHorizontal: 6 },
-  search: { minHeight: 52, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 26, paddingLeft: 16, paddingRight: 4, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  content: { width: '100%', maxWidth: 1180, alignSelf: 'center', paddingHorizontal: 16, paddingBottom: layout.tabContentBottom },
+  topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 8, paddingBottom: 6 },
+  where: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 }, actions: { flexDirection: 'row', gap: 8 },
+  demo: { ...typography.caption, fontWeight: '600', color: colors.muted, backgroundColor: colors.softNeutral, paddingHorizontal: 9, paddingVertical: 3, borderRadius: rounded.pill, overflow: 'hidden' },
+  messageBadge: { position: 'absolute', right: -2, top: -2, borderRadius: 11, minWidth: 19, paddingHorizontal: 5, height: 19, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.sol }, messageBadgeText: { color: colors.onSol, fontSize: 11, fontWeight: '700' },
+  search: { marginTop: 12, maxWidth: 640, minHeight: 52, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: rounded.pill, paddingLeft: 16, paddingRight: 6, flexDirection: 'row', alignItems: 'center', gap: 8 },
   searchInput: { flex: 1, minWidth: 0, minHeight: 50, fontSize: 16, color: colors.ink }, clearSearch: { backgroundColor: 'transparent', width: 40 },
-  filterButton: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.softBlue }, filterActive: { backgroundColor: colors.primaryFill },
-  filterCount: { position: 'absolute', right: -3, top: -3, minWidth: 19, height: 19, paddingHorizontal: 4, borderRadius: 10, backgroundColor: colors.inverseSurface, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.surface }, filterCountText: { color: colors.inverseInk, fontSize: 11, fontWeight: '700' },
-  refinements: { marginTop: 12 },
-  resultMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, marginBottom: 4 }, metaControls: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  compactMeta: { flexDirection: 'column', alignItems: 'stretch', gap: 0 },
-  compactMetaControls: { justifyContent: 'space-between' },
-  resultCount: { flex: 1, fontSize: 13, lineHeight: 19, color: colors.muted },
-  saveSearch: { backgroundColor: 'transparent' },
+  filterButton: { width: 40, height: 40, borderRadius: rounded.pill, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.softBlue }, filterActive: { backgroundColor: colors.primaryFill },
+  filterCount: { position: 'absolute', right: -4, top: -4, minWidth: 19, height: 19, paddingHorizontal: 4, borderRadius: 10, backgroundColor: colors.sol, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.surface }, filterCountText: { color: colors.onSol, fontSize: 11, fontWeight: '700' },
+  tagsRow: { marginHorizontal: -16 }, activeFilters: { gap: 8, paddingTop: 12, paddingHorizontal: 16, alignItems: 'center' },
+  filterTag: { minHeight: 36, paddingLeft: 14, paddingRight: 10, gap: 4, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: rounded.pill }, filterTagText: { fontSize: 14, fontWeight: '600', color: colors.ink },
+  clear: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }, clearText: { color: colors.muted, fontSize: 14, fontWeight: '600' },
+  carousel: { width: '100%', maxWidth: 640, alignSelf: 'center', marginTop: 18 },
+  resultMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18, marginBottom: 14 }, metaControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  compactMeta: { flexDirection: 'column', alignItems: 'stretch', gap: 8 },
+  resultCount: { flex: 1, ...typography.section, color: colors.ink, fontVariant: ['tabular-nums'] },
   saveNotice: { gap: 8, marginBottom: 10 },
-  activeFilters: { gap: 7, paddingTop: 12, alignItems: 'center' }, filterTag: { minHeight: 44, paddingHorizontal: 11, paddingVertical: 8, gap: 6, flexDirection: 'row', alignItems: 'center', backgroundColor: colors.softBlue, borderRadius: 12 }, filterTagText: { fontSize: 13, color: colors.primary },
-  clear: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }, clearText: { color: colors.muted, fontSize: 13 },
   listEnd: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: 4, marginBottom: 8 },
-  row: { columnGap: '2%' }, cell: {},
-  listDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: 13 },
+  row: { gap: GRID_GAP }, rowGap: { height: 18 }, single: { flex: 1 },
   listFooter: { paddingTop: 26 },
-  skeletons: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', marginTop: 4 }, skeleton: { flex: 1, minWidth: 260, gap: 8, marginBottom: 26 },
-  skeletonImage: { height: 200, borderRadius: 16, backgroundColor: colors.skeleton, marginBottom: 4 }, skeletonLine: { height: 14, borderRadius: 7, backgroundColor: colors.skeleton },
-  sellerBanner: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: colors.banner, borderRadius: 22, padding: 20, marginTop: 18, marginBottom: 10 },
-  sellerIcon: { width: 46, height: 46, borderRadius: 15, backgroundColor: colors.bannerIcon, alignItems: 'center', justifyContent: 'center' },
-  sellerTitle: { color: colors.onPrimary, fontSize: 19, fontWeight: '600', letterSpacing: -.3 }, sellerText: { fontSize: 13, lineHeight: 18, color: colors.bannerText, marginTop: 4 },
+  skeletons: { flexDirection: 'row', gap: GRID_GAP, flexWrap: 'wrap' }, skeleton: { gap: 8, marginBottom: 26 },
+  skeletonImage: { backgroundColor: colors.skeleton, marginBottom: 4 }, skeletonLine: { height: 14, borderRadius: 7, backgroundColor: colors.skeleton },
+  // The one paper card on the screen.
+  paper: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: colors.cream, borderRadius: rounded.card, padding: 18, marginTop: 18, marginBottom: 10 },
+  paperTitle: { ...typography.cardTitle, color: colors.creamInk }, paperText: { fontSize: 13, lineHeight: 18, color: colors.creamInk, opacity: .78, marginTop: 4 },
 }));

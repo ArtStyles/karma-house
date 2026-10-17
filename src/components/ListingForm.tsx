@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTabBarSpace } from './TabBarSpace';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useReducedMotion } from '../settings/useReducedMotion';
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -20,19 +20,23 @@ import {
   type DraftValidation,
   type ListingDraft,
 } from '../domain/listings';
-import { createThemedStyles, formatMoney, layout, typefaces } from '../theme';
+import { createThemedStyles, formatMoney, layout, rounded, typography } from '../theme';
 import { createDraftPersistence, draftToken, hasDraftVersionConflict } from '../domain/draftPersistence';
 import { restorePublicationDraft } from '../domain/publicationEntry';
 import { preparePublicationImport } from '../domain/publicationImport';
 import { draftStorage } from '../data/draftStorage';
-import { ListingPhotos } from './ListingPhotos';
+import { DraftPhoto, ListingPhotos } from './ListingPhotos';
+import { ArchImage } from './ArchImage';
+import { Cartel } from './Cartel';
+import { Mediopunto } from './Mediopunto';
+import { OperationGrid } from './OperationGrid';
 import { LocationPicker } from './maps/LocationPicker';
 import { normalizeMapLocation } from '../domain/geo';
 import { ActionGroup, Button, Icon, Notice, Pill } from './ui';
 import { SelectionField } from './SelectionField';
 import { AMENITIES, AMENITY_GROUPS, CONDITIONS, OPERATIONS, PROVINCES, RENT_PERIODS, SWAP_BALANCES, WANTED_OPERATIONS, type ListingOperation } from '../domain/listingOptions';
 import { normalizeDecimalInput, parseDecimal, publishedNumber } from '../domain/numericInput';
-import { minStayText, priceLabel, priceSuffix, swapBalanceText, wantedOperationsText } from '../domain/operations';
+import { cartelLabel, minStayText, priceLabel, priceSuffix, swapBalanceText, wantedOperationsText } from '../domain/operations';
 import type { ImportField, ImportResult } from '../domain/importListing';
 import { ImportListingSheet } from './ImportListingSheet';
 
@@ -107,6 +111,7 @@ export function ListingForm({
   draftStorageKey,
 }: ListingFormProps) {
   const { colors, styles } = useStyles();
+  const tabSpace = useTabBarSpace();
   const [draft, setDraft] = useState<ListingDraft>(() => ({ ...restorePublicationDraft(null, cloneDraft(initialDraft ?? emptyDraft), initialDraft ? undefined : initialOperation), clientRequestId: initialDraft?.clientRequestId ?? draftToken() }));
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<DraftErrors>({});
@@ -131,6 +136,7 @@ export function ListingForm({
   const wantedOperations = draft.wantedOperations ?? ['sale', 'swap'];
   const perNight = draft.rentPeriod === 'day';
   const stepFields = stepFieldsFor(operation);
+  const stepNames = ['Vivienda', 'Detalles', 'Revisar'];
   // A restored draft that already names its operation skips the chooser.
   const choosing = hydrated && !initialDraft && draft.operation === undefined && !chosen;
   const reducedMotion = useReducedMotion();
@@ -323,7 +329,7 @@ export function ListingForm({
     >
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: layout.tabContentBottom + tabSpace }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -331,41 +337,26 @@ export function ListingForm({
           {choosing ? (
             <View style={styles.section}>
               <SectionHeading title="¿Qué quieres publicar?" description="Elige una opción. Después no se puede cambiar sin crear otro anuncio." />
-              {OPERATIONS.map((item) => (
-                <Pressable key={item.value} accessibilityRole="button" accessibilityLabel={item.label}
-                  onPress={() => {
-                    changeField('operation', item.value);
-                    if (item.value === 'wanted') { changeField('type', ''); changeField('photos', []); changeField('photoUri', undefined); changeField('mapLocation', undefined); changeField('wantedOperations', ['sale', 'swap']); }
-                    if (item.value === 'rent' && !draft.rentPeriod) changeField('rentPeriod', 'month');
-                    setChosen(true);
-                  }}
-                  style={({ pressed }) => [styles.fieldCard, styles.operationOption, pressed && { opacity: .8 }]}>
-                  <Icon name={item.value === 'sale' ? 'pricetag-outline' : item.value === 'swap' ? 'swap-horizontal-outline' : item.value === 'rent' ? 'key-outline' : 'search-outline'} size={25} color={colors.primary} />
-                  <View style={{ flex: 1 }}><Text style={styles.operationTitle}>{item.label}</Text><Text style={styles.operationText}>{item.description}</Text></View>
-                  <Icon name="chevron-forward" size={19} color={colors.muted} />
-                </Pressable>
-              ))}
+              <OperationGrid onPick={(value) => {
+                changeField('operation', value);
+                if (value === 'wanted') { changeField('type', ''); changeField('photos', []); changeField('photoUri', undefined); changeField('mapLocation', undefined); changeField('wantedOperations', ['sale', 'swap']); }
+                if (value === 'rent' && !draft.rentPeriod) changeField('rentPeriod', 'month');
+                setChosen(true);
+              }} />
               <View style={styles.importOffer}>
                 <Text style={styles.fieldHint}>¿Ya lo tienes escrito en Revolico o WhatsApp? Pégalo y rellenamos el formulario.</Text>
                 <Button label="Pegar anuncio" icon="clipboard-outline" secondary onPress={() => setImportOpen(true)} />
               </View>
             </View>
           ) : <>
-          <View style={styles.steps} accessibilityLabel={`Paso ${step + 1} de 3`}>
-            {['Vivienda', 'Detalles', 'Revisar'].map((label, index) => (
-              <View key={label} style={styles.stepItem}>
-                <View style={[styles.stepDot, index <= step && styles.stepDotActive]}>
-                  {index < step ? (
-                    <Icon name="checkmark" size={12} color={colors.onPrimary} />
-                  ) : (
-                    <Text style={[styles.stepNumber, index <= step && styles.stepNumberActive]}>
-                      {index + 1}
-                    </Text>
-                  )}
-                </View>
-                <Text style={[styles.stepLabel, index === step && styles.stepLabelActive]}>{label}</Text>
-              </View>
-            ))}
+          <View style={styles.steps}>
+            <Mediopunto panes={3} state="progress" step={step} width={112} label={`Paso ${step + 1} de 3: ${stepNames[step]}`} />
+            <View style={styles.stepLabels}>
+              {stepNames.map((label, index) => <View key={label} style={styles.stepItem}>
+                {index < step ? <Icon name="checkmark" size={13} color={colors.primary} /> : null}
+                <Text style={[styles.stepLabel, index < step && styles.stepLabelDone, index === step && styles.stepLabelActive]}>{label}</Text>
+              </View>)}
+            </View>
           </View>
 
           {imported ? <View style={styles.importNotice}>
@@ -378,9 +369,15 @@ export function ListingForm({
 
           {step === 0 ? (
             <View style={styles.section}>
-              <View style={styles.labelRow}>
-                <Text style={styles.operationTag}>{OPERATIONS.find(o => o.value === operation)?.label}</Text>
-                {!initialDraft ? <Button label="Cambiar" secondary disabled={submitting || photoBusy} onPress={() => { setChosen(false); setImported(null); changeField('operation', undefined); }} /> : null}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.label}>{fieldLabels.operation}</Text>
+                <View style={styles.operationRow}>
+                  <Cartel label={cartelLabel({ operation })} />
+                  <Text style={styles.operationHint}>{OPERATIONS.find(o => o.value === operation)?.label}</Text>
+                  {!initialDraft ? <Pressable accessibilityRole="button" accessibilityLabel="Cambiar operación" disabled={submitting || photoBusy} onPress={() => { setChosen(false); setImported(null); changeField('operation', undefined); }} style={({ pressed }) => [styles.link, (pressed || submitting || photoBusy) && { opacity: .6 }]}>
+                    <Text style={styles.linkText}>Cambiar</Text>
+                  </Pressable> : null}
+                </View>
               </View>
               <SectionHeading
                 title={wanted ? 'Lo que buscas' : 'Sobre la vivienda'}
@@ -603,14 +600,18 @@ export function ListingForm({
                 title={wanted ? 'Revisa tu búsqueda' : 'Revisa tu anuncio'}
                 description="Podrás editarlo después desde Mi espacio."
               />
-              {wanted ? null : draft.photoUri ? (
-                <Image source={{ uri: draft.photoUri }} style={styles.reviewPhoto} resizeMode="cover" />
-              ) : (
-                <View style={styles.reviewPhotoPlaceholder}>
-                  <Icon name="image-outline" color={colors.primary} size={31} />
-                  <Text style={styles.photoDescription}>Sin foto propia</Text>
-                </View>
-              )}
+              <View style={styles.preview}>
+                {wanted ? null : <>
+                  <Text style={styles.previewCaption}>Así se verá en Explorar</Text>
+                  <View>
+                    <ArchImage width={210} height={236} bottom={rounded.inner} glow style={styles.previewArch}>
+                      {draft.photoUri ? <DraftPhoto uri={draft.photoUri} label={`Portada de ${draft.title.trim()}`} style={styles.previewPhoto} />
+                        : <View style={styles.reviewPhotoPlaceholder}><Icon name="image-outline" color={colors.primary} size={31} /><Text style={styles.photoDescription}>Sin foto propia</Text></View>}
+                    </ArchImage>
+                    <Cartel label={cartelLabel({ operation })} style={styles.previewSign} />
+                  </View>
+                </>}
+              </View>
               <View style={styles.reviewCard}>
                 <Text style={styles.reviewTitle}>{draft.title.trim()}</Text>
                 <Text style={styles.reviewLocation}>
@@ -692,7 +693,6 @@ export function ListingForm({
             ) : (
               <Button
                 label={submitLabel}
-                icon="save-outline"
                 loading={submitting}
                 disabled={photoBusy}
                 onPress={() => void submit()}
@@ -798,69 +798,62 @@ function readError(error: unknown, fallback: string): string {
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   flex: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: layout.tabContentBottom },
-  formShell: { width: '100%', maxWidth: 680, alignSelf: 'center', gap: 20 },
-  steps: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 8, borderRadius: 16, backgroundColor: colors.surface },
-  stepItem: { flex: 1, minWidth: 0, alignItems: 'center', gap: 6 },
-  stepDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
-  stepDotActive: { backgroundColor: colors.primaryFill, borderColor: colors.primary },
-  stepNumber: { color: colors.muted, fontSize: 11, fontWeight: '600' },
-  stepNumberActive: { color: colors.onPrimary },
-  stepLabel: { color: colors.muted, fontSize: 13, textAlign: 'center', flexShrink: 1 },
-  stepLabelActive: { color: colors.ink, fontWeight: '600' },
-  section: { gap: 16 },
-  sectionHeading: { gap: 6, paddingTop: 4, paddingBottom: 2 },
-  sectionTitle: { color: colors.ink, fontFamily: typefaces.display, fontSize: 24, fontWeight: '600', lineHeight: 30, letterSpacing: -0.5 },
-  sectionDescription: { color: colors.muted, fontSize: 15, lineHeight: 21, maxWidth: 560 },
-  fieldCard: { backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, borderRadius: 16, padding: 16, gap: 20 },
-  fieldGroup: { gap: 7 },
+  formShell: { width: '100%', maxWidth: 680, alignSelf: 'center', gap: 24 },
+  steps: { alignItems: 'center', gap: 8, paddingTop: 12 },
+  stepLabels: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 16, rowGap: 4 },
+  stepItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  stepLabel: { color: colors.muted, fontSize: 13, lineHeight: 18 },
+  stepLabelDone: { color: colors.primary },
+  stepLabelActive: { color: colors.ocre, fontWeight: '700' },
+  section: { gap: 24 },
+  sectionHeading: { gap: 6 },
+  sectionTitle: { color: colors.ink, ...typography.displayLong },
+  sectionDescription: { color: colors.body, fontSize: 15, lineHeight: 21, maxWidth: 560 },
+  // Fields sit on the ground in groups; the inputs carry the surface (DESIGN.md §6).
+  fieldCard: { gap: 18 },
+  fieldGroup: { gap: 8 },
   previewGroup: { gap: 6 },
-  publishNote: { color: colors.muted, fontSize: 12, lineHeight: 18 },
-  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  label: { color: colors.ink, fontSize: 14, fontWeight: '500' },
-  required: { color: colors.muted },
-  helper: { color: colors.muted, fontSize: 13 },
-  input: { minHeight: 48, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, backgroundColor: colors.surface, color: colors.ink, paddingHorizontal: 0, paddingTop: 8, paddingBottom: 11, fontSize: 17, lineHeight: 23 },
-  inputError: { borderBottomColor: colors.danger, backgroundColor: colors.softDanger },
-  descriptionInput: { minHeight: 132, paddingTop: 8 },
-  fieldHint: { flexShrink: 1, color: colors.muted, fontSize: 12, lineHeight: 18 }, descriptionHelp: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: colors.softBlue, borderRadius: 13, padding: 12 }, characterCount: { color: colors.muted, fontSize: 11, textAlign: 'right', marginTop: -12 },
-  errorRow: { flexDirection: 'row', gap: 6, alignItems: 'flex-start' },
+  publishNote: { color: colors.muted, fontSize: 12, lineHeight: 18, paddingHorizontal: 4 },
+  label: { color: colors.body, fontSize: 13, lineHeight: 18, fontWeight: '600' },
+  required: { color: colors.primary },
+  input: { minHeight: 52, borderRadius: rounded.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, color: colors.ink, paddingHorizontal: 18, paddingVertical: 13, fontSize: 16, lineHeight: 22 },
+  inputError: { borderColor: colors.danger, backgroundColor: colors.softDanger },
+  descriptionInput: { minHeight: 140, borderRadius: rounded.card, paddingTop: 14 },
+  fieldHint: { flexShrink: 1, color: colors.muted, fontSize: 12, lineHeight: 18 },
+  descriptionHelp: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', backgroundColor: colors.softBlue, borderRadius: rounded.inner, paddingVertical: 12, paddingHorizontal: 14 },
+  characterCount: { color: colors.muted, fontSize: 11, textAlign: 'right', marginTop: -8 },
+  errorRow: { flexDirection: 'row', gap: 6, alignItems: 'flex-start', paddingHorizontal: 4 },
   errorText: { color: colors.danger, fontSize: 13, lineHeight: 18, flex: 1 },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   fieldGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
   gridField: { flexGrow: 1, flexBasis: 130, minWidth: 125 },
-  photoEmpty: { gap: 12, alignItems: 'center', paddingVertical: 10 },
-  photoIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
-  photoCopy: { gap: 4 },
-  photoTitle: { color: colors.ink, fontSize: 17, fontWeight: '600', textAlign: 'center' },
   photoDescription: { color: colors.muted, fontSize: 14, lineHeight: 20, textAlign: 'center' },
-  photoCard: { gap: 12 },
-  photo: { width: '100%', aspectRatio: 16 / 9, borderRadius: 16, backgroundColor: colors.softBlue },
-  photoActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  photoButton: { flexGrow: 1, minWidth: 145 },
-  reviewPhoto: { width: '100%', aspectRatio: 16 / 9, borderRadius: 20, backgroundColor: colors.paper },
-  reviewPhotoPlaceholder: { minHeight: 150, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  reviewCard: { backgroundColor: colors.surface, borderRadius: 20, padding: 20, gap: 10 },
-  reviewTitle: { color: colors.ink, fontFamily: typefaces.display, fontSize: 24, fontWeight: '600', lineHeight: 30, letterSpacing: -0.4 },
-  reviewLocation: { color: colors.muted, fontSize: 15 },
-  reviewPrice: { color: colors.ink, fontSize: 24, fontWeight: '600', marginTop: 4 },
+  operationRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingLeft: 14, paddingRight: 8, borderRadius: rounded.inner, backgroundColor: colors.surface },
+  operationHint: { flex: 1, minWidth: 0, color: colors.muted, fontSize: 13, lineHeight: 18 },
+  link: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }, linkText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  preview: { alignItems: 'center', gap: 10 },
+  previewCaption: { color: colors.muted, fontSize: 12, lineHeight: 16, fontWeight: '600' },
+  previewArch: { backgroundColor: colors.softNeutral }, previewPhoto: { width: '100%', height: '100%' },
+  previewSign: { position: 'absolute', left: -8, top: 140 },
+  reviewPhotoPlaceholder: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  reviewCard: { backgroundColor: colors.surface, borderRadius: rounded.card, padding: 20, gap: 10 },
+  reviewTitle: { color: colors.ink, ...typography.sheetTitle },
+  reviewLocation: { color: colors.muted, fontSize: 15, lineHeight: 21 },
+  reviewPrice: { color: colors.primary, ...typography.numeral, marginTop: 4 },
   reviewFacts: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 5 },
   fact: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   factText: { color: colors.ink, fontSize: 14 },
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 5 },
   reviewType: { color: colors.ink, fontSize: 15, fontWeight: '600' },
-  reviewDescription: { color: colors.ink, fontSize: 17, lineHeight: 25 },
+  reviewDescription: { color: colors.body, fontSize: 16, lineHeight: 24 },
   reviewAmenities: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  amenityGroup: { gap: 8, marginTop: 4 }, amenityGroupTitle: { color: colors.ink, fontSize: 14, fontWeight: '600' },
-  amenityTag: { backgroundColor: colors.paper, borderRadius: 12, paddingVertical: 7, paddingHorizontal: 11 },
-  amenityTagText: { color: colors.ink, fontSize: 13 },
+  amenityGroup: { gap: 8, marginTop: 4 }, amenityGroupTitle: { color: colors.body, fontSize: 13, lineHeight: 18, fontWeight: '600' },
+  amenityTag: { backgroundColor: colors.softBlue, borderRadius: rounded.pill, paddingVertical: 6, paddingHorizontal: 12 },
+  amenityTagText: { color: colors.primary, fontSize: 13, fontWeight: '600' },
   actions: { paddingTop: 4 },
   actionButton: { width: '100%' },
-  operationOption: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  operationTitle: { fontSize: 17, fontWeight: '600', color: colors.ink },
-  operationText: { fontSize: 14, color: colors.muted },
-  operationTag: { color: colors.primary, fontSize: 15, fontWeight: '600' },
   importOffer: { gap: 10, paddingTop: 4 },
-  importNotice: { backgroundColor: colors.surface, borderRadius: 20, paddingHorizontal: 16, paddingBottom: 16, gap: 4 },
+  importNotice: { backgroundColor: colors.surface, borderRadius: rounded.card, paddingHorizontal: 16, paddingBottom: 16, gap: 4 },
   demoNote: { color: colors.muted, fontSize: 13, lineHeight: 18, textAlign: 'center', paddingHorizontal: 12 },
 }));
 

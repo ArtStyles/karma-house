@@ -1,7 +1,7 @@
 import { Camera, GeoJSONSource, Layer, Map as NativeMap, Marker } from '@maplibre/maplibre-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { createThemedStyles } from '../../theme';
+import { createThemedStyles, rounded } from '../../theme';
 import { Icon } from '../ui';
 import type { KarmaMapProps } from './KarmaMap.types';
 import { CUBA_CENTER, CUBA_ZOOM } from './mapConfig';
@@ -64,10 +64,11 @@ export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM,
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  wrapper: { minHeight: 180, backgroundColor: colors.softNeutral, overflow: 'hidden', borderRadius: 20, borderWidth: 1, borderColor: colors.border },
+  wrapper: { minHeight: 180, backgroundColor: colors.softNeutral, overflow: 'hidden', borderRadius: rounded.card, borderWidth: 1, borderColor: colors.border },
   canvas: { flex: 1, overflow: 'hidden' },
-  marker: { minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 22, backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border, boxShadow: '0 2px 6px rgba(30, 50, 70, 0.18)' },
-  selectedMarker: { backgroundColor: colors.primaryFill, borderColor: colors.surface },
-  markerText: { color: colors.ink, fontSize: 13, fontWeight: '700' },
+  // A price pill; the chosen one turns blue and lifts.
+  marker: { minWidth: 44, minHeight: 40, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: rounded.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.outline, boxShadow: '0 2px 6px rgba(0, 0, 0, 0.18)' },
+  selectedMarker: { backgroundColor: colors.primaryFill, borderColor: colors.primaryFill, boxShadow: '0 6px 16px rgba(0, 0, 0, 0.35)' },
+  markerText: { color: colors.ink, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
   selectedText: { color: colors.onPrimary },
 }));

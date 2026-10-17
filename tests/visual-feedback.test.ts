@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {executeComponent,Hooks,elements} from './helpers/tsxHooks.ts';
+import {control,executeComponent,Hooks,elements} from './helpers/tsxHooks.ts';
 function animatedFixture(path:string,name:string,bindings:Record<string,unknown>={}){
   const hooks=new Hooks(),commands:{kind:string;value:number}[]=[];let reduced=false;
   const component=executeComponent(path,name,hooks,{
@@ -60,28 +60,32 @@ test('Android materials require a supported OS and a separate blur target',()=>{
   assert.equal(render({blurTarget:target}).type,'View');platform.Version=31;assert.equal(render().type,'View');
   const tree=render({blurTarget:target});assert.equal(tree.type,'BlurView');assert.equal(tree.props.blurTarget,target);assert.equal(tree.props.blurMethod,'dimezisBlurViewSdk31Plus');assert.equal(tree.props.pointerEvents,'none');
 });
-test('discovery indicator tracks the finger while scrolling never applies a search and rotation keeps its page',()=>{
-  const hooks=new Hooks(),scrolls:any[]=[];let reaction:{read:()=>number;run:(next:number,previous:number|null)=>void};const progress={value:0};let operations=0;
-  const cards=[{action:'Comprar'},{action:'Alquilar'},{action:'Permutar'},{action:'Publicar anuncio'}];
+test('the arch carousel moves by neighbour, dot or swipe, and only the centre opens a home',()=>{
+  const hooks=new Hooks(),opened:string[]=[];let responder:any;
+  const listings=['A','B','C'].map(id=>({id,title:id,price:1,location:'Vedado',province:'La Habana'}));
   const component=executeComponent('src/components/ExploreDiscovery.tsx','ExploreDiscovery',hooks,{
-    useStyles:()=>({colors:{},styles:{}}),useWindowDimensions:()=>({width:390}),useReducedMotion:()=>false,
-    useSharedValue:()=>progress,useAnimatedScrollHandler:(work:any)=>work,useAnimatedReaction:(read:any,run:any)=>{reaction={read,run}},useAnimatedStyle:(work:any)=>({evaluate:work}),scheduleOnRN:(work:any,...args:any[])=>work(...args),
-    cards,layout:{wideMinWidth:1024},Platform:{OS:'android'},Animated:{ScrollView:'ScrollView',View:'AnimatedView'},View:'View',Text:'Text',Icon:'Icon',MotionPressable:'MotionPressable',
+    useStyles:()=>({colors:{},styles:{}}),useReducedMotion:()=>false,ease:{},
+    PanResponder:{create:(config:any)=>{responder=config;return{panHandlers:{}}}},Animated:{View:'AnimatedView'},FadeIn:{duration:()=>({easing:()=>({})})},
+    ArchImage:'ArchImage',Cartel:'Cartel',MotionPressable:'MotionPressable',PropertyImage:'PropertyImage',View:'View',Text:'Text',
+    formatMoney:()=>'$ 1',cartelLabel:()=>'Se vende',listingFacts:()=>'',priceSuffix:()=>'',
   });
-  const render=()=>hooks.render(()=>component({offline:false,onOperation:()=>operations++,onPublish:()=>operations++}));let tree=render(),scroll=elements(tree).find(x=>x.type==='ScrollView')!;
-  scroll.props.ref.current={scrollTo:(value:any)=>scrolls.push(value)};scroll.props.onScroll({contentOffset:{x:504}});reaction!.run(reaction!.read(),0);
-  assert.equal(operations,0);assert.equal(elements(tree).find(x=>x.type==='AnimatedView')!.props.style.at(-1).evaluate().transform[0].translateX,15);
-  tree=render();assert.ok(elements(tree).some(x=>x.props.accessibilityLabel==='Tarjeta 3 de 4: Permutar'));
-  tree.props.onLayout({nativeEvent:{layout:{width:600}}});render();assert.equal(scrolls.at(-1).x,1172);assert.equal(scrolls.at(-1).animated,false);assert.equal(operations,0);
+  const render=()=>hooks.render(()=>component({listings,onOpen:(listing:any)=>opened.push(listing.id)}));
+  const centre=(tree:any)=>elements(tree).find(x=>x.type==='MotionPressable'&&/^Ver [ABC],/.test(x.props.accessibilityLabel))!.props;
+  let tree=render();assert.match(centre(tree).accessibilityLabel,/^Ver A,/);
+  control(tree,'Siguiente: B').onPress();tree=render();assert.match(centre(tree).accessibilityLabel,/^Ver B,/);
+  control(tree,'Ver A').onPress();tree=render();assert.match(centre(tree).accessibilityLabel,/^Ver A,/);
+  responder.onPanResponderRelease({}, {dx:-60});tree=render();assert.match(centre(tree).accessibilityLabel,/^Ver B,/);
+  responder.onPanResponderRelease({}, {dx:20});tree=render();assert.match(centre(tree).accessibilityLabel,/^Ver B,/);
+  assert.deepEqual(opened,[]);centre(tree).onPress();assert.deepEqual(opened,['B']);
 });
-test('on wide screens every discovery option sits in one row with nothing to swipe',()=>{
-  const hooks=new Hooks();const cards=[{action:'Comprar'},{action:'Alquilar'},{action:'Permutar'},{action:'Publicar anuncio'}];
+test('a carousel with a single home shows no neighbours or dots',()=>{
+  const hooks=new Hooks();
   const component=executeComponent('src/components/ExploreDiscovery.tsx','ExploreDiscovery',hooks,{
-    useStyles:()=>({colors:{},styles:{}}),useWindowDimensions:()=>({width:1280}),useReducedMotion:()=>false,
-    useSharedValue:()=>({value:0}),useAnimatedScrollHandler:(work:any)=>work,useAnimatedReaction:()=>{},useAnimatedStyle:(work:any)=>({evaluate:work}),scheduleOnRN:(work:any,...args:any[])=>work(...args),
-    cards,layout:{wideMinWidth:1024},Platform:{OS:'web'},Animated:{ScrollView:'ScrollView',View:'AnimatedView'},View:'View',Text:'Text',Icon:'Icon',MotionPressable:'MotionPressable',
+    useStyles:()=>({colors:{},styles:{}}),useReducedMotion:()=>true,ease:{},
+    PanResponder:{create:()=>({panHandlers:{}})},Animated:{View:'AnimatedView'},FadeIn:{duration:()=>({easing:()=>({})})},
+    ArchImage:'ArchImage',Cartel:'Cartel',MotionPressable:'MotionPressable',PropertyImage:'PropertyImage',View:'View',Text:'Text',
+    formatMoney:()=>'$ 1',cartelLabel:()=>'Se vende',listingFacts:()=>'',priceSuffix:()=>'',
   });
-  const tree=hooks.render(()=>component({offline:false,onOperation:()=>{},onPublish:()=>{}}));
-  assert.ok(!elements(tree).some(x=>x.type==='ScrollView'));assert.equal(elements(tree).filter(x=>x.type==='MotionPressable').length,4);
-  assert.ok(!elements(tree).some(x=>x.type==='Text'&&x.props.children==='Desliza'));
+  const tree=hooks.render(()=>component({listings:[{id:'A',title:'A',price:1,location:'Vedado',province:'La Habana'}],onOpen:()=>{}}));
+  assert.equal(elements(tree).filter(x=>x.type==='MotionPressable').length,1);
 });

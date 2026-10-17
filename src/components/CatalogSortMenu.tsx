@@ -3,7 +3,7 @@ import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDime
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SORT_OPTIONS } from '../catalog/sortOptions';
 import type { ListingFilters } from '../domain/listings';
-import { createThemedStyles } from '../theme';
+import { createThemedStyles, rounded, typography } from '../theme';
 import { Icon } from './ui';
 import { MotionPressable } from './MotionPressable';
 
@@ -31,8 +31,8 @@ export function CatalogSortMenu({ value, onChange, disabled = false }: {
     return () => document.removeEventListener('keydown', escape);
   }, [anchor, close]);
 
-  const menuWidth = Math.min(224, width - 24 - insets.left - insets.right);
-  const menuHeight = 248;
+  const menuWidth = Math.min(240, width - 24 - insets.left - insets.right);
+  const menuHeight = 260;
   const left = anchor ? Math.max(insets.left + 12, Math.min(anchor.x + anchor.width - menuWidth, width - insets.right - menuWidth - 12)) : 0;
   const bottomLimit = height - insets.bottom - 12;
   const top = anchor ? Math.max(insets.top + 12, anchor.y + anchor.height + 6 + menuHeight <= bottomLimit
@@ -57,7 +57,7 @@ export function CatalogSortMenu({ value, onChange, disabled = false }: {
               onPress={() => { if (!disabled) onChange(option.value); close(); }}
               style={({ pressed }) => [styles.option, value === option.value && styles.selected, pressed && { opacity: .7 }]}>
               <Text style={[styles.optionText, value === option.value && styles.selectedText]}>{option.label}</Text>
-              {value === option.value && <Icon name="checkmark" size={19} color={colors.primary} />}
+              {value === option.value && <Icon name="checkmark" size={20} color={colors.sol} />}
             </MotionPressable>)}
           </ScrollView>
         </View>
@@ -67,13 +67,14 @@ export function CatalogSortMenu({ value, onChange, disabled = false }: {
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  trigger: { flexDirection: 'row', minHeight: 44, gap: 4, alignItems: 'center' },
-  triggerText: { fontSize: 13, color: colors.muted },
+  trigger: { flexDirection: 'row', minHeight: 40, gap: 4, alignItems: 'center', paddingLeft: 14, paddingRight: 12, borderRadius: rounded.pill, backgroundColor: colors.surface },
+  triggerText: { fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.ink },
   overlay: { flex: 1, backgroundColor: colors.subtleOverlay },
-  menu: { position: 'absolute', padding: 8, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, boxShadow: '0 6px 24px rgba(20,40,61,0.16)' },
-  heading: { color: colors.muted, fontSize: 12, fontWeight: '600', paddingHorizontal: 12, paddingVertical: 9 },
-  option: { minHeight: 48, paddingHorizontal: 12, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 11 },
+  // A menu floats, so it is one of the few things with a shadow.
+  menu: { position: 'absolute', padding: 8, borderRadius: 26, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, boxShadow: '0 18px 40px rgba(0,0,0,0.35)' },
+  heading: { ...typography.cardTitle, color: colors.ink, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 6 },
+  option: { minHeight: 48, paddingHorizontal: 12, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 18 },
   selected: { backgroundColor: colors.softBlue },
-  optionText: { flex: 1, fontSize: 15, color: colors.ink },
-  selectedText: { color: colors.primary, fontWeight: '600' },
+  optionText: { flex: 1, fontSize: 15, lineHeight: 20, color: colors.body },
+  selectedText: { color: colors.ink, fontWeight: '600' },
 }));

@@ -1,5 +1,5 @@
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import { createThemedStyles } from '../../theme';
+import { createThemedStyles, rounded } from '../../theme';
 import { Brand, Icon } from '../ui';
 import { MAP_ATTRIBUTION } from './mapConfig';
 
@@ -34,10 +34,10 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   attribution: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 9, paddingHorizontal: 7, paddingVertical: 5, backgroundColor: colors.paper },
   attributionText: { fontSize: 10, lineHeight: 14, color: colors.muted },
   status: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', padding: 18, zIndex: 4 },
-  statusCard: { maxWidth: 285, alignItems: 'center', gap: 10, padding: 18, borderRadius: 19, backgroundColor: colors.navigationGlass, borderColor: colors.border, borderWidth: 1 },
+  statusCard: { maxWidth: 285, alignItems: 'center', gap: 10, padding: 18, borderRadius: rounded.card, backgroundColor: colors.navigationGlass, borderColor: colors.border, borderWidth: 1 },
   statusText: { color: colors.muted, fontSize: 13, lineHeight: 19, textAlign: 'center' },
   errorTitle: { color: colors.ink, fontSize: 15, fontWeight: '600', textAlign: 'center' },
-  retry: { minHeight: 42, paddingHorizontal: 16, borderRadius: 21, backgroundColor: colors.softBlue, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  retry: { minHeight: 44, paddingHorizontal: 16, borderRadius: rounded.pill, backgroundColor: colors.softBlue, flexDirection: 'row', alignItems: 'center', gap: 7 },
   retryText: { fontSize: 14, color: colors.primary, fontWeight: '600' },
-  brand: { position: 'absolute', top: 10, left: 10, paddingHorizontal: 9, paddingVertical: 6, borderRadius: 12, backgroundColor: colors.navigationGlass },
+  brand: { position: 'absolute', top: 10, left: 10, paddingHorizontal: 12, paddingVertical: 6, borderRadius: rounded.pill, backgroundColor: colors.navigationGlass },
 }));

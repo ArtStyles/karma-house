@@ -5,7 +5,7 @@ import { useAuth } from '../../auth/AuthProvider';
 import type { Conversation } from '../../messaging/types';
 import type { useNegotiations } from '../../negotiations/useNegotiations';
 import type { Negotiation, NegotiationKind } from '../../negotiations/types';
-import { createThemedStyles } from '../../theme';
+import { createThemedStyles, rounded, typography } from '../../theme';
 import { ActionGroup, Button, EmptyState, Icon, Notice } from '../ui';
 import { NegotiationCard } from './NegotiationCard';
 import { NegotiationComposer, type ProposalTarget } from './NegotiationComposer';
@@ -64,4 +64,7 @@ function ConversationNegotiationsBody({conversation,userId,store,mutations,reque
     </NegotiationSheet>
   </>;
 }
-const useStyles = createThemedStyles(colors => StyleSheet.create({hidden:{display:'none'},intro:{gap:8,paddingBottom:16,borderBottomWidth:StyleSheet.hairlineWidth,borderBottomColor:colors.border},label:{color:colors.muted,fontSize:12,lineHeight:18,fontWeight:'600'},property:{color:colors.ink,fontSize:18,lineHeight:24,fontWeight:'600',letterSpacing:-.3},description:{color:colors.muted,fontSize:14,lineHeight:21},hint:{fontSize:12,lineHeight:19,color:colors.muted},listHeading:{marginTop:4,paddingTop:16,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:colors.border},sectionTitle:{fontSize:17,lineHeight:23,fontWeight:'600',color:colors.ink},loading:{padding:25},feedback:{flexDirection:'row',gap:8,alignItems:'center'},feedbackText:{flex:1,color:colors.green,fontSize:13,lineHeight:20}}));
+const useStyles = createThemedStyles(colors => StyleSheet.create({hidden:{display:'none'},
+  intro:{gap:2,padding:14,borderRadius:rounded.inner,backgroundColor:colors.surface},label:{color:colors.muted,fontSize:12,lineHeight:16,fontWeight:'600'},property:{color:colors.ink,fontSize:15,lineHeight:20,fontWeight:'600'},description:{color:colors.muted,fontSize:13,lineHeight:18,marginTop:4},
+  hint:{fontSize:12,lineHeight:17,color:colors.muted},listHeading:{marginTop:8},sectionTitle:{...typography.section,color:colors.ink},loading:{padding:25},
+  feedback:{flexDirection:'row',gap:8,alignItems:'center'},feedbackText:{flex:1,color:colors.green,fontSize:13,lineHeight:20}}));

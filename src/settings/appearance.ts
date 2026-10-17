@@ -10,9 +10,9 @@ type PreferenceStorage = {
   setItem(key: string, value: string): Promise<void>;
 };
 
-/** One device preference, independent of account changes. Writes retain tap order. */
+/** One device preference, independent of account changes. Writes retain tap order. Opens at night (dark) until chosen. */
 export function createAppearanceStore({ storage, key = 'karmahouse.appearance.v1' }: { storage: PreferenceStorage; key?: string }) {
-  let state = { preference: 'system' as AppearancePreference, ready: false, saveFailed: false };
+  let state = { preference: 'dark' as AppearancePreference, ready: false, saveFailed: false };
   let chosen = false;
   let revision = 0;
   let hydration: Promise<void> | undefined;
@@ -27,7 +27,7 @@ export function createAppearanceStore({ storage, key = 'karmahouse.appearance.v1
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     hydrate() {
       return hydration ??= storage.getItem(key).catch(() => null).then(value => {
-        if (!chosen) publish({ preference: value === 'light' || value === 'dark' ? value : 'system', ready: true, saveFailed: false });
+        if (!chosen) publish({ preference: value === 'light' || value === 'dark' || value === 'system' ? value : 'dark', ready: true, saveFailed: false });
       });
     },
     setPreference(preference: AppearancePreference) {

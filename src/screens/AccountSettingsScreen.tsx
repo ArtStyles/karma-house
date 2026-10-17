@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { router } from 'expo-router';
-import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useConsultationRefresh } from '../lib/useConsultationRefresh';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Sheet } from '../components/Sheet';
+import { setDataSaver, useDataSaver } from '../settings/useDataSaver';
+import { useReducedMotion } from '../settings/useReducedMotion';
 import { useAuth } from '../auth/AuthProvider';
 import { useAgencyWorkspace } from '../agencies/useAgencyWorkspace';
 import { accountProfileError } from '../auth/accountProfile';
@@ -12,7 +15,7 @@ import { AccountPrompt } from '../components/AccountPrompt';
 import { UserAvatar } from '../components/account/UserAvatar';
 import { AppearanceSettings } from '../components/AppearanceSettings';
 import { ActionGroup, Button, EmptyState, Icon, Notice, PageTitle } from '../components/ui';
-import { createThemedStyles, internalLayout } from '../theme';
+import { createThemedStyles, internalLayout, rounded, typography } from '../theme';
 import { PRIVACY_URL, TERMS_URL } from '../lib/publicSite';
 
 export default function AccountSettingsScreen() {
@@ -25,6 +28,7 @@ export default function AccountSettingsScreen() {
       <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!!auth.user && !editing.current && !formBusy.current} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}>
         <PageTitle compact title="Ajustes de cuenta" subtitle="Identidad, preferencias y privacidad." back fallback="/profile" />
         <AppearanceSettings />
+        <DevicePreferences />
         {!isSupabaseConfigured ? <EmptyState plain title="Perfil no disponible" description="La foto y el nombre de tu cuenta estarán disponibles con el servicio conectado." /> : !auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : !auth.user ? <AccountPrompt returnTo="/account-settings" title="Personaliza tu cuenta" description="Inicia sesión para cambiar el nombre y la foto de tu cuenta." /> : !auth.profileReady ? <View style={styles.card}>{auth.error ? <Notice error onRetry={() => void reload.refresh()}>{auth.error}</Notice> : <ActivityIndicator accessibilityLabel="Cargando tu perfil" color={colors.primary} />}</View> : <AccountSettingsForm key={auth.user.id} ownerId={auth.user.id} editing={editing} locked={formBusy} refreshing={reload.isRefreshing} />}
       </ScrollView>
     </KeyboardAvoidingView>
@@ -81,7 +85,7 @@ function AccountSettingsForm({ ownerId, editing, locked, refreshing }: { ownerId
     <View style={styles.card}>
       <Text accessibilityRole="header" style={styles.cardTitle}>Información personal</Text>
       <View style={styles.field}><Text style={styles.label}>Nombre</Text><TextInput accessibilityLabel="Nombre de tu cuenta" value={name} onChangeText={value => { setName(value); setSaved(false); }} editable={!busy} maxLength={80} autoCapitalize="words" style={styles.input} placeholder="Tu nombre" placeholderTextColor={colors.muted} /><Text style={styles.description}>Tu nombre en las conversaciones de KarmaHouse.</Text></View>
-      <View style={styles.field}><Text style={styles.label}>Correo electrónico</Text><Text selectable style={styles.email}>{auth.user?.email}</Text><Text style={styles.description}>Correo asociado a tu cuenta.</Text></View>
+      <View style={styles.field}><Text style={styles.label}>Correo electrónico</Text><View style={styles.locked}><Text selectable numberOfLines={1} style={styles.email}>{auth.user?.email}</Text><Icon name="lock-closed-outline" size={16} color={colors.muted} /></View><Text style={styles.description}>Correo asociado a tu cuenta.</Text></View>
     </View>
     {error || auth.error ? <Notice error>{error || auth.error}</Notice> : null}
     {saved && <View accessibilityLiveRegion="polite" style={styles.success}><Icon name="checkmark-circle" size={19} color={colors.green} /><Text style={styles.successText}>Cambios guardados.</Text></View>}
@@ -99,8 +103,8 @@ function AccountSettingsForm({ ownerId, editing, locked, refreshing }: { ownerId
         <Pressable accessibilityRole="link" style={styles.legalRow} onPress={() => void Linking.openURL(TERMS_URL)}><Text style={styles.link}>Términos de uso</Text><Icon name="open-outline" size={18} color={colors.muted} /></Pressable>
       </View>
     </View>
-    <View style={styles.card}>
-      <Text accessibilityRole="header" style={styles.cardTitle}>Eliminar cuenta</Text>
+    <View style={[styles.card, styles.dangerCard]}>
+      <Text accessibilityRole="header" style={[styles.cardTitle, styles.dangerTitle]}>Eliminar cuenta</Text>
       <Text style={styles.description}>La eliminación borra tus datos de forma permanente.</Text>
       {auth.isOwner ? <Notice>La cuenta propietaria está protegida. Para eliminarla, primero debe transferirse la propiedad de KarmaHouse.</Notice> : <Pressable accessibilityRole="button" disabled={!!busy} onPress={() => setDeleting(true)} style={({ pressed }) => [styles.danger, pressed && { opacity: .7 }]}>
         <Icon name="trash-outline" size={19} color={colors.danger} /><Text style={styles.dangerText}>Eliminar cuenta</Text>
@@ -112,7 +116,6 @@ function AccountSettingsForm({ ownerId, editing, locked, refreshing }: { ownerId
 
 function DeleteAccountSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colors, styles } = useStyles();
-  const insets = useSafeAreaInsets();
   const auth = useAuth();
   const { agencies, error: agenciesError } = useAgencyWorkspace();
   const [busy, setBusy] = useState(false);
@@ -130,36 +133,61 @@ function DeleteAccountSheet({ visible, onClose }: { visible: boolean; onClose: (
     finally { setBusy(false); }
   }
   const teams = agencies.map(agency => agency.tradeName).join(', ');
-  return <Modal visible={visible} transparent animationType="fade" onRequestClose={() => !busy && onClose()}>
-    <View style={[styles.backdrop, { paddingTop: Math.max(insets.top, 20), paddingBottom: Math.max(insets.bottom, 20) }]}>
-      <View accessibilityViewIsModal style={styles.sheet}>
-        <ScrollView contentContainerStyle={styles.sheetContent}>
-        <Text accessibilityRole="header" style={styles.sheetTitle}>¿Eliminar tu cuenta?</Text>
-        <Text style={styles.sheetText}>Se borran para siempre tus anuncios y sus fotos, tus favoritos, tus conversaciones, visitas y ofertas, tus avisos y tu perfil. No se puede deshacer.</Text>
-        {/* A suspended account or a failed load has no list here, but the server still removes the memberships. */}
-        {teams || auth.suspended || agenciesError ? <Text style={styles.sheetText}>{teams ? `También sales de ${teams}.` : 'Si perteneces a alguna inmobiliaria, también sales de su equipo.'} Si eres la única persona que administra una inmobiliaria, quedará suspendida hasta que KarmaHouse la recupere.</Text> : null}
-        <Text style={styles.description}>Los reportes enviados a moderación se conservan sin tus datos de cuenta.</Text>
-        {error ? <Notice error>{error}</Notice> : null}
-        {started ? <Text style={styles.description}>Si sales ahora, podrás terminar después en Ajustes de cuenta › Eliminar cuenta.</Text> : null}
-        <ActionGroup direction="vertical"><Pressable accessibilityRole="button" accessibilityLabel={error ? 'Reintentar eliminación' : 'Eliminar definitivamente'} accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={() => void confirm()} style={({ pressed }) => [styles.dangerFilled, (pressed || busy) && { opacity: .7 }]}>
-          {busy ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.dangerFilledText}>{error ? 'Reintentar eliminación' : 'Eliminar definitivamente'}</Text>}
-        </Pressable>
-        <Button label={started ? 'Terminar más tarde' : 'Cancelar'} secondary disabled={busy} onPress={onClose} /></ActionGroup>
-        </ScrollView>
+  return <Sheet visible={visible} onClose={() => { if (!busy) onClose(); }}>
+    <View style={styles.warning}><Icon name="trash-outline" size={22} color={colors.danger} /></View>
+    <Text accessibilityRole="header" style={styles.sheetTitle}>¿Eliminar tu cuenta?</Text>
+    <Text style={styles.sheetText}>Se borran para siempre tus anuncios y sus fotos, tus favoritos, tus conversaciones, visitas y ofertas, tus avisos y tu perfil. <Text style={styles.irreversible}>No se puede deshacer.</Text></Text>
+    {/* A suspended account or a failed load has no list here, but the server still removes the memberships. */}
+    {teams || auth.suspended || agenciesError ? <View style={styles.fact}><Icon name="information-circle-outline" size={16} color={colors.muted} /><Text style={styles.factText}>{teams ? `También sales de ${teams}.` : 'Si perteneces a alguna inmobiliaria, también sales de su equipo.'} Si eres la única persona que administra una inmobiliaria, quedará suspendida hasta que KarmaHouse la recupere.</Text></View> : null}
+    <View style={styles.fact}><Icon name="information-circle-outline" size={16} color={colors.muted} /><Text style={styles.factText}>Los reportes enviados a moderación se conservan sin tus datos de cuenta.</Text></View>
+    {error ? <Notice error>{error}</Notice> : null}
+    {started ? <Text style={styles.description}>Si sales ahora, podrás terminar después en Ajustes de cuenta › Eliminar cuenta.</Text> : null}
+    <ActionGroup direction="vertical"><Pressable accessibilityRole="button" accessibilityLabel={error ? 'Reintentar eliminación' : 'Eliminar definitivamente'} accessibilityState={{ disabled: busy, busy }} disabled={busy} onPress={() => void confirm()} style={({ pressed }) => [styles.dangerFilled, (pressed || busy) && { opacity: .7 }]}>
+      {busy ? <ActivityIndicator color={colors.onDark} /> : <Text style={styles.dangerFilledText}>{error ? 'Reintentar eliminación' : 'Eliminar definitivamente'}</Text>}
+    </Pressable>
+    <Button label={started ? 'Terminar más tarde' : 'Cancelar'} secondary disabled={busy} onPress={onClose} /></ActionGroup>
+  </Sheet>;
+}
+
+/** Device settings, for guests too: they live on this phone, not in the account. */
+function DevicePreferences() {
+  const { colors, styles } = useStyles();
+  const dataSaver = useDataSaver();
+  const reduced = useReducedMotion();
+  return <View style={styles.devices}>
+    <Text accessibilityRole="header" style={styles.sectionTitle}>En este dispositivo</Text>
+    <View style={styles.group}>
+      <View style={[styles.preference, styles.preferenceBorder]}>
+        <View style={styles.preferenceCopy}><Text style={styles.preferenceTitle}>Ahorro de datos</Text><Text style={styles.description}>Fotos al tocar; mapa al pedirlo.</Text></View>
+        <Switch accessibilityLabel="Ahorro de datos" accessibilityHint="Carga fotos solo cuando las tocas y no descarga el mapa hasta que lo pidas." hitSlop={10} value={dataSaver} onValueChange={setDataSaver} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.switchThumb} ios_backgroundColor={colors.switchTrack} />
+      </View>
+      {/* KarmaHouse has no switch of its own: it follows the device, so the row says which way it is set. */}
+      <View accessible accessibilityLabel={`Reducir movimiento: ${reduced ? 'activado' : 'desactivado'} en tu dispositivo`} style={styles.preference}>
+        <View style={styles.preferenceCopy}><Text style={styles.preferenceTitle}>Reducir movimiento</Text><Text style={styles.description}>KarmaHouse sigue el ajuste de tu dispositivo: sin desplazamientos, solo fundidos.</Text></View>
+        <Text style={[styles.state, reduced && styles.stateOn]}>{reduced ? 'Activado' : 'Desactivado'}</Text>
       </View>
     </View>
-  </Modal>;
+  </View>;
 }
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 }, content: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', paddingHorizontal: internalLayout.gutter, paddingBottom: 36 }, loading: { padding: 40 },
-  form: { gap: 20 }, card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: internalLayout.radius, padding: 16, gap: 16 }, photoCard: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  photoCopy: { flex: 1, minWidth: 0, gap: 6 }, cardTitle: { color: colors.ink, fontSize: 18, lineHeight: 24, fontWeight: '600', letterSpacing: -0.3 }, description: { color: colors.muted, fontSize: 14, lineHeight: 21 },
+  safe: { flex: 1, backgroundColor: colors.paper }, flex: { flex: 1 }, content: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', paddingHorizontal: 16, paddingBottom: 36 }, loading: { padding: 40 },
+  form: { gap: 20 }, card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: rounded.card, padding: 16, gap: 14 }, photoCard: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  photoCopy: { flex: 1, minWidth: 0, gap: 6 }, cardTitle: { ...typography.section, color: colors.ink }, description: { color: colors.muted, fontSize: 13, lineHeight: 19 },
   privacy: { color: colors.muted, fontSize: 12, lineHeight: 18 },
-  field: { gap: 8 }, label: { color: colors.ink, fontSize: 13, fontWeight: '600' }, input: { minHeight: 52, paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.border, borderRadius: 12, color: colors.ink, fontSize: 17 }, email: { color: colors.ink, fontSize: 16, lineHeight: 23 },
+  field: { gap: 8 }, label: { color: colors.body, fontSize: 13, lineHeight: 18, fontWeight: '600', paddingHorizontal: 4 },
+  input: { minHeight: 52, paddingVertical: 12, paddingHorizontal: 18, borderWidth: 1, borderColor: colors.border, borderRadius: rounded.pill, backgroundColor: colors.paper, color: colors.ink, fontSize: 16 },
+  locked: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, borderRadius: rounded.pill, backgroundColor: colors.softNeutral }, email: { flex: 1, minWidth: 0, color: colors.body, fontSize: 16, lineHeight: 22 },
   links: { gap: 0 }, legalRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, link: { flex: 1, color: colors.primary, fontSize: 16, lineHeight: 23, fontWeight: '500' },
-  danger: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }, dangerText: { color: colors.danger, fontSize: 16, fontWeight: '600' },
-  backdrop: { flex: 1, backgroundColor: colors.photoOverlay, justifyContent: 'center', paddingHorizontal: 20 }, sheet: { width: '100%', maxWidth: 520, maxHeight: '100%', alignSelf: 'center', backgroundColor: colors.surface, borderRadius: internalLayout.radius, overflow: 'hidden' }, sheetContent: { padding: 20, gap: 16 },
-  sheetTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '700', letterSpacing: -.5 }, sheetText: { color: colors.ink, fontSize: 16, lineHeight: 24 },
-  dangerFilled: { minHeight: 52, borderRadius: 26, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 12 }, dangerFilledText: { color: colors.onPrimary, fontSize: 16, lineHeight: 23, fontWeight: '600', textAlign: 'center' },
+  dangerCard: { backgroundColor: colors.softDanger, borderColor: colors.softDanger }, dangerTitle: { color: colors.danger },
+  danger: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingHorizontal: 16, borderRadius: rounded.pill, borderWidth: 1, borderColor: colors.danger }, dangerText: { color: colors.danger, fontSize: 15, fontWeight: '600' },
+  warning: { width: 52, height: 52, borderRadius: rounded.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.softDanger },
+  sheetTitle: { ...typography.sheetTitle, color: colors.ink }, sheetText: { color: colors.ink, fontSize: 15, lineHeight: 22 }, irreversible: { color: colors.danger, fontWeight: '700' },
+  fact: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' }, factText: { flex: 1, color: colors.body, fontSize: 13, lineHeight: 18 },
+  dangerFilled: { minHeight: 56, borderRadius: rounded.pill, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 12 }, dangerFilledText: { color: colors.onDark, fontSize: 16, lineHeight: 23, fontWeight: '600', textAlign: 'center' },
   success: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingHorizontal: 4 }, successText: { color: colors.green, fontSize: 14, fontWeight: '500' },
+  devices: { gap: 10, marginBottom: 24 }, sectionTitle: { ...typography.section, color: colors.ink, paddingHorizontal: 4 },
+  group: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: rounded.card, overflow: 'hidden' },
+  preference: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 }, preferenceBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  preferenceCopy: { flex: 1, minWidth: 0, gap: 2 }, preferenceTitle: { color: colors.ink, fontSize: 16, lineHeight: 22, fontWeight: '600' },
+  state: { color: colors.muted, fontSize: 13, fontWeight: '600' }, stateOn: { color: colors.primary },
 }));

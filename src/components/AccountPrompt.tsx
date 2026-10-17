@@ -1,24 +1,25 @@
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
-import { internalLayout, createThemedStyles } from '../theme';
+import { internalLayout, createThemedStyles, rounded, typography } from '../theme';
+import { Mediopunto } from './Mediopunto';
 import { Button, Icon } from './ui';
 
+/** «Entra en tu cuenta»: the lit window, what the account gives, and the privacy every account keeps. */
 export function AccountPrompt({ returnTo, title = 'Entra en tu cuenta', description = 'Inicia sesión para consultar y gestionar tus viviendas.' }: { returnTo: string; title?: string; description?: string }) {
   const { colors, styles } = useStyles();
   return <View style={styles.card}>
-    <View style={styles.symbol}><Icon name="person-outline" size={25} color={colors.primary} /></View>
+    <Mediopunto width={120} ground={colors.surface} />
     <Text accessibilityRole="header" style={styles.title}>{title}</Text>
     <Text style={styles.description}>{description}</Text>
-    <View style={styles.actions}>
     <Button label="Entrar o crear cuenta" onPress={() => router.push({ pathname: '/auth', params: { returnTo } })} style={styles.button} />
-  </View></View>;
+    <View style={styles.privacy}><Icon name="lock-closed-outline" size={15} color={colors.muted} /><Text style={styles.privacyText}>Nadie ve tu teléfono ni tu correo.</Text></View>
+  </View>;
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  card: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'flex-start', padding: 20, borderRadius: internalLayout.radius, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, gap: 12 },
-  symbol: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.paper, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 20, lineHeight: 27, fontWeight: '600', color: colors.ink },
-  description: { fontSize: 15, lineHeight: 22, color: colors.muted, maxWidth: 540 },
-  actions: { marginTop: 8, gap: 12, width: '100%', maxWidth: 360 },
-  button: { paddingHorizontal: 12 },
+  card: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', alignItems: 'center', paddingVertical: 28, paddingHorizontal: 22, borderRadius: rounded.cardLg, backgroundColor: colors.surface, gap: 12 },
+  title: { ...typography.sheetTitle, color: colors.ink, textAlign: 'center', marginTop: 8 },
+  description: { fontSize: 15, lineHeight: 22, color: colors.body, maxWidth: 420, textAlign: 'center' },
+  button: { marginTop: 8, width: '100%', maxWidth: 360 },
+  privacy: { flexDirection: 'row', alignItems: 'center', gap: 6 }, privacyText: { fontSize: 12, lineHeight: 16, color: colors.muted },
 }));

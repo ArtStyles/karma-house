@@ -11,7 +11,7 @@ test('saved searches retain the loaded view and show refresh progress on a subse
     useSafeAreaInsets: () => ({ top: 0, bottom: 0 }),
     ScrollView: 'ScrollView', RefreshControl: 'RefreshControl', ActivityIndicator: 'ActivityIndicator',
     EmptyState: 'EmptyState', Modal: 'Modal', View: 'View', Text: 'Text', Pressable: 'Pressable',
-    SafeAreaView: 'SafeAreaView', Button: 'Button', ActionGroup: 'ActionGroup',
+    SafeAreaView: 'SafeAreaView', Button: 'Button', ActionGroup: 'ActionGroup', Sheet: 'Sheet', Icon: 'Icon', IconButton: 'IconButton',
     router: { navigate() {} },
   });
   const render = () => hooks.render(() => component());

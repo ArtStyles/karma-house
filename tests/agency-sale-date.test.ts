@@ -13,16 +13,19 @@ test('sale occurredAt allows historical Havana dates and rejects future or inval
  assert.throws(()=>saleOccurredAt('2026-02-30','10:00',now));
  assert.throws(()=>saleOccurredAt('2026-03-08','00:30',now));
 });
-test('date fields retain default visit controls and expose historical sale input only with sale purpose',async()=>{
+test('visit dates are picked on a calendar with past days off, and only a sale gets the typed historical date',async()=>{
  const source=await readFile(new URL('../src/components/negotiations/VisitDateTimeFields.tsx',import.meta.url),'utf8');
  const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
  const require=createRequire(import.meta.url),exports:any={};
- const mocks:any={'../SelectionField':{SelectionField:'SelectionField'},'react-native':{Text:'Text',TextInput:'TextInput',View:'View',StyleSheet:{create:(v:any)=>v}},'../../negotiations/domain':{havanaDateTime:()=>({date:'2026-10-08',time:'10:00'})},'../../theme':{createThemedStyles:()=>()=>({styles:{},colors:{muted:'#666'}})}};
+ const mocks:any={'../SelectionField':{SelectionField:'SelectionField'},'../ui':{Icon:'Icon'},'react-native':{Text:'Text',TextInput:'TextInput',View:'View',Pressable:'Pressable',StyleSheet:{create:(v:any)=>v}},'../../negotiations/domain':{havanaDateTime:()=>({date:'2026-10-08',time:'10:00'})},'../../theme':{createThemedStyles:()=>()=>({styles:{},colors:{muted:'#666'}})}};
  runInNewContext(code,{exports,require:(id:string)=>id==='react/jsx-runtime'?require(id):mocks[id]??(()=>{throw Error(id)})()});
  const flatten=(n:any):any[]=>!n?[]:Array.isArray(n)?n.flatMap(flatten):typeof n==='object'?[n,...flatten(n.props?.children)]:[n];
- const base={date:'2026-10-08',time:'10:00',disabled:false,onDate(){},onTime(){}};
+ let picked='';const base={date:'2026-10-08',time:'10:00',disabled:false,onDate(value:string){picked=value;},onTime(){}};
  const visit=flatten(exports.VisitDateTimeFields(base));
- assert.deepEqual(visit.filter(n=>n.type==='SelectionField').map(n=>n.props.label),['Mes de la visita','Día de la visita','Hora','Minutos']);
+ assert.deepEqual(visit.filter(n=>n.type==='SelectionField').map(n=>n.props.label),['Mes de la visita','Hora','Minutos']);
+ const day=(n:number)=>visit.find(x=>x.type==='Pressable'&&new RegExp(` ${n} de octubre$`).test(x.props.accessibilityLabel))!.props;
+ assert.equal(day(7).disabled,true);assert.equal(day(8).accessibilityState.selected,true);
+ day(9).onPress();assert.equal(picked,'2026-10-09');
  assert.ok(visit.includes('Hora de Cuba · Elige una fecha futura, dentro de los próximos 180 días.'));
  let edited='';const sale=flatten(exports.VisitDateTimeFields({...base,purpose:'sale',date:'2020-01-01',onDate:(value:string)=>{edited=value;}}));
  const input=sale.find(n=>n.type==='TextInput');assert.equal(input.props.value,'2020-01-01');input.props.onChangeText('2019-12-31');assert.equal(edited,'2019-12-31');

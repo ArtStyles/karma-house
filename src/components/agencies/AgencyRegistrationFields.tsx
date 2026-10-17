@@ -3,7 +3,7 @@ import type {AgencyApplicationInput} from '../../agencies/types';
 import type {AgencyFieldErrors} from '../../agencies/registration';
 import {PROVINCES} from '../../domain/listingOptions';
 import {Pill} from '../ui';
-import {createThemedStyles,internalLayout} from '../../theme';
+import {createThemedStyles,internalLayout,rounded,typography} from '../../theme';
 export function AgencyTextField({label,error,hint,...props}:TextInputProps&{label:string;error?:string;hint?:string}){
  const {colors,styles:s}=useAgencyFormStyles();
  return <View style={s.field}>
@@ -32,7 +32,7 @@ export function AgencyRegistrationFields({value,onChange,disabled,errors={},comm
    <Text accessibilityRole="header" style={s.title}>Servicios y oficina</Text>
    <AgencyTextField label="Descripción de servicios" hint="Será pública tras la aprobación." value={value.description} onChangeText={v=>set('description',v)} editable={!disabled} multiline maxLength={1000} error={errors.description}/>
    <AgencyTextField label="Dirección de oficina · opcional" value={value.officeAddress??''} onChangeText={v=>set('officeAddress',v||null)} editable={!disabled} maxLength={200} error={errors.officeAddress}/>
-   <View style={s.switchRow}><View style={s.flex}><Text style={s.label}>Publicar dirección de oficina</Text><Text style={s.hint}>Activa esta opción para mostrarla en el perfil público.</Text></View><Switch accessibilityLabel="Publicar dirección de oficina" hitSlop={10} value={value.publishOfficeAddress} onValueChange={v=>set('publishOfficeAddress',v)} disabled={disabled} trackColor={{false:colors.switchTrack,true:colors.primary}} thumbColor={colors.onPrimary} ios_backgroundColor={colors.switchTrack}/></View>
+   <View style={s.switchRow}><View style={s.flex}><Text style={s.label}>Publicar dirección de oficina</Text><Text style={s.hint}>Activa esta opción para mostrarla en el perfil público.</Text></View><Switch accessibilityLabel="Publicar dirección de oficina" hitSlop={10} value={value.publishOfficeAddress} onValueChange={v=>set('publishOfficeAddress',v)} disabled={disabled} trackColor={{false:colors.switchTrack,true:colors.primary}} thumbColor={colors.switchThumb} ios_backgroundColor={colors.switchTrack}/></View>
   </View>
   {!commercialOnly&&<View style={s.card}>
    <Text accessibilityRole="header" style={s.title}>Referencias privadas</Text>
@@ -43,20 +43,24 @@ export function AgencyRegistrationFields({value,onChange,disabled,errors={},comm
 }
 export const useAgencyFormStyles=createThemedStyles(colors=>StyleSheet.create({
  safe:{flex:1,backgroundColor:colors.paper},
- content:{width:'100%',maxWidth:internalLayout.maxWidth,alignSelf:'center',paddingHorizontal:internalLayout.gutter,paddingBottom:40,gap:internalLayout.gap},
- form:{gap:20},field:{gap:8},label:{fontSize:14,lineHeight:20,fontWeight:'600',color:colors.ink},
- input:{backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,borderRadius:12,minHeight:52,color:colors.ink,fontSize:16,paddingHorizontal:14,paddingVertical:12},
- multiline:{minHeight:112,textAlignVertical:'top'},error:{color:colors.danger,fontSize:13,lineHeight:20},hint:{color:colors.muted,fontSize:12,lineHeight:19},
- copy:{color:colors.muted,fontSize:14,lineHeight:22},title:{color:colors.ink,fontSize:19,lineHeight:26,fontWeight:'600'},
- caption:{color:colors.muted,fontSize:12,lineHeight:18},value:{color:colors.ink,fontSize:15,lineHeight:23},date:{color:colors.ink,fontSize:20,lineHeight:28,fontWeight:'600'},
- status:{color:colors.primary,fontSize:13,lineHeight:20,fontWeight:'600'},
- card:{padding:16,backgroundColor:colors.surface,borderRadius:internalLayout.radius,borderWidth:1,borderColor:colors.border,gap:16},
- section:{gap:16,paddingVertical:8},item:{paddingVertical:16,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:colors.border,gap:12},first:{borderTopWidth:0,paddingTop:0},
- facts:{gap:12},datum:{gap:4},divider:{height:StyleSheet.hairlineWidth,backgroundColor:colors.border},
+ content:{width:'100%',maxWidth:internalLayout.maxWidth,alignSelf:'center',paddingHorizontal:16,paddingBottom:40,gap:16},
+ form:{gap:18},field:{gap:8},label:{fontSize:13,lineHeight:18,fontWeight:'600',color:colors.body,paddingHorizontal:4},
+ input:{backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,borderRadius:rounded.pill,minHeight:52,color:colors.ink,fontSize:16,paddingHorizontal:18,paddingVertical:12},
+ multiline:{minHeight:112,textAlignVertical:'top',borderRadius:rounded.card,paddingTop:14},error:{color:colors.danger,fontSize:13,lineHeight:19,paddingHorizontal:4},hint:{color:colors.muted,fontSize:12,lineHeight:18,paddingHorizontal:4},
+ copy:{color:colors.body,fontSize:14,lineHeight:21},title:{...typography.section,color:colors.ink},
+ caption:{color:colors.muted,fontSize:12,lineHeight:16,fontWeight:'600'},value:{color:colors.ink,fontSize:15,lineHeight:22},date:{...typography.numeral,color:colors.ink},
+ status:{color:colors.primary,fontSize:13,lineHeight:18,fontWeight:'700'},
+ card:{padding:16,backgroundColor:colors.surface,borderRadius:rounded.card,borderWidth:1,borderColor:colors.border,gap:14},
+ section:{gap:14,paddingVertical:4},item:{paddingVertical:14,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:colors.border,gap:10},first:{borderTopWidth:0,paddingTop:0},
+ facts:{gap:12},datum:{gap:2},divider:{height:StyleSheet.hairlineWidth,backgroundColor:colors.border},
  wrap:{flexDirection:'row',flexWrap:'wrap',gap:8},row:{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:12},flex:{flex:1,minWidth:0,gap:4},
  switchRow:{minHeight:52,flexDirection:'row',alignItems:'center',gap:16,paddingTop:12,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:colors.border},
- logo:{width:96,height:96,borderRadius:16},
- modalBackdrop:{flex:1,backgroundColor:colors.photoOverlay,justifyContent:'center',padding:20},
- modalFrame:{width:'100%',maxWidth:internalLayout.maxWidth,alignSelf:'center',maxHeight:'100%',backgroundColor:colors.surface,borderRadius:internalLayout.radius,overflow:'hidden'},
- modalContent:{padding:20,gap:20},
+ // Logos sit in the arch, like every photo in a list (DESIGN.md §1).
+ logo:{width:96,height:112,borderTopLeftRadius:48,borderTopRightRadius:48,borderBottomLeftRadius:rounded.inner,borderBottomRightRadius:rounded.inner},
+ modalBackdrop:{flex:1,backgroundColor:colors.overlay,justifyContent:'flex-end'},
+ modalFrame:{width:'100%',maxWidth:560,alignSelf:'center',maxHeight:'92%',backgroundColor:colors.sheet,borderTopLeftRadius:rounded.sheet,borderTopRightRadius:rounded.sheet,borderWidth:1,borderBottomWidth:0,borderColor:colors.border,overflow:'hidden'},
+ modalContent:{padding:20,paddingBottom:32,gap:18},
+ // A person chosen by their avatar (Seguimientos): 44 px circles, the chosen one in blue.
+ avatars:{flexDirection:'row',gap:8,paddingVertical:2},avatar:{width:44,height:44,borderRadius:rounded.pill,backgroundColor:colors.raised,alignItems:'center',justifyContent:'center'},avatarOn:{backgroundColor:colors.primaryFill},
+ avatarText:{...typography.cardTitle,fontSize:16,lineHeight:20,color:colors.primary},avatarTextOn:{color:colors.onPrimary},
 }));

@@ -34,7 +34,7 @@ function fixture(screen: 'inbox' | 'conversation') {
     'SafeAreaView', 'View', 'Text', 'Pressable', 'ActivityIndicator', 'FlatList', 'RefreshControl', 'ScrollView',
     'KeyboardAvoidingView', 'Modal', 'TextInput', 'PageTitle', 'Button', 'Icon', 'IconButton', 'Notice', 'EmptyState',
     'AccountPrompt', 'ActionGroup', 'AgencyInbox', 'ConversationCard', 'ConversationNegotiations', 'ReportConversationSheet',
-    'MessageBubble', 'ProposalCard', 'NegotiationNotice',
+    'MessageBubble', 'ProposalCard', 'NegotiationNotice', 'Segmented', 'ArchImage', 'Mediopunto', 'Sheet', 'ConversationBody', 'MenuItem',
   ].map(name => [name, name]));
   const path = screen === 'inbox' ? 'src/screens/InboxScreen.tsx' : 'src/screens/ConversationScreen.tsx';
   const component = executeComponent(path, screen === 'inbox' ? 'InboxScreen' : 'ConversationBody', hooks, {
@@ -49,6 +49,7 @@ function fixture(screen: 'inbox' | 'conversation') {
     useNegotiations: () => ({ userId: actor, items: [], ready: true, loading: false, loadingMore: false, mutating: false, error: '', hasMore: false, refresh: async () => {} }),
     useNegotiationMutations: () => ({ issue: '', clearFeedback() {}, respond: async () => {}, create: async () => {} }),
     useSafeAreaInsets: () => ({ top: 0, bottom: 0 }),
+    useWindowDimensions: () => ({ width: 390, height: 844 }), layout: { wideMinWidth: 1024 }, StyleSheet: { absoluteFill: {} },
     message: executeComponent('src/screens/ConversationScreen.tsx', 'message', hooks, {}),
     Platform: { OS: 'android' }, Keyboard: { dismiss() {} }, router: { push() {}, replace() {} }, goBack() {},
     setInterval: () => 1, clearInterval() {}, requestAnimationFrame() {},

@@ -11,7 +11,7 @@ import { notificationErrorMessage } from '../notifications/domain';
 import { reconcileNotificationPreferenceDraft, sameNotificationChoices } from '../notifications/preferenceDraft';
 import { useNotifications } from '../notifications/NotificationsProvider';
 import type { NotificationPreferences } from '../notifications/types';
-import { createThemedStyles, internalLayout } from '../theme';
+import { createThemedStyles, internalLayout, rounded, typography } from '../theme';
 
 export default function NotificationSettingsScreen() {
   const { colors, styles } = useStyles();
@@ -105,13 +105,13 @@ function PreferenceRow({ label, description, icon, value, disabled, onChange, la
 }) {
   const { colors, styles } = useStyles();
   return <View style={[styles.row, !last && styles.rowBorder]}>
-    <View style={styles.rowTop}><View style={styles.rowIcon}><Icon name={icon} color={colors.primary} size={20} /></View><Text style={styles.rowTitle}>{label}</Text><Switch hitSlop={10} accessibilityLabel={`Avisos de ${label.toLowerCase()}`} accessibilityHint={description} value={value} disabled={disabled} onValueChange={onChange} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.onPrimary} ios_backgroundColor={colors.switchTrack} /></View>
+    <View style={styles.rowTop}><View style={styles.rowIcon}><Icon name={icon} color={colors.primary} size={20} /></View><Text style={styles.rowTitle}>{label}</Text><Switch hitSlop={10} accessibilityLabel={`Avisos de ${label.toLowerCase()}`} accessibilityHint={description} value={value} disabled={disabled} onValueChange={onChange} trackColor={{ false: colors.switchTrack, true: colors.primary }} thumbColor={colors.switchThumb} ios_backgroundColor={colors.switchTrack} /></View>
     <Text style={styles.rowDescription}>{description}</Text>
   </View>;
 }
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', paddingHorizontal: internalLayout.gutter, paddingBottom: 36, gap: 20 }, loading: { padding: 40 }, form: { gap: 20 },
-  groupLabel: { color: colors.ink, fontSize: 17, lineHeight: 23, fontWeight: '600', letterSpacing: -0.2, marginBottom: -4 },
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: internalLayout.radius, paddingHorizontal: 16 }, row: { paddingVertical: 16, gap: 8 }, rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, rowTop: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44 }, rowIcon: { width: 24, alignItems: 'center', justifyContent: 'center' }, rowTitle: { flex: 1, minWidth: 0, fontSize: 16, lineHeight: 23, fontWeight: '600', color: colors.ink }, rowDescription: { color: colors.muted, fontSize: 14, lineHeight: 21 }, footnote: { color: colors.muted, fontSize: 12, lineHeight: 19 },
+  safe: { flex: 1, backgroundColor: colors.paper }, content: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', paddingHorizontal: 16, paddingBottom: 36, gap: 20 }, loading: { padding: 40 }, form: { gap: 20 },
+  groupLabel: { ...typography.section, color: colors.ink, paddingHorizontal: 4, marginBottom: -8 },
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: rounded.card, paddingHorizontal: 16 }, row: { paddingVertical: 14, gap: 4 }, rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }, rowTop: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 44 }, rowIcon: { width: 24, alignItems: 'center', justifyContent: 'center' }, rowTitle: { flex: 1, minWidth: 0, fontSize: 16, lineHeight: 22, fontWeight: '600', color: colors.ink }, rowDescription: { color: colors.muted, fontSize: 13, lineHeight: 18, paddingLeft: 36 }, footnote: { color: colors.muted, fontSize: 12, lineHeight: 18, paddingHorizontal: 4 },
   success: { flexDirection: 'row', alignItems: 'center', gap: 8 }, successText: { flex: 1, color: colors.green, fontSize: 14, lineHeight: 21 },
 }));

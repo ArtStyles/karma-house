@@ -40,7 +40,7 @@ test('PropertyCard always renders a heart and accepts taps while a favorite writ
   const component=executeComponent('src/components/PropertyCard.tsx','PropertyCard',hooks,{
     useStyles:()=>({colors:{},styles:{}}),useMarketplace:()=>({mode:'cloud'}),useAuth:()=>({user:{id:'account-a'},ready:true}),
     useFavoriteHeart:()=>({favorite,error:'',checking:true,toggle:()=>{favorite=!favorite;calls++;return gate.promise}}),
-    listingFacts:()=>'',operationBadge:()=>'',isNewListing:()=>false,priceLabel:()=>'',priceSuffix:()=>'',formatMoney:()=>'',
+    listingFacts:()=>'',cartelLabel:()=>'Se vende',isNewListing:()=>false,priceLabel:()=>'',priceSuffix:()=>'',formatMoney:()=>'',Cartel:'Cartel',ArchImage:'ArchImage',
     View:'View',Text:'Text',MotionPressable:'MotionPressable',PropertyImage:'PropertyImage',Icon:'Icon',IconButton:'IconButton',router:{push:()=>{}},
   });
   const listing={id:'property',title:'Casa',owner:'remote',location:'Vedado',province:'La Habana',price:1};

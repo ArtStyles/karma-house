@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { GeoJSONSource, Map as WebMap, Marker as WebMarker } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { createThemedStyles } from '../../theme';
+import { createThemedStyles, rounded } from '../../theme';
 import type { KarmaMapProps } from './KarmaMap.types';
 import { CUBA_CENTER, CUBA_ZOOM } from './mapConfig';
 import { approximateAreas, coordinatesFromMapPress } from './mapGeometry';
@@ -110,10 +110,11 @@ export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM,
       element.setAttribute('aria-label', `${marker.label ? `Vivienda ${marker.label}` : 'Ubicación de la vivienda'}${marker.precision === 'approximate' ? ', aproximada' : ''}`);
       if (onMarkerPress) element.setAttribute('aria-pressed', String(selected));
       Object.assign(element.style, {
-        boxSizing: 'border-box', minWidth: '44px', minHeight: '44px', padding: '8px 12px', borderRadius: '24px',
-        border: `1.5px solid ${selected ? colors.onPrimary : colors.border}`, background: selected ? colors.primaryFill : colors.surface,
-        color: selected ? colors.onPrimary : colors.ink, font: marker.label ? '700 13px system-ui, sans-serif' : '700 27px system-ui, sans-serif',
-        boxShadow: '0 2px 6px rgba(30, 50, 70, 0.18)', cursor: onMarkerPress ? 'pointer' : 'default', whiteSpace: 'nowrap',
+        // A price pill; the chosen one turns blue and lifts.
+        boxSizing: 'border-box', minWidth: '44px', minHeight: '40px', padding: '6px 12px', borderRadius: '999px',
+        border: `1px solid ${selected ? colors.primaryFill : colors.outline}`, background: selected ? colors.primaryFill : colors.surface,
+        color: selected ? colors.onPrimary : colors.ink, font: marker.label ? '700 13px system-ui, sans-serif' : '700 27px system-ui, sans-serif', fontVariantNumeric: 'tabular-nums',
+        boxShadow: selected ? '0 6px 16px rgba(0, 0, 0, 0.35)' : '0 2px 6px rgba(0, 0, 0, 0.18)', cursor: onMarkerPress ? 'pointer' : 'default', whiteSpace: 'nowrap',
         display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: selected ? '2' : '1',
       });
       element.addEventListener('click', event => { event.stopPropagation(); callbacks.current.onMarkerPress?.(marker.id); });
@@ -132,6 +133,6 @@ export function KarmaMap({ markers = [], center = CUBA_CENTER, zoom = CUBA_ZOOM,
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  wrapper: { minHeight: 180, backgroundColor: colors.softNeutral, overflow: 'hidden', borderRadius: 20, borderWidth: 1, borderColor: colors.border },
+  wrapper: { minHeight: 180, backgroundColor: colors.softNeutral, overflow: 'hidden', borderRadius: rounded.card, borderWidth: 1, borderColor: colors.border },
   canvas: { flex: 1, overflow: 'hidden' },
 }));

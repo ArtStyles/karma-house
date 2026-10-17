@@ -1,7 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { Easing, FadeIn, SlideInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { createThemedStyles } from '../theme';
+import { useReducedMotion } from '../settings/useReducedMotion';
+import { SheetHandle } from './Sheet';
+import { createThemedStyles, rounded, typography } from '../theme';
 import { Icon, IconButton } from './ui';
 
 export type SelectOption = { value: string; label: string };
@@ -16,6 +19,7 @@ export function SelectionField({ label, value, options, onChange, placeholder = 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const insets = useSafeAreaInsets();
+  const reduced = useReducedMotion();
   const selected = options.find(option => option.value === value);
   const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es');
   const visible = options.filter(option => normalize(option.label).includes(normalize(query.trim())));
@@ -31,7 +35,7 @@ export function SelectionField({ label, value, options, onChange, placeholder = 
     {options.length > 8 && <View style={styles.search}><Icon name="search-outline" size={18} color={colors.muted} /><TextInput accessibilityLabel={`Buscar en ${label}`} placeholder="Buscar una opción" placeholderTextColor={colors.muted} value={query} onChangeText={setQuery} style={styles.searchInput} autoCorrect={false} /></View>}
     <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled style={inline ? styles.inlineList : styles.list} contentContainerStyle={styles.options}>
       {visible.map(option => <Pressable key={option.value} accessibilityRole="button" accessibilityLabel={option.label} accessibilityState={{ selected: value === option.value }} onPress={() => { onChange(option.value); close(); }} style={({ pressed }) => [styles.option, value === option.value && styles.selectedOption, pressed && { opacity: .65 }]}>
-        <Text style={[styles.optionText, value === option.value && styles.selectedText]}>{option.label}</Text><Icon name={value === option.value ? 'checkmark-circle' : 'ellipse-outline'} color={value === option.value ? colors.primary : colors.muted} size={21} />
+        <Text style={[styles.optionText, value === option.value && styles.selectedText]}>{option.label}</Text>{value === option.value ? <Icon name="checkmark" color={colors.primary} size={20} /> : null}
       </Pressable>)}
       {!visible.length && <Text style={styles.noResults}>No hay opciones con ese nombre.</Text>}
     </ScrollView>
@@ -39,12 +43,14 @@ export function SelectionField({ label, value, options, onChange, placeholder = 
 
   const modal = <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
-      <View style={[styles.overlay, { paddingTop: Math.max(insets.top, 20), paddingBottom: Math.max(insets.bottom, 16) }]}>
+      {/* A bottom sheet like every other chooser (DESIGN.md §6); with reduced motion it only fades. */}
+      <View style={[styles.overlay, { paddingTop: Math.max(insets.top, 20) }]}>
         <Pressable accessibilityRole="button" accessibilityLabel="Cancelar selección" onPress={close} style={StyleSheet.absoluteFill} />
-        <View accessibilityViewIsModal style={styles.sheet}>
-          <View style={styles.header}><View style={styles.headerText}><Text accessibilityRole="header" style={styles.title}>{label}</Text></View><IconButton name="close" label="Cerrar selector" onPress={close} style={{ backgroundColor: colors.paper }} /></View>
+        <Animated.View accessibilityViewIsModal entering={reduced ? FadeIn.duration(200) : SlideInDown.duration(320).easing(Easing.bezier(.22, 1, .36, 1))} style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
+          <SheetHandle />
+          <View style={styles.header}><View style={styles.headerText}><Text accessibilityRole="header" style={styles.title}>{label}</Text></View><IconButton name="close" label="Cerrar selector" onPress={close} style={styles.close} /></View>
           {choices}
-        </View>
+        </Animated.View>
       </View>
     </KeyboardAvoidingView>
   </Modal>;
@@ -62,12 +68,14 @@ export function SelectionField({ label, value, options, onChange, placeholder = 
 }
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  flex: { flex: 1 }, field: { gap: 8 }, label: { color: colors.ink, fontSize: 14, fontWeight: '600' },
-  trigger: { minHeight: 52, borderRadius: 15, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }, triggerOpen: { borderColor: colors.primary, backgroundColor: colors.softBlue }, triggerError: { borderColor: colors.danger },
+  flex: { flex: 1 }, field: { gap: 8 }, label: { color: colors.body, fontSize: 13, lineHeight: 18, fontWeight: '600' },
+  // A one-line field is a pill (DESIGN.md §6).
+  trigger: { minHeight: 52, borderRadius: rounded.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingLeft: 18, paddingRight: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }, triggerOpen: { borderColor: colors.primary }, triggerError: { borderColor: colors.danger },
   value: { flex: 1, fontSize: 16, lineHeight: 22, color: colors.ink }, hint: { fontSize: 12, lineHeight: 18, color: colors.muted }, error: { color: colors.danger, fontSize: 13, lineHeight: 19 },
-  overlay: { flex: 1, backgroundColor: colors.overlay, paddingHorizontal: 16, justifyContent: 'center' }, sheet: { backgroundColor: colors.surface, borderRadius: 20, maxHeight: '90%', width: '100%', maxWidth: 480, alignSelf: 'center', overflow: 'hidden', flexShrink: 1 },
-  header: { padding: 20, flexDirection: 'row', gap: 12, alignItems: 'center' }, headerText: { flex: 1, minWidth: 0, gap: 5 }, title: { color: colors.ink, fontSize: 23, lineHeight: 29, fontWeight: '600', letterSpacing: -.5 },
-  list: { flexShrink: 1 }, options: { padding: 12, gap: 5 }, option: { minHeight: 50, borderRadius: 13, paddingVertical: 13, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }, selectedOption: { backgroundColor: colors.softBlue }, optionText: { flex: 1, color: colors.ink, fontSize: 15, lineHeight: 21 }, selectedText: { color: colors.primary, fontWeight: '600' },
-  search: { marginHorizontal: 16, marginBottom: 8, backgroundColor: colors.paper, borderRadius: 13, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 8 }, searchInput: { flex: 1, minWidth: 0, minHeight: 44, fontSize: 15, color: colors.ink }, noResults: { padding: 20, textAlign: 'center', color: colors.muted, fontSize: 14 },
-  inlinePanel: { borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingTop: 12, backgroundColor: colors.surface }, inlineList: { maxHeight: 230 },
+  overlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'flex-end' },
+  sheet: { backgroundColor: colors.sheet, borderTopLeftRadius: rounded.sheet, borderTopRightRadius: rounded.sheet, borderWidth: 1, borderBottomWidth: 0, borderColor: colors.border, maxHeight: '88%', width: '100%', maxWidth: 560, alignSelf: 'center', overflow: 'hidden', flexShrink: 1 },
+  header: { paddingTop: 6, paddingBottom: 12, paddingHorizontal: 20, flexDirection: 'row', gap: 12, alignItems: 'center' }, headerText: { flex: 1, minWidth: 0, gap: 5 }, title: { ...typography.sheetTitle, color: colors.ink }, close: { backgroundColor: colors.surface },
+  list: { flexShrink: 1 }, options: { paddingHorizontal: 16, paddingVertical: 8, gap: 2 }, option: { minHeight: 52, borderRadius: rounded.thumb, paddingVertical: 13, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }, selectedOption: { backgroundColor: colors.softBlue }, optionText: { flex: 1, color: colors.body, fontSize: 16, lineHeight: 22 }, selectedText: { color: colors.ink, fontWeight: '600' },
+  search: { marginHorizontal: 16, marginBottom: 4, minHeight: 52, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: rounded.pill, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 10 }, searchInput: { flex: 1, minWidth: 0, minHeight: 44, fontSize: 16, color: colors.ink }, noResults: { padding: 20, textAlign: 'center', color: colors.muted, fontSize: 14 },
+  inlinePanel: { borderWidth: 1, borderColor: colors.border, borderRadius: rounded.card, paddingTop: 12, backgroundColor: colors.surface }, inlineList: { maxHeight: 230 },
 }));

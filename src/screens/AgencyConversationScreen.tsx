@@ -20,7 +20,7 @@ import { ReportConversationSheet } from '../components/messaging/ReportConversat
 import { AgencyProposalPanel } from '../components/agencies/AgencyProposalPanel';
 import {useMessagingActivity} from '../components/messaging/useMessagingActivity';
 import {startAgencyPoll,readIncomingAgencyMessages,isAgencyReadAccessFailure} from '../agencies/messaging/live';
-import { createThemedStyles, internalLayout } from '../theme';
+import { createThemedStyles, internalLayout, rounded, typography } from '../theme';
 export default function AgencyConversationScreen() {
     const { id, agencyId } = useLocalSearchParams<{
         id: string;
@@ -179,9 +179,10 @@ export default function AgencyConversationScreen() {
     } }}/></SafeAreaView>;
 }
 const useStyles = createThemedStyles(colors => StyleSheet.create({
- safe:{flex:1,backgroundColor:colors.paper},content:{width:'100%',maxWidth:internalLayout.maxWidth,alignSelf:'center',paddingHorizontal:internalLayout.gutter,paddingBottom:32,gap:internalLayout.gap},
- card:{backgroundColor:colors.surface,borderRadius:internalLayout.radius,borderWidth:1,borderColor:colors.border,padding:16,gap:8},
- ownMessage:{borderLeftWidth:3,borderLeftColor:colors.primary},sender:{color:colors.ink,fontSize:13,lineHeight:20,fontWeight:'600'},body:{color:colors.ink,fontSize:16,lineHeight:24},meta:{color:colors.muted,fontSize:12,lineHeight:19},
- sectionTitle:{color:colors.ink,fontSize:19,lineHeight:26,fontWeight:'600'},composer:{gap:16,paddingVertical:20,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:colors.border},participant:{gap:12,paddingVertical:16,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:colors.border},
- input:{backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,borderRadius:12,padding:14,color:colors.ink,fontSize:16,lineHeight:24,minHeight:112,textAlignVertical:'top'},
+ safe:{flex:1,backgroundColor:colors.paper},content:{width:'100%',maxWidth:internalLayout.maxWidth,alignSelf:'center',paddingHorizontal:16,paddingBottom:32,gap:12},
+ card:{backgroundColor:colors.surface,borderRadius:rounded.inner,borderWidth:1,borderColor:colors.border,padding:14,gap:6},
+ // The team's own messages take the blue edge; the other side stays plain.
+ ownMessage:{backgroundColor:colors.softBlue,borderColor:colors.softBlue},sender:{color:colors.ink,fontSize:13,lineHeight:18,fontWeight:'700'},body:{color:colors.ink,fontSize:16,lineHeight:23},meta:{color:colors.muted,fontSize:12,lineHeight:16},
+ sectionTitle:{...typography.section,color:colors.ink},composer:{gap:14,paddingVertical:18,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:colors.border},participant:{gap:12,paddingVertical:16,borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:colors.border},
+ input:{backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,borderRadius:rounded.card,paddingVertical:14,paddingHorizontal:18,color:colors.ink,fontSize:16,lineHeight:23,minHeight:112,textAlignVertical:'top'},
 }));

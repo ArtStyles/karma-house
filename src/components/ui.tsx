@@ -2,9 +2,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, type Href } from 'expo-router';
 import { Children, type ComponentProps, type ReactNode } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type ViewStyle, type ColorValue } from 'react-native';
-import { createThemedStyles, typefaces, useTheme } from '../theme';
+import { createThemedStyles, rounded, typography, useTheme } from '../theme';
 import { MotionPressable } from './MotionPressable';
 import { HeartIcon } from './HeartIcon';
+import { Mediopunto } from './Mediopunto';
 
 /** Back that never dead-ends: history first, then the screen's own parent. */
 export function goBack(fallback: Href = '/') {
@@ -36,22 +37,23 @@ export function Button({ label, onPress, secondary = false, loading = false, dis
   const { colors, styles } = useStyles();
   return <MotionPressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: disabled || loading, busy: loading }}
     disabled={disabled || loading} onPress={onPress} style={({ pressed }) => [styles.button, secondary && styles.secondary, (disabled || loading) && { opacity: .5 }, pressed && { opacity: .8 }, style]}>
-    {loading ? <ActivityIndicator color={secondary ? colors.primary : colors.onPrimary} /> : icon ? <Icon name={icon} size={19} color={secondary ? colors.primary : colors.onPrimary} /> : null}
-    <Text style={[styles.buttonText, secondary && { color: colors.primary }]}>{label}</Text>
+    {loading ? <ActivityIndicator color={secondary ? colors.ink : colors.onPrimary} /> : icon ? <Icon name={icon} size={19} color={secondary ? colors.ink : colors.onPrimary} /> : null}
+    <Text style={[styles.buttonText, secondary && { color: colors.ink }]}>{label}</Text>
   </MotionPressable>;
 }
-/** `active` left undefined marks a plain action; only a real toggle reports a pressed state. */
-export function IconButton({ name, label, onPress, active, style }: { name: IconName; label: string; onPress: () => void; active?: boolean; style?: StyleProp<ViewStyle> }) {
+/** `active` left undefined marks a plain action; only a real toggle reports a pressed state. `color` overrides both states (on a photo scrim). */
+export function IconButton({ name, label, onPress, active, color, style }: { name: IconName; label: string; onPress: () => void; active?: boolean; color?: ColorValue; style?: StyleProp<ViewStyle> }) {
   const { colors, styles } = useStyles();
+  const tint = color ?? (active ? colors.primary : colors.ink);
   return <MotionPressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: active }} aria-pressed={active} style={({ pressed }) => [styles.iconButton, pressed && { opacity: .7 }, style]}>
-    {(name==='heart'||name==='heart-outline')&&typeof active==='boolean'?<HeartIcon active={active}><Icon name={name} size={22} color={active ? colors.primary : colors.ink}/></HeartIcon>:<Icon name={name} size={22} color={active ? colors.primary : colors.ink} />}
+    {(name==='heart'||name==='heart-outline')&&typeof active==='boolean'?<HeartIcon active={active}><Icon name={name} size={22} color={tint}/></HeartIcon>:<Icon name={name} size={22} color={tint} />}
   </MotionPressable>;
 }
 export function Pill({ label, active = false, onPress, icon, accessibilityLabel }: { label: string; active?: boolean; onPress: () => void; icon?: IconName; accessibilityLabel?: string }) {
   const { colors, styles } = useStyles();
-  return <MotionPressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} accessibilityState={{ selected: active }} aria-pressed={active} style={({ pressed }) => [styles.pill, active && styles.pillActive, pressed && { opacity: .7 }]}>
-    {icon && <Icon name={icon} size={17} color={active ? colors.primary : colors.muted} />}
-    <Text style={[styles.pillText, active && { color: colors.primary }]}>{label}</Text>
+  return <MotionPressable onPress={onPress} hitSlop={{ top: 2, bottom: 2 }} accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} accessibilityState={{ selected: active }} aria-pressed={active} style={({ pressed }) => [styles.pill, active && styles.pillActive, pressed && { opacity: .7 }]}>
+    {icon && <Icon name={icon} size={17} color={active ? colors.onPrimary : colors.muted} />}
+    <Text style={[styles.pillText, active && { color: colors.onPrimary }]}>{label}</Text>
   </MotionPressable>;
 }
 /** Related actions retain a readable label and a separate touch target at narrow widths. */
@@ -80,16 +82,11 @@ export function Notice({ children, error = false, onRetry }: { children: ReactNo
     {onRetry ? <View style={styles.noticeBody}>{text}<Pressable accessibilityRole="button" hitSlop={6} onPress={onRetry} style={({ pressed }) => [styles.retry, pressed && { opacity: .7 }]}><Text style={[styles.retryText, error && { color: colors.danger }]}>Reintentar</Text></Pressable></View> : text}
   </View>;
 }
-export function EmptyState({ title, description, icon = 'home-outline', action, plain = false }: { title: string; description: string; icon?: IconName; action?: ReactNode; plain?: boolean }) {
+/** An empty or missing answer: the mediopunto off with one pane lit. `icon` is kept for callers; the window replaces it. */
+export function EmptyState({ title, description, action, plain = false }: { title: string; description: string; icon?: IconName; action?: ReactNode; plain?: boolean }) {
   const { colors, styles } = useStyles();
   return <View style={[styles.empty, plain && styles.plainEmpty]}>
-    {!plain && <View pointerEvents="none" aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.emptyArtwork}>
-      <View style={styles.emptyHalo} />
-      <View style={styles.emptyBackCard}><View style={styles.emptyCardLine} /><View style={[styles.emptyCardLine, styles.emptyShortLine]} /></View>
-      <View style={styles.emptyIcon}><Icon name={icon} color={colors.primary} size={31} /></View>
-      <View style={styles.emptyAccent} />
-      <View style={styles.emptyGround} />
-    </View>}
+    {!plain && <Mediopunto state="off" width={140} ground={colors.surface} />}
     <Text accessibilityRole="header" style={[styles.emptyTitle, plain && styles.plainTitle]}>{title}</Text>
     <Text style={[styles.emptyDescription, plain && styles.plainDescription]}>{description}</Text>
     {action ? <View style={styles.emptyAction}>{action}</View> : null}
@@ -97,28 +94,22 @@ export function EmptyState({ title, description, icon = 'home-outline', action, 
 }
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: 6 }, brandText: { fontWeight: '400', letterSpacing: -.4 }, brandStrong: { fontWeight: '800' },
-  button: { minHeight: 52, borderRadius: 26, backgroundColor: colors.primaryFill, paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', gap: 9, justifyContent: 'center', alignItems: 'center' },
-  secondary: { backgroundColor: colors.softBlue }, buttonText: { color: colors.onPrimary, fontWeight: '600', fontSize: 16, flexShrink: 1, textAlign: 'center' },
-  iconButton: { width: 44, minHeight: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
-  pill: { minHeight: 44, borderRadius: 22, paddingHorizontal: 14, paddingVertical: 11, backgroundColor: colors.surface, flexDirection: 'row', gap: 7, alignItems: 'center' },
-  pillActive: { backgroundColor: colors.softBlue }, pillText: { fontSize: 14, fontWeight: '600', color: colors.ink, flexShrink: 1 },
-  pageTitle: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 26, paddingBottom: 24 }, title: { fontFamily: typefaces.display, fontSize: 34, fontWeight: '700', color: colors.ink, letterSpacing: -1 },
+  // DESIGN.md: 56 px pills; the secondary one is an outline with ink text.
+  button: { minHeight: 56, borderRadius: rounded.pill, backgroundColor: colors.primaryFill, paddingVertical: 14, paddingHorizontal: 22, flexDirection: 'row', gap: 9, justifyContent: 'center', alignItems: 'center' },
+  secondary: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.outline }, buttonText: { color: colors.onPrimary, fontWeight: '600', fontSize: 16, lineHeight: 20, flexShrink: 1, textAlign: 'center' },
+  iconButton: { width: 44, minHeight: 44, borderRadius: rounded.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  pill: { minHeight: 40, borderRadius: rounded.pill, paddingHorizontal: 16, paddingVertical: 9, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', gap: 7, alignItems: 'center' },
+  pillActive: { backgroundColor: colors.primaryFill, borderColor: colors.primaryFill }, pillText: { fontSize: 14, lineHeight: 20, fontWeight: '600', color: colors.ink, flexShrink: 1 },
+  pageTitle: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 26, paddingBottom: 24 }, title: { ...typography.display, color: colors.ink },
   subtitle: { color: colors.muted, fontSize: 15, lineHeight: 22, marginTop: 6 },
-  compactHeader: { paddingTop: 18, paddingBottom: 22, alignItems: 'flex-start' }, compactTitle: { fontSize: 28, lineHeight: 34, fontWeight: '600', letterSpacing: -.6 },
+  compactHeader: { paddingTop: 18, paddingBottom: 22, alignItems: 'flex-start' }, compactTitle: typography.displayLong,
   noticeBody: { flex: 1, gap: 8, alignItems: 'flex-start' }, retry: { minHeight: 36, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: colors.border, justifyContent: 'center', backgroundColor: colors.surface }, retryText: { fontSize: 13, fontWeight: '600', color: colors.primary },
   notice: { paddingVertical: 14, paddingHorizontal: 4, borderRadius: 14, flexDirection: 'row', gap: 9, alignItems: 'flex-start' }, noticeError: { backgroundColor: colors.softDanger, paddingHorizontal: 14 }, noticeText: { flex: 1, fontSize: 13, color: colors.muted, lineHeight: 20 },
-  empty: { width: '100%', maxWidth: 620, alignSelf: 'center', paddingVertical: 28, paddingHorizontal: 22, alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: 26, borderWidth: 1, borderColor: colors.border, boxShadow: '0 4px 18px rgba(32, 62, 94, 0.025)' },
-  emptyArtwork: { width: 150, height: 90, marginBottom: 2 },
-  emptyHalo: { position: 'absolute', width: 134, height: 65, borderRadius: 38, backgroundColor: colors.softBlue, left: 9, top: 10, transform: [{ rotate: '-9deg' }] },
-  emptyBackCard: { position: 'absolute', width: 55, height: 63, borderRadius: 14, backgroundColor: colors.blueDecoration, borderWidth: 2, borderColor: colors.border, left: 32, top: 7, transform: [{ rotate: '-14deg' }], padding: 11, justifyContent: 'flex-end', gap: 5 },
-  emptyCardLine: { width: 26, height: 4, borderRadius: 2, backgroundColor: colors.blueLine }, emptyShortLine: { width: 18 },
-  emptyIcon: { position: 'absolute', width: 62, height: 65, borderRadius: 17, backgroundColor: colors.surface, left: 63, top: 12, borderWidth: 1, borderColor: colors.border, justifyContent: 'center', alignItems: 'center', transform: [{ rotate: '7deg' }], boxShadow: '0 5px 12px rgba(35, 89, 150, 0.08)' },
-  emptyAccent: { position: 'absolute', width: 12, height: 12, borderRadius: 6, backgroundColor: colors.primary, borderWidth: 3, borderColor: colors.surface, left: 24, top: 18 },
-  emptyGround: { position: 'absolute', width: 64, height: 4, borderRadius: 2, backgroundColor: colors.softNeutral, left: 49, bottom: 0 },
-  emptyTitle: { fontSize: 21, lineHeight: 27, letterSpacing: -0.45, color: colors.ink, textAlign: 'center', fontWeight: '600', maxWidth: 390 },
-  emptyDescription: { fontSize: 14, lineHeight: 22, color: colors.muted, maxWidth: 370, textAlign: 'center' },
+  empty: { width: '100%', maxWidth: 620, alignSelf: 'center', paddingVertical: 28, paddingHorizontal: 22, alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: rounded.cardLg },
+  emptyTitle: { ...typography.sheetTitle, color: colors.ink, textAlign: 'center', maxWidth: 390, marginTop: 6 },
+  emptyDescription: { fontSize: 15, lineHeight: 22, color: colors.body, maxWidth: 370, textAlign: 'center' },
   emptyAction: { width: '100%', maxWidth: 330, marginTop: 6 },
-  plainEmpty: { alignItems: 'flex-start', maxWidth: 720, padding: 20, borderRadius: 16, boxShadow: 'none', gap: 8 },
-  plainTitle: { textAlign: 'left', fontSize: 19, lineHeight: 26, maxWidth: '100%' },
+  plainEmpty: { alignItems: 'flex-start', maxWidth: 720, padding: 20, borderRadius: rounded.card, gap: 8 },
+  plainTitle: { textAlign: 'left', ...typography.section, maxWidth: '100%' },
   plainDescription: { textAlign: 'left', maxWidth: '100%' },
 }));

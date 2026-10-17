@@ -1,11 +1,13 @@
 import { ImageManipulator, SaveFormat, type ImageRef } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, View, type ImageStyle, type StyleProp, type ViewStyle } from 'react-native';
 import type { PhotoDraft } from '../domain/listings';
 import { draftToken } from '../domain/draftPersistence';
 import { choosePhotoCover, prepareCoverPhoto } from '../domain/photoCover';
-import { createThemedStyles } from '../theme';
-import { Button, IconButton } from './ui';
+import { createThemedStyles, rounded, typography } from '../theme';
+import { PropertyImage } from './PropertyImage';
+import { Icon } from './ui';
 
 /** Copies a rendered file out of the cache folder so a saved draft still finds it after a restart. */
 async function keepLocally(uri: string, name: string): Promise<string> {
@@ -33,7 +35,7 @@ export function ListingPhotos({ photos, busy, disabled, required = false, onBusy
   photos: PhotoDraft[]; busy: boolean; disabled: boolean; required?: boolean; onBusy(value: boolean): void;
   onChange(photos: PhotoDraft[]): void; onError(message: string): void;
 }) {
-  const { styles } = useStyles();
+  const { colors, styles } = useStyles();
   async function pick() {
     if (busy || disabled || photos.length >= 6) return;
     onBusy(true);
@@ -86,25 +88,52 @@ export function ListingPhotos({ photos, busy, disabled, required = false, onBusy
     if (next[0].thumbUri) { onChange(next); return; }
     await setPreparedCover(next);
   }
+  // Three per row at every width: the tile size comes from the measured grid.
+  const [gridWidth, setGridWidth] = useState(0);
+  const tile = gridWidth ? Math.floor((gridWidth - GAP * 2) / 3) : 0;
+  const tileStyle = { width: tile, height: Math.round(tile * 1.08) };
   return <View style={styles.container}>
-    <Text accessibilityRole="header" style={styles.title}>Fotos de tu vivienda{required ? <Text style={styles.caption}> *</Text> : null}</Text>
+    <Text accessibilityRole="header" style={styles.title}>Fotos de tu vivienda{required ? <Text style={styles.required}> *</Text> : null}</Text>
     <Text style={styles.caption}>Hasta 6 fotos. Elige como portada una foto individual, nítida y representativa de la vivienda.</Text>
-    <View style={styles.grid}>{photos.map((photo, index) => <View key={photo.uploadId ?? photo.storagePath ?? index} style={styles.tile}>
-      <View style={styles.frame}>
-        <Image source={{ uri: photo.uri }} style={styles.image} accessibilityLabel={`Foto ${index + 1}${index === 0 ? ', portada' : ''}`} />
-        {!disabled && !busy && <IconButton name="close" label={`Quitar foto ${index + 1}`} onPress={() => void remove(index)} style={styles.remove} />}
-        <Text style={styles.number}>{index === 0 ? 'Portada' : `${index + 1}`}</Text>
-      </View>
-      {index > 0 && <Pressable accessibilityRole="button" accessibilityLabel={`Usar foto ${index + 1} como portada`} accessibilityState={{ disabled: disabled || busy }} disabled={disabled || busy} onPress={() => void chooseCover(index)} style={({ pressed }) => [styles.coverChoice, pressed && { opacity: .7 }, (disabled || busy) && { opacity: .5 }]}><Text style={styles.coverChoiceText}>Usar como portada</Text></Pressable>}
-    </View>)}</View>
-    {photos.length < 6 && <Button label={photos.length ? 'Añadir fotos' : 'Elegir fotos'} secondary icon="images-outline" onPress={() => void pick()} loading={busy} disabled={disabled} />}
+    <View style={styles.grid} onLayout={event => setGridWidth(event.nativeEvent.layout.width)}>{tile > 0 && <>
+      {photos.map((photo, index) => <View key={photo.uploadId ?? photo.storagePath ?? index} style={{ width: tile, gap: 6 }}>
+        <View style={[styles.frame, tileStyle, index === 0 ? [styles.cover, { borderTopLeftRadius: tile / 2, borderTopRightRadius: tile / 2 }] : styles.plain]}>
+          <DraftPhoto uri={photo.uri} label={`Foto ${index + 1}${index === 0 ? ', portada' : ''}`} style={styles.image} />
+          {!disabled && !busy && <Pressable accessibilityRole="button" accessibilityLabel={`Quitar foto ${index + 1}`} hitSlop={6} onPress={() => void remove(index)} style={({ pressed }) => [styles.remove, pressed && { opacity: .7 }]}><Icon name="close" size={17} color={colors.ink} /></Pressable>}
+          {index === 0 && <Text style={styles.coverBadge}>Portada</Text>}
+        </View>
+        {index > 0 && <Pressable accessibilityRole="button" accessibilityLabel={`Usar foto ${index + 1} como portada`} accessibilityState={{ disabled: disabled || busy }} disabled={disabled || busy} onPress={() => void chooseCover(index)} style={({ pressed }) => [styles.coverChoice, pressed && { opacity: .7 }, (disabled || busy) && { opacity: .5 }]}><Text style={styles.coverChoiceText}>Usar como portada</Text></Pressable>}
+      </View>)}
+      {photos.length < 6 && <Pressable accessibilityRole="button" accessibilityLabel={photos.length ? 'Añadir fotos' : 'Elegir fotos'} accessibilityState={{ disabled, busy }} disabled={disabled || busy} onPress={() => void pick()}
+        style={({ pressed }) => [styles.add, tileStyle, photos.length === 0 && { borderTopLeftRadius: tile / 2, borderTopRightRadius: tile / 2 }, (pressed || disabled) && { opacity: .6 }]}>
+        {busy ? <ActivityIndicator color={colors.primary} /> : <Icon name="add" size={24} color={colors.primary} />}
+        <Text style={styles.addText}>{photos.length ? 'Añadir' : 'Elegir fotos'}</Text>
+      </Pressable>}
+    </>}</View>
     <Text style={styles.caption}>Las fotos se optimizan para consumir menos datos.</Text>
   </View>;
 }
+
+/**
+ * A photo of the draft. Ones just picked are on this device and show at once; saved ones (editing) come
+ * from the network, so under «Ahorro de datos» they wait for a tap like any other listing photo.
+ */
+export function DraftPhoto({ uri, label, style }: { uri: string; label: string; style?: StyleProp<ImageStyle & ViewStyle> }) {
+  if (!/^https?:/i.test(uri)) return <Image source={{ uri }} style={style as StyleProp<ImageStyle>} accessibilityLabel={label} />;
+  return <PropertyImage listing={{ id: uri, title: label, owner: 'remote', photoUri: uri, imageKey: 'vedado' }} style={style as StyleProp<ViewStyle>} />;
+}
+
+const GAP = 8;
 const useStyles = createThemedStyles(colors => StyleSheet.create({
-  container: { gap: 12 }, title: { fontSize: 17, fontWeight: '600', color: colors.ink }, caption: { fontSize: 13, color: colors.muted, lineHeight: 19 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 }, tile: { flexBasis: 144, flexGrow: 1, minWidth: 124, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.paper }, frame: { aspectRatio: 1.35 },
-  coverChoice: { minHeight: 44, justifyContent: 'center', alignItems: 'center', padding: 8, backgroundColor: colors.softBlue }, coverChoiceText: { fontSize: 12, color: colors.primary, fontWeight: '600', textAlign: 'center' },
-  image: { width: '100%', height: '100%' }, remove: { position: 'absolute', right: 4, top: 4, backgroundColor: colors.surface },
-  number: { position: 'absolute', left: 8, bottom: 8, backgroundColor: colors.navigationGlass, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 8, fontSize: 12, color: colors.ink },
+  container: { gap: 10 }, title: { ...typography.section, color: colors.ink }, required: { color: colors.primary }, caption: { fontSize: 13, color: colors.muted, lineHeight: 19 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP, minHeight: 1 },
+  frame: { overflow: 'hidden', backgroundColor: colors.softNeutral }, plain: { borderRadius: rounded.thumb },
+  // The cover sits in the arch, ringed in sol, as it will in Explorar.
+  cover: { borderBottomLeftRadius: rounded.thumb, borderBottomRightRadius: rounded.thumb, borderWidth: 2, borderColor: colors.sol },
+  image: { width: '100%', height: '100%' }, // 32 px to see, 44 px to touch (hitSlop).
+  remove: { position: 'absolute', right: 6, top: 6, width: 32, height: 32, borderRadius: rounded.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.navigationGlass },
+  coverBadge: { position: 'absolute', left: 6, bottom: 6, overflow: 'hidden', backgroundColor: colors.sol, color: colors.onSol, paddingHorizontal: 8, paddingVertical: 3, borderRadius: rounded.pill, fontSize: 11, lineHeight: 15, fontWeight: '700' },
+  coverChoice: { minHeight: 44, justifyContent: 'center', alignItems: 'center' }, coverChoiceText: { fontSize: 12, lineHeight: 16, color: colors.primary, fontWeight: '600', textAlign: 'center' },
+  add: { alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: rounded.thumb, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.accentBorder },
+  addText: { color: colors.primary, fontSize: 13, lineHeight: 18, fontWeight: '600', textAlign: 'center' },
 }));

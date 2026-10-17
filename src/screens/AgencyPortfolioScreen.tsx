@@ -16,7 +16,7 @@ import {PropertyImage} from '../components/PropertyImage';
 import {ListingStateChip} from '../components/ListingStateChip';
 import {listingBoardLabels,listingBoardState,type ListingBoardState} from '../domain/listings';
 import {priceSuffix} from '../domain/operations';
-import {createThemedStyles,formatMoney,internalLayout} from '../theme';
+import {createThemedStyles,formatMoney,internalLayout,rounded,typography} from '../theme';
 import {bumpErrorMessage,canBumpNow,formatProDate,isProActive,nextBumpAt} from '../pro/domain';
 import {usePro} from '../pro/usePro';
 // ponytail: the whole portfolio is loaded so search and filters see every listing; past this many, «Cargar más» pages on.
@@ -62,7 +62,7 @@ function Portfolio(){
  {!allowed?<Notice>Selecciona una inmobiliaria aprobada con una membresía activa para consultar su cartera.</Notice>:<>
  {!w.enabled&&<Notice>Solo lectura: las operaciones de la inmobiliaria están en pausa.</Notice>}
  {Boolean(issue)&&<Notice error onRetry={()=>void reload.refresh()}>{issue}</Notice>}
- {w.membership?.role==='admin'&&<ActionGroup>{w.enabled&&w.activeAgency?.state==='approved'&&<Button label="Añadir vivienda en venta" icon="add" onPress={()=>router.push('/agency-property/new')}/>}<Button label="Autorizaciones y cambios" secondary onPress={()=>router.push('/agency-property-requests')}/></ActionGroup>}
+ {w.membership?.role==='admin'&&<ActionGroup direction="vertical">{w.enabled&&w.activeAgency?.state==='approved'&&<Button label="Añadir vivienda en venta" icon="add" onPress={()=>router.push('/agency-property/new')}/>}<Button label="Autorizaciones y cambios" secondary onPress={()=>router.push('/agency-property-requests')}/></ActionGroup>}
  {items.length>0&&<View style={s.filters}>
   <View style={s.search}><Icon name="search-outline" size={18} color={colors.muted}/><TextInput accessibilityLabel="Buscar en la cartera" value={query} onChangeText={setQuery} placeholder="Buscar por título, zona o referencia" placeholderTextColor={colors.muted} autoCorrect={false} returnKeyType="search" style={s.searchInput}/>{query?<Pressable accessibilityRole="button" accessibilityLabel="Borrar búsqueda" hitSlop={10} onPress={()=>setQuery('')}><Icon name="close-circle" size={18} color={colors.muted}/></Pressable>:null}</View>
   {states.length>1&&<View style={s.pills}><Pill label="Todas" active={state==='all'} onPress={()=>setState('all')}/>{states.map(value=><Pill key={value} label={listingBoardLabels[value]} active={state===value} onPress={()=>setState(value)}/>)}</View>}
@@ -102,24 +102,24 @@ function Portfolio(){
 }
 const useStyles=createThemedStyles(colors=>StyleSheet.create({
  safe:{flex:1,backgroundColor:colors.paper},
- content:{width:'100%',maxWidth:internalLayout.maxWidth,alignSelf:'center',paddingHorizontal:internalLayout.gutter,paddingBottom:32,gap:16},
+ content:{width:'100%',maxWidth:internalLayout.maxWidth,alignSelf:'center',paddingHorizontal:16,paddingBottom:32,gap:14},
  filters:{gap:10},
- search:{flexDirection:'row',alignItems:'center',gap:10,minHeight:48,paddingHorizontal:16,borderRadius:999,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surface},
+ search:{flexDirection:'row',alignItems:'center',gap:10,minHeight:52,paddingHorizontal:16,borderRadius:rounded.pill,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surface},
  searchInput:{flex:1,minWidth:0,minHeight:46,color:colors.ink,fontSize:16},
  pills:{flexDirection:'row',flexWrap:'wrap',gap:8},
- count:{color:colors.muted,fontSize:13,marginLeft:4,marginBottom:-6},
+ count:{color:colors.muted,fontSize:13,marginLeft:4,marginBottom:-4,fontVariant:['tabular-nums']},
  hint:{color:colors.muted,fontSize:13,lineHeight:19,marginLeft:4},
- card:{backgroundColor:colors.surface,padding:16,borderRadius:internalLayout.radius,borderWidth:1,borderColor:colors.border},
- overview:{flexDirection:'row',gap:13,alignItems:'center',borderRadius:12},
- image:{width:84,height:104,borderRadius:12},
- details:{flex:1,minWidth:0,gap:6},
+ card:{backgroundColor:colors.surface,padding:12,borderRadius:rounded.card,borderWidth:1,borderColor:colors.border},
+ overview:{flexDirection:'row',gap:12,alignItems:'center',borderRadius:rounded.inner},
+ image:{width:74,height:86,borderTopLeftRadius:37,borderTopRightRadius:37,borderBottomLeftRadius:14,borderBottomRightRadius:14},
+ details:{flex:1,minWidth:0,gap:4},
  chips:{flexDirection:'row',flexWrap:'wrap',gap:6,alignItems:'center'},
- origin:{color:colors.muted,fontSize:12,fontWeight:'600',paddingVertical:4,paddingHorizontal:9,borderRadius:999,borderWidth:1,borderColor:colors.border},
- title:{color:colors.ink,fontSize:17,lineHeight:22,fontWeight:'600',letterSpacing:-.3},
- price:{color:colors.ink,fontSize:16,fontWeight:'600',letterSpacing:-.2},
+ origin:{color:colors.body,fontSize:11,lineHeight:14,fontWeight:'700',paddingVertical:4,paddingHorizontal:9,borderRadius:rounded.pill,backgroundColor:colors.softNeutral,overflow:'hidden'},
+ title:{...typography.cardTitle,color:colors.ink},
+ price:{color:colors.primary,fontSize:15,fontWeight:'700'},
  currency:{color:colors.muted,fontSize:12,fontWeight:'400'},
  location:{fontSize:13,color:colors.muted,lineHeight:18},
- reference:{fontSize:12,color:colors.muted,lineHeight:17},
+ reference:{fontSize:12,color:colors.muted,lineHeight:16,fontVariant:['tabular-nums']},
  action:{minHeight:44},
  note:{color:colors.muted,fontSize:13,lineHeight:19,marginTop:10},
 }));
