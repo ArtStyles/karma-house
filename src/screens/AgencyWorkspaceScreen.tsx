@@ -11,8 +11,7 @@ import {useConsultationRefresh} from '../lib/useConsultationRefresh';
 import {AccountPrompt} from '../components/AccountPrompt';
 import {ActionGroup,Button,EmptyState,Icon,Notice,PageTitle,type IconName} from '../components/ui';
 import {createThemedStyles,internalLayout,rounded,typography} from '../theme';
-import {ArchImage} from '../components/ArchImage';
-import {agencyInitials} from '../components/agencies/agencyInitials';
+import {AgencyMark} from '../components/agencies/AgencyMark';
 import {AgencyStats} from '../components/agencies/AgencyStats';
 export const agencyRoleLabel={manager:'Gestor',coordinator:'Coordinador',admin:'Administrador'} as const;
 const links:{title:string;copy:string;icon:IconName;path:Href;admin?:boolean}[]=[
@@ -37,7 +36,7 @@ export default function AgencyWorkspaceScreen(){
  {!user?<AccountPrompt returnTo="/agency-workspace"/>:!w.ready?<ActivityIndicator color={colors.primary}/>:<>
  {issue||w.error?<Notice error>{issue||w.error}</Notice>:null}
  {!w.enabled&&<Notice>La gestión de inmobiliarias aún no está habilitada. Puedes consultar el historial; las operaciones están en pausa.</Notice>}
- {w.agencies.length===0?<EmptyState title="Aún no perteneces a una inmobiliaria" description="Entras en un equipo cuando aceptas la invitación de una inmobiliaria aprobada." action={<Button label="Ver invitaciones" onPress={()=>router.push('/agency-team')}/>}/>:w.agencies.map(agency=><Pressable key={agency.id} disabled={selecting||agency.id===w.activeAgencyId} accessibilityRole="button" accessibilityState={{selected:agency.id===w.activeAgencyId}} onPress={()=>void select(agency.id)} style={[s.card,agency.isPrincipal&&s.principal,agency.id===w.activeAgencyId&&s.selected]}><View style={s.header}><ArchImage width={56} height={66} bottom={14} style={s.tile}><Text style={s.initials}>{agencyInitials(agency.tradeName)}</Text></ArchImage><View style={s.copy}><Text style={s.title}>{agency.tradeName}</Text><Text style={s.meta}>{agencyStateLabel[agency.state]} · {agency.id===w.activeAgencyId?'Seleccionada':'Elegir'}</Text></View><Icon name={agency.id===w.activeAgencyId?'checkmark-circle':'chevron-forward'} color={agency.id===w.activeAgencyId?colors.primary:colors.muted}/></View><AgencyVerifiedBadge verified={agency.verified} principal={agency.isPrincipal} labelled agencyName={agency.tradeName}/></Pressable>)}
+ {w.agencies.length===0?<EmptyState title="Aún no perteneces a una inmobiliaria" description="Entras en un equipo cuando aceptas la invitación de una inmobiliaria aprobada." action={<Button label="Ver invitaciones" onPress={()=>router.push('/agency-team')}/>}/>:w.agencies.map(agency=><Pressable key={agency.id} disabled={selecting||agency.id===w.activeAgencyId} accessibilityRole="button" accessibilityState={{selected:agency.id===w.activeAgencyId}} onPress={()=>void select(agency.id)} style={[s.card,agency.isPrincipal&&s.principal,agency.id===w.activeAgencyId&&s.selected]}><View style={s.header}><AgencyMark agencyId={agency.id} name={agency.tradeName} logoPath={agency.logoPath} width={56} height={66} bottom={14}/><View style={s.copy}><Text style={s.title}>{agency.tradeName}</Text><Text style={s.meta}>{agencyStateLabel[agency.state]} · {agency.id===w.activeAgencyId?'Seleccionada':'Elegir'}</Text></View><Icon name={agency.id===w.activeAgencyId?'checkmark-circle':'chevron-forward'} color={agency.id===w.activeAgencyId?colors.primary:colors.muted}/></View><AgencyVerifiedBadge verified={agency.verified} principal={agency.isPrincipal} labelled agencyName={agency.tradeName}/></Pressable>)}
  {(selecting||routePending)&&<ActivityIndicator color={colors.primary}/>}
  {!selecting&&!routePending&&w.activeAgency&&w.membership&&<>
   <View style={s.context}><Text style={s.title}>{agencyRoleLabel[w.membership.role]} de {w.activeAgency.tradeName}</Text><Text style={s.meta}>Clientes, cartera y negociaciones de esta inmobiliaria.</Text></View>
@@ -51,7 +50,7 @@ export default function AgencyWorkspaceScreen(){
 }
 const useStyles=createThemedStyles(colors=>StyleSheet.create({safe:{flex:1,backgroundColor:colors.paper},content:{width:'100%',maxWidth:internalLayout.maxWidth,alignSelf:'center',paddingHorizontal:16,paddingBottom:40,gap:16},
  card:{padding:14,backgroundColor:colors.surface,borderRadius:rounded.card,borderWidth:1,borderColor:colors.border,gap:10},selected:{borderColor:colors.primary},principal:{borderColor:colors.amber},
- header:{flexDirection:'row',gap:14,alignItems:'center'},tile:{backgroundColor:colors.cream,alignItems:'center',justifyContent:'center'},initials:{...typography.cardTitle,color:colors.creamInk},
+ header:{flexDirection:'row',gap:14,alignItems:'center'},
  icon:{width:40,height:40,borderRadius:rounded.pill,backgroundColor:colors.softBlue,alignItems:'center',justifyContent:'center'},copy:{flex:1,minWidth:0,gap:3},
  title:{...typography.cardTitle,color:colors.ink},meta:{color:colors.muted,fontSize:13,lineHeight:18},context:{gap:4,paddingVertical:4,paddingHorizontal:4},
  section:{gap:10},sectionTitle:{...typography.section,color:colors.ink,paddingHorizontal:4},group:{borderWidth:1,borderColor:colors.border,backgroundColor:colors.surface,borderRadius:rounded.card,overflow:'hidden'},
