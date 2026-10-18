@@ -50,12 +50,14 @@ export function validateSignedAvatarUrl(value: string, origin: string, path: str
   } catch { throw new AccountProfileError('No pudimos cargar la foto de tu cuenta.'); }
 }
 
-export function accountProfileError(error: unknown): string {
+export function accountProfileError(error: unknown, fallback = 'No pudimos guardar los cambios. Comprueba tu conexión y vuelve a intentarlo.'): string {
   if (error instanceof AccountProfileError) return error.message;
+  // createDeadlineFetch already words a slow connection for people.
+  if (error instanceof Error && error.name === 'TimeoutError') return error.message;
   const value = error instanceof Error ? error.message : '';
   if (/KH_ACCOUNT_SUSPENDED/.test(value)) return 'Tu cuenta está suspendida. No puedes modificar tu perfil.';
   if (/KH_ACCOUNT_CHANGED|AbortError/.test(value)) return 'La sesión cambió. Abre los ajustes con la cuenta actual.';
   if (/KH_PROFILE_NAME/.test(value)) return 'Escribe un nombre de entre 2 y 80 caracteres.';
   if (/KH_PROFILE_AVATAR/.test(value)) return 'No pudimos guardar esta foto. Elige otra y vuelve a intentarlo.';
-  return 'No pudimos guardar los cambios. Comprueba tu conexión y vuelve a intentarlo.';
+  return fallback;
 }
