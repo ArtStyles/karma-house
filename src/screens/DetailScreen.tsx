@@ -1,5 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArchImage } from '../components/ArchImage';
@@ -22,7 +22,6 @@ import { ReportConversationSheet } from '../components/messaging/ReportConversat
 import { createPropertyReportRepository, PROPERTY_REPORT_REASONS } from '../data/propertyReports';
 import { supabase } from '../lib/supabase';
 import { UserAvatar } from '../components/account/UserAvatar';
-import { levelLabel } from '../profiles/domain';
 import { usePublicProfile } from '../profiles/usePublicProfile';
 import { PUBLIC_PAGES_URL, listingShareUrl } from '../lib/publicSite';
 import { cartelLabel, listingOperation, minStayText, priceSuffix, shareText, swapBalanceText, typeLabel, wantedOperationsText } from '../domain/operations';
@@ -35,6 +34,7 @@ import {agencyError} from '../agencies/domain';
 import {readPublicPropertyContact,createAgencyMessagingRepository} from '../agencies/messaging/repository';
 import type {PublicPropertyContact,PublicAgencyContact} from '../agencies/messaging/types';
 import {AgencyVerifiedBadge} from '../components/agencies/AgencyVerifiedBadge';
+import {AgencyMark} from '../components/agencies/AgencyMark';
 import {createMessageId,isUuid} from '../messaging/domain';
 
 import {validatePublicAgencyShare,agencyShareUrl} from '../agencies/share';
@@ -311,20 +311,16 @@ export default function DetailScreen() {
           /></MapOnDemand></View>
           <Text style={styles.mapDescription}>{approximate ? 'El área de 800 m muestra la zona de la vivienda. El punto exacto no se publica.' : 'Punto indicado por quien publica la vivienda.'}</Text>
         </View>}
-        {contactOptions?.agencies.map(agency => <View key={agency.agencyId} style={styles.card}>
-          <View style={styles.sellerBadges}><Text style={styles.sellerTitle}>{agency.tradeName}</Text><AgencyVerifiedBadge verified={agency.verified} principal={agency.isPrincipal} labelled agencyName={agency.tradeName} /></View>
-          <Button label="Ver perfil comercial" secondary onPress={() => void Linking.openURL(`${PUBLIC_PAGES_URL}agency/${agency.agencyId}`)} />
-          <Button label={`Contactar con ${agency.tradeName}`} secondary disabled={!agency.contactAvailable || contactBusy} onPress={() => { setPreferred(null); openContact(); }} />
-        </View>)}
-        <Pressable accessibilityRole={sellerProfile ? 'button' : undefined} accessibilityLabel={sellerProfile ? `Ver el perfil de ${sellerProfile.displayName}` : undefined} disabled={!sellerProfile} onPress={() => sellerProfile && router.push(`/user/${sellerProfile.id}`)} style={({ pressed }) => [styles.seller, pressed && { opacity: .7 }]}>
-          {sellerProfile ? <UserAvatar size={48} avatarUrl={seller.avatarUrl} name={sellerProfile.displayName} accessibilityLabel={`Foto de ${sellerProfile.displayName}`} /> : <View style={styles.sellerIcon}><Icon name="person" size={24} color={colors.primary} /></View>}
-          <View style={styles.sellerCopy}>
-            <Text style={styles.sellerTitle}>{mode === 'cloud' ? own ? 'Publicado por ti' : sellerProfile?.displayName || 'Información del anuncio' : own ? 'Tu anuncio de prueba' : 'Perfil de demostración'}</Text>
-            {sellerProfile && !sellerProfile.identityOnly && <View style={styles.sellerBadges}><Text style={styles.sellerLevel}>{levelLabel(sellerProfile.level)}</Text>{sellerProfile.verified && <><Icon name="shield-checkmark" size={14} color={colors.green} /><Text style={styles.sellerVerified}>Perfil revisado por KarmaHouse</Text></>}</View>}
-            <Text style={styles.sellerText}>{mode === 'cloud' ? `Publicado el ${new Date(listing.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}` : own ? 'Visible solo en este dispositivo' : 'Sin vendedor real asociado'}</Text>
-          </View>
-          {sellerProfile && <Icon name="chevron-forward" size={18} color={colors.primary} />}
-        </Pressable>
+        {/* Who publishes, once: an agency's logo or a person's photo with the name, leading to their profile. Contactar stays below. */}
+        <View style={styles.publisher}>
+          {contactOptions?.agencies.map(agency => <Publisher key={agency.agencyId} name={agency.tradeName} label={`Ver el perfil comercial de ${agency.tradeName}`} onPress={() => void Linking.openURL(`${PUBLIC_PAGES_URL}agency/${agency.agencyId}`)}>
+            <AgencyMark agencyId={agency.agencyId} name={agency.tradeName} width={48} height={56} bottom={14} />
+          </Publisher>)}
+          {sellerProfile && <Publisher name={sellerProfile.displayName} label={`Ver el perfil de ${sellerProfile.displayName}`} onPress={() => router.push(`/user/${sellerProfile.id}`)}>
+            <UserAvatar arch size={48} avatarUrl={seller.avatarUrl} name={sellerProfile.displayName} accessibilityLabel={`Foto de ${sellerProfile.displayName}`} />
+          </Publisher>}
+          <Text style={styles.sellerText}>{mode === 'cloud' ? `${own ? 'Publicado por ti' : 'Publicado'} el ${new Date(listing.createdAt).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}` : own ? 'Visible solo en este dispositivo' : 'Sin vendedor real asociado'}</Text>
+        </View>
         {mode === 'cloud' && listing.moderationStatus === 'approved' && <View style={styles.reviewed}><Icon name="shield-checkmark-outline" size={16} color={colors.muted} /><Text style={styles.reviewedText}>Revisado antes de publicarse. La revisión no certifica la propiedad.</Text></View>}
         {mode === 'cloud' && !own && <Pressable accessibilityRole="button" onPress={openReport} style={({ pressed }) => [styles.report, pressed && { opacity: .6 }]}>
           <Icon name="flag-outline" size={17} color={colors.body} /><Text style={styles.reportText}>Reportar anuncio</Text>
@@ -379,6 +375,14 @@ function Detail({ label, value }: { label: string; value: string }) {
   const { styles } = useStyles();
   return <View style={styles.tile}><Text style={styles.tileLabel}>{label}</Text><Text style={styles.tileValue}>{value}</Text></View>;
 }
+function Publisher({ name, label, onPress, children }: { name: string; label: string; onPress: () => void; children: ReactNode }) {
+  const { colors, styles } = useStyles();
+  return <Pressable accessibilityRole="link" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.seller, pressed && { opacity: .7 }]}>
+    {children}
+    <Text numberOfLines={2} style={styles.publisherName}>{name}</Text>
+    <Icon name="chevron-forward" size={18} color={colors.primary} />
+  </Pressable>;
+}
 /** An unavailable home: the persiana closed in its arch. */
 function Unavailable() {
   const { styles } = useStyles();
@@ -421,10 +425,9 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   tileLabel: { ...typography.caption, color: colors.muted }, tileValue: { fontSize: 15, lineHeight: 20, fontWeight: '600', color: colors.ink },
   amenities: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, amenity: { fontSize: 14, lineHeight: 20, color: colors.ink, backgroundColor: colors.surface, paddingHorizontal: 14, paddingVertical: 7, borderRadius: rounded.pill, overflow: 'hidden' },
   mapHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }, mapPrecision: { color: colors.primary, fontSize: 13, fontWeight: '600', backgroundColor: colors.softBlue, paddingHorizontal: 12, paddingVertical: 6, borderRadius: rounded.pill, overflow: 'hidden' }, mapFrame: { borderRadius: rounded.cardLg, overflow: 'hidden' }, mapDescription: { fontSize: 13, lineHeight: 18, color: colors.muted },
-  card: { gap: 12, padding: 18, borderRadius: rounded.card, backgroundColor: colors.surface },
   reviewed: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: -12 }, reviewedText: { flex: 1, fontSize: 13, lineHeight: 18, color: colors.muted },
   report: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, alignSelf: 'flex-start', marginTop: -12 }, reportText: { color: colors.body, fontSize: 14, fontWeight: '600' },
-  seller: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, backgroundColor: colors.surface, borderRadius: rounded.card }, sellerIcon: { backgroundColor: colors.raised, width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' }, sellerCopy: { flex: 1, gap: 4 }, sellerTitle: { color: colors.ink, fontSize: 16, fontWeight: '600' }, sellerBadges: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' }, sellerLevel: { color: colors.primary, fontSize: 13, fontWeight: '600', marginRight: 4 }, sellerVerified: { color: colors.green, fontSize: 13, fontWeight: '600' }, sellerText: { color: colors.muted, fontSize: 13, lineHeight: 19 },
+  publisher: { gap: 10 }, seller: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: colors.surface, borderRadius: rounded.card }, publisherName: { ...typography.cardTitle, flex: 1, color: colors.ink }, sellerTitle: { color: colors.ink, fontSize: 16, fontWeight: '600' }, sellerBadges: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' }, sellerText: { color: colors.muted, fontSize: 13, lineHeight: 19 },
   actionBar: { width: '100%', backgroundColor: colors.paper }, actionError: { paddingHorizontal: 16, maxWidth: 860, width: '100%', alignSelf: 'center' }, actionContent: { paddingTop: 10, paddingBottom: 12, paddingHorizontal: 16, width: '100%', maxWidth: 860, alignSelf: 'center' }, contactButton: { width: '100%' },
   contactProperty: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8, borderRadius: rounded.inner, backgroundColor: colors.surface }, contactWanted: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.softBlue }, contactPropertyCopy: { flex: 1, minWidth: 0, gap: 2 }, contactPropertyTitle: { color: colors.ink, fontSize: 15, lineHeight: 20, fontWeight: '600' }, contactPropertyPrice: { color: colors.primary, fontSize: 14, lineHeight: 20, fontWeight: '700' },
   contactLoading: { flexDirection: 'row', alignItems: 'center', gap: 10 }, contactChoice: { gap: 10, padding: 16, borderRadius: rounded.card, backgroundColor: colors.surface },
