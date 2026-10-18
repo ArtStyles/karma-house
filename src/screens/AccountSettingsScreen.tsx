@@ -23,24 +23,32 @@ export default function AccountSettingsScreen() {
   const auth = useAuth();
   const editing = useRef(false), formBusy = useRef(false);
   const reload = useConsultationRefresh(`${auth.user?.id}:${auth.session?.access_token}`, auth.refreshProfile, () => !auth.user || editing.current || formBusy.current);
+  // A new object each time, so the same text twice still restarts its timer.
+  const [toast, setToast] = useState<{ text: string } | null>(null);
+  useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(null), 3000); return () => clearTimeout(timer); }, [toast]);
   return <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.safe}>
     <KeyboardAvoidingView style={styles.flex} behavior="padding">
       <ScrollView alwaysBounceVertical contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" refreshControl={<RefreshControl refreshing={reload.refreshing} enabled={!!auth.user && !editing.current && !formBusy.current} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}>
         <PageTitle compact title="Ajustes de cuenta" subtitle="Identidad, preferencias y privacidad." back fallback="/profile" />
         <AppearanceSettings />
         <DevicePreferences />
-        {!isSupabaseConfigured ? <EmptyState plain title="Perfil no disponible" description="La foto y el nombre de tu cuenta estarán disponibles con el servicio conectado." /> : !auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : !auth.user ? <AccountPrompt returnTo="/account-settings" title="Personaliza tu cuenta" description="Inicia sesión para cambiar el nombre y la foto de tu cuenta." /> : !auth.profileReady ? <View style={styles.card}>{auth.error ? <Notice error onRetry={() => void reload.refresh()}>{auth.error}</Notice> : <ActivityIndicator accessibilityLabel="Cargando tu perfil" color={colors.primary} />}</View> : <AccountSettingsForm key={auth.user.id} ownerId={auth.user.id} editing={editing} locked={formBusy} refreshing={reload.isRefreshing} />}
+        {!isSupabaseConfigured ? <EmptyState plain title="Perfil no disponible" description="La foto y el nombre de tu cuenta estarán disponibles con el servicio conectado." /> : !auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : !auth.user ? <AccountPrompt returnTo="/account-settings" title="Personaliza tu cuenta" description="Inicia sesión para cambiar el nombre y la foto de tu cuenta." /> : !auth.profileReady ? <View style={styles.card}>{auth.error ? <Notice error onRetry={() => void reload.refresh()}>{auth.error}</Notice> : <ActivityIndicator accessibilityLabel="Cargando tu perfil" color={colors.primary} />}</View> : <AccountSettingsForm key={auth.user.id} ownerId={auth.user.id} editing={editing} locked={formBusy} refreshing={reload.isRefreshing} onPhotoSaved={text => setToast({ text })} />}
       </ScrollView>
+      {toast && <View pointerEvents="none" style={styles.toast}><Icon name="checkmark-circle" size={19} color={colors.inverseInk} /><Text accessibilityLiveRegion="polite" style={styles.toastText}>{toast.text}</Text></View>}
     </KeyboardAvoidingView>
   </SafeAreaView>;
 }
 
-function AccountSettingsForm({ ownerId, editing, locked, refreshing }: { ownerId: string; editing: RefObject<boolean>; locked: RefObject<boolean>; refreshing(): boolean }) {
+function AccountSettingsForm({ ownerId, editing, locked, refreshing, onPhotoSaved }: { ownerId: string; editing: RefObject<boolean>; locked: RefObject<boolean>; refreshing(): boolean; onPhotoSaved(text: string): void }) {
   const { colors, styles } = useStyles();
   const auth = useAuth();
   const [name, setName] = useState(auth.displayName);
-  const [avatar, setAvatar] = useState<PreparedAvatar | null | undefined>(undefined);
-  const [busy, setBusy] = useState<'photo' | 'save' | null>(null);
+  // The photo on its way to the server: shown while it uploads, dropped if it fails.
+  const [uploading, setUploading] = useState<PreparedAvatar | null | undefined>(undefined);
+  const [busy, setBusy] = useState<'photo' | 'upload' | 'remove' | 'save' | null>(null);
+  const [photoError, setPhotoError] = useState('');
+  // What «Reintentar» sends again; undefined reopens the gallery.
+  const failedPhoto = useRef<PreparedAvatar | null | undefined>(undefined);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -56,30 +64,43 @@ function AccountSettingsForm({ ownerId, editing, locked, refreshing }: { ownerId
     setName(current => current.trim() === previous ? auth.displayName : current);
   }, [auth.displayName]);
   function checkpoint() { if (!mounted.current || currentActor.current !== ownerId) throw new Error('KH_ACCOUNT_CHANGED'); }
-  async function selectPhoto() {
+  /** A photo saves the moment it is chosen (`null` removes it); with no argument, the gallery opens first. */
+  async function changePhoto(chosen?: PreparedAvatar | null) {
     if (locked.current || refreshing()) return;
-    locked.current = true; setBusy('photo'); setError(''); setSaved(false);
-    try { const next = await pickAccountAvatar(checkpoint); checkpoint(); if (next) setAvatar(next); }
-    catch (failure) { if (mounted.current) setError(accountProfileError(failure)); }
-    finally { locked.current = false; if (mounted.current) setBusy(null); }
+    locked.current = true; setPhotoError(''); setSaved(false);
+    let next = chosen;
+    try {
+      if (next === undefined) { setBusy('photo'); next = await pickAccountAvatar(checkpoint); checkpoint(); if (!next) return; }
+      setBusy(next ? 'upload' : 'remove'); setUploading(next);
+      await auth.saveAvatar(next); checkpoint();
+      failedPhoto.current = undefined;
+      onPhotoSaved(next ? 'Foto actualizada.' : 'Foto quitada.');
+    } catch (failure) {
+      if (mounted.current) { failedPhoto.current = next; setPhotoError(accountProfileError(failure, 'No pudimos preparar la foto. Elige otra y vuelve a intentarlo.')); }
+    } finally { locked.current = false; if (mounted.current) { setBusy(null); setUploading(undefined); } }
   }
   async function save() {
     if (locked.current || refreshing()) return;
     locked.current = true; setBusy('save'); setError(''); setSaved(false);
-    try { checkpoint(); await auth.saveProfile({ displayName: name, avatar }); checkpoint(); setName(name.trim()); setAvatar(undefined); setSaved(true); }
+    try { checkpoint(); await auth.saveProfile({ displayName: name }); checkpoint(); setName(name.trim()); setSaved(true); }
     catch (failure) { if (mounted.current) setError(failure instanceof Error ? failure.message : 'No pudimos guardar los cambios.'); }
     finally { locked.current = false; if (mounted.current) setBusy(null); }
   }
-  const changed = name.trim() !== auth.displayName || avatar !== undefined;
+  const changed = name.trim() !== auth.displayName;
   editing.current = changed || deleting;
-  const preview = avatar === undefined ? auth.avatarUrl : avatar?.previewUri ?? null;
+  const preview = uploading === undefined ? auth.avatarUrl : uploading?.previewUri ?? null;
+  const sending = busy === 'upload' || busy === 'remove';
   return <View style={styles.form}>
     <View style={styles.card}>
       <View style={styles.photoCard}>
-        <UserAvatar size={64} name={name} avatarUrl={preview} />
-        <View style={styles.photoCopy}><Text accessibilityRole="header" style={styles.cardTitle}>Foto de la cuenta</Text><Text style={styles.description}>Se recorta en formato cuadrado y se optimiza antes de guardar.</Text></View>
+        <View accessibilityState={{ busy: sending }}>
+          <UserAvatar size={64} name={name} avatarUrl={preview} />
+          {sending && <View style={styles.avatarBusy}><ActivityIndicator color={colors.onDark} /></View>}
+        </View>
+        <View style={styles.photoCopy}><Text accessibilityRole="header" style={styles.cardTitle}>Foto de la cuenta</Text><Text accessibilityLiveRegion="polite" style={styles.description}>{busy === 'upload' ? 'Subiendo foto…' : busy === 'remove' ? 'Quitando foto…' : 'Se recorta en cuadrado, se optimiza y se guarda en cuanto la eliges.'}</Text></View>
       </View>
-      <ActionGroup><Button label={preview || auth.hasAvatar ? 'Cambiar foto' : 'Elegir foto'} secondary icon="image-outline" onPress={selectPhoto} loading={busy === 'photo'} disabled={!!busy} />{(avatar ? true : avatar === undefined && auth.hasAvatar) && <Button label="Quitar foto" secondary onPress={() => { setAvatar(null); setSaved(false); }} disabled={!!busy} />}</ActionGroup>
+      {photoError ? <Notice error onRetry={() => void changePhoto(failedPhoto.current)}>{photoError}</Notice> : null}
+      <ActionGroup><Button label={preview || auth.hasAvatar ? 'Cambiar foto' : 'Elegir foto'} secondary icon="image-outline" onPress={() => void changePhoto()} loading={busy === 'photo' || busy === 'upload'} disabled={!!busy} />{auth.hasAvatar && <Button label="Quitar foto" secondary onPress={() => void changePhoto(null)} loading={busy === 'remove'} disabled={!!busy} />}</ActionGroup>
       <Text style={styles.privacy}>La foto se muestra solo en tu cuenta.</Text>
     </View>
     <View style={styles.card}>
@@ -90,7 +111,7 @@ function AccountSettingsForm({ ownerId, editing, locked, refreshing }: { ownerId
     {error || auth.error ? <Notice error>{error || auth.error}</Notice> : null}
     {saved && <View accessibilityLiveRegion="polite" style={styles.success}><Icon name="checkmark-circle" size={19} color={colors.green} /><Text style={styles.successText}>Cambios guardados.</Text></View>}
     <ActionGroup><Button label="Guardar cambios" onPress={save} loading={busy === 'save'} disabled={!!busy || !changed} />
-    {changed && <Button label="Descartar cambios" secondary disabled={!!busy} onPress={() => { setName(auth.displayName); setAvatar(undefined); setError(''); setSaved(false); }} />}</ActionGroup>
+    {changed && <Button label="Descartar cambios" secondary disabled={!!busy} onPress={() => { setName(auth.displayName); setError(''); setSaved(false); }} />}</ActionGroup>
     <View style={styles.card}>
       <Text accessibilityRole="header" style={styles.cardTitle}>Notificaciones</Text>
       <Text style={styles.description}>Elige qué novedades quieres ver en la bandeja de KarmaHouse.</Text>
@@ -185,6 +206,10 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   fact: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' }, factText: { flex: 1, color: colors.body, fontSize: 13, lineHeight: 18 },
   dangerFilled: { minHeight: 56, borderRadius: rounded.pill, backgroundColor: colors.dangerFill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 12 }, dangerFilledText: { color: colors.onDark, fontSize: 16, lineHeight: 23, fontWeight: '600', textAlign: 'center' },
   success: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingHorizontal: 4 }, successText: { color: colors.green, fontSize: 14, fontWeight: '500' },
+  avatarBusy: { ...StyleSheet.absoluteFill, borderRadius: rounded.pill, backgroundColor: colors.photoOverlay, alignItems: 'center', justifyContent: 'center' },
+  // The inverted toast of DESIGN.md: ink ground, floating at the foot of the screen.
+  toast: { position: 'absolute', left: 16, right: 16, bottom: 16, maxWidth: 560, alignSelf: 'center', minHeight: 52, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: rounded.pill, backgroundColor: colors.inverseSurface, boxShadow: '0 12px 28px rgba(0,0,0,0.35)' },
+  toastText: { flex: 1, fontSize: 15, lineHeight: 20, fontWeight: '600', color: colors.inverseInk },
   devices: { gap: 10, marginBottom: 24 }, sectionTitle: { ...typography.section, color: colors.ink, paddingHorizontal: 4 },
   group: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: rounded.card, overflow: 'hidden' },
   preference: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 }, preferenceBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },

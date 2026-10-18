@@ -7,7 +7,7 @@ import { keepVerifierOnFailure, type VerifierStore } from './pkce';
 import { authCallbackUrl } from './links';
 import { randomUUID } from 'expo-crypto';
 import { createDeadlineFetch } from '../lib/fetchTimeout';
-import { accountProfileError, type AccountProfileInput, type AccountRequestContext } from './accountProfile';
+import { AccountProfileError, accountProfileError, type AccountProfileInput, type AccountRequestContext, type AvatarUpload } from './accountProfile';
 import { createAccountProfileRepository, saveAccountProfile } from './accountProfileRepository';
 import { runBeforeSignOut } from '../push/signOutHooks';
 import { PushError, sessionFromAccessToken } from '../push/domain';
@@ -40,6 +40,8 @@ export type AuthContextValue = {
   updatePassword(password: string): Promise<void>;
   refreshProfile(): Promise<void>;
   saveProfile(input: AccountProfileInput): Promise<void>;
+  /** Saves only the photo (`null` removes it); the stored name stays. */
+  saveAvatar(avatar: AvatarUpload | null): Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -150,16 +152,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { subscription.remove(); clearInterval(timer); };
   }, [ownerId, refreshProfile]);
 
-  const saveProfile = useCallback(async (input: AccountProfileInput) => {
-    if (!ownerId || sessionRef.current?.user.id !== ownerId) throw new Error('La sesión cambió. Abre los ajustes con la cuenta actual.');
-    if (!profile || profile.ownerId !== ownerId) throw new Error('Primero hay que cargar tu perfil. Vuelve a intentarlo.');
-    if (savingProfile.current === ownerId) throw new Error('Espera a que terminen de guardarse los cambios.');
+  // The photo saves alone, as soon as it is chosen: it keeps the stored name, never one still being typed.
+  const persistProfile = useCallback(async (input: { displayName?: string; avatar?: AvatarUpload | null }) => {
+    if (!ownerId || sessionRef.current?.user.id !== ownerId) throw new AccountProfileError('La sesión cambió. Abre los ajustes con la cuenta actual.');
+    if (!profile || profile.ownerId !== ownerId) throw new AccountProfileError('Primero hay que cargar tu perfil. Vuelve a intentarlo.');
+    if (savingProfile.current === ownerId) throw new AccountProfileError('Espera a que terminen de guardarse los cambios.');
+    const photoOnly = input.displayName === undefined;
     savingProfile.current = ownerId;
     profileRequest.current += 1;
     const context = accountContext();
     setError(null);
     try {
-      const updated = await saveAccountProfile(accountRepository, context, input, profile.avatarPath, randomUUID);
+      const updated = await saveAccountProfile(accountRepository, context, { displayName: input.displayName ?? profile.displayName, avatar: input.avatar }, profile.avatarPath, randomUUID);
       let avatarUrl: string | null = null;
       let photoError = false;
       if (updated.avatarPath) { try { avatarUrl = await accountRepository.sign(updated.avatarPath, context); } catch { photoError = true; } }
@@ -167,13 +171,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileRequest.current += 1;
       setProfile(current => ({ ownerId, displayName: updated.displayName, avatarPath: updated.avatarPath, avatarUrl, isAdmin: current?.ownerId === ownerId ? current.isAdmin : false,
         access: current?.ownerId === ownerId ? current.access : {role:'member',suspended:false,reason:null} }));
-      setError(photoError ? 'Los cambios se guardaron. La foto se mostrará cuando puedas volver a cargar el perfil.' : null);
+      setError(photoError ? `${photoOnly ? 'La foto se guardó.' : 'Los cambios se guardaron.'} La foto se mostrará cuando puedas volver a cargar el perfil.` : null);
     } catch (cause) {
-      const message = accountProfileError(cause);
-      if (mounted.current && sessionRef.current?.user.id === ownerId) setError(message);
-      throw new Error(message);
+      const message = accountProfileError(cause, photoOnly ? `No pudimos ${input.avatar ? 'subir' : 'quitar'} la foto. Comprueba tu conexión y vuelve a intentarlo.` : undefined);
+      // A photo's failure stays on its own card, next to «Reintentar».
+      if (!photoOnly && mounted.current && sessionRef.current?.user.id === ownerId) setError(message);
+      throw new AccountProfileError(message);
     } finally { context.release(); if (savingProfile.current === ownerId) savingProfile.current = null; }
   }, [ownerId, profile, accountContext, accountRepository]);
+  const saveProfile = useCallback((input: AccountProfileInput) => persistProfile(input), [persistProfile]);
+  const saveAvatar = useCallback((avatar: AvatarUpload | null) => persistProfile({ avatar }), [persistProfile]);
 
   useEffect(() => {
     if (!supabase || Platform.OS === 'web' || !ready || !session?.user.id) return;
@@ -273,7 +280,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const matchingProfile = profile?.ownerId === user?.id ? profile : null;
   const metadataName = typeof user?.user_metadata?.display_name === 'string' ? user.user_metadata.display_name : '';
   const displayName = (matchingProfile?.displayName || metadataName || 'Mi cuenta').slice(0, 80);
-  const value = useMemo<AuthContextValue>(() => ({ ready, user, session, displayName, avatarUrl: matchingProfile?.avatarUrl ?? null, hasAvatar: !!matchingProfile?.avatarPath, profileReady: !!matchingProfile, isAdmin: matchingProfile?.isAdmin ?? false, isOwner: matchingProfile?.access.role === 'owner', suspended: matchingProfile?.access.suspended ?? false, suspensionReason: matchingProfile?.access.reason ?? null, error, signIn, signUp, signOut, deleteAccount: removeAccount, requestPasswordReset, resendConfirmation, updatePassword, refreshProfile, saveProfile }), [ready, user, session, displayName, matchingProfile, error, signIn, signUp, signOut, removeAccount, requestPasswordReset, resendConfirmation, updatePassword, refreshProfile, saveProfile]);
+  const value = useMemo<AuthContextValue>(() => ({ ready, user, session, displayName, avatarUrl: matchingProfile?.avatarUrl ?? null, hasAvatar: !!matchingProfile?.avatarPath, profileReady: !!matchingProfile, isAdmin: matchingProfile?.isAdmin ?? false, isOwner: matchingProfile?.access.role === 'owner', suspended: matchingProfile?.access.suspended ?? false, suspensionReason: matchingProfile?.access.reason ?? null, error, signIn, signUp, signOut, deleteAccount: removeAccount, requestPasswordReset, resendConfirmation, updatePassword, refreshProfile, saveProfile, saveAvatar }), [ready, user, session, displayName, matchingProfile, error, signIn, signUp, signOut, removeAccount, requestPasswordReset, resendConfirmation, updatePassword, refreshProfile, saveProfile, saveAvatar]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
