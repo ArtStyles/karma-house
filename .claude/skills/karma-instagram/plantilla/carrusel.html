@@ -1,0 +1,132 @@
+<!doctype html>
+<!--
+  Carrusel de Instagram, 1080×1350 (4:5). Cada lámina es un clip de 1 s; `snapshot --at 0.5,1.5,…` saca una
+  imagen por lámina y `exportar.py` (skill karma-instagram) las convierte en lamina-N.jpg y revisar.png.
+-->
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1350" />
+    <title>Pegar anuncio · carrusel</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Calistoga"; font-weight: 400; font-display: block; src: url("assets/fonts/Calistoga.ttf") format("truetype"); }
+      @font-face { font-family: "Roboto"; font-weight: 100 900; font-display: block; src: url("assets/fonts/Roboto-Variable.woff2") format("woff2"); }
+      @font-face { font-family: "Bahn"; font-weight: 300 700; font-stretch: 75% 100%; font-display: block; src: url("assets/fonts/bahnschrift.ttf") format("truetype"); }
+      @font-face { font-family: "KHMono"; font-weight: 400; font-display: block; src: url("assets/fonts/JetBrainsMono-400.woff2") format("woff2"); }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1350px; overflow: hidden; background: #0E2236; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; font-family: Roboto, sans-serif; color: #fff; }
+      .clip { position: absolute; inset: 0; overflow: hidden; }
+      .fondo { position: absolute; inset: -30px; width: calc(100% + 60px); height: calc(100% + 60px); object-fit: cover; filter: blur(3px) saturate(1.08); }
+      .velo { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14, 34, 54, .82) 0%, rgba(14, 34, 54, .45) 48%, rgba(14, 34, 54, .1) 70%, rgba(14, 34, 54, .55) 100%); }
+      .grano { position: absolute; inset: 0; background: url("assets/img/grano.png") 0 0 / 512px 512px repeat; mix-blend-mode: overlay; }
+      .marca { position: absolute; left: 64px; top: 56px; display: flex; align-items: center; gap: 16px; padding: 12px 24px 12px 16px;
+               border-radius: 9999px; background: rgba(14, 34, 54, .55); font: 800 26px/1 Roboto, sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+      .marca img { height: 40px; filter: brightness(0) invert(1); }
+      .pagina { position: absolute; right: 64px; top: 64px; font: 400 28px/1 KHMono, monospace; color: #E3B04B; }
+      .pj { position: absolute; object-fit: contain; object-position: 50% 100%; filter: drop-shadow(0 18px 24px rgba(14, 34, 54, .45)); }
+      .tit { position: absolute; left: 64px; right: 64px; font: 400 96px/1.08 Calistoga, serif; letter-spacing: -0.02em; text-shadow: 0 6px 30px rgba(14, 34, 54, .7); }
+      .sol { color: #E3B04B; }
+      .golpe { display: block; font-family: Bahn, sans-serif; font-weight: 700; font-stretch: 75%; font-size: 250px; line-height: .9; text-transform: uppercase; color: #E3B04B; }
+      .sub { position: absolute; left: 64px; right: 64px; font: 800 44px/1.25 Roboto, sans-serif; text-shadow: 0 4px 20px rgba(14, 34, 54, .8); }
+      .num { position: absolute; left: 64px; width: 110px; height: 110px; border-radius: 9999px; border: 3px solid #E3B04B;
+             display: grid; place-items: center; font: 400 46px/1 KHMono, monospace; color: #E3B04B; }
+      .chip { position: absolute; padding: 18px 30px; border-radius: 9999px; font: 800 32px/1 Roboto, sans-serif; }
+      .tarjeta { position: absolute; background: #FAF6EE; border: 2px solid #E6DCCB; border-radius: 30px; box-shadow: 0 30px 70px rgba(14, 34, 54, .5); color: #1A2B3B; }
+      .ejemplo { position: absolute; font: 700 24px/1 Roboto, sans-serif; color: #8A5C15; background: #F2EADC; border-radius: 9999px; padding: 12px 20px; }
+      .campos { position: absolute; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .campo { position: relative; height: 112px; background: #fff; border: 2px solid #E6DCCB; border-radius: 24px; padding: 16px 24px; box-shadow: 0 14px 30px rgba(14, 34, 54, .3); }
+      .campo b { display: block; font: 600 25px/1.1 Roboto, sans-serif; color: #4D5A66; }
+      .campo span { display: block; margin-top: 6px; font: 800 38px/1.1 Roboto, sans-serif; color: #1A2B3B; }
+      .campo i { position: absolute; right: 18px; top: 32px; width: 44px; height: 44px; border-radius: 9999px; background: #3F6B4F; color: #fff;
+                 font: normal 900 28px/44px Roboto, sans-serif; text-align: center; }
+      .campo.falta { background: #F2EADC; border-style: dashed; box-shadow: none; }
+      .campo.falta span { color: #8A5C15; font-size: 32px; }
+      .panel { position: absolute; left: 64px; right: 64px; background: #0E2236; border-radius: 40px; padding: 48px 52px; box-shadow: 0 40px 90px rgba(0, 0, 0, .45); color: #D7E2EC; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="4" data-width="1080" data-height="1350">
+
+      <!-- 1 · portada -->
+      <section id="l1" class="clip" data-start="0" data-duration="1">
+        <img class="fondo" src="assets/img/sala.png" alt="" />
+        <div class="velo"></div>
+        <div class="marca"><img src="assets/img/karmahouse-mark.png" alt="" />Pegar anuncio</div>
+        <div class="pagina">1/4</div>
+        <div class="tit" style="top: 190px;">¿Ya tienes el anuncio<span class="golpe">escrito?</span></div>
+        <div class="sub" style="top: 650px; right: 420px;">No lo copies campo por campo.</div>
+        <img class="pj" src="assets/img/persona-base.png" alt="" style="left: 600px; top: 600px; width: 430px; height: 760px;" />
+        <img class="pj" src="assets/img/bloque-piensa.png" alt="" style="left: 70px; top: 920px; width: 330px; height: 400px;" />
+        <div class="chip" style="right: 64px; bottom: 56px; background: #E3B04B; color: #0E2236;">Desliza →</div>
+        <div class="grano"></div>
+      </section>
+
+      <!-- 2 · toca «Pegar anuncio» -->
+      <section id="l2" class="clip" data-start="1" data-duration="1">
+        <img class="fondo" src="assets/img/sala.png" alt="" style="object-position: 12% 30%; transform: scale(1.5); transform-origin: 12% 30%;" />
+        <div class="velo"></div>
+        <div class="marca"><img src="assets/img/karmahouse-mark.png" alt="" />Pegar anuncio</div>
+        <div class="pagina">2/4</div>
+        <div class="num" style="top: 180px;">01</div>
+        <div class="tit" style="top: 320px;">Toca <span class="sol">Pegar anuncio</span></div>
+        <div class="sub" style="top: 560px;">En KarmaHouse, al publicar.</div>
+        <div class="tarjeta" style="left: 330px; top: 680px; width: 690px; height: 230px; display: flex; align-items: center; gap: 26px; padding: 0 34px;">
+          <div style="flex: none; width: 100px; height: 100px; border-radius: 22px; background: #0153A8; display: grid; place-items: center;">
+            <svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="M9 12h6M9 16h4"/></svg>
+          </div>
+          <div><div style="font: 800 46px/1.1 Roboto, sans-serif;">Pegar anuncio</div>
+            <div style="margin-top: 6px; font: 400 29px/1.3 Roboto, sans-serif; color: #4D5A66;">¿Ya lo tienes escrito? Pégalo y rellenamos el formulario.</div></div>
+        </div>
+        <img class="pj" src="assets/img/bloque-senala.png" alt="" style="left: 40px; top: 940px; width: 380px; height: 390px;" />
+        <img class="pj" src="assets/img/persona-base.png" alt="" style="left: 700px; top: 950px; width: 300px; height: 400px;" />
+        <div class="grano"></div>
+      </section>
+
+      <!-- 3 · pega el texto y se rellena solo -->
+      <section id="l3" class="clip" data-start="2" data-duration="1">
+        <img class="fondo" src="assets/img/mesa.png" alt="" />
+        <div class="velo"></div>
+        <div class="marca"><img src="assets/img/karmahouse-mark.png" alt="" />Pegar anuncio</div>
+        <div class="pagina">3/4</div>
+        <div class="num" style="top: 180px;">02</div>
+        <div class="tit" style="top: 320px; font-size: 80px;">Pega el texto. <span class="sol">Se rellena solo.</span></div>
+        <div class="tarjeta" style="left: 64px; right: 64px; top: 530px; height: 200px; background: #fff; padding: 28px 34px; font: 500 32px/1.4 Roboto, sans-serif;">
+          Vendo apartamento en el Vedado, La Habana. 2 cuartos, 1 baño, balcón y cocina amplia. Escríbeme por el chat.
+        </div>
+        <div class="ejemplo" style="right: 84px; top: 504px;">Ejemplo de uso</div>
+        <div class="campos" style="left: 64px; top: 770px; width: 700px;">
+          <div class="campo"><b>Operación</b><span>Venta</span><i>✓</i></div>
+          <div class="campo"><b>Tipo</b><span>Apartamento</span><i>✓</i></div>
+          <div class="campo"><b>Lugar</b><span>Vedado</span><i>✓</i></div>
+          <div class="campo"><b>Provincia</b><span>La Habana</span><i>✓</i></div>
+          <div class="campo"><b>Cuartos</b><span>2</span><i>✓</i></div>
+          <div class="campo"><b>Baños</b><span>1</span><i>✓</i></div>
+          <div class="campo falta" style="grid-column: span 2;"><b>Precio</b><span>Lo pones tú. Revisas y publicas.</span></div>
+        </div>
+        <img class="pj" src="assets/img/bloque-sorprendida.png" alt="" style="left: 790px; top: 1000px; width: 250px; height: 320px;" />
+        <div class="grano"></div>
+      </section>
+
+      <!-- 4 · cierre -->
+      <section id="l4" class="clip" data-start="3" data-duration="1">
+        <img class="fondo" src="assets/img/calle.png" alt="" />
+        <div class="velo" style="background: linear-gradient(180deg, rgba(14, 34, 54, .35), rgba(14, 34, 54, 0) 60%, rgba(14, 34, 54, .4));"></div>
+        <div class="pagina">4/4</div>
+        <div class="panel" style="top: 130px;">
+          <img src="assets/img/karmahouse-logo.png" alt="KarmaHouse" style="height: 110px; filter: brightness(0) invert(1);" />
+          <div style="margin-top: 26px; font: 400 86px/1.06 Calistoga, serif; color: #fff; letter-spacing: -0.02em;">Descarga KarmaHouse <span class="sol">para Android</span></div>
+          <div style="margin-top: 22px; font: 500 34px/1.35 Roboto, sans-serif;">Publicar, buscar y conversar es gratis. También en app.karmahouse.site.</div>
+          <div style="margin-top: 30px; display: inline-block; padding: 22px 38px; border-radius: 9999px; background: #E3B04B; color: #0E2236; font: 800 40px/1 Roboto, sans-serif;">karmahouse.site →</div>
+        </div>
+        <img class="pj" src="assets/img/persona-saluda.png" alt="" style="left: 40px; top: 800px; width: 340px; height: 530px;" />
+        <img class="pj" src="assets/img/bloque-celebra.png" alt="" style="left: 560px; top: 940px; width: 430px; height: 400px;" />
+        <div class="grano"></div>
+      </section>
+    </div>
+    <script>
+      window.__timelines["main"] = gsap.timeline({ paused: true });
+    </script>
+  </body>
+</html>
