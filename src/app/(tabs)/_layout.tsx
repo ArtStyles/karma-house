@@ -51,7 +51,7 @@ export default function TabLayout() {
         height: bar + 20 + insets.bottom, paddingTop: 0, paddingBottom: 20 + insets.bottom, paddingHorizontal: side + 4,
         backgroundColor: 'transparent', borderTopWidth: 0, elevation: 0,
       },
-      // Nearly opaque, in the search field's surface colour (like Telegram): blurred on iOS and the web, tinted on Android.
+      // Opaque, in the search field's surface colour (like Telegram): the screen never shows through.
       tabBarBackground: () => <View style={[styles.pill, { left: side, right: side, borderColor: colors.navigationBorder,
         boxShadow: scheme === 'dark' ? '0 12px 32px rgba(0,0,0,0.4)' : '0 10px 28px rgba(26,43,59,0.12)' }]}><NavigationMaterial /></View>,
       // No side padding on items: at 320 px «Mi espacio» needs the whole quarter. React Navigation lays each item out
