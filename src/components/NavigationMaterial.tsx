@@ -1,8 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 import { useTheme } from '../theme';
 
-/** The tab bar is opaque, in the search field's surface colour: the screen never shows through it. */
+/** The tab bar is the search field's surface at 92 %: nearly opaque, with the screen just showing through. */
 export function NavigationMaterial() {
   const { colors } = useTheme();
-  return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.navigation }]} />;
+  return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.navigationGlass }]} />;
 }

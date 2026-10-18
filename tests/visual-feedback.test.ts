@@ -52,12 +52,12 @@ test('data saver does not mount a photo until reveal; changing its source resets
   tree=render({...listing,photoUri:'https://photo.test/two'});assert.equal(elements(tree).some(x=>x.type==='LoadedPhoto'),false);
   saver=false;tree=render({...listing,photoUri:'https://photo.test/two'});const second=elements(tree).find(x=>x.type==='LoadedPhoto')!;assert.notEqual(first.props.key,second.props.key);
 });
-test('the tab bar material is opaque in the navigation colour',()=>{
+test('the tab bar material is the nearly opaque navigation glass',()=>{
   const hooks=new Hooks();const component=executeComponent('src/components/NavigationMaterial.tsx','NavigationMaterial',hooks,{
     useTheme:()=>({colors:{navigation:'solid',navigationGlass:'glass'},scheme:'dark'}),StyleSheet:{absoluteFill:{}},View:'View',
   });
   const tree=hooks.render(()=>component());
-  assert.equal(tree.type,'View');assert.equal(tree.props.style[1].backgroundColor,'solid');assert.equal(tree.props.pointerEvents,'none');
+  assert.equal(tree.type,'View');assert.equal(tree.props.style[1].backgroundColor,'glass');assert.equal(tree.props.pointerEvents,'none');
 });
 function carouselFixture(reduced:boolean){
   const hooks=new Hooks();let responder:any;

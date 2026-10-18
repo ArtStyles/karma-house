@@ -96,7 +96,7 @@ components:
   button-icon: { size: 44, radius: pill, bg: surface }
   chip: { height: 36, radius: pill, bg: surface, selected: { bg: blue, fg: on-blue } }
   field: { height: 52, radius: pill, bg: surface, border: line, focus: blue }
-  nav-bar: { height: 68, width: "336 como máximo, centrada", radius: pill, bottom: 20, bg: "surface opaca, el mismo color que el buscador", items: "contenido centrado en vertical", active: "icono propio relleno en sol de noche y en ocre de día, etiqueta en blue" }
+  nav-bar: { height: 68, width: "336 como máximo, centrada", radius: pill, bottom: 20, bg: "surface al 92 %, el mismo color que el buscador (casi opaca)", items: "contenido centrado en vertical", active: "icono propio relleno en sol de noche y en ocre de día, etiqueta en blue" }
   sheet: { radius-top: sheet, bg: sheet, handle: mediopunto-outline, backdrop: dim }
   card: { radius: card-lg, bg: surface, padding: 10 }
 ---
@@ -213,8 +213,8 @@ Las piezas viven en `src/components/ui.tsx` y vecinos. Reutiliza antes de crear.
 
 - **Barra inferior flotante**: cápsula de 68 px y 336 px de ancho como máximo (en pantallas estrechas,
   a 16 px de los lados), centrada y a 20 px del borde, con los cuatro destinos juntos, como la de
-  Telegram. Es opaca, en `surface`, el mismo color que el buscador de Explorar: la pantalla no se ve
-  a través de ella. El icono
+  Telegram. Es casi opaca, `surface` al 92 %, el mismo color que el buscador de Explorar: la pantalla
+  apenas se intuye detrás, sin desenfoque. El icono
   y la etiqueta van centrados en vertical dentro de la cápsula. Flota sobre las pantallas, que
   terminan su contenido por encima (`TabBarSpace`). Cuatro destinos con icono y etiqueta: Explorar,
   Favoritos, Publicar, Mi espacio. El activo conserva su icono, relleno en `sol` de noche y en `ocre`
@@ -300,7 +300,7 @@ Las reglas de *Web Interface Guidelines* de Vercel, en React Native:
 
 Ajustes ofrece Claro, Oscuro y Sistema; **la app abre en Oscuro (noche)**. El modo día usa
 `colorsDay` con la misma geometría: fondo cal, tarjetas blancas con línea arena, azul del logo y
-la barra inferior blanca y opaca (`surface`, como el buscador) con sombra suave. El sol nunca
+la barra inferior blanca casi opaca (`surface` al 92 %, como el buscador) con sombra suave. El sol nunca
 se usa como texto en día (usa `ocre`). El icono de la ruta activa va relleno en `ocre` de día (5,8:1
 sobre la barra blanca; en sol quedaba en 1,8:1) y en sol de noche (8,0:1 sobre `surface`); la etiqueta
 en azul repite el estado (7,5:1 de día, 8,3:1 de noche) y las inactivas van en `muted` (5,0:1 y 6,0:1).
