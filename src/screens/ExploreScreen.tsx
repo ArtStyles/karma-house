@@ -3,7 +3,7 @@ import { useTabBarSpace } from '../components/TabBarSpace';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { activeFilterCount, defaultFilters, type ListingFilters } from '../domain/listings';
+import { activeFilterCount, defaultFilters, type Listing, type ListingFilters } from '../domain/listings';
 import { useCatalogPage } from '../catalog/useCatalog';
 import { catalogRetryAction } from '../catalog/presentation';
 import { snapshotAgeText } from '../catalog/offlineSnapshot';
@@ -91,46 +91,34 @@ export default function ExploreScreen() {
   // The arch carousel opens a search that has not been narrowed yet; once it is, the grid answers alone.
   const carousel = ready && current && !filters.query && !filterTags.length && result.length >= 3 ? result.slice(0, 5) : [];
   const removeFilter = (key: string) => { if (!offline) setFilters(old => removeCatalogFilter(old, key)); };
+  // The search field is the list's one sticky row: the same field scrolls up and stays docked under the status bar,
+  // in the tab bar's glass, while the homes pass behind it.
+  const searchBar = <View style={[styles.search, locked]}>
+    <Icon name="search" size={20} color={colors.muted} />
+    <TextInput accessibilityLabel="Buscar por barrio, municipio o calle" placeholder="Barrio, municipio o calle" placeholderTextColor={colors.muted} style={styles.searchInput} editable={!offline} value={filters.query} onChangeText={query => change({ query })} returnKeyType="search" />
+    {filters.query ? <IconButton name="close-circle" label="Borrar búsqueda" onPress={() => change({ query: '' })} style={styles.clearSearch} /> : null}
+    <MotionPressable accessibilityRole="button" accessibilityLabel={filterCount ? `Filtros, ${filterCount} ${filterCount === 1 ? 'activo' : 'activos'}` : 'Abrir filtros'} onPress={openFilters} style={({ pressed }) => [styles.filterButton, filterCount > 0 && styles.filterActive, pressed && { opacity: .7 }]}>
+      <Icon name="options-outline" size={21} color={filterCount > 0 ? colors.onPrimary : colors.primary} />
+      {filterCount > 0 && <View style={styles.filterCount}><Text style={styles.filterCountText}>{filterCount}</Text></View>}
+    </MotionPressable>
+  </View>;
+  // Rows of `columns` cards are built here, not with numColumns, so the search row can be a sticky list child.
+  const gridRows: ExploreRow[] = [];
+  if (ready) for (let index = 0; index < result.length; index += columns) gridRows.push({ kind: 'row', key: result[index].id, items: result.slice(index, index + columns) });
+  const rows: ExploreRow[] = [{ kind: 'search' }, { kind: 'meta' }, ...gridRows];
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <FlatList
-        // numColumns cannot change on a mounted list; only a breakpoint remounts it.
         key={columns}
-        data={!ready ? [] : result}
-        numColumns={columns}
-        keyExtractor={item => item.id}
+        data={rows}
+        keyExtractor={item => item.kind === 'row' ? item.key : item.kind}
+        // The header counts as child 0, so 1 is the search row.
+        stickyHeaderIndices={[1]}
         initialNumToRender={6}
         onEndReached={loadMore}
         onEndReachedThreshold={0.6}
-        columnWrapperStyle={styles.row}
-        ItemSeparatorComponent={() => <View accessible={false} style={styles.rowGap} />}
-        renderItem={({ item }) => result.length === 1 ? <View style={styles.single}><PropertyCard listing={item} offline={offline} horizontal /></View> : <PropertyCard listing={item} offline={offline} width={cellWidth} />}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={[styles.content, { paddingBottom: layout.tabContentBottom + tabSpace }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={colors.primary} />}
-        ListEmptyComponent={!ready || updating ? <View style={styles.skeletons}>{Array.from({ length: columns }, (_, index) => <CardSkeleton key={index} width={cellWidth} />)}</View> : !pageError && !storageError ? <EmptyState title={hasFilters ? 'Sin coincidencias' : 'Aquí empieza tu próximo hogar'} description={hasFilters ? 'Prueba otra zona o amplía los filtros. También puedes guardar la búsqueda para volver cuando aparezca una coincidencia.' : 'Aún no hay viviendas publicadas. Si tienes una en venta, puedes preparar el primer anuncio.'} icon={hasFilters ? 'search-outline' : 'home-outline'} action={<View style={{ gap: 10 }}><Button label={hasFilters ? 'Ampliar búsqueda' : 'Publicar una vivienda'} onPress={() => hasFilters ? setFilters({ ...defaultFilters }) : router.push('/publish')} />{hasFilters && !offline && <Button label="Guardar esta búsqueda" secondary icon="bookmark-outline" onPress={saveSearch} />}</View>} /> : null}
-        ListHeaderComponent={<View>
-          {/* Wide screens carry the logo and the inboxes in the SideRail. */}
-          <View style={styles.topbar}>
-            <View style={styles.where}><ProvincePicker value={filters.province} onChange={province => change({ province })} disabled={offline} />{mode === 'demo' && <Text style={styles.demo}>Demo</Text>}</View>
-            {!wide && <View style={styles.actions}>
-              <NotificationBell unreadCount={notificationUnreadCount} />
-              <View><IconButton name="chatbubbles-outline" label={unreadCount ? `Mensajes, ${unreadCount} sin leer` : 'Abrir mensajes'} onPress={() => router.push('/messages')} />
-                {unreadCount > 0 && <View pointerEvents="none" style={styles.messageBadge}><Text style={styles.messageBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text></View>}
-              </View>
-            </View>}
-          </View>
-          <OperationTabs value={filters.operation} onChange={operation => change({ operation })} disabled={offline} />
-          <InstallHint />
-          <View style={[styles.search, locked]}>
-            <Icon name="search" size={20} color={colors.muted} />
-            <TextInput accessibilityLabel="Buscar por barrio, municipio o calle" placeholder="Barrio, municipio o calle" placeholderTextColor={colors.muted} style={styles.searchInput} editable={!offline} value={filters.query} onChangeText={query => change({ query })} returnKeyType="search" />
-            {filters.query ? <IconButton name="close-circle" label="Borrar búsqueda" onPress={() => change({ query: '' })} style={styles.clearSearch} /> : null}
-            <MotionPressable accessibilityRole="button" accessibilityLabel={filterCount ? `Filtros, ${filterCount} ${filterCount === 1 ? 'activo' : 'activos'}` : 'Abrir filtros'} onPress={openFilters} style={({ pressed }) => [styles.filterButton, filterCount > 0 && styles.filterActive, pressed && { opacity: .7 }]}>
-              <Icon name="options-outline" size={21} color={filterCount > 0 ? colors.onPrimary : colors.primary} />
-              {filterCount > 0 && <View style={styles.filterCount}><Text style={styles.filterCountText}>{filterCount}</Text></View>}
-            </MotionPressable>
-          </View>
+        renderItem={({ item }) => item.kind === 'search' ? <View style={styles.searchRow}>{searchBar}</View>
+          : item.kind === 'meta' ? <View>
           {filterTags.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={[styles.tagsRow, locked]} contentContainerStyle={styles.activeFilters}>
             {filterTags.map(tag => <FilterTag key={tag.key} label={tag.label} onRemove={() => removeFilter(tag.key)} />)}
             <MotionPressable accessibilityRole="button" accessibilityLabel="Limpiar búsqueda y filtros" disabled={offline} onPress={clearFilters} style={styles.clear}><Text style={styles.clearText}>Limpiar</Text></MotionPressable>
@@ -150,6 +138,26 @@ export default function ExploreScreen() {
           {saveNotice === 'demo' && <View style={styles.saveNotice}><Notice>Las alertas necesitan una cuenta de KarmaHouse.</Notice></View>}
           {saveNotice === 'saved' && <View style={styles.saveNotice}><Notice>Te avisaremos cuando aparezca una vivienda que encaje.</Notice><Button label="Ver mis alertas" secondary icon="bookmark-outline" onPress={() => router.push('/saved-searches')} /></View>}
           {storageError && <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{storageError}</Notice><Button label="Volver a cargar" secondary loading={refreshing} onPress={reload} /></View>}
+          {(!ready || result.length === 0) && (!ready || updating ? <View style={styles.skeletons}>{Array.from({ length: columns }, (_, index) => <CardSkeleton key={index} width={cellWidth} />)}</View> : !pageError && !storageError ? <EmptyState title={hasFilters ? 'Sin coincidencias' : 'Aquí empieza tu próximo hogar'} description={hasFilters ? 'Prueba otra zona o amplía los filtros. También puedes guardar la búsqueda para volver cuando aparezca una coincidencia.' : 'Aún no hay viviendas publicadas. Si tienes una en venta, puedes preparar el primer anuncio.'} icon={hasFilters ? 'search-outline' : 'home-outline'} action={<View style={{ gap: 10 }}><Button label={hasFilters ? 'Ampliar búsqueda' : 'Publicar una vivienda'} onPress={() => hasFilters ? setFilters({ ...defaultFilters }) : router.push('/publish')} />{hasFilters && !offline && <Button label="Guardar esta búsqueda" secondary icon="bookmark-outline" onPress={saveSearch} />}</View>} /> : null)}
+          </View>
+          : result.length === 1 ? <View style={[styles.single, styles.gridRow]}><PropertyCard listing={item.items[0]} offline={offline} horizontal /></View>
+          : <View style={[styles.row, styles.gridRow]}>{item.items.map(listing => <PropertyCard key={listing.id} listing={listing} offline={offline} width={cellWidth} />)}</View>}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[styles.content, { paddingBottom: layout.tabContentBottom + tabSpace }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} tintColor={colors.primary} />}
+        ListHeaderComponent={<View>
+          {/* Wide screens carry the logo and the inboxes in the SideRail. */}
+          <View style={styles.topbar}>
+            <View style={styles.where}><ProvincePicker value={filters.province} onChange={province => change({ province })} disabled={offline} />{mode === 'demo' && <Text style={styles.demo}>Demo</Text>}</View>
+            {!wide && <View style={styles.actions}>
+              <NotificationBell unreadCount={notificationUnreadCount} />
+              <View><IconButton name="chatbubbles-outline" label={unreadCount ? `Mensajes, ${unreadCount} sin leer` : 'Abrir mensajes'} onPress={() => router.push('/messages')} />
+                {unreadCount > 0 && <View pointerEvents="none" style={styles.messageBadge}><Text style={styles.messageBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text></View>}
+              </View>
+            </View>}
+          </View>
+          <OperationTabs value={filters.operation} onChange={operation => change({ operation })} disabled={offline} />
+          <InstallHint />
         </View>}
         ListFooterComponent={<View style={result.length > 0 ? styles.listFooter : undefined}>
           {pageError && ready ? <View style={{ gap: 8, marginBottom: 18 }}><Notice error>{pageError}</Notice><Button label="Reintentar" secondary loading={loading} onPress={() => { if (catalogRetryAction({ current, hasMore }) === 'page') loadMore(); else void refreshCatalog().catch(() => {}); }} /></View>
@@ -185,6 +193,7 @@ function SavedSearchParam({ id, onApply }: { id: string; onApply(filters: Listin
 }
 
 const GRID_GAP = 14;
+type ExploreRow = { kind: 'search' } | { kind: 'meta' } | { kind: 'row'; key: string; items: Listing[] };
 
 function CardSkeleton({ width }: { width: number }) {
   const { styles } = useStyles();
@@ -208,7 +217,9 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   where: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 }, actions: { flexDirection: 'row', gap: 8 },
   demo: { ...typography.caption, fontWeight: '600', color: colors.muted, backgroundColor: colors.softNeutral, paddingHorizontal: 9, paddingVertical: 3, borderRadius: rounded.pill, overflow: 'hidden' },
   messageBadge: { position: 'absolute', right: -2, top: -2, borderRadius: 11, minWidth: 19, paddingHorizontal: 5, height: 19, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.sol }, messageBadgeText: { color: colors.onSol, fontSize: 11, fontWeight: '700' },
-  search: { marginTop: 12, maxWidth: 640, minHeight: 52, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: rounded.pill, paddingLeft: 16, paddingRight: 6, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  search: { maxWidth: 640, minHeight: 52, backgroundColor: colors.navigationGlass, borderWidth: 1, borderColor: colors.navigationBorder, boxShadow: '0 8px 22px rgba(5,13,24,0.18)', borderRadius: rounded.pill, paddingLeft: 16, paddingRight: 6, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  // Docked, the pill floats over the homes like the tab bar: same glass, same border and a soft shadow.
+  searchRow: { paddingTop: 12, paddingBottom: 4 },
   searchInput: { flex: 1, minWidth: 0, minHeight: 50, fontSize: 16, color: colors.ink }, clearSearch: { backgroundColor: 'transparent', width: 40 },
   filterButton: { width: 40, height: 40, borderRadius: rounded.pill, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.softBlue }, filterActive: { backgroundColor: colors.primaryFill },
   filterCount: { position: 'absolute', right: -4, top: -4, minWidth: 19, height: 19, paddingHorizontal: 4, borderRadius: 10, backgroundColor: colors.sol, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.surface }, filterCountText: { color: colors.onSol, fontSize: 11, fontWeight: '700' },
@@ -221,7 +232,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   resultCount: { flex: 1, ...typography.section, color: colors.ink, fontVariant: ['tabular-nums'] },
   saveNotice: { gap: 8, marginBottom: 10 },
   listEnd: { fontSize: 13, color: colors.muted, textAlign: 'center', marginTop: 4, marginBottom: 8 },
-  row: { gap: GRID_GAP }, rowGap: { height: 18 }, single: { flex: 1 },
+  row: { flexDirection: 'row', gap: GRID_GAP }, gridRow: { marginBottom: 18 }, single: { flex: 1 },
   listFooter: { paddingTop: 26 },
   skeletons: { flexDirection: 'row', gap: GRID_GAP, flexWrap: 'wrap' }, skeleton: { gap: 8, marginBottom: 26 },
   skeletonImage: { backgroundColor: colors.skeleton, marginBottom: 4 }, skeletonLine: { height: 14, borderRadius: 7, backgroundColor: colors.skeleton },
