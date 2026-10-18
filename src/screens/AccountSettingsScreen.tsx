@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { router } from 'expo-router';
-import { ActivityIndicator, KeyboardAvoidingView, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, KeyboardAvoidingView, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useConsultationRefresh } from '../lib/useConsultationRefresh';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Sheet } from '../components/Sheet';
@@ -72,6 +72,7 @@ function AccountSettingsForm({ ownerId, editing, locked, refreshing, onPhotoSave
     try {
       if (next === undefined) { setBusy('photo'); next = await pickAccountAvatar(checkpoint); checkpoint(); if (!next) return; }
       setBusy(next ? 'upload' : 'remove'); setUploading(next);
+      AccessibilityInfo.announceForAccessibility(next ? 'Subiendo foto…' : 'Quitando foto…');
       await auth.saveAvatar(next); checkpoint();
       failedPhoto.current = undefined;
       onPhotoSaved(next ? 'Foto actualizada.' : 'Foto quitada.');
@@ -97,10 +98,11 @@ function AccountSettingsForm({ ownerId, editing, locked, refreshing, onPhotoSave
           <UserAvatar size={64} name={name} avatarUrl={preview} />
           {sending && <View style={styles.avatarBusy}><ActivityIndicator color={colors.onDark} /></View>}
         </View>
-        <View style={styles.photoCopy}><Text accessibilityRole="header" style={styles.cardTitle}>Foto de la cuenta</Text><Text accessibilityLiveRegion="polite" style={styles.description}>{busy === 'upload' ? 'Subiendo foto…' : busy === 'remove' ? 'Quitando foto…' : 'Se recorta en cuadrado, se optimiza y se guarda en cuanto la eliges.'}</Text></View>
+        <View style={styles.photoCopy}><Text accessibilityRole="header" style={styles.cardTitle}>Foto de la cuenta</Text><Text style={styles.description}>Se recorta en cuadrado, se optimiza y se guarda en cuanto la eliges.</Text></View>
       </View>
       {photoError ? <Notice error onRetry={() => void changePhoto(failedPhoto.current)}>{photoError}</Notice> : null}
-      <ActionGroup><Button label={preview || auth.hasAvatar ? 'Cambiar foto' : 'Elegir foto'} secondary icon="image-outline" onPress={() => void changePhoto()} loading={busy === 'photo' || busy === 'upload'} disabled={!!busy} />{auth.hasAvatar && <Button label="Quitar foto" secondary onPress={() => void changePhoto(null)} loading={busy === 'remove'} disabled={!!busy} />}</ActionGroup>
+      {/* The progress lives in the buttons, so the card keeps its height while the photo uploads. */}
+      <ActionGroup><Button label={busy === 'upload' ? 'Subiendo foto…' : preview || auth.hasAvatar ? 'Cambiar foto' : 'Elegir foto'} secondary icon="image-outline" onPress={() => void changePhoto()} loading={busy === 'photo' || busy === 'upload'} disabled={!!busy} />{auth.hasAvatar && <Button label={busy === 'remove' ? 'Quitando foto…' : 'Quitar foto'} secondary onPress={() => void changePhoto(null)} loading={busy === 'remove'} disabled={!!busy} />}</ActionGroup>
       <Text style={styles.privacy}>La foto se muestra solo en tu cuenta.</Text>
     </View>
     <View style={styles.card}>

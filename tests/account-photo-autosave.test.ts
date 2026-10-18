@@ -8,7 +8,7 @@ const settle = async () => { for (let i = 0; i < 5; i++) await new Promise(resol
 
 // The real account form, run with stub natives: a photo must save the moment it is chosen.
 function fixture() {
-  const hooks = new Hooks(), uploads: ReturnType<typeof deferred>[] = [], photos: unknown[] = [], names: unknown[] = [], toasts: string[] = [];
+  const hooks = new Hooks(), uploads: ReturnType<typeof deferred>[] = [], photos: unknown[] = [], names: unknown[] = [], toasts: string[] = [], announced: string[] = [];
   const chosen = { data: new ArrayBuffer(8), contentType: 'image/jpeg', previewUri: 'file:///new.jpg' };
   let picks = 0;
   const auth = {
@@ -19,6 +19,7 @@ function fixture() {
   const bindings: Record<string, unknown> = {
     useStyles: () => ({ colors: {}, styles: {} }), useAuth: () => auth, accountProfileError,
     pickAccountAvatar: async () => { picks++; return chosen; },
+    AccessibilityInfo: { announceForAccessibility: (text: string) => announced.push(text) },
     router: { push() {} }, Linking: { openURL() {} }, PRIVACY_URL: '', TERMS_URL: '',
   };
   for (const name of ['View', 'Text', 'TextInput', 'Pressable', 'ActivityIndicator', 'UserAvatar', 'ActionGroup', 'Button', 'Notice', 'Icon', 'DeleteAccountSheet']) bindings[name] = name;
@@ -28,7 +29,7 @@ function fixture() {
   render();
   const avatar = () => elements(render()).find(element => element.type === 'UserAvatar')!.props.avatarUrl;
   const failure = () => elements(render()).find(element => element.type === 'Notice' && element.props.onRetry)?.props;
-  return { render, auth, chosen, uploads, photos, names, toasts, avatar, failure, picks: () => picks };
+  return { render, auth, chosen, uploads, photos, names, toasts, announced, avatar, failure, picks: () => picks };
 }
 
 test('choosing a photo uploads it at once, without «Guardar cambios» and without the name being typed', async () => {
@@ -39,7 +40,8 @@ test('choosing a photo uploads it at once, without «Guardar cambios» and witho
   assert.deepEqual(f.photos, [f.chosen], 'the chosen photo goes to the server on its own');
   assert.equal(f.names.length, 0, 'the unsaved name is not sent with the photo');
   assert.equal(f.avatar(), 'file:///new.jpg', 'the new photo shows while it uploads');
-  assert.ok(elements(f.render()).some(element => element.type === 'Text' && element.props.children.includes('Subiendo foto…')), 'the upload shows its progress');
+  assert.equal(control(f.render(), 'Subiendo foto…').loading, true, 'the upload shows its progress');
+  assert.deepEqual(f.announced, ['Subiendo foto…']);
   f.uploads[0].resolve(); await settle();
   assert.deepEqual(f.toasts, ['Foto actualizada.']);
   assert.equal(control(f.render(), 'Nombre de tu cuenta').value, 'Ana María', 'the typed name waits for its own button');
