@@ -21,9 +21,11 @@ export function OperationTabs({ value, onChange, disabled = false }: { value: Li
       const selected = (value ?? 'offers') === operation.value;
       return <MotionPressable key={operation.value} accessibilityRole="tab" accessibilityLabel={operation.label} accessibilityState={{ selected, disabled }} aria-selected={selected}
         disabled={disabled} onPress={() => { if (!selected) onChange(operation.value); }} style={({ pressed }) => [styles.tab, pressed && { opacity: .7 }]}>
-        {/* One line, always: Android can lay the text out a fraction narrower than it measured it (seen after the app
-            resumes), and «Venta y permuta» then drops «permuta» to a hidden second line. Clipping that fraction is invisible. */}
-        <Text numberOfLines={1} ellipsizeMode="clip" style={[styles.tabText, selected && styles.selected]}>{operation.label}</Text>
+        {/* Android lays the label out in a box a fraction of a pixel narrower than the text it measured (seen after the app
+            resumes or the theme changes), and «Venta y permuta» drops «permuta» to a hidden second line; numberOfLines alone
+            does not help, it breaks first. A trailing space widens the measure, and Android lets trailing space hang past the
+            box instead of breaking the line. The accessible name stays the bare label. */}
+        <Text numberOfLines={1} ellipsizeMode="clip" style={[styles.tabText, selected && styles.selected]}>{`${operation.label} `}</Text>
         <View style={[styles.mark, selected && styles.markOn]} />
       </MotionPressable>;
     })}

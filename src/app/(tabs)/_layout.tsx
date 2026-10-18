@@ -14,7 +14,10 @@ import { useAppUpdate } from '../../updates/useAppUpdate';
 export default function TabLayout() {
   const { colors, scheme } = useTheme();
   const insets = useSafeAreaInsets();
-  const wide = useWindowDimensions().width >= layout.wideMinWidth;
+  const { width } = useWindowDimensions();
+  const wide = width >= layout.wideMinWidth;
+  // A compact pill centred on the screen, like Telegram's, not one stretched edge to edge: the four sections sit closer.
+  const side = Math.round((width - Math.min(width - 32, barWidth)) / 2);
   const { unreadCount: messageUnread } = useMessaging();
   const { unreadCount: noticeUnread } = useNotifications();
   // Mi espacio is the only tab that carries both inboxes, so its badge counts both.
@@ -41,18 +44,19 @@ export default function TabLayout() {
       tabBarInactiveTintColor: colors.muted,
       tabBarActiveBackgroundColor: 'transparent',
       tabBarHideOnKeyboard: true,
-      // A floating pill 16 px from the sides and 20 above the safe area, over the screen: what scrolls behind it
-      // shows through the glass. Hiding it for the keyboard moves the whole pill out of view.
+      // A floating pill, at most 336 px wide and 20 above the safe area, over the screen. Hiding it for the keyboard
+      // moves the whole pill out of view.
       tabBarStyle: {
         position: 'absolute', left: 0, right: 0, bottom: 0,
-        height: bar + 20 + insets.bottom, paddingTop: 0, paddingBottom: 20 + insets.bottom, paddingHorizontal: 20,
+        height: bar + 20 + insets.bottom, paddingTop: 0, paddingBottom: 20 + insets.bottom, paddingHorizontal: side + 4,
         backgroundColor: 'transparent', borderTopWidth: 0, elevation: 0,
       },
-      // Glass tinted with the ground, not a blue slab: blurred on iOS and the web, translucent on Android.
-      tabBarBackground: () => <View style={[styles.pill, { borderColor: colors.navigationBorder,
+      // Nearly opaque, in the search field's surface colour (like Telegram): blurred on iOS and the web, tinted on Android.
+      tabBarBackground: () => <View style={[styles.pill, { left: side, right: side, borderColor: colors.navigationBorder,
         boxShadow: scheme === 'dark' ? '0 12px 32px rgba(0,0,0,0.4)' : '0 10px 28px rgba(26,43,59,0.12)' }]}><NavigationMaterial /></View>,
-      // No side padding on items: at 320 px «Mi espacio» needs the whole quarter.
-      tabBarItemStyle: { height: bar, paddingHorizontal: 0 },
+      // No side padding on items: at 320 px «Mi espacio» needs the whole quarter. React Navigation lays each item out
+      // from the top; a row wrapper lets the button take its content's height and centres it in the pill.
+      tabBarItemStyle: { height: bar, paddingHorizontal: 0, flexDirection: 'row', alignItems: 'center' },
       tabBarLabelStyle: { fontSize: 12, lineHeight: 16, fontWeight: '600', marginTop: 2, flexShrink: 0 },
       tabBarLabelPosition: 'below-icon',
       sceneStyle: { backgroundColor: colors.paper },
@@ -68,8 +72,8 @@ export default function TabLayout() {
   );
 }
 
-const bar = 68;
+const bar = 68, barWidth = 336;
 const styles = StyleSheet.create({
-  pill: { position: 'absolute', left: 16, right: 16, top: 0, height: bar, borderRadius: rounded.pill, borderWidth: 1, overflow: 'hidden' },
+  pill: { position: 'absolute', top: 0, height: bar, borderRadius: rounded.pill, borderWidth: 1, overflow: 'hidden' },
   avatar: { borderRadius: rounded.pill, borderWidth: 2, borderColor: 'transparent' },
 });
