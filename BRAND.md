@@ -1,12 +1,13 @@
 ---
-version: 2026-10-06
+version: 2026-10-18
 name: KarmaHouse — brand
 description: >
   Brand truth for everything KarmaHouse makes: app, website, videos, motion graphics, posts.
   Taken from the live React site (web/src/index.css, web/src/App.tsx, web/src/ui.tsx) and the app
   theme (src/theme.ts). Warm Havana editorial: limewash cream, Calistoga headlines, the app's blue as
   the one strong accent, and four quiet colours borrowed from a Vedado porch (shutter green,
-  terracotta steps, ochre, afternoon sun). Calm and well made, never loud.
+  terracotta steps, ochre, afternoon sun). Calm and well made by default; social posts and videos
+  may turn the volume up (see «Redes y video»).
 unit: the frame — 1080×1920 (9:16) for Reels, Status and TikTok; 1920×1080 and 1080×1080 also valid
 principle: atoms are sacred · composition is free · facts come only from the list below
 
@@ -55,7 +56,7 @@ spacing:
   gap: "2cqw"
 
 motion:
-  ease: "cubic-bezier(.22, 1, .36, 1)"   # --ease-out-soft; the only ease for entrances
+  ease: "cubic-bezier(.22, 1, .36, 1)"   # --ease-out-soft; the default ease for entrances
   rise: "opacity 0 → 1 and y 24px → 0 over 0.7–0.8s"
   stagger: "0.08s between siblings"
   door: "clip-path inset(100% 0 0 0) → inset(0) over 1.1s; photos open upward like a door"
@@ -83,7 +84,8 @@ directly with whoever publishes. Tagline on the site: «Un espacio para encontra
 
 Look: a warm Havana editorial. Limewash cream, Calistoga headlines with one phrase in blue, white
 cards with sand hairlines, a deep-sea navy panel to close, and Cuban architecture as ornament (the
-*mediopunto* window, the *losa hidráulica* floor tile, a door opening). Calm, crafted, never loud.
+*mediopunto* window, the *losa hidráulica* floor tile, a door opening). Calm and crafted by
+default; on social and video it can get louder (see «Redes y video»).
 
 Voice: Cuban Spanish, *tú*, short sentences, concrete benefits. Careful and honest like the site:
 no hype, no promises the app does not keep, no clichés (old cars, cigars, flags as decoration).
@@ -124,18 +126,53 @@ illustrative photos and example chats: «Imagen ilustrativa», «Ejemplo de uso�
 
 ## Motion
 
-Motion should feel like the site: soft, confident, architectural. Everything enters on
-`cubic-bezier(.22,1,.36,1)`; nothing bounces or spins. Signature moves: a photo opening upward
+By default, motion feels like the site: soft, confident, architectural. Things enter on
+`cubic-bezier(.22,1,.36,1)` and do not bounce or spin. Signature moves: a photo opening upward
 like a door (clip-path), the mediopunto window lighting pane by pane, the verb in the headline
 swapping in place, siblings rising in a 0.08 s stagger, a thin sol → terracota → blue line drawing
 left to right. Cuts land on the music. Texture comes from light (warm afternoon glow, soft grain,
-the losa pattern at low opacity), not from effects.
+the losa pattern at low opacity). Social and video may go further: see «Redes y video».
 
-## Do / Don't
+## Defaults
 
-- Do keep blue as the single strong accent; sol, persiana, terracota and ocre stay small (icons, numerals, one phrase on mar).
-- Do use one coloured phrase per headline, not more. Calistoga is weight 400 only; never fake-bold it.
-- Do make every button and chip a full pill.
-- Don't add other saturated colours, rainbow gradients, neon, glitch or lens flares.
-- Don't put text on a photo without the mar overlay.
+These are the starting point, not prohibitions. Follow them unless the piece calls for something
+else or the user asks for it; «Redes y video» lists what is open there.
+
+- Blue is the single strong accent; sol, persiana, terracota and ocre stay small (icons, numerals, one phrase on mar).
+- One coloured phrase per headline.
+- Every button and chip is a full pill.
+- Calm palette: no other saturated colours, rainbow gradients, neon, glitch or lens flares.
+- Text on a photo sits on the mar overlay.
+
+## Always
+
+- Facts, voice, the logo rules and the labels «Imagen ilustrativa» / «Ejemplo de uso» above do not change for any format.
+- Calistoga is weight 400 only; never fake-bold it.
 - Don't show third-party logos (Revolico, WhatsApp, Google Play).
+- Text stays legible: on a photo or a busy scene, give it a backing (the mar overlay, a solid panel, a blur or a strong shadow).
+
+## Redes y video
+
+Instagram (posts, carousels, stories, reels), TikTok, WhatsApp Status, ads and promo videos may
+use anything the user wants on top of the defaults. The app (`DESIGN.md`) and the landing keep the
+defaults unless the user asks otherwise.
+
+Open here:
+
+- **Extra saturated colours**, any the user picks. Starting suggestions from Havana façades:
+  flamboyán `#E8432E`, turquesa `#16B3C1`, buganvilla `#D2367A`. Blue is still the brand's colour;
+  extras can carry the beat.
+- **Several coloured words per frame** in kinetic text: small connectors, the key word huge, in
+  another font and colour.
+- **More fonts with a role:** Calistoga and the sans as the base, plus a heavy sans, a condensed
+  all-caps face to hit, and a pixel or mono face for numbers. Each font must exist as a local file.
+- **Effects:** glitch, text decoding or scrambling, colour trails, motion blur, colour flashes,
+  light streaks and lens flares, chromatic split, grain.
+- **Transitions:** block dissolves, losa dissolves (tiles flipping), whip pans with blur, flashes,
+  zooms that pass through an object, plus the brand ones (door, mediopunto pane, losa).
+- **Easing:** bounce, overshoot, squash and stretch, spins.
+- **The mascot** (`assets/mascota/`, once chosen): a character, not the logo. It can act, change
+  pose and take any colour or prop the scene needs. The logo itself still follows the logo rules.
+
+Still holds here: everything under «Always». Flashes: at most three full-frame flashes per second
+(photosensitivity).
