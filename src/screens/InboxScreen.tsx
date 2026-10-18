@@ -118,7 +118,7 @@ function AgencyInbox({refreshRef,onUnread}:{refreshRef:RefObject<() => Promise<u
      {staff&&(c.closedReason?<StateChip tone="neutral" label="Expediente cerrado"/>:!c.assigneeId&&<StateChip tone="waiting" label="Sin responsable"/>)}
     </View>
    </Pressable>;})}
-  {visible&&!visible.error&&!visible.items.length&&<Text style={s.preview}>{staff?'Aún no hay conversaciones con clientes.':'Sin conversaciones con inmobiliarias.'}</Text>}
+  {visible&&!visible.error&&!visible.items.length&&<Text style={s.agencyEmpty}>{staff?'Aún no hay conversaciones con clientes.':'Sin conversaciones con inmobiliarias.'}</Text>}
   {visible?.hasMore&&<Button label="Más conversaciones de inmobiliaria" secondary onPress={()=>void load(true)}/>}
  </View>;
 }
@@ -149,7 +149,7 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   preview: { flex: 1, color: colors.body, fontSize: 14, lineHeight: 20 }, unreadPreview: { color: colors.ink, fontWeight: '600' },
   badge: { minWidth: 20, height: 20, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryFill, borderRadius: rounded.pill }, badgeText: { color: colors.onPrimary, fontSize: 11, fontWeight: '700' },
   blocked: { color: colors.danger, fontSize: 12, lineHeight: 16, marginTop: 2 }, footer: { color: colors.muted, fontSize: 12, lineHeight: 17, paddingVertical: 16, paddingHorizontal: 6 },
-  agencyGroup: { gap: 6, paddingBottom: 8 }, agencyFilters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 4, paddingBottom: 6 },
+  agencyGroup: { gap: 6, paddingBottom: 8 }, agencyEmpty: { ...typography.bodySm, color: colors.body, paddingHorizontal: 6, paddingVertical: 8 }, agencyFilters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 4, paddingBottom: 6 },
   requests: { marginHorizontal: 16, marginBottom: 12, paddingVertical: 12, paddingHorizontal: 14, borderRadius: rounded.card, backgroundColor: colors.softAmber, flexDirection: 'row', alignItems: 'center', gap: 12 },
   requestIcon: { width: 40, height: 40, borderRadius: rounded.pill, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.softAmber },
   requestTitle: { color: colors.ink, fontSize: 15, lineHeight: 20, fontWeight: '600' }, requestSubtitle: { color: colors.body, fontSize: 13, lineHeight: 18 },

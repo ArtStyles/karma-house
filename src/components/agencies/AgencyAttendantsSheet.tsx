@@ -24,7 +24,7 @@ export function AgencyAttendantsSheet({ visible, onClose, conversation: c, onCha
   const { colors, styles } = useStyles();
   const [members, setMembers] = useState<AgencyMembership[] | null>(null), [busy, setBusy] = useState(''), [issue, setIssue] = useState('');
   useEffect(() => {
-    if (!visible || !c.canManage || !w.repository) return;
+    if (!visible || !c.canManage || c.closedReason || !w.repository) return;
     const repository = w.repository;
     let active = true, context: CapturedAgencyContext;
     try { context = w.captureAgencyReadContext(); } catch { return; }
@@ -35,7 +35,7 @@ export function AgencyAttendantsSheet({ visible, onClose, conversation: c, onCha
       return all;
     })().then(all => { if (active) setMembers(all); }).catch(error => { if (active) setIssue(agencyError(error)); }).finally(() => context.release());
     return () => { active = false; };
-  }, [visible, c.canManage, w.repository, w.captureAgencyReadContext]);
+  }, [visible, c.canManage, c.closedReason, w.repository, w.captureAgencyReadContext]);
   async function change(key: string, work: (context: CapturedAgencyContext) => Promise<unknown>) {
     if (busy || !messaging || !deals) return;
     setBusy(key); setIssue('');
@@ -45,18 +45,21 @@ export function AgencyAttendantsSheet({ visible, onClose, conversation: c, onCha
     finally { context?.release(); setBusy(''); }
   }
   const attending = new Set(c.attendants.filter(a => !a.lead).map(a => a.userId));
-  const people: Person[] = c.canManage && members ? members : c.attendants;
+  // A closed case keeps its history; who answers it can no longer change.
+  const editable = c.canManage && !c.closedReason;
+  const people: Person[] = editable && members ? members : c.attendants;
   return <Sheet visible={visible} onClose={onClose} title="Quién atiende">
     <Text style={styles.intro}>Administradores y coordinadores escriben en todas las conversaciones. También escriben el responsable y las personas que se añadan aquí. El cliente ve todas las respuestas como {c.agencyName}.</Text>
+    {!!c.closedReason && <Text style={styles.meta}>El expediente está cerrado: ya no se puede cambiar quién atiende.</Text>}
     {!!issue && <Notice error>{issue}</Notice>}
-    {c.canManage && !members && !issue && <ActivityIndicator accessibilityLabel="Consultando el equipo" color={colors.primary} />}
+    {editable && !members && !issue && <ActivityIndicator accessibilityLabel="Consultando el equipo" color={colors.primary} />}
     {people.map(person => {
       const name = person.displayName ?? 'Persona del equipo';
       const lead = person.userId === c.assigneeId, supervisor = person.role !== 'manager', added = attending.has(person.userId);
       return <View key={person.userId} style={styles.person}>
         <Text style={styles.name}>{name}</Text>
         <Text style={styles.meta}>{agencyRoleLabel[person.role]}{lead ? ' · Responsable' : added ? ' · Atiende' : supervisor ? ' · Escribe siempre' : ''}</Text>
-        {c.canManage && !lead && <View style={styles.actions}>
+        {editable && !lead && <View style={styles.actions}>
           <Pill label={busy === `lead:${person.userId}` ? 'Guardando…' : 'Hacer responsable'} accessibilityLabel={`Hacer responsable a ${name}`}
             onPress={() => void change(`lead:${person.userId}`, context => deals!.assign({ dealId: c.dealId, userId: person.userId, expectedVersion: c.dealVersion, clientRequestId: createMessageId() }, context))} />
           {!supervisor && <Pill label={busy === `attend:${person.userId}` ? 'Guardando…' : 'Atiende'} active={added} accessibilityLabel={`${added ? 'Quitar' : 'Añadir'} a ${name} en esta conversación`}
