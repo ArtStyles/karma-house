@@ -29,14 +29,15 @@ async function fixture(guest = false, agency = false) {
     StyleSheet: { absoluteFill: {} }, PROPERTY_REPORT_REASONS: [], CONDITIONS: [], NEEDS_CONNECTION: 'Sin conexión',
     createMessageId: () => 'request', agencyError: (error: Error) => error.message,
     router: { push: (destination: unknown) => destinations.push(destination) },
+    Linking: { opened: [] as unknown[], openURL(url: string) { this.opened.push(url); } }, PUBLIC_PAGES_URL: 'https://karmahouse.site/',
   };
-  for (const name of ['ActivityIndicator', 'View', 'Text', 'Pressable', 'SafeAreaView', 'ScrollView', 'Button', 'Icon', 'IconButton', 'PropertyImage', 'Notice', 'Sheet', 'Feature', 'Detail', 'Cartel', 'StateChip', 'ArchImage', 'PhotoGallery', 'ReportConversationSheet', 'AgencyVerifiedBadge']) bindings[name] = name;
+  for (const name of ['ActivityIndicator', 'View', 'Text', 'Pressable', 'SafeAreaView', 'ScrollView', 'Button', 'Icon', 'IconButton', 'PropertyImage', 'Notice', 'Sheet', 'Feature', 'Detail', 'Cartel', 'StateChip', 'ArchImage', 'PhotoGallery', 'ReportConversationSheet', 'AgencyVerifiedBadge', 'AgencyMark', 'UserAvatar', 'Publisher']) bindings[name] = name;
   const component = executeComponent('src/screens/DetailScreen.tsx', 'DetailScreen', hooks, bindings);
   const render = () => hooks.render(() => component());
   render(); await settle(); render(); control(render(), 'Contactar').onPress();
   const sheet = () => elements(render()).find(element => element.type === 'Sheet' && elements(element).some(child => child.props?.label === 'Cerrar'))!;
   const contact = () => control(sheet(), agency ? 'Contactar con Inmobiliaria' : 'Contactar con el responsable personal').onPress();
-  return { render, sheet, contact, refresh, start, starts, destinations, close: () => control(render(), 'Cerrar').onPress(), blur: () => hooks.dispose() };
+  return { render, sheet, contact, openURL: (bindings.Linking as any)?.opened as unknown[], refresh, start, starts, destinations, close: () => control(render(), 'Cerrar').onPress(), blur: () => hooks.dispose() };
 }
 
 test('guest contact hides its sheet before navigating to authentication', async () => {
@@ -64,4 +65,12 @@ test('a stale agency failure cannot reopen a closed sheet or show an error', asy
 test('losing focus invalidates a request while the detail screen remains mounted', async () => {
   const f = await fixture(); f.contact(); f.blur(); f.refresh.resolve({ managerId: 'owner', contactAvailable: true }); await settle();
   assert.equal(f.starts.length, 0); assert.equal(f.destinations.length, 0); assert.equal(f.sheet().props.visible, false);
+});
+
+test('an agency listing names its publisher once, as a link to the commercial profile, and keeps one Contactar', async () => {
+  const f = await fixture(false, true), page = f.render(), sheets = new Set(elements(page).filter(element => element.type === 'Sheet').flatMap(elements)), outside = elements(page).filter(element => !sheets.has(element));
+  control(page, 'Ver el perfil comercial de Inmobiliaria').onPress();
+  assert.deepEqual(f.openURL, ['https://karmahouse.site/agency/agency']);
+  assert.equal(outside.filter(element => /^Contactar/.test(element.props?.label ?? '')).length, 1);
+  assert.ok(!outside.some(element => element.type === 'AgencyVerifiedBadge'));
 });
