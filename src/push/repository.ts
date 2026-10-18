@@ -21,16 +21,26 @@ export function createPushRepository(url: string, publicKey: string, fetcher: ty
       method: 'POST', headers, body: JSON.stringify(args), ...(context ? { signal: context.signal } : {}),
     });
     checkpoint(context);
-    if (!response.ok) throw name === 'kh_disable_push_device' ? revocationError() : registrationError();
+    if (!response.ok) {
+      const refused = /KH_PUSH_INVALID/.test(await response.text().catch(() => ''));
+      throw Object.assign(name === 'kh_disable_push_device' ? revocationError() : registrationError(), { invalidPayload: refused });
+    }
     const result: unknown = await response.json(); checkpoint(context); return record(result);
   }
   return {
     async register(input, context) {
       validateIdentity(input);
       if (!isUuid(context.userId) || !isUuid(context.sessionId) || !isUuid(input.projectId) || input.platform !== 'android' || !isFcmToken(input.fcmToken)) throw invalid();
-      const result = await rpc('kh_register_push_device', { p_actor_id: context.userId, p_payload: input }, context);
+      let result: Record<string, unknown>, agencyChat = input.supportsAgencyChat === true;
+      try { result = await rpc('kh_register_push_device', { p_actor_id: context.userId, p_payload: input }, context); }
+      catch (error) {
+        // A server without agency chat notices refuses the unknown flag: register without it until that migration lands.
+        if (!agencyChat || !(error as { invalidPayload?: boolean }).invalidPayload) throw error;
+        const { supportsAgencyChat: _, ...older } = input; agencyChat = false;
+        result = await rpc('kh_register_push_device', { p_actor_id: context.userId, p_payload: older }, context);
+      }
       if (result.enabled !== true || result.revision !== input.revision || result.platform !== 'android') throw invalid();
-      return { enabled: true, revision: input.revision, platform: 'android' };
+      return { enabled: true, revision: input.revision, platform: 'android', agencyChat };
     },
     async disable(input) {
       validateIdentity(input);

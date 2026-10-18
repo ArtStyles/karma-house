@@ -13,6 +13,7 @@ import {ActionGroup,Button,EmptyState,Icon,Notice,PageTitle,type IconName} from 
 import {createThemedStyles,internalLayout,rounded,typography} from '../theme';
 import {AgencyMark} from '../components/agencies/AgencyMark';
 import {AgencyStats} from '../components/agencies/AgencyStats';
+import {TeamChatRow} from '../components/agencies/TeamChatRow';
 export const agencyRoleLabel={manager:'Gestor',coordinator:'Coordinador',admin:'Administrador'} as const;
 const links:{title:string;copy:string;icon:IconName;path:Href;admin?:boolean}[]=[
  {title:'Perfil comercial',copy:'Datos públicos de la inmobiliaria',icon:'business-outline',path:'/agency-profile',admin:true},
@@ -41,6 +42,7 @@ export default function AgencyWorkspaceScreen(){
  {!selecting&&!routePending&&w.activeAgency&&w.membership&&<>
   <View style={s.context}><Text style={s.title}>{agencyRoleLabel[w.membership.role]} de {w.activeAgency.tradeName}</Text><Text style={s.meta}>Clientes, cartera y negociaciones de esta inmobiliaria.</Text></View>
   <AgencyStats key={`${w.activeAgencyId}:${w.generation}`}/>
+  <TeamChatRow/>
   {[{title:'Actividad comercial',items:links.filter(link=>!link.admin)},{title:'Administración',items:links.filter(link=>link.admin&&w.membership?.role==='admin')}].filter(group=>group.items.length).map(group=><View key={group.title} style={s.section}><Text accessibilityRole="header" style={s.sectionTitle}>{group.title}</Text><View style={s.group}>{group.items.map((link,index)=><Pressable key={link.title} accessibilityRole="button" onPress={()=>router.push(link.path)} style={[s.link,index>0&&s.divider]}><View style={s.icon}><Icon name={link.icon} color={colors.primary}/></View><View style={s.copy}><Text style={s.rowTitle}>{link.title}</Text><Text style={s.meta}>{link.copy}</Text></View><Icon name="chevron-forward" size={18} color={colors.muted}/></Pressable>)}</View></View>)}
   {w.activeAgency.isPrincipal?<Notice>Inmobiliaria principal de KarmaHouse. El sello dorado distingue su identidad oficial.</Notice>:canPerformAgencyAction(w.membership.role,'request_verification')&&<Button secondary label={w.activeAgency.verified?'Ver estado de verificación':'Verificación empresarial'} icon="checkmark-circle-outline" onPress={()=>router.push('/agency-verification')}/>}
  </>}

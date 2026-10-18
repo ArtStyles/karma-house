@@ -1,8 +1,8 @@
-// Applies one reviewed migration with its SQL suite: node scripts/apply-reviewed-migration.mjs <version>_<name> [--commit]
+// Applies one reviewed migration with its SQL suite: node scripts/apply-reviewed-migration.mjs <version>_<name> [--commit] [--after=<version>_<name>,…]
 // The suite is supabase/tests/<name>.sql. Without --commit the suite runs on top of the migration in one transaction
 // that rolls back: nothing stays. With --commit the migration, its ledger row and checksum are committed once and the
 // suite runs after it. Used for 20261014000200_agency_sent_invitations, 20261015000100_agency_member_exits and
-// 20261015000200_pro_private and 20261015000300_owner_listings_to_agency.
+// 20261015000200_pro_private, 20261015000300_owner_listings_to_agency, 20261017000200_agency_team_chat, 20261017000300_agency_client_chat and 20261017000400_agency_chat_notifications.
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createDatabaseClient } from './cloud-db.mjs';
@@ -20,12 +20,16 @@ const ledger = `insert into supabase_migrations.schema_migrations(version,statem
 insert into supabase_migrations.karmahouse_migration_checksums(version,sha256) values('${version}','${sha256}');`;
 const suite = readFileSync(new URL(`supabase/tests/${name}.sql`, root), 'utf8');
 const commit = process.argv.includes('--commit');
+// --after prepends migrations that are reviewed but not applied yet, only for a dry run; --commit needs them applied first.
+const after = (process.argv.find(arg => arg.startsWith('--after=')) ?? '').slice('--after='.length).split(',').filter(Boolean);
+if (after.some(item => !/^\d{14}_[a-z0-9_]+$/.test(item)) || (commit && after.length)) { console.error('--after solo admite <version>_<name> y no se combina con --commit'); process.exit(2); }
+const prerequisites = after.map(item => readFileSync(new URL(`supabase/migrations/${item}.sql`, root), 'utf8')).join('\n');
 const transaction = sql => `begin; set local lock_timeout='3s'; set local statement_timeout='60s'; set local idle_in_transaction_session_timeout='15s';\n${sql}`;
 const db = createDatabaseClient();
 // Suites invent ids with these prefixes (agency_sent_invitations 47…, agency_member_exits 48…, pro_private 49…,
-// owner_listings_to_agency 50…); real activity cannot match.
+// owner_listings_to_agency 50…, agency_team_chat 61…, agency_client_chat 62…, agency_chat_notifications 63…); real activity cannot match.
 const leftovers = async () => (await db.query(`select (select count(*) from auth.users where id::text like any($1::text[]))+(select count(*) from kh_private.agencies where id::text like any($1::text[])) n`,
-  [['47000000-0000-4000-8000-%', '48000000-0000-4000-8000-%', '49000000-0000-4000-8000-%', '50000000-0000-4000-8000-%']])).rows[0].n;
+  [['47000000-0000-4000-8000-%', '48000000-0000-4000-8000-%', '49000000-0000-4000-8000-%', '50000000-0000-4000-8000-%', '61000000-0000-4000-8000-%', '62000000-0000-4000-8000-%', '63000000-0000-4000-8000-%']])).rows[0].n;
 
 try {
   await db.connect();
@@ -36,7 +40,7 @@ try {
     await db.query(transaction(suite));
   } else {
     // A suite's own begin only warns inside this transaction; its trailing rollback also undoes the migration.
-    await db.query(transaction(`${migration}\n${suite}`));
+    await db.query(transaction(`${prerequisites}\n${migration}\n${suite}`));
   }
   if (Number(await leftovers())) throw new Error('KH_LEFTOVER: la suite dejó filas sintéticas');
   console.log(commit ? 'suite superada sobre el esquema aplicado' : 'suite superada; nada se aplicó (usa --commit para aplicar)');

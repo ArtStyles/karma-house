@@ -4,6 +4,8 @@ export interface PushRequestContext extends PushSession { signal: AbortSignal; c
 export interface InstallationIdentity { installationId: string; installationSecret: string }
 export interface PushIntent {
   supportsAgencyNotifications?: boolean;
+  /** True once the server accepted agency chat notices for this phone. */
+  supportsAgencyChat?: boolean;
   enabled: boolean;
   userId: string | null;
   sessionId: string | null;
@@ -17,10 +19,10 @@ export interface InstallationStore {
   change(update: (current: InstallationState) => InstallationState): Promise<InstallationState>;
 }
 export interface RevocationInput extends InstallationIdentity { revision: number }
-export interface RegistrationInput extends RevocationInput { fcmToken: string; platform: 'android'; projectId: string; supportsAgencyNotifications?: boolean }
-export interface RegistrationResult { enabled: true; revision: number; platform: 'android' }
+export interface RegistrationInput extends RevocationInput { fcmToken: string; platform: 'android'; projectId: string; supportsAgencyNotifications?: boolean; supportsAgencyChat?: boolean }
+export interface RegistrationResult { enabled: true; revision: number; platform: 'android'; agencyChat?: boolean }
 export interface RevocationResult { enabled: false; revision: number }
-export interface AgencyPushTarget { route: 'account_notice'|'reviews'|'verification_reviews'|'application'|'verification'|'team'|'closures'|'deal'|'buyer_conversation'|'personal_conversation'; agencyId: string|null; dealId: string|null }
+export interface AgencyPushTarget { route: 'account_notice'|'reviews'|'verification_reviews'|'application'|'verification'|'team'|'closures'|'deal'|'buyer_conversation'|'personal_conversation'|'agency_conversation'|'team_chat'; agencyId: string|null; dealId: string|null }
 export interface ResolvedPush { agencyTarget?: AgencyPushTarget; notificationId: string; recipientId: string; conversationId: string | null; propertyId: string | null }
 export type PushTarget = { conversationId: string } | { propertyId: string } | { agencyTarget: AgencyPushTarget };
 export interface PushRepository {

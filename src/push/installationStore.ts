@@ -13,10 +13,11 @@ function validate(value: unknown): InstallationState {
   else if (!intent || item.revision === 0 || typeof intent.enabled !== 'boolean' || typeof intent.confirmed !== 'boolean' || typeof intent.wasEnabled !== 'boolean'
     || intent.userId !== null && !isUuid(intent.userId) || intent.sessionId !== null && !isUuid(intent.sessionId)
     || intent.supportsAgencyNotifications!==undefined && typeof intent.supportsAgencyNotifications!=='boolean'
+    || intent.supportsAgencyChat!==undefined && typeof intent.supportsAgencyChat!=='boolean'
     || intent.fcmToken !== null && !isFcmToken(intent.fcmToken)
     || intent.enabled && (!intent.userId || !intent.sessionId || !intent.fcmToken)) throw new Error('Invalid intent');
   return { version: 1, installationId: item.installationId, installationSecret: item.installationSecret, revision: item.revision,
-    intent: intent ? { ...(intent.supportsAgencyNotifications!==undefined?{supportsAgencyNotifications:intent.supportsAgencyNotifications}:{}),enabled: intent.enabled, userId: intent.userId, sessionId: intent.sessionId, fcmToken: intent.fcmToken, confirmed: intent.confirmed, wasEnabled: intent.wasEnabled } : null };
+    intent: intent ? { ...(intent.supportsAgencyNotifications!==undefined?{supportsAgencyNotifications:intent.supportsAgencyNotifications}:{}),...(intent.supportsAgencyChat!==undefined?{supportsAgencyChat:intent.supportsAgencyChat}:{}),enabled: intent.enabled, userId: intent.userId, sessionId: intent.sessionId, fcmToken: intent.fcmToken, confirmed: intent.confirmed, wasEnabled: intent.wasEnabled } : null };
 }
 
 /** One durable write precedes each outbound mutation. Failed writes never publish an in-memory revision. */

@@ -185,6 +185,9 @@ export default function DetailScreen() {
     if ((agencyId && !isUuid(agencyId)) || (managerId && (!agencyId || !isUuid(managerId)))) {
       setPreferred(null); setContactError('El destino del enlace no es válido. Elige un contacto para confirmarlo.');
     }
+    const only = contactOptions && !contactOptions.personalContact && contactOptions.agencies.length === 1 ? contactOptions.agencies[0] : null;
+    // One agency and no link to confirm: Contactar opens its chat without a choice to make.
+    if (only?.contactAvailable && !preferred && !agencyId && !managerId && auth.ready && (!auth.user || messaging.ready)) { void contactSeller(only); return; }
     setAgencyChoice(true);
   }
   async function share() {

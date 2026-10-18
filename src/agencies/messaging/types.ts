@@ -1,6 +1,9 @@
 import type { MessagingRequestContext, ReportReason } from '../../messaging/types';
-import type { AgencyRequestContext, Page } from '../types';
+import type { AgencyRequestContext, AgencyRole, Page } from '../types';
 export type AgencyConversationContext = MessagingRequestContext | AgencyRequestContext;
+/** client, supervisor (admin or coordinator), lead (the responsable) or attendant (added to this conversation). */
+export type AgencyConversationRole = 'client' | 'supervisor' | 'lead' | 'attendant';
+export interface AgencyAttendant { userId: string; displayName: string; role: AgencyRole; lead: boolean }
 export interface AgencyConversation {
     id: string;
     agencyId: string;
@@ -16,6 +19,16 @@ export interface AgencyConversation {
     dealVersion: number;
     unreadCount: number;
     blockedUserIds: string[];
+    role: AgencyConversationRole | null;
+    canManage: boolean;
+    canSeeDeal: boolean;
+    agencyBlocked: boolean;
+    /** The team member reading has a personal block on the client, wherever it was made. */
+    clientBlockedByMe: boolean;
+    buyerName: string | null;
+    attendants: AgencyAttendant[];
+    lastMessage: { body: string; createdAt: string; fromAgency: boolean } | null;
+    lastMessageAt: string | null;
 }
 export interface AgencyMessage {
     id: string;
@@ -25,6 +38,10 @@ export interface AgencyMessage {
     senderId: string | null;
     body: string;
     createdAt: string;
+    /** null before the server says which side wrote it. */
+    fromAgency: boolean | null;
+    senderName: string | null;
+    senderRole: AgencyRole | null;
 }
 export interface PublicAgencyContact {
     agencyId: string;
@@ -60,9 +77,22 @@ export interface AgencyMessagingRepository {
         blocked: boolean;
         clientRequestId: string;
     }, context: AgencyConversationContext): Promise<void>;
+    setAttendant(input: {
+        conversationId: string;
+        userId: string;
+        attending: boolean;
+        clientRequestId: string;
+    }, context: AgencyRequestContext): Promise<AgencyConversation>;
+    setAgencyBlock(input: {
+        conversationId: string;
+        agencyId: string;
+        blocked: boolean;
+        clientRequestId: string;
+    }, context: MessagingRequestContext): Promise<AgencyConversation>;
     report(input: {
         conversationId: string;
-        reportedUserId: string;
+        /** Omitted by a client: the report names the last team member who wrote. */
+        reportedUserId?: string;
         reason: ReportReason;
         details: string;
         clientRequestId: string;

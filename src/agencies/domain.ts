@@ -42,6 +42,13 @@ export function agencyError(error:unknown):string{
  if(/ACCOUNT_CHANGED|SESSION_REQUIRED/.test(message))return 'La sesión cambió. Actualiza antes de continuar.';
  if(/KH_AGENCY_DISABLED/.test(message))return 'La gestión de inmobiliarias aún no está habilitada.';
  if(/KH_AGENCY_NOT_APPROVED/.test(message))return 'La inmobiliaria debe ser aprobada por KarmaHouse antes de operar.';
+ if(/KH_CHAT_RATE_LIMIT/.test(message))return 'Has enviado muchos mensajes seguidos. Espera un momento antes de volver a escribir.';
+ if(/KH_CHAT_INVALID_MESSAGE/.test(message))return 'Escribe un mensaje de hasta 2000 caracteres.';
+ if(/KH_AGENCY_BLOCKED/.test(message))return 'Esta conversación está bloqueada. Quien bloqueó puede desbloquearla desde sus opciones.';
+ if(/KH_AGENCY_CONVERSATION_CLOSED/.test(message))return 'Esta conversación ya no admite mensajes.';
+ if(/KH_CHAT_BLOCKED/.test(message))return 'Hay un bloqueo entre esa persona y el cliente.';
+ if(/KH_AGENCY_MANAGER_CHANGED/.test(message))return 'Esa persona ya no puede atender esta conversación. Actualiza y elige otra.';
+ if(/KH_AGENCY_ASSIGNMENT_CHANGED/.test(message))return 'El responsable de esta conversación cambió. Actualiza e inténtalo de nuevo.';
  if(/KH_AGENCY_LAST_ADMIN/.test(message))return 'Debe quedar al menos un administrador activo en la inmobiliaria.';
  if(/CONFLICT|VERSION/.test(message))return 'Los datos cambiaron. Actualiza antes de volver a guardar.';
  if(/ROLE_REQUIRED|MEMBERSHIP_REQUIRED|OWNER_REQUIRED|ADMIN_REQUIRED/.test(message))return 'Tu cuenta no tiene permiso para esta acción.';

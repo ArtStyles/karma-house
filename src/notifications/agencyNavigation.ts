@@ -22,6 +22,8 @@ function routePath(target:AgencyPushTarget):string {
   case 'deal':return `/agency-deal/${target.dealId}`;
   case 'buyer_conversation':return `/agency-conversation/${target.dealId}`;
   case 'personal_conversation':return `/messages/${target.dealId}`;
+  case 'agency_conversation':return `/agency-conversation/${target.dealId}?agencyId=${target.agencyId}`;
+  case 'team_chat':return '/agency-team-chat';
  }
 }
 

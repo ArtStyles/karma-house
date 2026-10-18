@@ -11,6 +11,10 @@ import { Mediopunto } from '../components/Mediopunto';
 import { Segmented } from '../components/Segmented';
 import { ConversationBody } from './ConversationScreen';
 import {useAgencyWorkspace} from '../agencies/AgencyProvider';
+import {TeamChatRow} from '../components/agencies/TeamChatRow';
+import {AgencyMark} from '../components/agencies/AgencyMark';
+import {StateChip} from '../components/StateChip';
+import {inboxPreview,initials,shortDate} from '../agencies/messaging/presentation';
 import {agencyError} from '../agencies/domain';
 import {createAgencyMessagingRepository} from '../agencies/messaging/repository';
 import type {AgencyConversation} from '../agencies/messaging/types';
@@ -36,7 +40,7 @@ export default function InboxScreen() {
     if (active && messaging.available && auth.user && messaging.userId === auth.user.id) void latestRefresh.current().catch(() => undefined);
   }, [active, messaging.available, messaging.userId, auth.user?.id]);
   const authorized = !!auth.user && messaging.userId === auth.user.id;
-  const [tab, setTab] = useState<'personal' | 'agency'>('personal');
+  const [tab, setTab] = useState<'personal' | 'agency'>('personal'), [agencyUnread, setAgencyUnread] = useState(0);
   // From 1024 px the list and the open conversation sit side by side (DESIGN.md §10).
   const wide = useWindowDimensions().width >= layout.wideMinWidth;
   const [selected, setSelected] = useState<string | null>(null);
@@ -49,12 +53,12 @@ export default function InboxScreen() {
       <Icon name="chevron-forward" size={17} color={colors.body} />
     </Pressable>}
     {!auth.ready ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : !messaging.available ? <View style={styles.header}><EmptyState title="Mensajes no disponibles" description="Los mensajes estarán disponibles con el servicio conectado. La demostración no envía mensajes." /></View> : !auth.user ? <View style={styles.header}><AccountPrompt returnTo="/messages" title="Consulta tus mensajes" description="Inicia sesión para hablar con propietarios y compradores sin publicar tu teléfono." /></View> : !authorized || (!messaging.ready && !messaging.error) ? <ActivityIndicator color={colors.primary} style={styles.loading} /> : <>
-      <View style={styles.tabs}><Segmented<typeof tab> label="Tipo de conversación" value={tab} onChange={setTab} options={[{ value: 'personal', label: 'Personales' }, { value: 'agency', label: 'Con inmobiliarias' }]} /></View>
+      <View style={styles.tabs}><Segmented<typeof tab> label="Tipo de conversación" value={tab} onChange={setTab} options={[{ value: 'personal', label: messaging.unreadCount ? `Personales · ${messaging.unreadCount}` : 'Personales' }, { value: 'agency', label: agencyUnread ? `Inmobiliarias · ${agencyUnread}` : 'Inmobiliarias' }]} /></View>
       {messaging.error && <View style={styles.sync}><Notice error onRetry={() => void reload.refresh()}>{messaging.error}</Notice></View>}
       <FlatList data={tab === 'personal' ? messaging.conversations : []} keyExtractor={item => item.id} alwaysBounceVertical contentContainerStyle={styles.list} refreshControl={<RefreshControl refreshing={reload.refreshing} onRefresh={() => void reload.refresh()} tintColor={colors.primary} colors={[colors.primary]} />}
         renderItem={({ item }) => <ConversationCard conversation={item} selected={item.id === shown} onOpen={() => open(item.id)} />}
         // Kept mounted on both tabs so the agency inbox keeps its own refresh.
-        ListHeaderComponent={<View style={tab === 'agency' ? undefined : styles.hidden}><AgencyInbox refreshRef={agencyRefresh}/></View>}
+        ListHeaderComponent={<View style={tab === 'agency' ? undefined : styles.hidden}><AgencyInbox refreshRef={agencyRefresh} onUnread={setAgencyUnread}/></View>}
         ListEmptyComponent={tab === 'personal' && messaging.ready && !messaging.error ? <EmptyState title="Sin conversaciones personales" description="Abre una vivienda y toca Contactar para iniciar una conversación." action={<Button label="Explorar viviendas" onPress={() => router.replace('/')} />} /> : null}
         ListFooterComponent={messaging.conversations.length ? <Text style={styles.footer}>Se actualiza mientras KarmaHouse está abierta.</Text> : null}
       />
@@ -73,7 +77,7 @@ export default function InboxScreen() {
   </SafeAreaView>;
 }
 
-function AgencyInbox({refreshRef}:{refreshRef:RefObject<() => Promise<unknown>>}){
+function AgencyInbox({refreshRef,onUnread}:{refreshRef:RefObject<() => Promise<unknown>>;onUnread(count:number):void}){
  const auth=useAuth(),w=useAgencyWorkspace();const{styles:s}=useStyles();const[staff,setStaff]=useState(false);
  const repo=useMemo(()=>supabase?createAgencyMessagingRepository(supabase):null,[]);
  const scope=`${auth.user?.id}:${auth.session?.access_token}:${staff?w.activeAgencyId:'buyer'}:${staff?w.generation:''}`;
@@ -97,10 +101,24 @@ function AgencyInbox({refreshRef}:{refreshRef:RefObject<() => Promise<unknown>>}
  refreshRef.current=()=>latest.current();
  useFocusEffect(useCallback(()=>{epoch.current++;loading.current=false;setState({scope,items:[],hasMore:false,error:''});void latest.current();return()=>{epoch.current++;loading.current=false;setState({scope,items:[],hasMore:false,error:''})}},[scope]));
  useEffect(()=>{if(!active||!auth.user||(staff&&!w.activeAgencyId))return;return startAgencyPoll(()=>latest.current());},[active,scope,auth.user?.id,staff,w.activeAgencyId]);
+ const tradeName=w.activeAgency?.tradeName??'Mi inmobiliaria';
+ const unread=(visible?.items??[]).reduce((sum,c)=>sum+c.unreadCount,0);
+ useEffect(()=>{onUnread(unread)},[unread]);
  if(!auth.user)return null;
- return <View style={s.agencyGroup}><View style={s.agencyFilters}><Pill label="Como comprador" active={!staff} onPress={()=>setStaff(false)}/>{!!w.activeAgencyId&&<Pill label="Equipo de mi inmobiliaria" active={staff} onPress={()=>setStaff(true)}/>}</View>
-  {!!visible?.error&&<Notice error>{visible.error}</Notice>}{visible?.items.map(c=><Pressable key={c.id} accessibilityRole="button" style={({pressed})=>[s.card,pressed&&s.pressed]} onPress={()=>router.push({pathname:'/agency-conversation/[id]',params:{id:c.id,...(staff?{agencyId:c.agencyId}:{})}})}><ArchImage width={52} height={60} bottom={14} style={s.paperTile}><Text style={s.paperInitial}>{initials(c.agencyName)}</Text></ArchImage><View style={s.copy}><Text numberOfLines={1} style={[s.name,c.unreadCount>0&&s.unreadName]}>{c.agencyName}</Text><Text numberOfLines={1} style={s.property}>{c.propertyTitle}</Text><Text style={s.preview}>{c.unreadCount} sin leer · {c.closedReason?'Expediente cerrado':c.assigneeId?'Con responsable':'Cola de la inmobiliaria'}</Text></View></Pressable>)}
-  {visible&&!visible.error&&!visible.items.length&&<Text style={s.preview}>Sin conversaciones con inmobiliarias.</Text>}
+ return <View style={s.agencyGroup}>{!!w.activeAgencyId&&<View style={s.agencyFilters}><Pill label="Mis consultas" active={!staff} onPress={()=>setStaff(false)}/><Pill label={tradeName} accessibilityLabel={`Equipo de ${tradeName}`} active={staff} onPress={()=>setStaff(true)}/></View>}
+  {staff&&<TeamChatRow/>}
+  {!!visible?.error&&<Notice error>{visible.error}</Notice>}
+  {visible?.items.map(c=>{const title=staff?c.buyerName??'Cliente':c.agencyName,count=c.unreadCount,unseen=count>0;
+   return <Pressable key={c.id} accessibilityRole="button" accessibilityLabel={`${title}. ${c.propertyTitle}. ${unseen?`${count} ${count===1?'mensaje sin leer':'mensajes sin leer'}`:'Sin mensajes nuevos'}`} style={({pressed})=>[s.card,pressed&&s.pressed]} onPress={()=>router.push({pathname:'/agency-conversation/[id]',params:{id:c.id,...(staff?{agencyId:c.agencyId}:{})}})}>
+    {staff?<ArchImage width={52} height={60} bottom={14} style={s.tile}><Text style={s.initial}>{initials(title)}</Text></ArchImage>:<AgencyMark agencyId={c.agencyId} name={c.agencyName} width={52} height={60} bottom={14}/>}
+    <View style={s.copy}>
+     <View style={s.line}><Text numberOfLines={1} style={[s.name,unseen&&s.unreadName]}>{title}</Text>{!!c.lastMessageAt&&<Text style={[s.date,unseen&&s.unreadDate]}>{shortDate(c.lastMessageAt)}</Text>}</View>
+     <Text numberOfLines={1} style={s.property}>{c.propertyTitle}</Text>
+     <View style={s.line}><Text numberOfLines={1} style={[s.preview,unseen&&s.unreadPreview]}>{inboxPreview(c,staff)}</Text>{unseen&&<View style={s.badge}><Text style={s.badgeText}>{count>99?'99+':count}</Text></View>}</View>
+     {staff&&(c.closedReason?<StateChip tone="neutral" label="Expediente cerrado"/>:!c.assigneeId&&<StateChip tone="waiting" label="Sin responsable"/>)}
+    </View>
+   </Pressable>;})}
+  {visible&&!visible.error&&!visible.items.length&&<Text style={s.preview}>{staff?'Aún no hay conversaciones con clientes.':'Sin conversaciones con inmobiliarias.'}</Text>}
   {visible?.hasMore&&<Button label="Más conversaciones de inmobiliaria" secondary onPress={()=>void load(true)}/>}
  </View>;
 }
@@ -118,13 +136,6 @@ function ConversationCard({ conversation: item, selected = false, onOpen }: { co
   </Pressable>;
 }
 
-/** Without a photo in the inbox row, the arch holds the person's initials in Calistoga. */
-const initials = (name: string) => name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(part => [...part][0]).join('').toLocaleUpperCase('es') || '·';
-
-function shortDate(value: string) {
-  const date = new Date(value);
-  return date.toDateString() === new Date().toDateString() ? new Intl.DateTimeFormat('es', { hour: '2-digit', minute: '2-digit' }).format(date) : new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short' }).format(date);
-}
 
 const useStyles = createThemedStyles(colors => StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.paper }, shell: { width: '100%', maxWidth: internalLayout.maxWidth, alignSelf: 'center', flex: 1 }, header: { paddingHorizontal: 16 },
@@ -139,7 +150,6 @@ const useStyles = createThemedStyles(colors => StyleSheet.create({
   badge: { minWidth: 20, height: 20, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryFill, borderRadius: rounded.pill }, badgeText: { color: colors.onPrimary, fontSize: 11, fontWeight: '700' },
   blocked: { color: colors.danger, fontSize: 12, lineHeight: 16, marginTop: 2 }, footer: { color: colors.muted, fontSize: 12, lineHeight: 17, paddingVertical: 16, paddingHorizontal: 6 },
   agencyGroup: { gap: 6, paddingBottom: 8 }, agencyFilters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 4, paddingBottom: 6 },
-  paperTile: { backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' }, paperInitial: { ...typography.cardTitle, color: colors.creamInk },
   requests: { marginHorizontal: 16, marginBottom: 12, paddingVertical: 12, paddingHorizontal: 14, borderRadius: rounded.card, backgroundColor: colors.softAmber, flexDirection: 'row', alignItems: 'center', gap: 12 },
   requestIcon: { width: 40, height: 40, borderRadius: rounded.pill, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.softAmber },
   requestTitle: { color: colors.ink, fontSize: 15, lineHeight: 20, fontWeight: '600' }, requestSubtitle: { color: colors.body, fontSize: 13, lineHeight: 18 },

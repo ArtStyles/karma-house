@@ -7,7 +7,7 @@ import * as live from '../src/agencies/messaging/live.ts';
 import { createAgencyMessagingRepository, mergeAgencyMessages } from '../src/agencies/messaging/repository.ts';
 import { createAgencyController } from '../src/agencies/controller.ts';
 import { agencyError } from '../src/agencies/domain.ts';
-import { agencyConversationCounterparts } from '../src/agencies/messaging/counterparts.ts';
+import * as presentation from '../src/agencies/messaging/presentation.ts';
 import { validateAgencyProposal, schedulingError } from '../src/agencies/scheduling/domain.ts';
 import { createConsultationRefreshGate } from '../src/lib/consultationRefresh.ts';
 
@@ -51,7 +51,7 @@ const actor = id(1), agency = id(2), chat = id(3);
 // these recovery tests exercise a failed send even after that date has passed.
 const proposalNow = new Date('2026-10-08T12:00:00Z');
 const message = (seq: number) => ({ id: id(100 + seq), conversationId: chat, seq, clientMessageId: id(200 + seq), senderId: actor, body: `Message ${seq}`, createdAt: '2026-10-08T00:00:00Z' });
-const conversation = (n = 0) => ({ id: n ? id(1000 + n) : chat, agencyId: agency, dealId: id(4), propertyId: id(5), buyerId: actor, canSend: true, closedReason: null, lastSeq: 90, agencyName: 'Agency', propertyTitle: `Home ${n}`, assigneeId: actor, dealVersion: 1, unreadCount: 0, blockedUserIds: [] });
+const conversation = (n = 0) => ({ id: n ? id(1000 + n) : chat, agencyId: agency, dealId: id(4), propertyId: id(5), buyerId: actor, canSend: true, closedReason: null, lastSeq: 90, agencyName: 'Agency', propertyTitle: `Home ${n}`, assigneeId: actor, dealVersion: 1, unreadCount: 1, blockedUserIds: [] });
 function elements(root: any): Element[] {
     if (!root) return [];
     if (Array.isArray(root)) return root.flatMap(elements);
@@ -97,7 +97,7 @@ async function fixture(staff = false, inbox = false) {
     const hooks = new Hooks(), panelHooks = new Hooks();
     const panelType = 'ActualProposalPanel';
     let requests = 800;
-    const bindings: any = { ActivityIndicator:'ActivityIndicator',EmptyState:'EmptyState',ActionGroup:'ActionGroup',AgencyTextField:'AgencyTextField',KeyboardAvoidingView:'KeyboardAvoidingView',Platform:{OS:'web'}, ...live, mergeAgencyMessages, agencyError, agencyConversationCounterparts, createAgencyMessagingRepository, supabase: client, useAuth: () => auth, useAgencyWorkspace: () => w, useMessagingActivity: () => false, useLocalSearchParams: () => ({ id: chat, ...(staff ? { agencyId: agency } : {}) }), useStyles: () => ({ styles: {}, colors: {} }), isUuid: () => true, createMessageId: () => id(requests++), router: { push() {} }, ScrollView: 'ScrollView', SafeAreaView: 'SafeAreaView', View: 'View', Text: 'Text', TextInput: 'TextInput', Button: 'Button', Notice: 'Notice', PageTitle: 'PageTitle', AccountPrompt: 'AccountPrompt', ReportConversationSheet: 'ReportConversationSheet', AgencyProposalPanel: panelType, Pill: 'Pill', Pressable: 'Pressable', ArchImage: 'ArchImage', initials: (name: string) => name };
+    const bindings: any = { ActivityIndicator:'ActivityIndicator',EmptyState:'EmptyState',ActionGroup:'ActionGroup',AgencyTextField:'AgencyTextField',KeyboardAvoidingView:'KeyboardAvoidingView',Platform:{OS:'web'}, ...live, ...presentation, agencyRoleLabel: { manager: 'Gestor', coordinator: 'Coordinador', admin: 'Administrador' }, IconButton: 'IconButton', AgencyMark: 'AgencyMark', MessageBubble: 'MessageBubble', Sheet: 'Sheet', AgencyAttendantsSheet: 'AgencyAttendantsSheet', Icon: 'Icon', goBack() {}, mergeAgencyMessages, agencyError, createAgencyMessagingRepository, supabase: client, useAuth: () => auth, useAgencyWorkspace: () => w, useMessagingActivity: () => false, useLocalSearchParams: () => ({ id: chat, ...(staff ? { agencyId: agency } : {}) }), useStyles: () => ({ styles: {}, colors: {} }), isUuid: () => true, createMessageId: () => id(requests++), router: { push() {} }, ScrollView: 'ScrollView', SafeAreaView: 'SafeAreaView', View: 'View', Text: 'Text', TextInput: 'TextInput', Button: 'Button', Notice: 'Notice', PageTitle: 'PageTitle', AccountPrompt: 'AccountPrompt', ReportConversationSheet: 'ReportConversationSheet', AgencyProposalPanel: panelType, Pill: 'Pill', Pressable: 'Pressable', ArchImage: 'ArchImage', TeamChatRow: 'TeamChatRow', StateChip: 'StateChip', initials: (name: string) => name };
     bindings.useConsultationRefresh=execute('src/lib/useConsultationRefresh.ts','useConsultationRefresh',hooks,{createConsultationRefreshGate});
     bindings.RefreshControl='RefreshControl';
     const inboxRefresh={current:async()=>{}};
@@ -105,17 +105,17 @@ async function fixture(staff = false, inbox = false) {
     const panel = execute('src/components/agencies/AgencyProposalPanel.tsx', 'AgencyProposalPanel', panelHooks, { ...bindings, useAgencyFormStyles: bindings.useStyles, havanaDateTime: () => ({ date: '2026-10-09', time: '10:00' }), validateAgencyProposal: (input: Parameters<typeof validateAgencyProposal>[0]) => validateAgencyProposal(input, proposalNow), schedulingError, VisitDateTimeFields: 'DateTime', statusLabel: {}, repository: { list: async () => ({ items: [], hasMore: false }), create: async (payload: any) => { proposalPayloads.push(payload); throw Error('temporary proposal failure'); } } });
     let tree: Element, panelTree: Element | undefined, childKey: string | undefined, mounts = 0;
     function render() {
-        tree = hooks.render(() => inbox ? component({refreshRef:inboxRefresh}) : component());
+        tree = hooks.render(() => inbox ? component({refreshRef:inboxRefresh,onUnread(){}}) : component());
         const child = elements(tree).find(e => e.type === panelType);
         if (!child) { if (childKey !== undefined) { panelHooks.blur(); panelHooks.slots = []; } childKey = undefined; panelTree = undefined; }
         else { if (childKey !== child.props.key) { panelHooks.blur(); panelHooks.slots = []; mounts++; childKey = child.props.key; } panelTree = panelHooks.render(() => panel(child.props)); panelHooks.focus(); }
         return tree;
     }
     render(); hooks.focus(); await settle(); render(); await settle(); render();
-    if (staff && inbox) { control(tree!, 'Equipo de mi inmobiliaria').onPress(); render(); hooks.focus(); await settle(); render(); }
+    if (staff && inbox) { control(tree!, 'Equipo de Agency').onPress(); render(); hooks.focus(); await settle(); render(); }
     return { controller, auth, w, hooks, render, reads, proposalPayloads, messagePayloads, get tree() { return tree!; }, get panelTree() { return panelTree; }, get mounts() { return mounts; }, get proposals() { return proposalPayloads.length; }, get sends() { return messagePayloads.length; }, fail(method: string, error: any = Error('temporary network failure')) { fault = { method, error }; }, recover() { fault = null; }, delayed(method: string) { let finish!: (v: any) => void; const promise = new Promise(r => finish = r); delay = { method, finish, promise }; return finish; }, async refresh() { if(inbox)void inboxRefresh.current();else {const scroll=elements(tree!).find(e=>e.type==='ScrollView'&&e.props.refreshControl);assert.ok(scroll);scroll.props.refreshControl.props.onRefresh();}await settle();render(); }, async press(label: string, onPanel = false) { control(onPanel ? panelTree! : tree!, label).onPress(); await settle(); render(); }, input(label: string, value: string, onPanel = false) { control(onPanel ? panelTree! : tree!, label).onChangeText(value); render(); } };
 }
-function chatMessages(f: Awaited<ReturnType<typeof fixture>>) { return elements(f.tree).filter(e => e.type === 'Text' && e.props?.selectable).map(e => e.props.children[0]); }
+function chatMessages(f: Awaited<ReturnType<typeof fixture>>) { return elements(f.tree).filter(e => e.type === 'MessageBubble').map(e => e.props.row.message.body); }
 function inboxHomes(f: Awaited<ReturnType<typeof fixture>>) { return elements(f.tree).filter(e => e.type === 'Text' && String(e.props.children[0]).startsWith('Home ')).map(e => e.props.children[0]); }
 
 async function dealFixture(){

@@ -104,17 +104,17 @@ export function createPushController({ store, repository, adapter, projectId, na
     saved = await store.change(current => {
       assertCurrent(expectedEpoch, expectedIntent);
       const previous = current.intent;
-      if (previous?.enabled && previous.userId === captured.userId && previous.sessionId === captured.sessionId && previous.fcmToken === token && previous.supportsAgencyNotifications===true) return current;
-      return { ...current, revision: nextRevision(current.revision), intent: { supportsAgencyNotifications:true,enabled: true, userId: captured.userId, sessionId: captured.sessionId, fcmToken: token, confirmed: false,
+      if (previous?.enabled && previous.userId === captured.userId && previous.sessionId === captured.sessionId && previous.fcmToken === token && previous.supportsAgencyNotifications===true && previous.supportsAgencyChat===true) return current;
+      return { ...current, revision: nextRevision(current.revision), intent: { supportsAgencyNotifications:true,supportsAgencyChat:true,enabled: true, userId: captured.userId, sessionId: captured.sessionId, fcmToken: token, confirmed: false,
         wasEnabled: !!(previous?.enabled && previous.userId === captured.userId && previous.sessionId === captured.sessionId && (previous.confirmed || previous.wasEnabled)) } };
     });
     assertCurrent(expectedEpoch, expectedIntent);
     const request = context(expectedEpoch, expectedIntent);
     try {
-      const result = await repository.register({ installationId: saved.installationId, installationSecret: saved.installationSecret, revision: saved.revision, fcmToken: token, platform: 'android', projectId, supportsAgencyNotifications: true }, request);
+      const result = await repository.register({ installationId: saved.installationId, installationSecret: saved.installationSecret, revision: saved.revision, fcmToken: token, platform: 'android', projectId, supportsAgencyNotifications: true, supportsAgencyChat: true }, request);
       request.checkpoint();
       if (result.enabled !== true || result.revision !== saved.revision || result.platform !== 'android') throw registrationError();
-      await store.change(current => { request.checkpoint(); return current.revision === saved.revision && current.intent?.enabled ? { ...current, intent: { ...current.intent, confirmed: true } } : current; });
+      await store.change(current => { request.checkpoint(); return current.revision === saved.revision && current.intent?.enabled ? { ...current, intent: { ...current.intent, confirmed: true, supportsAgencyChat: result.agencyChat !== false } } : current; });
       request.checkpoint(); publish({ enabled: true, error: null });
     } finally { request.release(); }
   }

@@ -36,9 +36,9 @@ export function nextRevision(revision: number): number {
 export function decodeAgencyPushTarget(value: unknown): AgencyPushTarget | null {
  if(!value||typeof value!=='object'||Array.isArray(value))return null;
  const t=value as AgencyPushTarget;
- if(!['account_notice','reviews','verification_reviews','application','verification','team','closures','deal','buyer_conversation','personal_conversation'].includes(t.route)||!([t.agencyId,t.dealId].every(v=>v===null||isUuid(v))))return null;
+ if(!['account_notice','reviews','verification_reviews','application','verification','team','closures','deal','buyer_conversation','personal_conversation','agency_conversation','team_chat'].includes(t.route)||!([t.agencyId,t.dealId].every(v=>v===null||isUuid(v))))return null;
  if(['account_notice','reviews','verification_reviews','application','team','buyer_conversation','personal_conversation'].includes(t.route)&&t.agencyId!==null)return null;
- if(['verification','deal'].includes(t.route)&&!isUuid(t.agencyId))return null;
- if(['deal','buyer_conversation','personal_conversation'].includes(t.route)?!isUuid(t.dealId):t.dealId!==null)return null;
+ if(['verification','deal','agency_conversation','team_chat'].includes(t.route)&&!isUuid(t.agencyId))return null;
+ if(['deal','buyer_conversation','personal_conversation','agency_conversation'].includes(t.route)?!isUuid(t.dealId):t.dealId!==null)return null;
  return {route:t.route,agencyId:t.agencyId,dealId:t.dealId};
 }
