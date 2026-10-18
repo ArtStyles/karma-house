@@ -1,0 +1,87 @@
+<!doctype html>
+<!--
+  Pieza «tarjeta final» (modo cinético de karma-video): panel mar con el logo en blanco, el titular,
+  un campo que se escribe solo y el botón píldora en sol que se pulsa al final.
+  Tiempos en segundos desde el inicio del clip anfitrión. El texto sale de BRAND.md § Facts:
+  la llamada es «Descarga KarmaHouse para Android».
+  Requiere assets/img/karmahouse-logo.png y las fuentes Calistoga.ttf y Roboto-Variable.woff2 en assets/fonts/.
+-->
+<html
+  lang="es"
+  data-composition-variables='[
+    {"id":"titulo","type":"string","label":"Titular","default":"Descarga KarmaHouse"},
+    {"id":"acento","type":"string","label":"Frase en sol","default":"para Android"},
+    {"id":"campo","type":"string","label":"Texto que se escribe","default":"karmahouse.site"},
+    {"id":"boton","type":"string","label":"Botón","default":"Descargar"},
+    {"id":"nota","type":"string","label":"Nota","default":"Gratis · Android 7 o superior · también en app.karmahouse.site"},
+    {"id":"y","type":"number","label":"Posición vertical (px)","default":860},
+    {"id":"entra","type":"number","label":"Entra (s)","default":0.2},
+    {"id":"escribe","type":"number","label":"Empieza a escribir (s)","default":0.8},
+    {"id":"toque","type":"number","label":"Pulsa el botón (s)","default":3.2}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Tarjeta final</title>
+  </head>
+  <body>
+    <template>
+      <div id="root" data-composition-id="tarjeta-final" data-width="1080" data-height="1920">
+        <style>
+          @font-face { font-family: "Calistoga"; font-weight: 400; font-display: block; src: url("assets/fonts/Calistoga.ttf") format("truetype"); }
+          @font-face { font-family: "Roboto"; font-weight: 100 900; font-display: block; src: url("assets/fonts/Roboto-Variable.woff2") format("woff2"); }
+          #root { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+          #fin-card { position: absolute; left: 60px; width: 960px; padding: 56px 56px 50px; border-radius: 40px; background: #0E2236;
+                      box-shadow: 0 40px 90px rgba(0, 0, 0, .45); color: #D7E2EC; opacity: 0; }
+          #fin-logo { display: block; height: 116px; filter: brightness(0) invert(1); }
+          #fin-tit { margin-top: 30px; font: 400 92px/1.06 Calistoga, serif; color: #fff; letter-spacing: -0.02em; }
+          #fin-acento { color: #E3B04B; }
+          #fin-fila { display: flex; gap: 18px; margin-top: 40px; align-items: center; }
+          #fin-campo { flex: 1; height: 104px; border-radius: 9999px; background: #FAF6EE; display: flex; align-items: center; padding: 0 36px;
+                       font: 700 42px/1 Roboto, sans-serif; color: #1A2B3B; white-space: nowrap; overflow: hidden; }
+          #fin-cur { display: inline-block; width: 4px; height: 46px; margin-left: 4px; background: #0153A8; }
+          #fin-boton { position: relative; height: 104px; padding: 0 40px; border-radius: 9999px; background: #E3B04B; color: #0E2236;
+                       font: 800 40px/104px Roboto, sans-serif; white-space: nowrap; }
+          #fin-onda { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 9999px;
+                      border: 6px solid #fff; opacity: 0; }
+          #fin-nota { margin-top: 30px; font: 500 30px/1.35 Roboto, sans-serif; color: #D7E2EC; }
+        </style>
+        <div id="fin-card">
+          <img id="fin-logo" src="assets/img/karmahouse-logo.png" alt="KarmaHouse" />
+          <div id="fin-tit"><span id="fin-tit-a"></span> <span id="fin-acento"></span></div>
+          <div id="fin-fila">
+            <div id="fin-campo"><span id="fin-txt"></span><span id="fin-cur"></span></div>
+            <div id="fin-boton"><span id="fin-boton-t"></span> →<span id="fin-onda"></span></div>
+          </div>
+          <div id="fin-nota"></div>
+        </div>
+        <script>
+          (function () {
+            var v = window.__hyperframes && window.__hyperframes.getVariables ? window.__hyperframes.getVariables() : {};
+            function num(x, d) { x = Number(x); return Number.isFinite(x) ? x : d; }
+            var entra = num(v.entra, .2), escribe = num(v.escribe, .8), toque = num(v.toque, 3.2);
+            var campo = String(v.campo == null ? "karmahouse.site" : v.campo);
+            var card = document.getElementById("fin-card");
+            card.style.top = num(v.y, 860) + "px";
+            document.getElementById("fin-tit-a").textContent = v.titulo == null ? "Descarga KarmaHouse" : v.titulo;
+            document.getElementById("fin-acento").textContent = v.acento == null ? "para Android" : v.acento;
+            document.getElementById("fin-boton-t").textContent = v.boton == null ? "Descargar" : v.boton;
+            document.getElementById("fin-nota").textContent = v.nota == null ? "" : v.nota;
+            var txt = document.getElementById("fin-txt"), cur = document.getElementById("fin-cur");
+            var tl = gsap.timeline({ paused: true });
+            tl.fromTo(card, { opacity: 0, y: 220, rotationX: -18, transformPerspective: 1200 }, { opacity: 1, y: 0, rotationX: 0, duration: .6, ease: "back.out(1.4)" }, entra);
+            tl.fromTo("#fin-logo, #fin-tit, #fin-fila, #fin-nota", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: .4, ease: "power3.out", stagger: .08 }, entra + .18);
+            // The field types itself one character at a time.
+            var p = { n: 0 };
+            tl.fromTo(p, { n: 0 }, { n: campo.length, duration: campo.length * .06, ease: "none", onUpdate: function () { txt.textContent = campo.slice(0, Math.round(p.n)); } }, escribe);
+            for (var b = 0; entra + b * .5 < toque + 2; b++) { tl.set(cur, { opacity: 1 }, entra + b * .5); tl.set(cur, { opacity: 0 }, entra + b * .5 + .25); }
+            tl.to("#fin-boton", { scale: .9, duration: .08, ease: "power2.out" }, toque);
+            tl.to("#fin-boton", { scale: 1, duration: .35, ease: "elastic.out(1.2, .4)" }, toque + .08);
+            tl.fromTo("#fin-onda", { opacity: .9, scale: .4 }, { opacity: 0, scale: 3.2, duration: .55, ease: "power2.out", immediateRender: false }, toque);
+            window.__timelines["tarjeta-final"] = tl;
+          })();
+        </script>
+      </div>
+    </template>
+  </body>
+</html>

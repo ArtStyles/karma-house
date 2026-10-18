@@ -1,6 +1,6 @@
 ---
 name: karma-video
-description: Crea un video promocional de KarmaHouse con HyperFrames (reel, estado de WhatsApp, short, anuncio, intro o tutorial de la app) a partir de cómo lo describe el usuario, con la marca, los datos y los recursos reales del proyecto. Úsala con /karma-video y siempre que pidan un video, reel, animación o promo de KarmaHouse o Karma House, aunque no nombren HyperFrames.
+description: Crea un video promocional de KarmaHouse con HyperFrames (reel, reel cinético con la mascota Bloque, estado de WhatsApp, short, anuncio, intro o tutorial de la app) a partir de cómo lo describe el usuario, con la marca, los datos y los recursos reales del proyecto. Úsala con /karma-video y siempre que pidan un video, reel, animación o promo de KarmaHouse o Karma House, aunque no nombren HyperFrames.
 argument-hint: "[cómo quieres el video]"
 ---
 
@@ -119,6 +119,96 @@ Ideas del repo onetake (github.com/feitangyuan/onetake). Su licencia es no comer
 - **Elementos pequeños, mucho fondo:** la interfaz como componente vivo en una tarjeta, o a pantalla completa solo en una espera con el dedo visible. Una página entera en miniatura no se lee.
 - **No termines dos planos seguidos igual:** alterna muelle, desenfoque, crecimiento y corte.
 - **Movimientos rápidos:** más de ~80 px por frame a 30 fps se ve a saltos. Hazlos más lentos o revisa ese tramo fotograma a fotograma en el render.
+
+## 3j. Modo cinético (reels de Instagram, 2026-10-18)
+
+Úsalo cuando pidan un reel o story «cinético», «como el de referencia», «con la mascota», o cuando lo pida la skill
+`karma-instagram`. Formato 1080×1920, 15–45 s. Notas del video de referencia: `references/cinetico-referencia.md`.
+Reel de ejemplo ya hecho con todo esto: `artifacts/videos/2026-10-18-pegar-anuncio/` («Pegar anuncio», 17 s); su
+`index.html` es el modelo de escenas, personajes, puerta, ráfagas y sonido.
+
+### Reglas
+
+- **Guion en arco:** gancho (pregunta corta) → problema → revelación (KarmaHouse y la función) → prueba (la función
+  funcionando con datos de ejemplo) → llamada («Descarga KarmaHouse para Android»). Frases de 8 palabras o menos.
+  Solo hechos de `BRAND.md` § Facts; lo que la app hace se comprueba en el código (`src/`), como el resultado real
+  de `parseListingText` que se ve en el reel de ejemplo. Un ejemplo de anuncio lleva la etiqueta «Ejemplo de uso».
+- **Texto con la voz, palabra por palabra:** conectores pequeños (Roboto 800, ~62 px) y la palabra clave enorme
+  (Bahnschrift condensada en mayúsculas, 150–300 px) en color, con estela de flamboyán, turquesa y sol. «KarmaHouse»
+  y los nombres de función en Calistoga. Cifras y valores en mono (JetBrains Mono) que se descifran. Glitch solo en
+  1–2 palabras por video. Fuera de las franjas de Instagram: nada de texto arriba de y = 240 ni debajo de y = 1540.
+- **Dos personajes fijos** que actúan en casi todos los planos: la mascota Bloque y la persona (`assets/mascota/`,
+  ver su `PROVENANCE.md`). Poses de Bloque: base, saluda, señala, sorprendida, celebra, piensa. Poses de la
+  persona: base, cansada, sorprendida, pulgar, señala, saluda. Cambio de pose = ráfaga de vóxeles (`cambiaPose` en
+  el reel de ejemplo). Sombra de contacto bajo cada uno. Si falta una pose, genérala con Codex adjuntando la lámina.
+- **Escenas 3D vóxel** con luz cálida y profundidad de campo: el fondo con `blur(2–3px)`, los personajes nítidos,
+  bokeh delante. La cámara deriva siempre (escala 1,05 → 1,12 en cada plano), salvo en el reposo final.
+- **Un golpe cada 1–2 s,** con duraciones que varían (0,2 s junto a 2,5 s) y al menos un reposo quieto de 1 s o más
+  (el cierre). Sigue valiendo § 3g.
+- **Transiciones disponibles:** losa hidráulica que gira (pieza `transicion-losa.html`), puerta que se abre (dos
+  hojas con el mediopunto arriba, en el reel de ejemplo), entrada por un vidrio del mediopunto (zoom sobre un vidrio
+  de la puerta de `sala.png` hasta que su color llena la pantalla y se abre la escena nueva), zoom que atraviesa una
+  tarjeta, barrido con estelas, destello ≤ 0,15 s, glitch y disolución en bloques. No repitas la misma dos veces
+  seguidas. Máximo tres destellos de pantalla completa por segundo.
+- **Tarjetas de interfaz en fila** (pieza `tarjetas-ui.html`) con los textos reales de la app; nunca una captura
+  entera en miniatura.
+- **Sonido en cada golpe** con el banco de `media-use/audio/assets/sfx/` (pop, whoosh, impact-bass, glitch, click,
+  typing, chime, sparkle, notification) y música de fondo a ~0,22 bajo la voz.
+- **Cierre:** los dos personajes en la calle y la pieza `tarjeta-final.html`: panel mar, logo en blanco,
+  «Descarga KarmaHouse para Android», campo que escribe `karmahouse.site`, botón píldora sol que se pulsa.
+
+### Proceso
+
+1. **Guion** en `SCRIPT.md`: pantalla y voz por línea; la voz escribe «Karma Jáus» y «aplicación» (§ 3, § 3f).
+2. **Voz Kokoro `ef_dora`** (elegida por el usuario), una línea por archivo:
+   `hf2.cmd tts l1.txt --voice ef_dora --speed 1.05 -o l1.wav`. Los `.txt` en UTF-8 sin BOM (escríbelos con
+   `printf` en Bash). Monta la pista con un script de Python (soundfile): recorta el silencio de cada línea y
+   colócala en su segundo, con huecos de 0,25–0,45 s → `assets/voice/voz.wav`.
+3. **Tiempos por palabra con whisper:** `hf2.cmd transcribe assets\voice\voz.wav --engine whisper --model small --language es`
+   (sin `--engine` usa Parakeet, que da tiempos más gruesos). Whisper adelanta la primera palabra de cada línea
+   hacia el silencio: fíjala con `"t"` en el plan.
+4. **Imágenes de escena con Codex** cuando hagan falta: `codex exec --skip-git-repo-check -s workspace-write -C <carpeta> -i assets/mascota/bloque-lamina.png`
+   con el prompt por stdin (`Get-Content -Raw prompt.txt | & codex.cmd exec ...`), pidiendo «use $imagegen … copy the
+   PNG into the current working directory as X.png». 1024×1536, «voxel diorama», sin personajes ni texto, con hueco
+   abajo para los personajes y el tercio de arriba tranquilo para el texto. Tarda 2–3 min; varias en paralelo van
+   bien. El CLI está en `%APPDATA%\npm\codex.cmd`, con la sesión de ChatGPT del usuario. Si da EACCES, es el
+   cortafuegos Simplewall: pide al usuario que permita esa aplicación. Guarda los prompts junto a las imágenes.
+5. **Proyecto:** `hyperframes init <fecha-tema> --example blank --resolution portrait --non-interactive` (en una
+   carpeta vacía) dentro de `artifacts/videos/`. Copia `piezas/*.html` a `compositions/` y las fuentes a
+   `assets/fonts/`: `Calistoga.ttf` (`assets/fonts/` del repo), `Roboto-Variable.woff2` y `JetBrainsMono-400.woff2`
+   (de un proyecto anterior en `artifacts/videos/`) y `bahnschrift.ttf` (`C:\Windows\Fonts`).
+6. **Planos** en `index.html` (1–2 s cada uno) y **`plan.json`** con las frases, la losa y las tarjetas; después
+   `python <skill>/piezas/armar.py` desde la carpeta del proyecto rellena las variables de las piezas con los tiempos
+   de whisper y muestra la tabla de palabras para revisarla.
+7. **Revisión:** `lint` (0 errores), `snapshot --at …` en los golpes, y render con `--no-browser-gpu`. Revisa el MP4
+   con ffmpeg (hoja a 2 fps y tramos a 10 fps en las transiciones) y el sonido con `ebur128`; normaliza a −14 LUFS.
+
+### Piezas reutilizables (`piezas/`)
+
+Cada una es una sub-composición con una sola instancia que cubre todo el video y recibe sus datos por
+`data-variable-values` (los JSON los escribe `armar.py`):
+
+- `texto-voz.html` — variable `datos`: frases con caja (`x`, `y`, `ancho`, `alinear`), `inicio`/`fin` y líneas de
+  palabras `{t, p, rol, color, tam, efecto}`; roles `conector`, `medio`, `clave`, `marca`, `cifra`; efectos
+  `glitch` y `descifrar`.
+- `transicion-losa.html` — variable `momentos`: `[{t, desde, fondo, petalo, centro, linea}]`; la pantalla queda
+  tapada justo en `t`, que es donde se corta la escena.
+- `tarjetas-ui.html` — variable `grupos`: filas de campos `{t, etiqueta, valor | nota}` en estilo `vacio` (cursor)
+  o `lleno` (valor que se descifra y check en persiana).
+- `tarjeta-final.html` — variables `titulo`, `acento`, `campo`, `boton`, `nota`, `y`, `entra`, `escribe`, `toque`
+  (segundos desde el inicio de su clip).
+- `armar.py` — une `plan.json` y la transcripción con las piezas.
+
+### Trampas que ya costaron
+
+- El hook del worktree bloquea escribir en la copia principal: el proyecto va en `artifacts/` del worktree (está
+  fuera de git; cópialo a la copia principal antes de borrar el worktree).
+- `fromTo` repetidos sobre el mismo elemento: añade `immediateRender: false` a los posteriores (lint
+  `gsap_repeated_fromto_without_baseline`); un anillo o un dedo con `fromTo` sin eso se ve antes de tiempo.
+- GSAP 3 no anima `className`: cambia la fuente con `tl.set(el, { fontFamily, color })`.
+- El descifrado debe depender solo del progreso (no de un azar que avanza en cada `onUpdate`), o cada búsqueda de
+  fotograma da otro texto.
+- Las palabras clave condensadas a 250 px pueden ocupar 2/3 del ancho: deja la otra parte para el personaje.
 
 ## 4. Entrega
 

@@ -1,0 +1,104 @@
+<!doctype html>
+<!--
+  Pieza «tarjetas de interfaz» (modo cinético de karma-video).
+  Campos de la app que aparecen en fila, uno tras otro, como tarjetas vivas (no capturas en miniatura).
+  Una sola instancia cubre todo el video. Variable `grupos` (cadena JSON):
+  [{ "inicio": 3.0, "fin": 4.4,                 // tramo visible del grupo (s)
+     "x": 60, "y": 1100, "columnas": 2, "ancho": 460, "alto": 128, "hueco": 20,
+     "estilo": "vacio" | "lleno",               // vacío: cursor que parpadea · lleno: valor que se descifra y check
+     "tarjetas": [{ "t": 3.0, "etiqueta": "Precio", "valor": "Venta", "nota": "lo pones tú" }] }]
+  Una tarjeta con "nota" y sin "valor" se queda en gris: dato que falta y completa quien publica.
+-->
+<html
+  lang="es"
+  data-composition-variables='[
+    {"id":"grupos","type":"string","label":"Grupos de tarjetas (JSON)","default":"[{\"inicio\":0.2,\"fin\":3,\"x\":60,\"y\":800,\"columnas\":2,\"ancho\":460,\"alto\":128,\"hueco\":20,\"estilo\":\"lleno\",\"tarjetas\":[{\"t\":0.3,\"etiqueta\":\"Operación\",\"valor\":\"Venta\"},{\"t\":0.4,\"etiqueta\":\"Cuartos\",\"valor\":\"2\"}]}]"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Tarjetas de interfaz</title>
+  </head>
+  <body>
+    <template>
+      <div id="root" data-composition-id="tarjetas-ui" data-width="1080" data-height="1920">
+        <style>
+          @font-face { font-family: "Roboto"; font-weight: 100 900; font-display: block; src: url("assets/fonts/Roboto-Variable.woff2") format("woff2"); }
+          @font-face { font-family: "KHMono"; font-weight: 400; font-display: block; src: url("assets/fonts/JetBrainsMono-400.woff2") format("woff2"); }
+          #root { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+          .ui-t { position: absolute; background: #fff; border: 2px solid #E6DCCB; border-radius: 26px; padding: 18px 26px;
+                  box-shadow: 0 18px 40px rgba(14, 34, 54, .35); opacity: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+          .ui-e { font: 600 27px/1.1 Roboto, sans-serif; color: #4D5A66; }
+          .ui-v { font: 800 42px/1.1 Roboto, sans-serif; color: #1A2B3B; white-space: nowrap; }
+          .ui-falta { background: #F2EADC; border-style: dashed; box-shadow: none; }
+          .ui-falta .ui-v { color: #8A5C15; font-size: 34px; font-weight: 700; }
+          .ui-cur { display: inline-block; width: 4px; height: 40px; background: #0153A8; vertical-align: middle; }
+          .ui-ok { position: absolute; right: 22px; top: 50%; width: 46px; height: 46px; margin-top: -23px; border-radius: 9999px;
+                   background: #3F6B4F; color: #fff; font: 900 30px/46px Roboto, sans-serif; text-align: center; opacity: 0; }
+        </style>
+        <div id="ui-raiz"></div>
+        <script>
+          (function () {
+            var vars = window.__hyperframes && window.__hyperframes.getVariables ? window.__hyperframes.getVariables() : {};
+            var grupos = [];
+            try { grupos = JSON.parse(vars.grupos || "[]"); } catch (e) { grupos = []; }
+            var raiz = document.getElementById("ui-raiz");
+            var tl = gsap.timeline({ paused: true });
+            var GLIFOS = "#%&@$<>/=+*0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+            function h(a) { a = (a ^ 61) ^ (a >>> 16); a = a + (a << 3); a = a ^ (a >>> 4); a = Math.imul(a, 0x27d4eb2d); return ((a ^ (a >>> 15)) >>> 0) / 4294967296; }
+            var n = 0;
+            grupos.forEach(function (g, gi) {
+              var cols = g.columnas || 2, an = g.ancho || 460, al = g.alto || 128, hu = g.hueco == null ? 20 : g.hueco;
+              (g.tarjetas || []).forEach(function (c, i) {
+                n++;
+                var d = document.createElement("div");
+                var falta = !c.valor && c.nota;
+                d.className = "ui-t" + (falta ? " ui-falta" : "");
+                d.id = "ui-" + gi + "-" + i;
+                d.style.left = (g.x + (i % cols) * (an + hu)) + "px";
+                d.style.top = (g.y + Math.floor(i / cols) * (al + hu)) + "px";
+                d.style.width = an + "px";
+                d.style.height = al + "px";
+                var e = document.createElement("div");
+                e.className = "ui-e";
+                e.textContent = c.etiqueta;
+                var v = document.createElement("div");
+                v.className = "ui-v";
+                d.appendChild(e);
+                d.appendChild(v);
+                raiz.appendChild(d);
+                var t = c.t == null ? g.inicio + i * .08 : c.t;
+                tl.fromTo(d, { opacity: 0, y: 46, scale: .9 }, { opacity: 1, y: 0, scale: 1, duration: .34, ease: "back.out(1.7)" }, t);
+                if (falta) {
+                  v.textContent = c.nota;
+                } else if (g.estilo === "vacio") {
+                  var cur = document.createElement("span");
+                  cur.className = "ui-cur";
+                  v.appendChild(cur);
+                  for (var b = 0; t + b * .5 < g.fin; b++) { tl.set(cur, { opacity: 1 }, t + b * .5); tl.set(cur, { opacity: 0 }, t + b * .5 + .25); }
+                } else {
+                  var ok = document.createElement("div");
+                  ok.className = "ui-ok";
+                  ok.textContent = "✓";
+                  d.appendChild(ok);
+                  var final = String(c.valor || ""), p = { v: 0 }, id = n;
+                  v.textContent = final;
+                  tl.set(v, { fontFamily: "KHMono, monospace", fontWeight: 400, color: "#0153A8" }, t);
+                  tl.fromTo(p, { v: 0 }, { v: 1, duration: .42, ease: "none", onUpdate: function () {
+                    var k = Math.floor(p.v * final.length), paso = Math.floor(p.v * 20), out = "";
+                    for (var j = 0; j < final.length; j++) out += j < k || final[j] === " " ? final[j] : GLIFOS[Math.floor(h(id * 131 + paso * 17 + j) * GLIFOS.length)];
+                    v.textContent = out;
+                  } }, t + .06);
+                  tl.set(v, { fontFamily: "Roboto, sans-serif", fontWeight: 800, color: "#1A2B3B" }, t + .5);
+                  tl.fromTo(ok, { opacity: 0, scale: 0 }, { opacity: 1, scale: 1, duration: .3, ease: "back.out(3)" }, t + .48);
+                }
+                tl.to(d, { opacity: 0, y: -30, duration: .18, ease: "power2.in" }, g.fin - .2 + (i % cols) * .03);
+              });
+            });
+            window.__timelines["tarjetas-ui"] = tl;
+          })();
+        </script>
+      </div>
+    </template>
+  </body>
+</html>

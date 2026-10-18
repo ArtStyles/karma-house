@@ -1,0 +1,78 @@
+<!doctype html>
+<!--
+  Pieza «transición de losa» (modo cinético de karma-video).
+  Una sola instancia cubre todo el video, por encima de las escenas. En cada momento `t` la pantalla
+  se cubre de losas hidráulicas que giran (t − 0,34 s → t) y se destapan girando hacia el otro lado
+  (t → t + 0,34 s): corta la escena justo en `t`, cuando la pantalla está tapada.
+  Variable `momentos` (cadena JSON): [{ "t": 4.55, "desde": "centro" | "izquierda" | "derecha" | "arriba" | "abajo",
+                                        "fondo": "#0153A8", "petalo": "#E3B04B", "centro": "#A84C33", "linea": "#FAF6EE" }]
+-->
+<html
+  lang="es"
+  data-composition-variables='[
+    {"id":"momentos","type":"string","label":"Momentos de la transición (JSON)","default":"[{\"t\":1,\"desde\":\"centro\"}]"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Transición de losa</title>
+  </head>
+  <body>
+    <template>
+      <div id="root" data-composition-id="transicion-losa" data-width="1080" data-height="1920">
+        <style>
+          #root { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+          .losa-capa { position: absolute; inset: 0; }
+          .losa-t { position: absolute; width: 182px; height: 182px; background-size: 100% 100%; opacity: 0; backface-visibility: hidden; }
+        </style>
+        <div id="losa-raiz"></div>
+        <script>
+          (function () {
+            var vars = window.__hyperframes && window.__hyperframes.getVariables ? window.__hyperframes.getVariables() : {};
+            var momentos = [];
+            try { momentos = JSON.parse(vars.momentos || "[]"); } catch (e) { momentos = []; }
+            var raiz = document.getElementById("losa-raiz");
+            var tl = gsap.timeline({ paused: true });
+            var L = 180, COLS = 6, FILAS = 11, MEDIO = .34, ONDA = .22;
+            function losa(c) {
+              // Site pattern (web/src/index.css .losa) drawn as a filled tile.
+              var svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 56'><rect width='56' height='56' fill='" + c.fondo + "'/>" +
+                "<path fill='" + c.petalo + "' d='M28 6c7 9 7 13 0 22-7-9-7-13 0-22zM28 50c-7-9-7-13 0-22 7 9 7 13 0 22zM6 28c9-7 13-7 22 0-9 7-13 7-22 0zM50 28c-9 7-13 7-22 0 9-7 13-7 22 0z'/>" +
+                "<circle cx='28' cy='28' r='4' fill='" + c.centro + "'/><g fill='none' stroke='" + c.linea + "' stroke-width='1.4'>" +
+                "<path d='M0 9 9 0M47 0l9 9M0 47l9 9M56 47l-9 9'/><rect x='.7' y='.7' width='54.6' height='54.6'/></g></svg>";
+              return "url(\"data:image/svg+xml," + encodeURIComponent(svg) + "\")";
+            }
+            momentos.forEach(function (m, mi) {
+              var c = { fondo: m.fondo || "#0153A8", petalo: m.petalo || "#E3B04B", centro: m.centro || "#A84C33", linea: m.linea || "#FAF6EE" };
+              var capa = document.createElement("div");
+              capa.className = "losa-capa";
+              raiz.appendChild(capa);
+              var img = losa(c);
+              var ox = { izquierda: 0, derecha: COLS - 1, arriba: (COLS - 1) / 2, abajo: (COLS - 1) / 2 }[m.desde];
+              var oy = { izquierda: (FILAS - 1) / 2, derecha: (FILAS - 1) / 2, arriba: 0, abajo: FILAS - 1 }[m.desde];
+              if (ox === undefined) { ox = (COLS - 1) / 2; oy = (FILAS - 1) / 2; }
+              var max = Math.hypot(Math.max(ox, COLS - 1 - ox), Math.max(oy, FILAS - 1 - oy));
+              for (var f = 0; f < FILAS; f++) for (var k = 0; k < COLS; k++) {
+                var d = document.createElement("div");
+                d.className = "losa-t";
+                d.id = "losa-" + mi + "-" + f + "-" + k;
+                d.style.left = (k * L - 1) + "px";
+                d.style.top = (f * L - 1) + "px";
+                d.style.backgroundImage = img;
+                capa.appendChild(d);
+                var r = Math.hypot(k - ox, f - oy) / max;
+                var entra = m.t - MEDIO + r * ONDA * .5, sale = m.t + r * ONDA;
+                tl.set(d, { opacity: 1 }, entra);
+                tl.fromTo(d, { rotationY: -90, scale: .7, transformPerspective: 700 },
+                  { rotationY: 0, scale: 1, duration: MEDIO - ONDA * .5, ease: "power3.out" }, entra);
+                tl.to(d, { rotationY: 90, scale: .7, duration: MEDIO - ONDA * .5, ease: "power3.in" }, sale);
+                tl.set(d, { opacity: 0 }, sale + MEDIO - ONDA * .5);
+              }
+            });
+            window.__timelines["transicion-losa"] = tl;
+          })();
+        </script>
+      </div>
+    </template>
+  </body>
+</html>

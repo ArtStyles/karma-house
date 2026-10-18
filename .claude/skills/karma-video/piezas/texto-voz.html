@@ -1,0 +1,138 @@
+<!doctype html>
+<!--
+  Pieza «texto con la voz» (modo cinético de karma-video).
+  Una sola instancia cubre todo el video: cada palabra entra en el segundo en que la voz la dice.
+  Variable `datos` (cadena JSON):
+  {
+    "frases": [{
+      "inicio": 0.2, "fin": 2.1,            // segundos del video; fuera de ese tramo la frase no se ve
+      "x": 80, "y": 300, "ancho": 920,      // caja de la frase en px (1080×1920)
+      "alinear": "left" | "center",
+      "lineas": [[ { "t": 0.25, "p": "¿Ya", "rol": "conector" }, ... ], ...]
+    }]
+  }
+  Roles: conector (pequeño), medio, clave (enorme, condensada, con estela de color), marca (Calistoga),
+  cifra (mono, se descifra). Opcionales por palabra: "color", "efecto": "glitch" | "descifrar", "tam" (px).
+  Fuentes que el proyecto copia a assets/fonts/: Calistoga.ttf, Roboto-Variable.woff2, bahnschrift.ttf, JetBrainsMono-400.woff2.
+-->
+<html
+  lang="es"
+  data-composition-variables='[
+    {"id":"datos","type":"string","label":"Frases y tiempos (JSON)","default":"{\"frases\":[{\"inicio\":0,\"fin\":3,\"x\":80,\"y\":400,\"ancho\":920,\"alinear\":\"left\",\"lineas\":[[{\"t\":0.2,\"p\":\"Tu casa\",\"rol\":\"conector\"}],[{\"t\":0.6,\"p\":\"EN CUBA\",\"rol\":\"clave\",\"color\":\"#E3B04B\"}]]}]}"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Texto con la voz</title>
+  </head>
+  <body>
+    <template>
+      <div id="root" data-composition-id="texto-voz" data-width="1080" data-height="1920">
+        <style>
+          @font-face { font-family: "Calistoga"; font-weight: 400; font-display: block; src: url("assets/fonts/Calistoga.ttf") format("truetype"); }
+          @font-face { font-family: "Roboto"; font-weight: 100 900; font-display: block; src: url("assets/fonts/Roboto-Variable.woff2") format("woff2"); }
+          @font-face { font-family: "Bahn"; font-weight: 300 700; font-stretch: 75% 100%; font-display: block; src: url("assets/fonts/bahnschrift.ttf") format("truetype"); }
+          @font-face { font-family: "KHMono"; font-weight: 400; font-display: block; src: url("assets/fonts/JetBrainsMono-400.woff2") format("woff2"); }
+          #root { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+          .tv-frase { position: absolute; display: flex; flex-direction: column; gap: 6px; opacity: 0; }
+          .tv-linea { display: block; white-space: nowrap; line-height: 1.02; }
+          .tv-p { position: relative; display: inline-block; margin-right: 0.22em; color: #fff;
+                  text-shadow: 0 6px 28px rgba(14, 34, 54, .85), 0 2px 4px rgba(14, 34, 54, .6); }
+          .tv-conector { font: 800 62px/1.05 Roboto, sans-serif; }
+          .tv-medio { font: 900 104px/1.02 Roboto, sans-serif; letter-spacing: -0.02em; }
+          .tv-clave { font-family: Bahn, sans-serif; font-weight: 700; font-stretch: 75%; font-size: 250px; line-height: .9; text-transform: uppercase; }
+          .tv-marca { font: 400 132px/1.08 Calistoga, serif; letter-spacing: -0.01em; }
+          .tv-cifra { font: 400 120px/1 KHMono, monospace; }
+          .tv-eco { position: absolute; left: 0; top: 0; opacity: 0; text-shadow: none; mix-blend-mode: screen; }
+        </style>
+        <div id="tv-capa"></div>
+        <script>
+          (function () {
+            var vars = window.__hyperframes && window.__hyperframes.getVariables ? window.__hyperframes.getVariables() : {};
+            var datos = { frases: [] };
+            try { datos = JSON.parse(vars.datos || "{}"); } catch (e) { datos = { frases: [] }; }
+            var capa = document.getElementById("tv-capa");
+            var tl = gsap.timeline({ paused: true });
+            var ECOS = ["#E8432E", "#16B3C1", "#E3B04B"]; // flamboyán, turquesa, sol
+            var GLIFOS = "01#%&@$<>/\\=+*ABCDEFGHJKLMNPQRSTUVWXYZ0123456789";
+            // Seeded random keeps every render identical.
+            function azar(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+            var n = 0;
+            (datos.frases || []).forEach(function (f, fi) {
+              var caja = document.createElement("div");
+              caja.className = "tv-frase";
+              caja.id = "tv-f" + fi;
+              caja.style.left = (f.x || 80) + "px";
+              caja.style.top = (f.y || 300) + "px";
+              caja.style.width = (f.ancho || 920) + "px";
+              caja.style.alignItems = f.alinear === "center" ? "center" : "flex-start";
+              capa.appendChild(caja);
+              tl.set(caja, { opacity: 1 }, f.inicio);
+              (f.lineas || []).forEach(function (linea) {
+                var l = document.createElement("div");
+                l.className = "tv-linea";
+                caja.appendChild(l);
+                linea.forEach(function (w) {
+                  n++;
+                  var rol = w.rol || "conector";
+                  var s = document.createElement("span");
+                  s.className = "tv-p tv-" + rol;
+                  s.id = "tv-p" + n;
+                  if (w.tam) s.style.fontSize = w.tam + "px";
+                  if (w.color) s.style.color = w.color;
+                  s.textContent = w.p;
+                  l.appendChild(s);
+                  var t = w.t;
+                  if (rol === "clave") {
+                    // Colour trail: three echoes slide in behind the word and collapse onto it.
+                    ECOS.forEach(function (c, i) {
+                      var e = document.createElement("span");
+                      e.className = "tv-eco";
+                      e.style.color = c;
+                      e.textContent = w.p;
+                      s.appendChild(e);
+                      tl.fromTo(e, { x: 150 + i * 60, opacity: .85 }, { x: 0, opacity: 0, duration: .28 + i * .05, ease: "expo.out" }, t);
+                    });
+                    tl.fromTo(s, { x: 120, scaleX: 1.5, opacity: 0, transformOrigin: "0% 50%" }, { x: 0, scaleX: 1, opacity: 1, duration: .24, ease: "expo.out" }, t);
+                    tl.fromTo(s, { y: -10 }, { y: 0, duration: .3, ease: "elastic.out(1.2, .4)" }, t + .12);
+                  } else if (rol === "marca") {
+                    tl.fromTo(s, { y: 60, opacity: 0, scale: .9 }, { y: 0, opacity: 1, scale: 1, duration: .45, ease: "back.out(1.8)" }, t);
+                  } else if (rol === "cifra") {
+                    tl.fromTo(s, { opacity: 0 }, { opacity: 1, duration: .05 }, t);
+                  } else {
+                    // Small words flash sol and settle to white.
+                    tl.fromTo(s, { y: 34, opacity: 0, color: "#E3B04B" }, { y: 0, opacity: 1, color: w.color || "#FFFFFF", duration: .3, ease: "power3.out" }, t);
+                  }
+                  if (w.efecto === "descifrar" || rol === "cifra") {
+                    var final = w.p, prox = { v: 0 }, semilla = n;
+                    // Glyphs depend only on progress, so seeking to any frame gives the same text.
+                    tl.fromTo(prox, { v: 0 }, { v: 1, duration: .36, ease: "none", onUpdate: function () {
+                      var k = Math.floor(prox.v * final.length), paso = Math.floor(prox.v * 24), out = "";
+                      for (var i = 0; i < final.length; i++) out += i < k || final[i] === " " ? final[i] : GLIFOS[Math.floor(azar(semilla * 977 + paso * 31 + i)() * GLIFOS.length)];
+                      s.firstChild.nodeValue = out;
+                    } }, t);
+                  }
+                  if (w.efecto === "glitch") {
+                    var g = azar(n * 104729);
+                    [ECOS[0], ECOS[1]].forEach(function (c, i) {
+                      var e = document.createElement("span");
+                      e.className = "tv-eco";
+                      e.style.color = c;
+                      e.textContent = w.p;
+                      s.appendChild(e);
+                      for (var k = 0; k < 7; k++) tl.set(e, { opacity: .9, x: (g() - .5) * 40, y: (g() - .5) * 14 }, t + k * .045);
+                      tl.set(e, { opacity: 0, x: 0, y: 0 }, t + .32);
+                    });
+                  }
+                });
+              });
+              // Exit: the phrase lifts and stretches away just before its end.
+              tl.to(caja, { y: -50, scaleY: 1.25, opacity: 0, duration: .16, ease: "power2.in" }, f.fin - .16);
+            });
+            window.__timelines["texto-voz"] = tl;
+          })();
+        </script>
+      </div>
+    </template>
+  </body>
+</html>
