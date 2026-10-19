@@ -1,7 +1,7 @@
 ---
 name: karma-instagram
-description: Prepara publicaciones de Instagram de KarmaHouse listas para programar a mano en la app de Instagram (carrusel o lámina 1080×1350, story 1080×1920, reel con el modo cinético de karma-video) con su texto, texto alternativo, primer comentario, ficha y lámina de revisión, y el plan de la semana. Úsala cuando pidan un post, carrusel, story, reel o contenido para Instagram (o redes) de KarmaHouse, el calendario o el «plan de la semana», aunque no digan «skill». No publica ni inicia sesión en ningún servicio.
-argument-hint: "[tema o «plan de la semana»]"
+description: Prepara publicaciones de Instagram de KarmaHouse listas para programar a mano en la app de Instagram (carrusel o lámina 1080×1350, story 1080×1920, reel con el modo cinético de karma-video) con su texto, texto alternativo, primer comentario, ficha y lámina de revisión, y el plan de la semana. También responde los comentarios y mensajes que le peguen y puntúa el perfil. Úsala cuando pidan un post, carrusel, story, reel o contenido para Instagram (o redes) de KarmaHouse, el calendario o el «plan de la semana», respuestas a comentarios, o revisar la bio o el perfil, aunque no digan «skill». No publica ni inicia sesión en ningún servicio.
+argument-hint: "[tema, «plan de la semana», «comentarios» o «perfil»]"
 ---
 
 # Instagram de KarmaHouse
@@ -17,6 +17,8 @@ Si no hay pedido, pregunta en una frase qué quiere (una publicación sobre un t
 - No publica, no programa, no sube nada y no inicia sesión en Instagram, Meta, Metricool ni ningún otro servicio.
   Prepara la carpeta; el usuario la programa en la app de Instagram (§ 8).
 - No inventa cifras de usuarios ni de anuncios, precios reales, testimonios, socios ni premios (`BRAND.md`).
+- No responde comentarios ni edita el perfil en Instagram: escribe las respuestas y los textos (§ 10 y § 11) y el
+  usuario los pega.
 
 ## 1. Fuentes de verdad
 
@@ -86,7 +88,12 @@ Ejemplo completo: `artifacts/instagram/2026-10-20-pegar-anuncio/` (carrusel de 4
 3. **Captura** desde `laminas/` con el lanzador de HyperFrames (`karma-video` § 3h):
    `hf2.cmd snapshot . --at 0.5,1.5,2.5,3.5 --no-end --no-browser-gpu --timeout 20000` (un tiempo por lámina).
 4. **Textos** (§ 6) en `texto.txt`, `alt.txt` y `comentario.txt`, en UTF-8 (en Bash con `printf`).
-5. **Exporta:** `python .claude/skills/karma-instagram/exportar.py <carpeta>` escribe `lamina-N.jpg` y `revisar.png`.
+5. **Exporta:** `python .claude/skills/karma-instagram/exportar.py <carpeta>` revisa los textos (abajo), escribe
+   `lamina-N.jpg` y `revisar.png`. En una publicación solo de reel, `exportar.py <carpeta> --textos` revisa solo los
+   textos. La revisión borra los caracteres invisibles de los tres `.txt` (espacios de ancho cero, guiones suaves,
+   marcas de dirección, BOM; los espacios duros pasan a espacios normales), enseña lo que el feed muestra antes de
+   «… más» y avisa si el gancho no cabe en esos 125 caracteres o si hay más de 5 hashtags entre el pie y el
+   comentario. Corrige cada aviso antes de seguir.
 6. **Revisa `revisar.png` tú mismo** con la lista de § 7: si algo se corta, se tapa o no se lee en el móvil,
    corrige y repite 3–5.
 7. **Ficha** (`ficha.md`) con la revisión marcada y los pasos de § 8.
@@ -94,11 +101,17 @@ Ejemplo completo: `artifacts/instagram/2026-10-20-pegar-anuncio/` (carrusel de 4
 
 ## 6. Textos
 
-- **Pie de foto:** gancho en una línea; dos o tres frases cortas con el beneficio concreto, en tú y español de Cuba;
+- **Gancho:** el feed enseña unos 125 caracteres del pie y esconde el resto tras «… más». El gancho va en la
+  primera línea y cabe entero ahí, con algo concreto (una función, un paso, una pregunta real). Escribe tres
+  ganchos con las fórmulas de `referencia.md` § Ganchos y quédate con el más concreto. En un reel, el gancho dicho
+  y el gancho en pantalla (seis palabras o menos) son dos líneas distintas.
+- **Pie de foto:** el gancho; dos o tres frases cortas con el beneficio concreto, en tú y español de Cuba;
   cierre «Descarga KarmaHouse para Android: el enlace está en la bio.». Los enlaces del pie no se pueden tocar: el
   enlace va en la bio (karmahouse.site).
-- **Primer comentario:** una pregunta corta para que respondan y 5–10 hashtags. Base: #KarmaHouse #CasasEnCuba
-  #ViviendaEnCuba #LaHabana #Cuba, más los del tema (#VentaDeCasas, #AlquilerEnCuba, #PermutaEnCuba…).
+- **Primer comentario:** una pregunta corta para que respondan y los hashtags. **Como mucho 5 hashtags en total**:
+  es el límite de Instagram desde el 18-12-2025, y cuentan juntos los del pie y los del comentario. Fijos:
+  #KarmaHouse #CasasEnCuba; más hasta tres del tema (#VentaDeCasas, #AlquilerEnCuba, #PermutaEnCuba, #LaHabana…).
+  Nada de etiquetas de relleno (#viral, #explore, #reels).
 - **Texto alternativo:** por lámina, qué se ve y el texto que lleva, en una o dos frases.
 - **Hora:** sin estadísticas todavía, propón 20:30 hora de Cuba y dilo como suposición. Cuando el usuario pase
   capturas de las Estadísticas de Instagram, ajusta la hora y los pilares que mejor funcionan.
@@ -112,6 +125,7 @@ Ejemplo completo: `artifacts/instagram/2026-10-20-pegar-anuncio/` (carrusel de 4
 - [ ] El logo solo en azul sobre claro o en blanco sobre oscuro; la mascota nunca en lugar del logo.
 - [ ] Todo el texto se lee en un móvil (mira `revisar.png`) y tiene fondo o sombra sobre la escena.
 - [ ] El pie, el comentario y el texto alternativo dicen lo mismo que las láminas.
+- [ ] El gancho cabe entero antes de «… más», hay 5 hashtags o menos y `exportar.py` no da ningún aviso.
 
 ## 8. Programar en la app de Instagram
 
@@ -131,7 +145,39 @@ Las stories no se programan en la app: se publican a mano. Escribe estos pasos e
 3. Enséñale la tabla al usuario y espera su visto bueno antes de producir: un reel lleva un buen rato.
 4. Produce cada publicación con § 5 y termina con las tres carpetas y sus `revisar.png`.
 
-## 10. Siguiente paso: Metricool (todavía no)
+## 10. Modo «comentarios»: responder comentarios y mensajes
+
+El usuario pega los comentarios o los mensajes, o manda capturas. No abras Instagram ni leas el hilo con un
+navegador. Primero clasifica cada uno y di cuántos hay de cada clase; después escribe las respuestas en este orden y
+para cuando ya no aporten:
+
+| Clase | Qué es | Qué recibe |
+|---|---|---|
+| **Queja o reporte** | Un anuncio sospechoso, un problema con la app, alguien molesto | Gracias, en público y corto; cómo reportar o bloquear desde la app; si hay datos personales, sigue por mensaje directo. Nunca prometas que un anuncio está «verificado» |
+| **Interés en una casa** | «¿Precio?», «¿dónde queda?», «busco en Playa» | KarmaHouse no intermedia: que le escriba a quien publica desde el chat de la app. Nunca pidas ni des teléfonos, correos ni precios en público |
+| **Pregunta sobre la app** | Cómo publicar, si cuesta, si hay para iPhone | La respuesta completa en el comentario, solo con hechos de § Facts. Si preguntan por iPhone, no lo anuncies: hay app para Android, y app.karmahouse.site se abre en el navegador con la misma cuenta |
+| **Aporte** | Añade un dato, matiza o discrepa | La respuesta más larga del hilo. Ante una crítica, primero lo que tiene de cierto, con sus palabras; luego lo nuestro. Una sola respuesta |
+| **Apoyo** | Un emoji, «buena idea», una mención | Un me gusta y, si acaso, ocho palabras o menos |
+| **Ruido** | Spam, ventas ajenas, provocaciones | Nada. Si es ofensivo, ocúltalo con los controles de comentarios de Instagram. Nunca discutas |
+
+Reglas al escribir: responde lo que preguntaron, en el comentario y no «por privado»; usa su nombre una vez, al
+principio; mide la respuesta por la suya (a cuatro palabras no se contesta con cuatro líneas); tú y español de Cuba;
+nada que no esté en § Facts. Si tres personas o más hacen la misma pregunta, márcala: es tema para un reel con la
+fórmula «La pregunta literal» (`referencia.md` § Ganchos), y en Instagram se puede responder un comentario con un
+reel. KarmaHouse no pide «comenta la palabra X» ni manda mensajes a quien no escribió primero.
+
+Entrega un solo bloque agrupado por clase, con cada respuesta lista para copiar. Nada se publica: el usuario pega
+las respuestas.
+
+## 11. Modo «perfil»: puntuar y reescribir el perfil
+
+El usuario pega o manda en captura el nombre, el usuario (@), la bio, el enlace, los destacados, lo fijado y las
+nueve primeras portadas. Puntúa con la rúbrica de `referencia.md` § Perfil (12 puntos, 100 en total), enseña la
+tabla y el total sin inflarlo, y reescribe en el orden de los puntos perdidos: tres opciones por campo, listas para
+copiar, cada una con hechos de § Facts. Puntúa otra vez al final y di la diferencia real. No cambies nada en
+Instagram: el usuario edita cada campo.
+
+## 12. Siguiente paso: Metricool (todavía no)
 
 El informe de la cuenta (`instagram-cuenta-informe.md`, 18-10-2026, en las notas compartidas de Claude) dejó a
 Metricool, plan gratis (1 marca, 20 publicaciones al mes, conector MCP), como la única forma razonable de que Claude
