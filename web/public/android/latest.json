@@ -1,13 +1,14 @@
 {
-    "version":  "0.1.29",
-    "versionCode":  30,
-    "date":  "2026-10-15",
-    "size":  85299695,
-    "sha256":  "356285e77c34dd43a099c8f605d8e3c1a086407ceca7d995482cc67093a9db9e",
-    "url":  "https://github.com/ArtStyles/karma-house/releases/download/v0.1.29/KarmaHouse.apk",
+    "version":  "0.1.30",
+    "versionCode":  31,
+    "date":  "2026-10-20",
+    "size":  85652503,
+    "sha256":  "7eb773c27a462ff3a48bb1e62c30441be946e564d4a5da2c2f828c74cd04ac01",
+    "url":  "https://github.com/ArtStyles/karma-house/releases/download/v0.1.30/KarmaHouse.apk",
     "notes":  [
-                  "Mi espacio te avisa cuando hay una versión nueva de KarmaHouse para Android: ves qué cambia y cuánto pesa, y la descargas solo si quieres.",
-                  "«Ver mi perfil público» aparece en Mi espacio desde que creas tu cuenta, antes de tu primer anuncio.",
-                  "Si un enlace de confirmación ya no sirve, la app te explica por qué y, al entrar, te deja reenviar el correo."
+                  "«Publicar con ayuda» y «Quiero KarmaHouse Pro» ahora escriben a soporte@karmahouse.site, el correo oficial de KarmaHouse.",
+                  "Nuevo diseño en toda la app: Explorar, los anuncios, los mensajes, Publicar y Mi espacio.",
+                  "En Explorar, el buscador se queda arriba mientras bajas por las casas.",
+                  "Tu foto de perfil se guarda en cuanto la eliges."
               ]
 }

@@ -3,6 +3,30 @@
 Revisión inicial del 2 de octubre y publicación del 3 de octubre de 2026. La distribución elegida es la descarga directa
 desde la página oficial, sin una cuenta de pago de Google Play.
 
+## Entrega 0.1.30 del 20 de octubre de 2026
+
+Se publicó la [release `v0.1.30`](https://github.com/ArtStyles/karma-house/releases/tag/v0.1.30), con tag en `3def39160576d22512da4ceac00b2cda5a5ff4c6` y marcada como última. Su motivo es el correo de soporte: las apps instaladas hasta la 0.1.29 envían «Publicar con ayuda» y «Quiero KarmaHouse Pro» al Gmail personal; esta versión lleva `soporte@karmahouse.site` (commit `0f85e2a`). Compilada en el repositorio tras `expo prebuild` (el proyecto nativo seguía en la 0.1.29, sin el fondo nocturno `#0A1626` ni la Calistoga incrustada), con `build-android-preview.ps1 -Release`.
+
+| Comprobación | Resultado |
+| --- | --- |
+| Paquete / versión / código | `com.karmahouse.karmahouse` / `0.1.30` / `31` |
+| APK público | `KarmaHouse.apk`, 85.652.503 bytes (85,7 MB) |
+| APK SHA-256 | `7eb773c27a462ff3a48bb1e62c30441be946e564d4a5da2c2f828c74cd04ac01` |
+| AAB SHA-256 (local) | `8c33116b780197d516a259df65f51699dfc59fb21dc3028145438b535d7ad803` |
+| Certificado SHA-256 | `1752d33a3fb6e45fada4e6adbbec99af851d9ae6716a73770c382c79d3356ac6`, el mismo de las versiones anteriores |
+| Firma / Android / ABI | v2 correcta, no depurable, minSdk 24 (Android 7), arm64-v8a y armeabi-v7a |
+| Secretos | 1.388 entradas sin los valores privados ni marcadores de credenciales que comprueba el verificador; la configuración pública de Supabase está en el bundle |
+| Correo de soporte | El bundle contiene `soporte@karmahouse.site` y ninguna de las dos direcciones de Gmail anteriores |
+| Aviso de actualización | `assets/app.config` declara `0.1.30` / `31`, el código que lee `useAppUpdate`, así que el aviso no vuelve a ofrecer esta versión una vez instalada |
+| Archivos remotos | APK, checksum e instrucciones `uploaded`, con digests iguales a los locales |
+| Descargas anónimas | Los tres archivos completos coinciden en tamaño y SHA-256 con los preparados |
+
+Logs locales: `artifacts/prebuild-0.1.30.log`, `artifacts/android-build-0.1.30.log`, `artifacts/distribution-0.1.30.log` y `artifacts/release-0.1.30-upload.log`. Entrega en `artifacts/distribution/0.1.30/`; descargas públicas en `artifacts/release-0.1.30-public/`.
+
+No se instaló en un teléfono. Es la primera entrega que verán los teléfonos con la 0.1.29 en el aviso de Mi espacio; la descarga, el permiso para instalar desde KarmaHouse y el instalador quedan por probar en un teléfono real.
+
+`npm test`: 877 pruebas correctas y 2 fallidas, las dos de `tests/android-private-reference.test.ts`, que lanza `pwsh` (PowerShell 7) y en este equipo solo está Windows PowerShell 5.1. `npm run typecheck` pasa.
+
 ## Entrega 0.1.29 del 15 de octubre de 2026
 
 Se publicó la [release `v0.1.29`](https://github.com/ArtStyles/karma-house/releases/tag/v0.1.29), con tag en `86069cceeb80a5e1749ec752f35a61ed4c704182` y marcada como última. Es la primera versión con el aviso de actualización en Mi espacio. Compilada en el repositorio tras `expo prebuild` (permiso `REQUEST_INSTALL_PACKAGES` y módulo `expo-intent-launcher`), con `build-android-preview.ps1 -Release -RefreshBundleCache`.
