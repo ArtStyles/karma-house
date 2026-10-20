@@ -11,8 +11,8 @@ export const WEB_APP = 'https://app.karmahouse.site/';
 export const SIGN_IN = `${WEB_APP}auth?returnTo=/profile`;
 export const CODE = 'https://github.com/ArtStyles/karma-house';
 export const LEGAL = 'https://artstyles.github.io/karma-house';
-export const CONTACT = 'mailto:hernandezfrankjames@gmail.com';
-export const ASSISTED_EMAIL = 'fejames07@gmail.com';
+export const CONTACT = 'mailto:soporte@karmahouse.site';
+export const ASSISTED_EMAIL = 'soporte@karmahouse.site';
 export const ASSISTED_CONTACT = `mailto:${ASSISTED_EMAIL}?subject=Ayuda%20para%20publicar%20en%20KarmaHouse`;
 
 /** Section ids in the main navigation, in page order. */

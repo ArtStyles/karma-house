@@ -1,4 +1,4 @@
-export const ASSISTED_PUBLICATION_EMAIL = 'fejames07@gmail.com';
+export const ASSISTED_PUBLICATION_EMAIL = 'soporte@karmahouse.site';
 
 export function assistedPublicationMailto(): string {
   const subject = 'Ayuda para publicar en KarmaHouse';

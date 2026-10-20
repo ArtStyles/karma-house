@@ -5,7 +5,7 @@ import { ASSISTED_PUBLICATION_EMAIL, assistedPublicationMailto, openAssistedPubl
 test('assisted intake opens a reviewable email with blank fields and explicit later authorization', () => {
   const url = new URL(assistedPublicationMailto());
   assert.equal(url.protocol, 'mailto:');
-  assert.equal(url.pathname, 'fejames07@gmail.com');
+  assert.equal(url.pathname, 'soporte@karmahouse.site');
   assert.equal(ASSISTED_PUBLICATION_EMAIL, url.pathname);
   assert.equal(url.searchParams.get('subject'), 'Ayuda para publicar en KarmaHouse');
   const body = url.searchParams.get('body')!;

@@ -12,7 +12,7 @@ El aviso sobre una fuente externa indica que instalas fuera de Google Play.
 La firma del APK acredita su integridad y continuidad, no una aprobación de
 Google. Si Play Protect indica que la aplicación es dañina o bloquea su
 instalación, no fuerces la instalación: comunica el mensaje exacto y la versión
-de Android a hernandezfrankjames@gmail.com.
+de Android a soporte@karmahouse.site.
 
 Para actualizar, instala la nueva versión sobre la anterior. Las entregas
 oficiales conservan el mismo certificado. Si Android informa que las firmas no
