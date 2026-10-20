@@ -9,6 +9,8 @@ Plantillas de confirmación de cuenta y recuperación de contraseña para Supaba
 
 En el proyecto `iuhvlpucclqbytuqflci`, abre **Authentication → Emails → Templates**, elige la plantilla y copia su HTML completo en **Source**, junto con el asunto de `subjects.json`. Revisa **Preview**, guarda y vuelve a cargar para comprobar que se conserva.
 
+La cabecera animada es `https://www.karmahouse.site/email/puerta.gif` (`web/public/email/puerta.gif`): una puerta que se abre a una sala ilustrativa, que se reproduce una vez y se queda abierta. Se regenera con `python infra/email-templates/puerta-gif.py` (Pillow, numpy y FFmpeg). Hay que publicar la web antes de pegar las plantillas, o Supabase enviará la imagen rota.
+
 Los botones y enlaces alternativos utilizan `{{ .ConfirmationURL }}`. Conserva esa variable: Supabase genera el enlace de un solo uso y mantiene la dirección de retorno que solicita la app. Las plantillas no construyen enlaces de autenticación propios ni contienen credenciales SMTP.
 
 El diseño utiliza tablas de presentación, estilos en línea, un preencabezado, tipografías de sistema y ajustes para pantallas pequeñas. El logo existente se carga por HTTPS desde `https://www.karmahouse.site/karmahouse-logo.png`; el texto y los botones siguen disponibles si el destinatario bloquea imágenes. La dirección de soporte coincide con la publicada en la web.
