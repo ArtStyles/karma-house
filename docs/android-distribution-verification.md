@@ -3,6 +3,30 @@
 Revisión inicial del 2 de octubre y publicación del 3 de octubre de 2026. La distribución elegida es la descarga directa
 desde la página oficial, sin una cuenta de pago de Google Play.
 
+## Entrega 0.1.31 del 21 de octubre de 2026
+
+Se publicó la [release `v0.1.31`](https://github.com/ArtStyles/karma-house/releases/tag/v0.1.31), con tag en `66257a71755cf760409beee54957d2d165e40645` y marcada como última. Su motivo es el selector de fotos: en las apps instaladas hasta la 0.1.30, «Elegir fotos» y «Cambiar foto» pueden dejar de abrir la galería después de reabrir KarmaHouse desde el launcher, hasta que se cierra la app (`Attempting to launch an unregistered ActivityResultLauncher`). Esta versión lleva el arreglo del commit `8777a15`. Compilada en el repositorio tras `expo prebuild --clean`, con `build-android-preview.ps1 -Release`.
+
+| Comprobación | Resultado |
+| --- | --- |
+| Paquete / versión / código | `com.karmahouse.karmahouse` / `0.1.31` / `32` |
+| APK público | `KarmaHouse.apk`, 85.652.503 bytes (85,7 MB) |
+| APK SHA-256 | `6e29c16865534484a19ba840d39a9dd26b5877e072b839ed46ddafeab1d37da7` |
+| AAB SHA-256 (local) | `cc2aec16ace1ed9166be87a9df98d17b553b11e3c7f865b50605f5d330d3c815` |
+| Certificado SHA-256 | `1752d33a3fb6e45fada4e6adbbec99af851d9ae6716a73770c382c79d3356ac6`, el mismo de las versiones anteriores |
+| Firma / Android / ABI | v2 correcta, no depurable, minSdk 24 (Android 7), arm64-v8a y armeabi-v7a |
+| Secretos | 1.388 entradas sin los valores privados ni marcadores de credenciales que comprueba el verificador; la configuración pública de Supabase está en el bundle |
+| Arreglo del selector | `MainActivity.kt` regenerado por el plugin avisa al host de React de la instancia anterior aunque ya esté destruida |
+| Aviso de actualización | `assets/app.config` declara `0.1.31` / `32`, el código que lee `useAppUpdate`, así que el aviso no vuelve a ofrecer esta versión una vez instalada |
+| Archivos remotos | APK, checksum e instrucciones `uploaded`, con digests iguales a los locales |
+| Descargas anónimas | Los tres archivos completos coinciden en tamaño y SHA-256 con los preparados |
+
+Logs locales: `artifacts/prebuild-0.1.31.log`, `artifacts/android-build-0.1.31.log`, `artifacts/distribution-0.1.31.log` y `artifacts/release-0.1.31-upload.log`. Entrega en `artifacts/distribution/0.1.31/`; descargas públicas en `artifacts/release-0.1.31-public/`.
+
+El arreglo se probó en un Pixel 7 Pro (Android 17) con una build de prueba igual salvo la versión (`artifacts/releases/KarmaHouse-0.1.30-fotos-launcher.apk`): con `am freeze`, Atrás y relanzar desde el launcher, la 0.1.29 no abrió el selector y la build con el arreglo lo abrió en 6 de 6 intentos; el relanzamiento con `clear-task` también lo abrió. Esta APK 0.1.31 no se instaló por adb: el aviso de Mi espacio, la descarga y la instalación los prueba el usuario en ese teléfono, que tiene la build de prueba (versionCode 31).
+
+`npm test`: 877 pruebas correctas y 2 fallidas, las dos de `tests/android-private-reference.test.ts`, que lanza `pwsh` (PowerShell 7) y en este equipo solo está Windows PowerShell 5.1. `npm run typecheck` pasa. La landing compila y enlaza `v0.1.31/KarmaHouse.apk`.
+
 ## Entrega 0.1.30 del 20 de octubre de 2026
 
 Se publicó la [release `v0.1.30`](https://github.com/ArtStyles/karma-house/releases/tag/v0.1.30), con tag en `3def39160576d22512da4ceac00b2cda5a5ff4c6` y marcada como última. Su motivo es el correo de soporte: las apps instaladas hasta la 0.1.29 envían «Publicar con ayuda» y «Quiero KarmaHouse Pro» al Gmail personal; esta versión lleva `soporte@karmahouse.site` (commit `0f85e2a`). Compilada en el repositorio tras `expo prebuild` (el proyecto nativo seguía en la 0.1.29, sin el fondo nocturno `#0A1626` ni la Calistoga incrustada), con `build-android-preview.ps1 -Release`.
