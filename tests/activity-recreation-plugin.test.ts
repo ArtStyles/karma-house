@@ -22,6 +22,7 @@ test('the MainActivity patch reports the previous instance to the React host, on
   const patched = patchMainActivity(source);
   assert.ok(patched.includes('companion object { private var live: java.lang.ref.WeakReference<MainActivity>? = null }'));
   assert.ok(patched.includes('reactHost?.onHostDestroy(previous)'));
+  assert.ok(!patched.includes('isDestroyed'), 'an instance destroyed just before the new one is still reported: Expo forwards its onDestroy too late');
   assert.ok(patched.indexOf('reactHost?.onHostDestroy(previous)') < patched.indexOf('super.onCreate(null)'), 'the host hears about the old activity before the new one is created');
   assert.ok(patched.indexOf('live = java.lang.ref.WeakReference(this)') < patched.indexOf('super.onCreate(null)'));
   assert.equal(patchMainActivity(patched), patched, 'running prebuild twice does not patch twice');

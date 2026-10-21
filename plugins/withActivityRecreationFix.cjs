@@ -1,14 +1,18 @@
-// When Android replaces MainActivity inside a living process and resumes the new instance
-// before it destroys the old one (a clear-task relaunch, or reopening right after leaving with
-// Back), React Native drops the old instance's onHostDestroy: ReactHostImpl only forwards it
-// for the current activity. Expo waits for that call to re-register its activity result
-// launchers, so expo-image-picker rejects with "Attempting to launch an unregistered
+// When Android replaces MainActivity inside a living process, React Native can drop the old
+// instance's onHostDestroy: ReactHostImpl only forwards it for the current activity, and Expo's
+// ReactActivityDelegateWrapper posts onDestroy to a coroutine that often runs after the new
+// instance has resumed. That happens when the old instance is destroyed after the new one
+// resumes (a clear-task relaunch) and also when it is destroyed just before the new one is
+// created (reopening from the launcher after the old instance finished while the process was
+// frozen; seen in logcat on 2026-10-21). Expo waits for that call to re-register its activity
+// result launchers, so expo-image-picker rejects with "Attempting to launch an unregistered
 // ActivityResultLauncher" until the process dies. Measured on a Pixel 7 Pro, Android 17,
 // expo-modules-core 57.0.18 (the latest for SDK 57).
 //
 // The fix tells the React host about the previous instance from the new one's onCreate, while
 // the previous one is still the current activity, so Expo marks the host as destroyed and
-// registers the launchers again on the next resume.
+// registers the launchers again on the next resume. If the host already handled that instance,
+// ReactHostImpl ignores the call.
 const { withMainActivity } = require('expo/config-plugins');
 
 const MARK = '// karmahouse: activity recreation fix';
@@ -26,7 +30,7 @@ function patchMainActivity(source) {
   companion object { private var live: java.lang.ref.WeakReference<MainActivity>? = null }
 `)
     .replace(CREATE, `${MARK}
-    live?.get()?.takeIf { it !== this && !it.isDestroyed }?.let { previous -> reactHost?.onHostDestroy(previous) }
+    live?.get()?.takeIf { it !== this }?.let { previous -> reactHost?.onHostDestroy(previous) }
     live = java.lang.ref.WeakReference(this)
     ${CREATE}`);
 }
